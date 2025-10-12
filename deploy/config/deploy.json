@@ -1,0 +1,76 @@
+{
+  "project": {
+    "name": "MPPEEP Dashboard",
+    "version": "1.0.0",
+    "python_version": "3.11"
+  },
+  
+  "environments": {
+    "development": {
+      "server": {
+        "host": "localhost",
+        "port": 8000,
+        "workers": 1
+      },
+      "database": {
+        "type": "sqlite",
+        "path": "./app.db"
+      },
+      "debug": true,
+      "cors_allow_all": true
+    },
+    
+    "staging": {
+      "server": {
+        "host": "0.0.0.0",
+        "port": 8000,
+        "workers": 2
+      },
+      "database": {
+        "type": "postgresql",
+        "host": "localhost",
+        "port": 5432,
+        "name": "mppeep_staging",
+        "user": "mppeep_user"
+      },
+      "debug": false,
+      "cors_allow_all": false,
+      "allowed_hosts": ["staging.mondomaine.com"]
+    },
+    
+    "production": {
+      "server": {
+        "host": "0.0.0.0",
+        "port": 8000,
+        "workers": 4
+      },
+      "database": {
+        "type": "postgresql",
+        "host": "localhost",
+        "port": 5432,
+        "name": "mppeep_prod",
+        "user": "mppeep_user"
+      },
+      "debug": false,
+      "cors_allow_all": false,
+      "allowed_hosts": ["mondomaine.com", "www.mondomaine.com"],
+      "https_redirect": true
+    }
+  },
+  
+  "cloudflare": {
+    "enabled": true,
+    "zone_id": "VOTRE_ZONE_ID",
+    "email": "votre@email.com"
+  },
+  
+  "deployment": {
+    "service_name": "mppeep-api",
+    "install_path": "C:\\inetpub\\mppeep",
+    "python_path": "C:\\Python311\\python.exe",
+    "venv_path": ".venv",
+    "backup_enabled": true,
+    "backup_path": "C:\\Backups\\mppeep"
+  }
+}
+

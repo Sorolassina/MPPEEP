@@ -1,0 +1,15 @@
+# Ignorer tous les fichiers uploadés
+*
+
+# Mais garder la structure des dossiers
+!.gitignore
+!raw/
+!processed/
+!archive/
+raw/*
+processed/*
+archive/*
+!raw/.gitkeep
+!processed/.gitkeep
+!archive/.gitkeep
+

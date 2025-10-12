@@ -1,0 +1,889 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Gestion des Fichiers - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+    .files-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 2rem;
+    }
+
+    .files-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .files-header h1 {
+        margin: 0;
+        color: var(--primary-color);
+    }
+
+    .upload-section {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+
+    .accordion-header {
+        padding: 1.5rem 2rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s;
+        user-select: none;
+    }
+
+    .accordion-header:hover {
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+    }
+
+    .accordion-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .accordion-icon {
+        font-size: 1.5rem;
+        transition: transform 0.3s;
+    }
+
+    .accordion-icon.open {
+        transform: rotate(180deg);
+    }
+
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+
+    .accordion-content.open {
+        max-height: 1000px;
+        transition: max-height 0.5s ease-in;
+    }
+
+    .accordion-body {
+        padding: 2rem;
+    }
+
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+    }
+
+    .file-input-wrapper input[type=file] {
+        position: absolute;
+        left: -9999px;
+    }
+
+    .file-input-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        border: 2px dashed #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: #f9f9f9;
+    }
+
+    .file-input-label:hover {
+        border-color: var(--primary-color);
+        background: #f0f0f0;
+    }
+
+    .file-input-label.has-file {
+        border-color: var(--primary-color);
+        background: #e8f5e9;
+    }
+
+    .btn-upload {
+        padding: 1rem 2rem;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 0.5rem;
+    }
+
+    .btn-upload:hover:not(:disabled) {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .btn-upload:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .filters-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        min-width: 200px;
+    }
+
+    .filter-group label {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .filter-group select {
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .files-list {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .files-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .files-table thead {
+        background: #f5f5f5;
+    }
+
+    .files-table th,
+    .files-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .files-table th {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .files-table tbody tr:hover {
+        background: #f9f9f9;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .status-uploaded {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .status-processing {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .status-processed {
+        background: #e8f5e9;
+        color: #388e3c;
+    }
+
+    .status-error {
+        background: #ffebee;
+        color: #d32f2f;
+    }
+
+    .status-archived {
+        background: #f5f5f5;
+        color: #757575;
+    }
+
+    .file-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-action {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.3s;
+    }
+
+    .btn-view {
+        background: #2196f3;
+        color: white;
+    }
+
+    .btn-view:hover {
+        background: #1976d2;
+    }
+
+    .btn-reprocess {
+        background: #ff9800;
+        color: white;
+    }
+
+    .btn-reprocess:hover {
+        background: #f57c00;
+    }
+
+    .btn-delete {
+        background: #f44336;
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background: #d32f2f;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #999;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: #e0e0e0;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--primary-color);
+        transition: width 0.3s;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .stat-card h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+        color: var(--primary-color);
+    }
+
+    .stat-card p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="files-container">
+    <!-- Header -->
+    <div class="files-header">
+        <h1>📁 Gestion des Fichiers</h1>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-grid" id="statsGrid" style="display: none;">
+        <!-- Stats will be loaded here -->
+    </div>
+
+    <!-- Upload Section -->
+    <div class="upload-section" id="uploadSection">
+        <div class="accordion-header" onclick="toggleAccordion()">
+            <h2>
+                <span>📤</span>
+                <span>Télécharger un nouveau fichier</span>
+            </h2>
+            <span class="accordion-icon" id="accordionIcon">▼</span>
+        </div>
+        <div class="accordion-content" id="accordionContent">
+            <div class="accordion-body">
+                <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
+            <!-- File Input -->
+            <div class="form-group">
+                <label>Fichier Excel *</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" name="file" accept=".xlsx,.xls" required>
+                    <label for="fileInput" class="file-input-label" id="fileInputLabel">
+                        <span>📄 Cliquez pour sélectionner un fichier</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Type de fichier -->
+            <div class="form-group">
+                <label for="fileType">Type de fichier *</label>
+                <select id="fileType" name="file_type" required>
+                    <option value="">-- Sélectionner --</option>
+                    <option value="budget">💰 Budget</option>
+                    <option value="depenses">💸 Dépenses</option>
+                    <option value="revenus">💵 Revenus</option>
+                    <option value="personnel">👥 Personnel</option>
+                    <option value="rapport_activite">📋 Rapport d'activité</option>
+                    <option value="beneficiaires">👤 Bénéficiaires</option>
+                    <option value="indicateurs">📊 Indicateurs</option>
+                    <option value="autre">📄 Autre</option>
+                </select>
+            </div>
+
+            <!-- Programme -->
+            <div class="form-group">
+                <label for="program">Programme *</label>
+                <select id="program" name="program" required>
+                    <option value="">-- Sélectionner --</option>
+                    <option value="education">🎓 Éducation</option>
+                    <option value="sante">🏥 Santé</option>
+                    <option value="agriculture">🌾 Agriculture</option>
+                    <option value="infrastructure">🏗️ Infrastructure</option>
+                    <option value="protection_sociale">🛡️ Protection sociale</option>
+                    <option value="environnement">🌱 Environnement</option>
+                    <option value="gouvernance">⚖️ Gouvernance</option>
+                    <option value="autre">📋 Autre</option>
+                </select>
+            </div>
+
+            <!-- Période -->
+            <div class="form-group">
+                <label for="period">Période *</label>
+                <input type="text" id="period" name="period" placeholder="Ex: 2024-01, Q1-2024, 2024" required>
+            </div>
+
+            <!-- Titre -->
+            <div class="form-group">
+                <label for="title">Titre *</label>
+                <input type="text" id="title" name="title" placeholder="Ex: Budget annuel 2024" required>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group">
+                <label for="description">Description (optionnel)</label>
+                <textarea id="description" name="description" placeholder="Description ou notes additionnelles..."></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-upload" id="submitBtn">
+                📤 Télécharger et traiter
+            </button>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+            </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label for="filterType">Type</label>
+            <select id="filterType" onchange="loadFiles()">
+                <option value="">Tous</option>
+                <option value="budget">Budget</option>
+                <option value="depenses">Dépenses</option>
+                <option value="revenus">Revenus</option>
+                <option value="personnel">Personnel</option>
+                <option value="rapport_activite">Rapport d'activité</option>
+                <option value="beneficiaires">Bénéficiaires</option>
+                <option value="indicateurs">Indicateurs</option>
+                <option value="autre">Autre</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filterStatus">Statut</label>
+            <select id="filterStatus" onchange="loadFiles()">
+                <option value="">Tous</option>
+                <option value="uploaded">Téléchargé</option>
+                <option value="processing">En traitement</option>
+                <option value="processed">Traité</option>
+                <option value="error">Erreur</option>
+                <option value="archived">Archivé</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filterProgram">Programme</label>
+            <select id="filterProgram" onchange="loadFiles()">
+                <option value="">Tous</option>
+                <option value="education">Éducation</option>
+                <option value="sante">Santé</option>
+                <option value="agriculture">Agriculture</option>
+                <option value="infrastructure">Infrastructure</option>
+                <option value="protection_sociale">Protection sociale</option>
+                <option value="environnement">Environnement</option>
+                <option value="gouvernance">Gouvernance</option>
+                <option value="autre">Autre</option>
+            </select>
+        </div>
+
+        <button onclick="resetFilters()" class="btn-action btn-view">🔄 Réinitialiser</button>
+    </div>
+
+    <!-- Files List -->
+    <div class="files-list">
+        <h2>📋 Liste des fichiers</h2>
+        <div id="filesTableContainer">
+            <div class="loading">Chargement des fichiers...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle accordion
+function toggleAccordion() {
+    const content = document.getElementById('accordionContent');
+    const icon = document.getElementById('accordionIcon');
+    
+    content.classList.toggle('open');
+    icon.classList.toggle('open');
+}
+
+// File input handling
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const label = document.getElementById('fileInputLabel');
+    if (e.target.files.length > 0) {
+        const fileName = e.target.files[0].name;
+        const fileSize = (e.target.files[0].size / (1024 * 1024)).toFixed(2);
+        label.innerHTML = `<span>✅ ${fileName} (${fileSize} MB)</span>`;
+        label.classList.add('has-file');
+    } else {
+        label.innerHTML = '<span>📄 Cliquez pour sélectionner un fichier</span>';
+        label.classList.remove('has-file');
+    }
+});
+
+// Upload form submission
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Masquer l'overlay global s'il est affiché
+    if (typeof hideGlobalLoading === 'function') {
+        hideGlobalLoading();
+    }
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressBarFill');
+    
+    // Disable button
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Téléchargement en cours...';
+    progressBar.style.display = 'block';
+    progressFill.style.width = '30%';
+    
+    // Prepare form data
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('/api/v1/files/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        progressFill.style.width = '70%';
+        
+        if (response.ok) {
+            const data = await response.json();
+            progressFill.style.width = '100%';
+            
+            alert('✅ Fichier téléchargé avec succès! Le traitement a démarré.');
+            
+            // Reset form
+            this.reset();
+            document.getElementById('fileInputLabel').innerHTML = '<span>📄 Cliquez pour sélectionner un fichier</span>';
+            document.getElementById('fileInputLabel').classList.remove('has-file');
+            
+            // Fermer l'accordéon
+            toggleAccordion();
+            
+            // Attendre un peu avant de rafraîchir (laisser le temps au backend)
+            setTimeout(() => {
+                loadFiles();
+                loadStatistics();
+            }, 2000);
+            
+        } else {
+            const error = await response.json();
+            alert(`❌ Erreur: ${error.detail || 'Erreur inconnue'}`);
+        }
+        
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('❌ Erreur lors du téléchargement: ' + error.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📤 Télécharger et traiter';
+        progressBar.style.display = 'none';
+        progressFill.style.width = '0%';
+        
+        // S'assurer que l'overlay est bien caché
+        if (typeof hideGlobalLoading === 'function') {
+            hideGlobalLoading();
+        }
+    }
+});
+
+// Load files list
+async function loadFiles() {
+    const container = document.getElementById('filesTableContainer');
+    if (!container) return; // Protection si l'élément n'existe pas
+    
+    container.innerHTML = '<div class="loading">Chargement des fichiers...</div>';
+    
+    // Get filters
+    const filterType = document.getElementById('filterType')?.value || '';
+    const filterStatus = document.getElementById('filterStatus')?.value || '';
+    const filterProgram = document.getElementById('filterProgram')?.value || '';
+    
+    // Build query string
+    let query = '/api/v1/files/list_files?limit=100';
+    if (filterType) query += `&file_type=${filterType}`;
+    if (filterStatus) query += `&status=${filterStatus}`;
+    if (filterProgram) query += `&program=${filterProgram}`;
+    
+    try {
+        const response = await fetch(query);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.files && data.files.length > 0) {
+            renderFilesTable(data.files);
+            
+            // Vérifier s'il y a des fichiers en traitement
+            hasProcessingFiles = checkProcessingFiles(data.files);
+            
+            if (hasProcessingFiles) {
+                startAutoRefresh(); // Activer l'auto-refresh
+            } else {
+                stopAutoRefresh(); // Désactiver l'auto-refresh
+            }
+        } else {
+            container.innerHTML = '<div class="empty-state">Aucun fichier trouvé</div>';
+            hasProcessingFiles = false;
+            stopAutoRefresh();
+        }
+    } catch (error) {
+        console.error('Error loading files:', error);
+        container.innerHTML = `<div class="empty-state">❌ Erreur lors du chargement: ${error.message}</div>`;
+    }
+}
+
+// Render files table
+function renderFilesTable(files) {
+    const container = document.getElementById('filesTableContainer');
+    
+    let html = `
+        <table class="files-table">
+            <thead>
+                <tr>
+                    <th>Fichier</th>
+                    <th>Type</th>
+                    <th>Programme</th>
+                    <th>Période</th>
+                    <th>Statut</th>
+                    <th>Taille</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    files.forEach(file => {
+        const statusClass = `status-${file.status}`;
+        const date = new Date(file.created_at).toLocaleDateString('fr-FR');
+        
+        html += `
+            <tr>
+                <td title="${file.original_filename}">
+                    <strong>${file.title}</strong><br>
+                    <small>${file.original_filename}</small>
+                </td>
+                <td>${formatFileType(file.file_type)}</td>
+                <td>${formatProgram(file.program)}</td>
+                <td>${file.period}</td>
+                <td><span class="status-badge ${statusClass}">${formatStatus(file.status)}</span></td>
+                <td>${file.file_size_mb} MB</td>
+                <td>${date}</td>
+                <td>
+                    <div class="file-actions">
+                        <button class="btn-action btn-view" onclick="viewFile(${file.id})" title="Voir détails">👁️</button>
+                        ${file.status === 'error' ? `<button class="btn-action btn-reprocess" onclick="reprocessFile(${file.id})" title="Retraiter">🔄</button>` : ''}
+                        <button class="btn-action btn-delete" onclick="deleteFile(${file.id})" title="Supprimer">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Format helpers
+function formatFileType(type) {
+    const types = {
+        'budget': '💰 Budget',
+        'depenses': '💸 Dépenses',
+        'revenus': '💵 Revenus',
+        'personnel': '👥 Personnel',
+        'rapport_activite': '📋 Rapport',
+        'beneficiaires': '👤 Bénéficiaires',
+        'indicateurs': '📊 Indicateurs',
+        'autre': '📄 Autre'
+    };
+    return types[type] || type;
+}
+
+function formatProgram(program) {
+    const programs = {
+        'education': '🎓 Éducation',
+        'sante': '🏥 Santé',
+        'agriculture': '🌾 Agriculture',
+        'infrastructure': '🏗️ Infrastructure',
+        'protection_sociale': '🛡️ Protection sociale',
+        'environnement': '🌱 Environnement',
+        'gouvernance': '⚖️ Gouvernance',
+        'autre': '📋 Autre'
+    };
+    return programs[program] || program;
+}
+
+function formatStatus(status) {
+    const statuses = {
+        'uploaded': 'Téléchargé',
+        'processing': 'En traitement',
+        'processed': 'Traité',
+        'error': 'Erreur',
+        'archived': 'Archivé'
+    };
+    return statuses[status] || status;
+}
+
+// File actions
+async function viewFile(fileId) {
+    window.location.href = `/api/v1/files/get_file/${fileId}`;
+}
+
+async function reprocessFile(fileId) {
+    if (!confirm('Voulez-vous vraiment retraiter ce fichier?')) return;
+    
+    try {
+        const response = await fetch(`/api/v1/files/reprocess_file/${fileId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            alert('✅ Retraitement lancé!');
+            loadFiles();
+        } else {
+            alert('❌ Erreur lors du retraitement');
+        }
+    } catch (error) {
+        console.error('Reprocess error:', error);
+        alert('❌ Erreur');
+    }
+}
+
+async function deleteFile(fileId) {
+    if (!confirm('Voulez-vous vraiment supprimer ce fichier? Cette action est irréversible.')) return;
+    
+    try {
+        const response = await fetch(`/api/v1/files/delete_file/${fileId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok || response.status === 204) {
+            alert('✅ Fichier supprimé!');
+            loadFiles();
+            loadStatistics();
+        } else {
+            alert('❌ Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('❌ Erreur');
+    }
+}
+
+// Load statistics
+async function loadStatistics() {
+    try {
+        const response = await fetch('/api/v1/files/get_statistics');
+        const stats = await response.json();
+        
+        const statsGrid = document.getElementById('statsGrid');
+        statsGrid.style.display = 'grid';
+        
+        statsGrid.innerHTML = `
+            <div class="stat-card">
+                <h3>${stats.total_files}</h3>
+                <p>Fichiers total</p>
+            </div>
+            <div class="stat-card">
+                <h3>${stats.files_by_status.processed || 0}</h3>
+                <p>Traités</p>
+            </div>
+            <div class="stat-card">
+                <h3>${stats.files_by_status.processing || 0}</h3>
+                <p>En traitement</p>
+            </div>
+            <div class="stat-card">
+                <h3>${stats.total_size_mb} MB</h3>
+                <p>Espace utilisé</p>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+    }
+}
+
+// Reset filters
+function resetFilters() {
+    document.getElementById('filterType').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterProgram').value = '';
+    loadFiles();
+}
+
+// Variable pour suivre les fichiers en traitement
+let hasProcessingFiles = false;
+let autoRefreshInterval = null;
+
+// Fonction pour vérifier s'il y a des fichiers en traitement
+function checkProcessingFiles(files) {
+    return files.some(file => file.status === 'processing' || file.status === 'uploaded');
+}
+
+// Démarrer l'auto-refresh si nécessaire
+function startAutoRefresh() {
+    if (autoRefreshInterval) return; // Déjà actif
+    
+    console.log('🔄 Auto-refresh activé (fichiers en traitement)');
+    autoRefreshInterval = setInterval(() => {
+        if (!document.hidden && hasProcessingFiles) {
+            console.log('🔄 Rafraîchissement automatique...');
+            loadFiles();
+        } else if (!hasProcessingFiles && autoRefreshInterval) {
+            // Plus de fichiers en traitement, arrêter l'auto-refresh
+            stopAutoRefresh();
+        }
+    }, 10000); // Toutes les 10 secondes
+}
+
+// Arrêter l'auto-refresh
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        console.log('⏸️ Auto-refresh désactivé (plus de fichiers en traitement)');
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    loadFiles();
+    loadStatistics();
+});
+</script>
+{% endblock %}
+

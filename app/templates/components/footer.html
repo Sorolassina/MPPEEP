@@ -1,0 +1,16 @@
+<footer class="footer">
+    <div class="footer-container">
+        <div class="footer-content">
+            <p>&copy; {{ current_year() }} {{ system_settings.company_name or app_name }}. {{ system_settings.footer_text or 'Tous droits réservés' }}.</p>
+        </div>
+        
+        <div class="footer-links">
+            {% if system_settings.company_email %}
+                <a href="mailto:{{ system_settings.company_email }}">Contact</a>
+            {% endif %}
+            <a href="#" onclick="alert('Page en développement'); return false;">CGU</a>
+            <a href="#" onclick="alert('Page en développement'); return false;">Confidentialité</a>
+        </div>
+    </div>
+</footer>
+

@@ -1,0 +1,70 @@
+# Tâches planifiées
+# Health checks, backups, rapports
+
+name: Tâches Planifiées
+
+on:
+  schedule:
+    # Tous les jours à 2h du matin (UTC)
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Manuel
+
+jobs:
+  health-check:
+    name: Health Check Quotidien
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏥 Health Check Production
+      run: |
+        response=$(curl -s https://mondomaine.com/api/v1/ping)
+        
+        if echo "$response" | grep -q "pong"; then
+          echo "✅ Application en ligne"
+        else
+          echo "❌ Application hors ligne"
+          exit 1
+        fi
+    
+    - name: 🚨 Alerte si DOWN
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: 'failure'
+        text: '🚨 ALERTE : Application DOWN !'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  dependency-check:
+    name: Vérification Dépendances
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configuration Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: 🔍 Vérifier les vulnérabilités
+      run: |
+        pip install safety
+        cd mppeep
+        safety check --json || true
+    
+    - name: 📊 Rapport mensuel
+      run: |
+        echo "📊 Rapport de dépendances - $(date)"
+        pip list --outdated
+
+  backup-notification:
+    name: Vérification Backups
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📢 Rappel Backup
+      run: |
+        echo "💾 Vérifier que les backups automatiques fonctionnent"
+        echo "   Derniers backups attendus dans C:\Backups\mppeep\"
+

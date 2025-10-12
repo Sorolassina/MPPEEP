@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ static_url('favicon.ico') }}">
+    
+    <!-- CSS de base -->
+    <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/theme.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
+    
+    <!-- Couleurs dynamiques depuis les paramètres système -->
+    {% if system_settings %}
+    <style>
+        :root {
+            /* Couleurs principales (depuis DB ou config) */
+            --primary-color: {{ system_settings.primary_color }};
+            --secondary-color: {{ system_settings.secondary_color }};
+            --accent-color: {{ system_settings.accent_color }};
+            
+            /* Couleurs dérivées (calculées côté serveur) */
+            --primary-dark: {{ system_settings.primary_dark }};
+            --primary-light: {{ system_settings.primary_light }};
+        }
+    </style>
+    {% endif %}
+    
+    <!-- CSS spécifiques à la page -->
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <!-- Global Loading Overlay pour navigation -->
+    <div id="globalLoadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Chargement...</div>
+            <div class="loading-subtext">Veuillez patienter</div>
+        </div>
+    </div>
+
+    {% block body %}
+        <!-- Header / Navigation -->
+        {% block header %}
+            {% include "components/navbar.html" %}
+        {% endblock %}
+        
+        <!-- Messages flash -->
+        {% block messages %}
+            {% include "components/flash_messages.html" %}
+        {% endblock %}
+        
+        <!-- Contenu principal -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <!-- Footer -->
+        {% block footer %}
+            {% include "components/footer.html" %}
+        {% endblock %}
+    {% endblock %}
+    
+    <!-- Scripts JS de base -->
+    <script src="/static/js/app.js"></script>
+    
+    <!-- Script global pour l'overlay de navigation -->
+    <script>
+        // Fonction pour afficher l'overlay global
+        function showGlobalLoading() {
+            const overlay = document.getElementById('globalLoadingOverlay');
+            if (overlay) {
+                overlay.classList.add('show');
+            }
+        }
+
+        // Fonction pour masquer l'overlay global
+        function hideGlobalLoading() {
+            const overlay = document.getElementById('globalLoadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+        }
+
+        // Intercepter les clics sur les liens pour afficher l'overlay
+        document.addEventListener('DOMContentLoaded', function() {
+            // Masquer l'overlay au chargement de la page
+            hideGlobalLoading();
+
+            // Intercepter tous les clics sur les liens
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                
+                // Si c'est un lien interne (pas #, pas javascript:, pas external)
+                if (link && link.href && 
+                    !link.href.startsWith('javascript:') && 
+                    !link.href.includes('#') &&
+                    !link.target &&
+                    !link.hasAttribute('onclick') &&
+                    link.href.startsWith(window.location.origin)) {
+                    
+                    // Afficher l'overlay
+                    showGlobalLoading();
+                }
+            });
+
+            // Masquer l'overlay si la page ne change pas (ex: erreur)
+            window.addEventListener('pageshow', function() {
+                hideGlobalLoading();
+            });
+
+            // Masquer l'overlay si l'utilisateur revient en arrière
+            window.addEventListener('popstate', function() {
+                hideGlobalLoading();
+            });
+        });
+
+        // Afficher l'overlay lors de la soumission de formulaires GET
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form.method.toLowerCase() === 'get') {
+                showGlobalLoading();
+            }
+        });
+    </script>
+    
+    <!-- Scripts spécifiques à la page -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

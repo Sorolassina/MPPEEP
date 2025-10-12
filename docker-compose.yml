@@ -1,0 +1,136 @@
+# ============================================
+# DOCKER COMPOSE - MPPEEP DASHBOARD
+# ============================================
+# Services : Application FastAPI + PostgreSQL
+# Usage : docker-compose up -d
+# ============================================
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # SERVICE : PostgreSQL Database
+  # ==========================================
+  db:
+    image: postgres:16-alpine
+    container_name: mppeep-db
+    restart: unless-stopped
+    
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mppeep}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups  # Pour les backups
+    
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    networks:
+      - mppeep-network
+
+  # ==========================================
+  # SERVICE : Application FastAPI
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    container_name: mppeep-app
+    restart: unless-stopped
+    
+    environment:
+      # Application
+      APP_NAME: ${APP_NAME:-MPPEEP Dashboard}
+      ENV: ${ENV:-production}
+      DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${SECRET_KEY:-changeme-in-production}
+      
+      # Database (pointe vers le service db)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-mppeep}
+      
+      # Security
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      CORS_ALLOW_ALL: ${CORS_ALLOW_ALL:-false}
+      
+      # Middlewares
+      ENABLE_HTTPS_REDIRECT: ${ENABLE_HTTPS_REDIRECT:-false}
+      ENABLE_CORS: ${ENABLE_CORS:-true}
+      ENABLE_GZIP: ${ENABLE_GZIP:-true}
+      ENABLE_SECURITY_HEADERS: ${ENABLE_SECURITY_HEADERS:-true}
+    
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    
+    volumes:
+      - ./logs:/app/logs  # Logs persistants
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    networks:
+      - mppeep-network
+
+  # ==========================================
+  # SERVICE : pgAdmin (Optionnel)
+  # ==========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mppeep-pgadmin
+    restart: unless-stopped
+    
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@mppeep.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    
+    depends_on:
+      - db
+    
+    networks:
+      - mppeep-network
+    
+    profiles:
+      - tools  # Démarré seulement avec --profile tools
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  postgres_data:
+    name: mppeep-postgres-data
+  pgadmin_data:
+    name: mppeep-pgadmin-data
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  mppeep-network:
+    name: mppeep-network
+    driver: bridge
+

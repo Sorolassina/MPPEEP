@@ -1,0 +1,45 @@
+# ============================================
+# DOCKERFILE POUR DÉVELOPPEMENT
+# ============================================
+# Image avec hot-reload et outils de dev
+# ============================================
+
+FROM python:3.11-slim
+
+# Variables d'environnement pour développement
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBUG=true \
+    ENV=dev
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Répertoire de travail
+WORKDIR /app
+
+# Installer uv
+RUN pip install uv
+
+# Copier les fichiers de dépendances
+COPY pyproject.toml uv.lock ./
+
+# Installer TOUTES les dépendances (prod + dev)
+RUN uv sync --extra dev
+
+# Copier le code
+COPY . .
+
+# Exposer le port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/ping || exit 1
+
+# Commande avec hot-reload
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+

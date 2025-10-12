@@ -1,0 +1,16 @@
+from sqlmodel import SQLModel, Session, create_engine
+from app.core.rh_workflow_seed import ensure_workflow_steps
+from app.core.config import settings
+
+# Utilise la propriété database_url qui bascule automatiquement selon l'environnement
+engine = create_engine(settings.database_url, echo=settings.DEBUG)
+
+def init_db() -> None:
+    SQLModel.metadata.create_all(engine)
+
+def get_session():
+    with Session(engine) as session:
+        ensure_workflow_steps(session)
+        yield session
+
+

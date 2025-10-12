@@ -1,0 +1,127 @@
+# CI - Intégration Continue
+# Lance les tests à chaque push ou pull request
+
+name: CI - Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  tests:
+    name: Tests Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    
+    steps:
+    - name: 📥 Checkout du code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configuration Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: 📦 Installation uv
+      run: |
+        pip install uv
+    
+    - name: 📚 Installation des dépendances
+      run: |
+        cd mppeep
+        uv sync
+    
+    - name: 🧪 Tests unitaires
+      run: |
+        cd mppeep
+        uv run pytest tests/unit/ -v --tb=short
+    
+    - name: 🔗 Tests d'intégration
+      run: |
+        cd mppeep
+        uv run pytest tests/integration/ -v --tb=short
+    
+    - name: 📋 Tests fonctionnels
+      run: |
+        cd mppeep
+        uv run pytest tests/functional/ -v --tb=short
+    
+    - name: 📊 Couverture de code
+      run: |
+        cd mppeep
+        uv add pytest-cov
+        uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
+    
+    - name: 📤 Upload couverture vers Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./mppeep/coverage.xml
+        fail_ci_if_error: false
+
+  lint:
+    name: Linting et Qualité du Code
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configuration Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: 📦 Installation des outils de linting
+      run: |
+        pip install ruff black isort
+    
+    - name: 🔍 Ruff (linting rapide)
+      run: |
+        cd mppeep
+        ruff check app/ tests/ --output-format=github
+      continue-on-error: true
+    
+    - name: 🎨 Black (formatage)
+      run: |
+        cd mppeee
+        black --check app/ tests/
+      continue-on-error: true
+    
+    - name: 📑 isort (tri des imports)
+      run: |
+        cd mppeep
+        isort --check-only app/ tests/
+      continue-on-error: true
+
+  security:
+    name: Analyse de Sécurité
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configuration Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: 🔒 Scan de sécurité (Bandit)
+      run: |
+        pip install bandit
+        cd mppeep
+        bandit -r app/ -f json -o bandit-report.json
+      continue-on-error: true
+    
+    - name: 🔍 Vérification des dépendances (Safety)
+      run: |
+        pip install safety
+        cd mppeep
+        safety check --json
+      continue-on-error: true
+

@@ -1,0 +1,73 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Rapports{% endblock %}
+
+{% block page_title %}Rapports{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2>📊 Rapports</h2>
+    </div>
+
+    <div class="coming-soon">
+        <div class="coming-soon-icon">📈</div>
+        <h3>Fonctionnalité en développement</h3>
+        <p>La page des rapports sera bientôt disponible avec des statistiques avancées.</p>
+    </div>
+
+    <div class="actions-footer">
+        <a href="{{ url_for('accueil') }}" class="btn btn-secondary">
+            ← Retour à l'accueil
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.admin-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+.page-header {
+    margin-bottom: var(--spacing-xl);
+}
+
+.page-header h2 {
+    margin: 0;
+    color: var(--secondary-color);
+}
+
+.coming-soon {
+    background: var(--white-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.coming-soon-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.coming-soon h3 {
+    color: var(--secondary-color);
+    margin-bottom: var(--spacing-sm);
+}
+
+.coming-soon p {
+    color: var(--gray-600);
+}
+
+.actions-footer {
+    display: flex;
+    gap: var(--spacing-md);
+}
+</style>
+{% endblock %}
+

@@ -1,0 +1,509 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Paramètres Système{% endblock %}
+
+{% block page_title %}Paramètres Système{% endblock %}
+
+{% block content %}
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Traitement en cours...</div>
+        <div class="loading-subtext">Veuillez patienter</div>
+    </div>
+</div>
+
+<div class="settings-page">
+    <!-- Messages -->
+    <div id="message-container"></div>
+
+    <!-- En-tête -->
+    <div class="page-header">
+        <h2>⚙️ Paramètres Système</h2>
+        <div class="header-info">
+            <span class="text-muted">
+                Dernière modification: {{ settings.updated_at|format_datetime if settings.updated_at else 'Jamais' }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Formulaire des paramètres -->
+    <form id="settingsForm" onsubmit="saveSettings(event)">
+        
+        <!-- Section: Informations Entreprise -->
+        <div class="settings-section">
+            <h3>🏢 Informations Entreprise</h3>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label>Nom de l'entreprise *</label>
+                    <input type="text" name="company_name" value="{{ settings.company_name }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email de contact</label>
+                    <input type="email" name="company_email" value="{{ settings.company_email or '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label>Téléphone</label>
+                    <input type="tel" name="company_phone" value="{{ settings.company_phone or '' }}">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Description</label>
+                    <textarea name="company_description" rows="3">{{ settings.company_description or '' }}</textarea>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label>Adresse</label>
+                    <input type="text" name="company_address" value="{{ settings.company_address or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Logo -->
+        <div class="settings-section">
+            <h3>🎨 Logo de l'entreprise</h3>
+            <div class="logo-upload-section">
+                <div class="logo-preview">
+                    <img id="logo-preview" src="{{ static_url(settings.logo_path) }}" alt="Logo actuel">
+                    <p class="text-muted">Logo actuel</p>
+                </div>
+                <div class="logo-upload">
+                    <label for="logo-file" class="btn btn-secondary">
+                        📁 Choisir un nouveau logo
+                    </label>
+                    <input type="file" id="logo-file" accept="image/*" style="display: none;" onchange="uploadLogo(this)">
+                    <p class="help-text">Formats acceptés : JPG, PNG, GIF, WEBP (max 5MB)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Couleurs -->
+        <div class="settings-section">
+            <h3>🎨 Palette de Couleurs</h3>
+            <div class="colors-grid">
+                <div class="form-group">
+                    <label>Couleur Principale</label>
+                    <div class="color-input-group">
+                        <input type="color" name="primary_color" value="{{ settings.primary_color }}" id="primary-color">
+                        <input type="text" value="{{ settings.primary_color }}" readonly class="color-text">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Couleur Secondaire</label>
+                    <div class="color-input-group">
+                        <input type="color" name="secondary_color" value="{{ settings.secondary_color }}" id="secondary-color">
+                        <input type="text" value="{{ settings.secondary_color }}" readonly class="color-text">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Couleur d'Accent</label>
+                    <div class="color-input-group">
+                        <input type="color" name="accent_color" value="{{ settings.accent_color }}" id="accent-color">
+                        <input type="text" value="{{ settings.accent_color }}" readonly class="color-text">
+                    </div>
+                </div>
+            </div>
+            <p class="help-text">💡 Les couleurs seront appliquées après sauvegarde et rechargement de la page</p>
+        </div>
+
+        <!-- Section: Personnalisation -->
+        <div class="settings-section">
+            <h3>✨ Personnalisation</h3>
+            <div class="settings-grid">
+                <div class="form-group full-width">
+                    <label>Texte du Footer</label>
+                    <input type="text" name="footer_text" value="{{ settings.footer_text or '' }}" placeholder="Tous droits réservés">
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Paramètres Système -->
+        <div class="settings-section">
+            <h3>🔧 Paramètres Système</h3>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label>Taille max upload (MB)</label>
+                    <input type="number" name="max_upload_size_mb" value="{{ settings.max_upload_size_mb }}" min="1" max="100">
+                </div>
+                
+                <div class="form-group">
+                    <label>Durée session (minutes)</label>
+                    <input type="number" name="session_timeout_minutes" value="{{ settings.session_timeout_minutes }}" min="5" max="1440">
+                </div>
+                
+                <div class="form-group checkbox-group full-width">
+                    <label>
+                        <input type="checkbox" name="maintenance_mode" {% if settings.maintenance_mode %}checked{% endif %}>
+                        🚧 Mode Maintenance (désactive l'accès pour les utilisateurs)
+                    </label>
+                </div>
+                
+                <div class="form-group checkbox-group full-width">
+                    <label>
+                        <input type="checkbox" name="allow_registration" {% if settings.allow_registration %}checked{% endif %}>
+                        ✍️ Autoriser les nouvelles inscriptions
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+            <a href="{{ url_for('accueil') }}" class="btn btn-secondary">
+                ← Retour
+            </a>
+            <button type="submit" class="btn btn-primary">
+                💾 Enregistrer les paramètres
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.settings-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+/* Messages container */
+#message-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 2000;
+    max-width: 400px;
+}
+
+/* Alertes - styles dans components.css */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.page-header h2 {
+    margin: 0;
+    color: var(--secondary-color);
+}
+
+.header-info {
+    font-size: 0.875rem;
+}
+
+.text-muted {
+    color: var(--gray-600);
+}
+
+/* Sections */
+.settings-section {
+    background: var(--white-color);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.settings-section h3 {
+    color: var(--secondary-color);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--gray-200);
+}
+
+/* Grilles */
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Form Groups */
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+    color: var(--secondary-color);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--gray-400);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(3, 108, 29, 0.1);
+}
+
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    font-weight: 400;
+    margin: 0;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+/* Logo Upload */
+.logo-upload-section {
+    display: flex;
+    gap: var(--spacing-xl);
+    align-items: flex-start;
+}
+
+.logo-preview {
+    text-align: center;
+}
+
+.logo-preview img {
+    max-width: 200px;
+    max-height: 200px;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    background: var(--white-color);
+}
+
+.logo-preview p {
+    margin-top: var(--spacing-sm);
+    font-size: 0.875rem;
+}
+
+.logo-upload {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+/* Color Inputs */
+.color-input-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.color-input-group input[type="color"] {
+    width: 60px;
+    height: 40px;
+    border: 1px solid var(--gray-400);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.color-text {
+    flex: 1;
+    text-transform: uppercase;
+    font-family: monospace;
+    background-color: var(--gray-100);
+}
+
+.help-text {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-top: var(--spacing-xs);
+}
+
+/* Actions */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding-top: var(--spacing-lg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .colors-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .logo-upload-section {
+        flex-direction: column;
+    }
+    
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .form-actions button,
+    .form-actions a {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Fonctions pour l'overlay de chargement
+function showLoading(message = 'Traitement en cours...', subtext = 'Veuillez patienter') {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.querySelector('.loading-text').textContent = message;
+    overlay.querySelector('.loading-subtext').textContent = subtext;
+    overlay.classList.add('show');
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.remove('show');
+}
+
+// Fonction pour recharger la page automatiquement après succès
+function reloadAfterSuccess(message, delay = 1500) {
+    showMessage(message, 'success');
+    showMessage('🔄 Actualisation automatique...', 'info');
+    showLoading('Actualisation...', 'Mise à jour de la page en cours');
+    setTimeout(() => {
+        location.reload(true);  // true = force reload sans cache
+    }, delay);
+}
+
+// Synchroniser l'affichage du code couleur avec le color picker
+document.getElementById('primary-color').addEventListener('input', function(e) {
+    e.target.nextElementSibling.value = e.target.value;
+});
+
+document.getElementById('secondary-color').addEventListener('input', function(e) {
+    e.target.nextElementSibling.value = e.target.value;
+});
+
+document.getElementById('accent-color').addEventListener('input', function(e) {
+    e.target.nextElementSibling.value = e.target.value;
+});
+
+// Sauvegarder les paramètres
+async function saveSettings(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    showLoading('Sauvegarde...', 'Enregistrement des paramètres en cours');
+    
+    try {
+        const response = await fetch('/api/v1/admin/settings/update', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            reloadAfterSuccess(data.message);
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors de la sauvegarde', 'error');
+    }
+}
+
+// Upload du logo
+async function uploadLogo(input) {
+    if (!input.files || !input.files[0]) {
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    // Vérifier la taille (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+        showMessage('Le fichier est trop volumineux (max 5MB)', 'error');
+        input.value = '';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('logo', file);
+    
+    showLoading('Upload...', `Téléchargement de ${file.name} en cours`);
+    
+    try {
+        const response = await fetch('/api/v1/admin/settings/upload-logo', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            // Mettre à jour l'aperçu immédiatement
+            document.getElementById('logo-preview').src = data.logo_url + '?t=' + new Date().getTime();
+            reloadAfterSuccess(data.message);
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors de l\'upload', 'error');
+    }
+    
+    input.value = '';
+}
+
+// Afficher un message
+function showMessage(message, type) {
+    const container = document.getElementById('message-container');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    
+    container.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,509 @@
+{% extends "layouts/base.html" %}
+{% block title %}RH – Administration Publique · {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Grille principale RH - UNE SEULE COLONNE */
+.rh-grid{
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* Cards */
+.card{ 
+  background:#fff; 
+  border-radius:14px; 
+  box-shadow:0 10px 25px rgba(0,0,0,.06); 
+  padding:1.5rem;
+  height: fit-content;
+}
+
+.card h2, .card h3 {
+  margin: 0 0 1rem 0;
+  color: #222;
+  font-size: 1.2rem;
+}
+
+/* KPIs */
+.kpis{
+  display:grid; 
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+  gap:.75rem;
+  margin-bottom: 1rem;
+}
+
+.kpi{ 
+  background: var(--white-color);
+  color: var(--secondary-color);
+  border-radius:12px; 
+  padding:1.2rem; 
+  text-align:center;
+  transition: transform 0.2s;
+  cursor:pointer;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.kpi .label {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin-bottom: 0.5rem;
+}
+
+.kpi .val{ 
+  font-size:2rem; 
+  font-weight:700;
+  display: block;
+}
+
+/* Actions */
+.actions{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap:.75rem; 
+  margin-top:1rem;
+}
+
+.btn{
+  display:flex; 
+  align-items:center; 
+  justify-content: center;
+  gap:.5rem;
+  padding:.8rem 1rem; 
+  background:#fff; 
+  border:2px solid #667eea; 
+  border-radius:10px;
+  text-decoration:none; 
+  color:#667eea;
+  font-weight: 500;
+  box-shadow:0 4px 12px rgba(0,0,0,.08);
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+}
+
+.btn svg{ 
+  width:20px; 
+  height:20px; 
+  stroke:currentColor; 
+  fill:none; 
+  stroke-width:1.8; 
+}
+
+/* Charts */
+.chart-wrap{ 
+  margin-top:.75rem; 
+}
+
+.chart-card {
+  min-height: 300px;
+}
+
+/* Liste des demandes */
+.demandes-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1rem;
+}
+
+.demandes-table thead {
+  background: #f8f9fa;
+}
+
+.demandes-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  font-size: 0.9rem;
+}
+
+.demandes-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e9ecef;
+  color: #495057;
+}
+
+.demandes-table tbody tr {
+  transition: background 0.2s;
+}
+
+.demandes-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.badge-type {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.badge-state {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #6c757d;
+  color: white;
+}
+
+.badge-state.draft { background: #adb5bd; }
+.badge-state.submitted { background: #0dcaf0; }
+.badge-state.validation { background: #ffc107; }
+.badge-state.signature { background: #fd7e14; }
+.badge-state.archived { background: #198754; }
+.badge-state.rejected { background: #dc3545; }
+
+.action-icons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #e9ecef;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #667eea;
+  color: white;
+  transform: scale(1.1);
+}
+
+.icon-btn.delete:hover {
+  background: #dc3545;
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.no-demandes {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rh-grid">
+  
+  <!-- KPIs et Actions -->
+    <div class="card">
+    <h2>Gestion des ressources humaines</h2>
+    
+    <!-- KPIs Agents -->
+    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">👥 Effectifs</h3>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Total Agents</div>
+        <div class="val" id="kpi-total-agents">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Agents Actifs</div>
+        <div class="val" id="kpi-actifs">—</div>
+      </div>
+    </div>
+    
+    <!-- KPIs Demandes -->
+    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">📋 Demandes</h3>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Total Demandes</div>
+        <div class="val" id="kpi-total-demandes">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">En Cours</div>
+        <div class="val" id="kpi-demandes-cours">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Archivées</div>
+        <div class="val" id="kpi-demandes-archivees">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Taux Traitement</div>
+        <div class="val" id="kpi-taux-traitement">—</div>
+      </div>
+    </div>
+    
+    <!-- Circuit - En attente par étape -->
+    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">🔄 Circuit de Validation</h3>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">⏳ Attente N+1</div>
+        <div class="val" id="kpi-attente-n1">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">⏳ Attente N+2</div>
+        <div class="val" id="kpi-attente-n2">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">⏳ Attente DRH</div>
+        <div class="val" id="kpi-attente-drh">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">⏳ Attente DAF</div>
+        <div class="val" id="kpi-attente-daf">—</div>
+      </div>
+      </div>
+
+    <!-- Actions -->
+      <div class="actions">
+      <a href="{{ url_for('rh_new_demande') }}" class="btn" title="Nouvelle demande">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nouvelle demande
+      </a>
+      <a href="#" class="btn" title="Suivi des Congés">
+          <svg viewBox="0 0 24 24"><path d="M7 3v4M17 3v4M3 9h18M5 12h14M5 16h10"/></svg>
+        Personnel
+        </a>
+        <a href="#" class="btn" title="Besoins d'actes administratifs">
+          <svg viewBox="0 0 24 24"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg>
+        Suivi des besoins agents
+        </a>
+      </div>
+    </div>
+
+  <!-- Évolution des effectifs -->
+  <div class="card chart-card">
+    <h3>📈 Évolution des effectifs par année</h3>
+      <canvas id="chart-evolution" height="120"></canvas>
+  </div>
+
+  <!-- Répartition par grade -->
+  <div class="card chart-card">
+    <h3>🎯 Répartition par grade</h3>
+      <canvas id="chart-grade" height="180"></canvas>
+    </div>
+
+  <!-- Répartition par service -->
+  <div class="card chart-card">
+    <h3>🏢 Répartition par service</h3>
+      <canvas id="chart-service" height="180"></canvas>
+    </div>
+
+  <!-- Satisfaction besoins -->
+  <div class="card chart-card">
+    <h3>⭐ Satisfaction besoins d'actes</h3>
+      <canvas id="chart-satisfaction" height="160"></canvas>
+  </div>
+
+  <!-- Liste des demandes récentes -->
+  <div class="card">
+    <h3>📋 Demandes Récentes ({{ demandes|length }})</h3>
+    
+    {% if demandes and demandes|length > 0 %}
+    <table class="demandes-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Objet</th>
+          <th>Agent</th>
+          <th>État</th>
+          <th>Créée le</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in demandes %}
+        <tr>
+          <td><strong>#{{ d.id }}</strong></td>
+          <td><span class="badge-type">{{ d.type.value }}</span></td>
+          <td>
+            {{ d.objet }}
+            {% if d.document_joint %}<span title="Document joint">📎</span>{% endif %}
+            {% if d.acte_type %}<br><small style="color: #666;">{{ d.acte_type.value }}</small>{% endif %}
+          </td>
+          <td>#{{ d.agent_id }}</td>
+          <td>
+            {% set state_class = 'draft' %}
+            {% if 'Soumis' in d.current_state %}{% set state_class = 'submitted' %}
+            {% elif 'Validation' in d.current_state %}{% set state_class = 'validation' %}
+            {% elif 'Signature' in d.current_state %}{% set state_class = 'signature' %}
+            {% elif 'Archivé' in d.current_state %}{% set state_class = 'archived' %}
+            {% elif 'Rejeté' in d.current_state %}{% set state_class = 'rejected' %}
+            {% endif %}
+            <span class="badge-state {{ state_class }}">{{ d.current_state.value }}</span>
+            {% if d.current_assignee_role %}
+            <br><small style="color: #666;">→ {{ d.current_assignee_role }}</small>
+            {% endif %}
+          </td>
+          <td style="font-size: 0.85rem;">
+            {{ d.created_at.strftime('%d/%m/%Y') if d.created_at else '—' }}<br>
+            <small style="color: #999;">{{ d.created_at.strftime('%H:%M') if d.created_at else '' }}</small>
+          </td>
+          <td>
+            <div class="action-icons">
+              <a href="{{ url_for('rh_demande_detail', request_id=d.id) }}" class="icon-btn" title="Voir les détails">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </a>
+              <button class="icon-btn delete" onclick="supprimerDemande({{ d.id }})" title="Supprimer">
+                <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="no-demandes">📭 Aucune demande pour le moment</div>
+    {% endif %}
+  </div>
+  
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+async function getJSON(url){ 
+  const r = await fetch(url, {headers:{'Accept':'application/json'}}); 
+  return r.json(); 
+}
+
+(async ()=>{
+  try {
+  // KPIs
+    const k = await getJSON("{{ url_for('rh_home') }}api/kpis".replace(/\/$/, ""));
+    console.log('📊 KPIs reçus:', k);
+    
+    // KPIs Agents
+    document.getElementById('kpi-total-agents').textContent = k.total_agents ?? 0;
+  document.getElementById('kpi-actifs').textContent = k.actifs ?? 0;
+    
+    // KPIs Demandes
+    document.getElementById('kpi-total-demandes').textContent = k.total_demandes ?? 0;
+    document.getElementById('kpi-demandes-cours').textContent = k.demandes_en_cours ?? 0;
+    document.getElementById('kpi-demandes-archivees').textContent = k.demandes_archivees ?? 0;
+    document.getElementById('kpi-taux-traitement').textContent = `${k.taux_traitement ?? 0}%`;
+    
+    // Circuit - En attente par étape
+    document.getElementById('kpi-attente-n1').textContent = k.en_attente_n1 ?? 0;
+    document.getElementById('kpi-attente-n2').textContent = k.en_attente_n2 ?? 0;
+    document.getElementById('kpi-attente-drh').textContent = k.en_attente_drh ?? 0;
+    document.getElementById('kpi-attente-daf').textContent = k.en_attente_daf ?? 0;
+
+  // Évolution
+  const evo = await getJSON("{{ url_for('rh_home') }}api/evolution".replace(/\/$/, ""));
+  new Chart(document.getElementById('chart-evolution').getContext('2d'), {
+    type:'line',
+    data:{
+      labels: evo.map(x=>x.annee),
+      datasets:[{label:'Effectif', data:evo.map(x=>x.effectif)}]
+    }
+  });
+
+  // Grade
+  const grd = await getJSON("{{ url_for('rh_home') }}api/grade".replace(/\/$/, ""));
+  new Chart(document.getElementById('chart-grade').getContext('2d'), {
+    type:'bar',
+    data:{ labels: grd.map(x=>x.grade), datasets:[{label:'Agents', data: grd.map(x=>x.nb)}] }
+  });
+
+  // Service
+  const svc = await getJSON("{{ url_for('rh_home') }}api/service".replace(/\/$/, ""));
+  new Chart(document.getElementById('chart-service').getContext('2d'), {
+    type:'bar',
+    data:{ labels: svc.map(x=>x.service), datasets:[{label:'Agents', data: svc.map(x=>x.nb)}] }
+  });
+
+    // Satisfaction exprimés vs satisfaits
+    const sat = await getJSON("{{ url_for('rh_home') }}api/satisfaction-besoins".replace(/\/$/, ""));
+    new Chart(document.getElementById('chart-satisfaction').getContext('2d'), {
+      type:'bar',
+      data:{
+        labels:['Exprimés','Satisfaits'],
+        datasets:[{label:'Besoins', data:[sat.exprimes, sat.satisfaits]}]
+      }
+    });
+    
+  } catch(error) {
+    console.error('❌ Erreur chargement données RH:', error);
+  }
+})();
+
+// Fonction pour supprimer une demande
+async function supprimerDemande(demandeId) {
+  if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette demande ?\n\nCette action est irréversible.')) {
+    return;
+  }
+  
+  // Afficher l'overlay global
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) {
+    overlay.querySelector('.loading-text').textContent = 'Suppression en cours...';
+    overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
+    overlay.classList.add('show');
+  }
+  
+  try {
+    const res = await fetch(`/api/v1/rh/api/demandes/${demandeId}`, {
+      method: 'DELETE',
+      headers: {'Accept': 'application/json'}
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok && data.ok) {
+      // Mettre à jour l'overlay avec un message de succès
+      if (overlay) {
+        overlay.querySelector('.loading-text').textContent = '✅ Suppression réussie';
+        overlay.querySelector('.loading-subtext').textContent = 'Rechargement de la page...';
+      }
+      // Recharger après un court délai pour que l'utilisateur voie le message de succès
+      setTimeout(() => {
+        location.reload();
+      }, 800);
+    } else {
+      // Masquer l'overlay et afficher l'erreur
+      if (overlay) {
+        overlay.classList.remove('show');
+      }
+      alert('❌ ' + (data.detail || 'Impossible de supprimer cette demande'));
+    }
+  } catch (error) {
+    // Masquer l'overlay en cas d'erreur
+    if (overlay) {
+      overlay.classList.remove('show');
+    }
+    console.error('Erreur:', error);
+    alert('❌ Erreur lors de la suppression');
+  }
+}
+</script>
+{% endblock %}

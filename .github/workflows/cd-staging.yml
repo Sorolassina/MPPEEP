@@ -1,0 +1,75 @@
+# CD - Déploiement Staging
+# Déploie automatiquement en staging après les tests
+
+name: CD - Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:  # Permet déclenchement manuel
+
+jobs:
+  deploy-staging:
+    name: Déploiement Staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    environment:
+      name: staging
+      url: https://staging.mondomaine.com
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configuration Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: 📦 Installation uv
+      run: pip install uv
+    
+    - name: 🧪 Tests
+      run: |
+        cd mppeep
+        uv sync
+        uv run pytest -v
+    
+    - name: 🚀 Déploiement vers Staging (SSH)
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: 22
+        script: |
+          cd /var/www/mppeep
+          git pull origin develop
+          .venv/bin/uv sync
+          .venv/bin/python -c "from app.db.session import init_db; init_db()"
+          sudo systemctl restart mppeep-staging
+    
+    - name: ⏳ Attendre le démarrage
+      run: sleep 10
+    
+    - name: 🏥 Health Check
+      run: |
+        response=$(curl -s -o /dev/null -w "%{http_code}" https://staging.mondomaine.com/api/v1/ping)
+        if [ $response -eq 200 ]; then
+          echo "✅ Staging opérationnel"
+        else
+          echo "❌ Staging ne répond pas (HTTP $response)"
+          exit 1
+        fi
+    
+    - name: 📢 Notification Slack (optionnel)
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: 'Déploiement Staging : ${{ job.status }}'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+

@@ -1,0 +1,381 @@
+{% extends "layouts/base.html" %}
+{% block title %}Nouvelle demande RH · {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.form-card{
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,.06);
+  padding:2rem;
+  max-width:900px;
+  margin:0 auto;
+}
+
+.form-card h2 {
+  margin: 0 0 0.5rem 0;
+  color: #222;
+}
+
+.grid{
+  display:grid;
+  gap:1rem;
+  margin-top: 1.5rem;
+}
+
+@media(min-width:760px){
+  .grid{grid-template-columns:1fr 1fr;}
+}
+
+.row{
+  display:flex;
+  flex-direction:column;
+  gap:.4rem;
+}
+
+.row.full {
+  grid-column: 1/-1;
+}
+
+label{
+  font-weight:600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+label.required::after {
+  content: " *";
+  color: #dc3545;
+}
+
+input, select, textarea{
+  border:1px solid #e6e6e6;
+  border-radius:10px;
+  padding:.75rem .85rem;
+  font:inherit;
+  background:#fff;
+  transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.file-input-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+.file-input-wrapper input[type=file] {
+  position: absolute;
+  left: -9999px;
+}
+
+.file-input-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-input-label:hover {
+  background: #e9ecef;
+  border-color: #667eea;
+}
+
+.file-name {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.actions{
+  display:flex;
+  gap:.75rem;
+  margin-top:1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e6e6e6;
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.75rem 1.5rem;
+  border-radius:10px;
+  text-decoration:none;
+  border:2px solid #ddd;
+  background:#fff;
+  color:#222;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+}
+
+.btn.primary{
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color:#fff;
+  border-color:#667eea;
+}
+
+.btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.help{
+  font-size:.95rem;
+  color:#666;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 1.5rem 0 0.75rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e6e6e6;
+}
+
+/* Sections cachées par défaut */
+.hidden-section {
+  display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <h2>📝 Nouvelle Demande Administrative</h2>
+  <p class="help">
+    Créez une nouvelle demande administrative. Elle suivra automatiquement le circuit complet de validation : 
+    <strong>N1 → N2 → DRH → DG → DAF → Archivage</strong>
+  </p>
+
+  <form method="post" action="{{ url_for('rh_create_demande') }}" enctype="multipart/form-data">
+    
+    <!-- Informations de base -->
+    <div class="section-title">📋 Informations de base</div>
+    
+    <div class="grid">
+      <div class="row">
+        <label for="agent_id" class="required">Matricule / Agent ID</label>
+        <input type="number" name="agent_id" id="agent_id" required placeholder="ex: 1023">
+      </div>
+
+      <div class="row">
+        <label for="type" class="required">Type de demande</label>
+        <select name="type" id="type" required>
+          <option value="">-- Sélectionnez un type --</option>
+          <option value="Congé">🏖️ Congé</option>
+          <option value="Permission">⏰ Permission</option>
+          <option value="Formation">📚 Formation</option>
+          <option value="Besoin d'acte administratif">📄 Besoin d'acte administratif</option>
+        </select>
+      </div>
+
+      <div class="row full">
+        <label for="objet" class="required">Objet de la demande</label>
+        <input type="text" name="objet" id="objet" required placeholder="Résumé de votre demande">
+      </div>
+
+      <div class="row full">
+        <label for="motif">Motif détaillé (optionnel)</label>
+        <textarea name="motif" id="motif" rows="4" placeholder="Expliquez le contexte et les raisons de votre demande"></textarea>
+      </div>
+    </div>
+
+    <!-- Type d'acte (affiché si BESOIN_ACTE) -->
+    <div id="acte_section" class="hidden-section">
+      <div class="section-title">📄 Type d'Acte Administratif</div>
+      <div class="grid">
+        <div class="row full">
+          <label for="acte_type">Type d'acte</label>
+          <select name="acte_type" id="acte_type">
+            <option value="">-- Sélectionnez un acte --</option>
+            <option value="Attestation de travail">📋 Attestation de travail</option>
+            <option value="Certificat de présence">✅ Certificat de présence</option>
+            <option value="Attestation de salaire">💰 Attestation de salaire</option>
+            <option value="Ordre de mission">🎯 Ordre de mission</option>
+            <option value="Décision de congé">🏖️ Décision de congé</option>
+            <option value="Décision d'avancement">⬆️ Décision d'avancement</option>
+            <option value="Décision d'affectation">🔄 Décision d'affectation</option>
+            <option value="Décision de recrutement">👤 Décision de recrutement</option>
+            <option value="Acte de naissance">👶 Acte de naissance</option>
+            <option value="Casier judiciaire">⚖️ Casier judiciaire</option>
+            <option value="Certificat de nationalité">🌍 Certificat de nationalité</option>
+            <option value="Autre acte administratif">📄 Autre acte administratif</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dates et durée (affichées pour CONGE, PERMISSION, FORMATION) -->
+    <div id="dates_section" class="hidden-section">
+      <div class="section-title">📅 Dates et Durée</div>
+      <div class="grid">
+        <div class="row">
+          <label for="date_debut">Date de début</label>
+          <input type="date" name="date_debut" id="date_debut">
+        </div>
+        
+        <div class="row">
+          <label for="date_fin">Date de fin</label>
+          <input type="date" name="date_fin" id="date_fin">
+        </div>
+
+        <div class="row">
+          <label for="nb_jours">Nombre de jours</label>
+          <input type="number" step="0.5" name="nb_jours" id="nb_jours" placeholder="ex: 3.5" readonly>
+          <small class="help">Calculé automatiquement</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document joint (toujours visible) -->
+    <div class="section-title">📎 Document Joint (Optionnel)</div>
+    
+    <div class="grid">
+      <div class="row full">
+        <label for="document">Joindre un fichier</label>
+        <div class="file-input-wrapper">
+          <input type="file" name="document" id="document" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+          <label for="document" class="file-input-label">
+            <span>📁</span>
+            <span id="file-label">Cliquez pour sélectionner un fichier</span>
+          </label>
+        </div>
+        <div class="file-name" id="file-name"></div>
+        <small class="help">Formats acceptés : PDF, Word, Images (JPG, PNG) - Taille max : 10 Mo</small>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button type="submit" class="btn primary">📤 Créer la demande</button>
+      <a href="{{ url_for('rh_home') }}" class="btn">❌ Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ============================================
+// 1. Gestion du type de demande
+// ============================================
+const typeSelect = document.getElementById('type');
+const acteSection = document.getElementById('acte_section');
+const datesSection = document.getElementById('dates_section');
+const acteTypeSelect = document.getElementById('acte_type');
+
+typeSelect.addEventListener('change', function() {
+  const selectedType = this.value;
+  console.log('📋 Type sélectionné:', selectedType);
+  
+  // Réinitialiser tous les champs
+  acteSection.classList.add('hidden-section');
+  datesSection.classList.add('hidden-section');
+  acteTypeSelect.removeAttribute('required');
+  
+  // Afficher les sections appropriées
+  if (selectedType === "Besoin d'acte administratif") {
+    console.log('✅ Affichage section acte');
+    acteSection.classList.remove('hidden-section');
+    acteTypeSelect.setAttribute('required', 'required');
+  } else if (selectedType === "Congé" || selectedType === "Permission" || selectedType === "Formation") {
+    console.log('✅ Affichage section dates');
+    datesSection.classList.remove('hidden-section');
+  }
+});
+
+// ============================================
+// 2. Gestion du fichier
+// ============================================
+const fileInput = document.getElementById('document');
+const fileLabel = document.getElementById('file-label');
+const fileName = document.getElementById('file-name');
+
+fileInput.addEventListener('change', function() {
+  if (this.files && this.files.length > 0) {
+    const file = this.files[0];
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    
+    // Vérifier la taille
+    if (file.size > 10 * 1024 * 1024) {
+      alert('⚠️ Le fichier est trop volumineux (max 10 Mo)');
+      this.value = '';
+      fileLabel.textContent = 'Cliquez pour sélectionner un fichier';
+      fileName.textContent = '';
+      return;
+    }
+    
+    fileLabel.textContent = file.name;
+    fileName.textContent = `✅ Fichier sélectionné : ${file.name} (${sizeMB} Mo)`;
+    fileName.style.color = '#198754';
+    fileName.style.fontWeight = '600';
+  } else {
+    fileLabel.textContent = 'Cliquez pour sélectionner un fichier';
+    fileName.textContent = '';
+  }
+});
+
+// ============================================
+// 3. Calcul automatique du nombre de jours
+// ============================================
+const dateDebut = document.getElementById('date_debut');
+const dateFin = document.getElementById('date_fin');
+const nbJours = document.getElementById('nb_jours');
+
+function calculerJours() {
+  if (dateDebut.value && dateFin.value) {
+    const debut = new Date(dateDebut.value);
+    const fin = new Date(dateFin.value);
+    const diffTime = Math.abs(fin - debut);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    nbJours.value = diffDays;
+    console.log(`📊 Jours calculés: ${diffDays}`);
+  }
+}
+
+dateDebut.addEventListener('change', calculerJours);
+dateFin.addEventListener('change', calculerJours);
+
+// ============================================
+// 4. Validation du formulaire
+// ============================================
+document.querySelector('form').addEventListener('submit', function(e) {
+  const type = typeSelect.value;
+  
+  // Si BESOIN_ACTE, vérifier que le type d'acte est renseigné
+  if (type === "Besoin d'acte administratif") {
+    if (!acteTypeSelect.value) {
+      e.preventDefault();
+      alert('⚠️ Veuillez sélectionner un type d\'acte administratif');
+      acteTypeSelect.focus();
+      return false;
+    }
+  }
+  
+  console.log('✅ Formulaire validé, envoi en cours...');
+});
+
+// Log au chargement pour debug
+console.log('✅ Script du formulaire RH chargé');
+</script>
+{% endblock %}

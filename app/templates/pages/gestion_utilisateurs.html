@@ -1,0 +1,755 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Gestion des Utilisateurs{% endblock %}
+
+{% block page_title %}Gestion des Utilisateurs{% endblock %}
+
+{% block content %}
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Traitement en cours...</div>
+        <div class="loading-subtext">Veuillez patienter</div>
+    </div>
+</div>
+
+<div class="users-management">
+    <!-- Messages -->
+    <div id="message-container"></div>
+
+    <!-- En-tête avec actions -->
+    <div class="page-header">
+        <h2>👥 Liste des Utilisateurs</h2>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openCreateModal()">
+                ➕ Nouvel utilisateur
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="stats-cards">
+        <div class="mini-stat-card">
+            <span class="mini-stat-value">{{ users|length }}</span>
+            <span class="mini-stat-label">Utilisateurs</span>
+        </div>
+        <div class="mini-stat-card">
+            <span class="mini-stat-value">{{ users|selectattr('is_active')|list|length }}</span>
+            <span class="mini-stat-label">Actifs</span>
+        </div>
+        <div class="mini-stat-card">
+            <span class="mini-stat-value">{{ users|selectattr('type_user', 'equalto', 'admin')|list|length }}</span>
+            <span class="mini-stat-label">Admins</span>
+        </div>
+    </div>
+
+    <!-- Tableau des utilisateurs -->
+    <div class="users-table-container">
+        {% if users %}
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>ID</th>
+                    <th>Nom</th>
+                    <th>Email</th>
+                    <th>Type</th>
+                    <th>Statut</th>
+                    <th>Créé le</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="users-tbody">
+                {% for user in users %}
+                <tr class="{% if not user.is_active %}user-inactive{% endif %}" data-user-id="{{ user.id }}">
+                    <td class="photo-cell">
+                        {% if user.profile_picture %}
+                            <img src="/uploads/{{ user.profile_picture }}?t={{ now().timestamp() }}" alt="Photo {{ user.full_name }}" class="user-photo">
+                        {% else %}
+                            <div class="user-photo-placeholder">👤</div>
+                        {% endif %}
+                    </td>
+                    <td>#{{ user.id }}</td>
+                    <td>{{ user.full_name or '-' }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <span class="badge badge-{{ user.type_user }}">
+                            {{ user.type_user }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="status-badge status-active">✓ Actif</span>
+                        {% else %}
+                            <span class="status-badge status-inactive">✗ Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at|format_date }}</td>
+                    <td class="actions-cell">
+                        <button class="btn-icon" title="Modifier photo" onclick="openPhotoModal({{ user.id }}, '{{ user.full_name or user.email }}')">
+                            📸
+                        </button>
+                        <button class="btn-icon" title="Modifier" onclick="openEditModal({{ user.id }})">
+                            ✏️
+                        </button>
+                        <button class="btn-icon" title="Supprimer" onclick="deleteUser({{ user.id }}, '{{ user.email }}')">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>Aucun utilisateur trouvé</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bouton retour -->
+    <div class="actions-footer">
+        <a href="{{ url_for('accueil') }}" class="btn btn-secondary">
+            ← Retour à l'accueil
+        </a>
+    </div>
+</div>
+
+<!-- Modal Créer Utilisateur -->
+<div id="createModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>➕ Créer un Utilisateur</h3>
+            <span class="modal-close" onclick="closeModals()">&times;</span>
+        </div>
+        <form id="createUserForm" onsubmit="createUser(event)">
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label>Nom complet *</label>
+                <input type="text" name="full_name" required>
+            </div>
+            <div class="form-group">
+                <label>Mot de passe *</label>
+                <input type="password" name="password" required minlength="6">
+            </div>
+            <div class="form-group">
+                <label>Type d'utilisateur</label>
+                <select name="type_user">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="guest">Guest</option>
+                </select>
+            </div>
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" name="is_active" checked>
+                    Compte actif
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Créer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Upload Photo de Profil -->
+<div id="photoModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>📸 Photo de Profil</h3>
+            <span class="modal-close" onclick="closeModals()">&times;</span>
+        </div>
+        <div class="photo-upload-container">
+            <input type="hidden" id="photo-user-id">
+            <div class="current-photo">
+                <h4>Photo actuelle</h4>
+                <img id="current-photo-preview" src="" alt="Photo actuelle" class="photo-preview">
+                <p id="photo-user-name" class="text-muted"></p>
+            </div>
+            <div class="new-photo">
+                <h4>Nouvelle photo</h4>
+                <label for="photo-upload" class="btn btn-secondary">
+                    📁 Choisir une photo
+                </label>
+                <input type="file" id="photo-upload" accept="image/*" style="display: none;" onchange="uploadUserPhoto(this)">
+                <p class="help-text">JPG, PNG, GIF, WEBP - Max 2MB</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modifier Utilisateur -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>✏️ Modifier l'Utilisateur</h3>
+            <span class="modal-close" onclick="closeModals()">&times;</span>
+        </div>
+        <form id="editUserForm" onsubmit="updateUser(event)">
+            <input type="hidden" name="user_id" id="edit-user-id">
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="email" id="edit-email" required>
+            </div>
+            <div class="form-group">
+                <label>Nom complet *</label>
+                <input type="text" name="full_name" id="edit-full-name" required>
+            </div>
+            <div class="form-group">
+                <label>Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                <input type="password" name="password" id="edit-password" minlength="6">
+            </div>
+            <div class="form-group">
+                <label>Type d'utilisateur</label>
+                <select name="type_user" id="edit-type-user">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="guest">Guest</option>
+                </select>
+            </div>
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" name="is_active" id="edit-is-active">
+                    Compte actif
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModals()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Modifier</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles principaux */
+.users-management {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+/* Messages container */
+#message-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 2000;
+    max-width: 400px;
+}
+
+/* Les styles .alert sont maintenant dans components.css */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.page-header h2 {
+    margin: 0;
+    color: var(--secondary-color);
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+/* Stats Cards */
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.mini-stat-card {
+    background: var(--white-color);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.mini-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+}
+
+.mini-stat-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+}
+
+/* Tableau */
+.users-table-container {
+    background: var(--white-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: var(--spacing-lg);
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table thead {
+    background-color: var(--secondary-color);
+    color: var(--white-color);
+}
+
+.users-table th,
+.users-table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.users-table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+}
+
+.users-table tbody tr:hover {
+    background-color: var(--gray-100);
+}
+
+.user-inactive {
+    opacity: 0.6;
+}
+
+/* Photos de profil */
+.photo-cell {
+    text-align: center;
+}
+
+.user-photo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gray-300);
+}
+
+.user-photo-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--gray-200);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--gray-500);
+}
+
+.photo-upload-container {
+    padding: var(--spacing-lg);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+}
+
+.current-photo,
+.new-photo {
+    text-align: center;
+}
+
+.current-photo h4,
+.new-photo h4 {
+    margin-bottom: var(--spacing-md);
+    color: var(--secondary-color);
+}
+
+.photo-preview {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--gray-300);
+    margin: 0 auto var(--spacing-md);
+}
+
+.help-text {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-top: var(--spacing-sm);
+}
+
+/* Badges et Status - définis dans components.css */
+
+/* Actions */
+.actions-cell {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+    transition: transform 0.2s;
+}
+
+.btn-icon:hover {
+    transform: scale(1.2);
+}
+
+.actions-footer {
+    display: flex;
+    justify-content: flex-start;
+    gap: var(--spacing-md);
+}
+
+/* Modaux - définis dans components.css */
+
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+    color: var(--secondary-color);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--gray-400);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+    
+    .users-table-container {
+        overflow-x: auto;
+    }
+    
+    .users-table {
+        min-width: 900px;
+    }
+
+    .modal-content {
+        width: 95%;
+    }
+    
+    .photo-upload-container {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Fonctions pour l'overlay de chargement
+function showLoading(message = 'Traitement en cours...', subtext = 'Veuillez patienter') {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.querySelector('.loading-text').textContent = message;
+    overlay.querySelector('.loading-subtext').textContent = subtext;
+    overlay.classList.add('show');
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.remove('show');
+}
+
+// Fonction pour recharger la page automatiquement après succès
+function reloadAfterSuccess(message, delay = 1500) {
+    showMessage(message, 'success');
+    showMessage('🔄 Actualisation automatique...', 'info');
+    showLoading('Actualisation...', 'Mise à jour de la page en cours');
+    setTimeout(() => {
+        location.reload(true);  // true = force reload sans cache
+    }, delay);
+}
+
+// Fonctions pour les modaux
+function openCreateModal() {
+    document.getElementById('createModal').classList.add('show');
+    document.getElementById('createUserForm').reset();
+}
+
+async function openEditModal(userId) {
+    showLoading('Chargement...', 'Récupération des données utilisateur');
+    
+    try {
+        const response = await fetch(`/api/v1/admin/users/${userId}/get`);
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            document.getElementById('edit-user-id').value = data.user.id;
+            document.getElementById('edit-email').value = data.user.email;
+            document.getElementById('edit-full-name').value = data.user.full_name;
+            document.getElementById('edit-type-user').value = data.user.type_user;
+            document.getElementById('edit-is-active').checked = data.user.is_active;
+            document.getElementById('edit-password').value = '';
+            
+            document.getElementById('editModal').classList.add('show');
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors du chargement des données', 'error');
+    }
+}
+
+function closeModals() {
+    document.getElementById('createModal').classList.remove('show');
+    document.getElementById('editModal').classList.remove('show');
+    document.getElementById('photoModal').classList.remove('show');
+}
+
+// Ouvrir le modal de photo
+async function openPhotoModal(userId, userName) {
+    showLoading('Chargement...', 'Récupération des données utilisateur');
+    
+    try {
+        const response = await fetch(`/api/v1/admin/users/${userId}/get`);
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            document.getElementById('photo-user-id').value = userId;
+            document.getElementById('photo-user-name').textContent = userName;
+            
+            // Afficher la photo actuelle ou placeholder
+            const photoPreview = document.getElementById('current-photo-preview');
+            if (data.user.profile_picture) {
+                photoPreview.src = `/uploads/${data.user.profile_picture}`;
+                photoPreview.style.display = 'block';
+            } else {
+                photoPreview.src = '/static/images/default-avatar.png';
+                photoPreview.style.display = 'block';
+            }
+            
+            document.getElementById('photoModal').classList.add('show');
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors du chargement des données', 'error');
+    }
+}
+
+// Upload de la photo de profil
+async function uploadUserPhoto(input) {
+    if (!input.files || !input.files[0]) {
+        return;
+    }
+    
+    const file = input.files[0];
+    const userId = document.getElementById('photo-user-id').value;
+    
+    // Vérifier la taille (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+        showMessage('Le fichier est trop volumineux (max 2MB)', 'error');
+        input.value = '';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('photo', file);
+    
+    closeModals();
+    showLoading('Upload...', `Téléchargement de ${file.name} en cours`);
+    
+    try {
+        const response = await fetch(`/api/v1/admin/users/${userId}/upload-photo`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            reloadAfterSuccess(data.message);
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors de l\'upload', 'error');
+    }
+    
+    input.value = '';
+}
+
+// Fermer le modal en cliquant en dehors
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        closeModals();
+    }
+}
+
+// Créer un utilisateur
+async function createUser(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    closeModals();
+    showLoading('Création...', 'Création de l\'utilisateur en cours');
+    
+    try {
+        const response = await fetch('/api/v1/admin/users/create', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            reloadAfterSuccess(data.message);
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors de la création', 'error');
+    }
+}
+
+// Modifier un utilisateur
+async function updateUser(event) {
+    event.preventDefault();
+    const form = event.target;
+    const userId = form.querySelector('[name="user_id"]').value;
+    const formData = new FormData(form);
+    
+    closeModals();
+    showLoading('Modification...', 'Mise à jour de l\'utilisateur en cours');
+    
+    try {
+        const response = await fetch(`/api/v1/admin/users/${userId}/update`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            reloadAfterSuccess(data.message);
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors de la modification', 'error');
+    }
+}
+
+// Supprimer un utilisateur
+async function deleteUser(userId, email) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${email} ?`)) {
+        return;
+    }
+    
+    showLoading('Suppression...', `Suppression de ${email} en cours`);
+    
+    try {
+        const response = await fetch(`/api/v1/admin/users/${userId}/delete`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        hideLoading();
+        
+        if (data.success) {
+            reloadAfterSuccess(data.message);
+        } else {
+            showMessage(data.message, 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showMessage('Erreur lors de la suppression', 'error');
+    }
+}
+
+// Afficher un message
+function showMessage(message, type) {
+    const container = document.getElementById('message-container');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+    
+    container.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

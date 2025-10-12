@@ -1,0 +1,35 @@
+<nav class="navbar">
+  <div class="navbar-container">
+      <div class="navbar-brand">
+          <a href="{{ url_for('read_root') }}">
+              <img src="{{ static_url(system_settings.logo_path or 'images/logo.jpg') }}" alt="Logo" class="navbar-logo">
+              <span>{{ system_settings.company_name or app_name }}</span>
+          </a>
+      </div>
+      
+      <div class="navbar-menu">
+          <a href="{{ url_for('accueil') }}" class="nav-link">Accueil</a>
+          <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+          <a href="{{ url_for('fichiers') }}" class="nav-link">Fichiers</a>
+          <a href="#" class="nav-link">Budget</a>
+          <a href="#" class="nav-link">RH</a>
+          <a href="#" class="nav-link">Stocks</a>
+          
+          
+          {% if current_user %}
+              <span class="nav-user">
+                  {% if current_user.profile_picture %}
+                      <img src="/uploads/{{ current_user.profile_picture }}?v={{ current_user.id }}_{{ now().timestamp() }}" alt="Photo profil" class="nav-user-photo">
+                  {% else %}
+                      👤
+                  {% endif %}
+                  {{ current_user.full_name or current_user.email }}
+              </span>
+              <a href="{{ url_for('logout') }}" class="nav-link">Déconnexion</a>
+          {% else %}
+              <a href="{{ url_for('login_page') }}" class="nav-link">Connexion</a>
+          {% endif %}
+      </div>
+  </div>
+</nav>
+

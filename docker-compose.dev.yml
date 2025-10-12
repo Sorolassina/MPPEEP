@@ -1,0 +1,93 @@
+# ============================================
+# DOCKER COMPOSE - DÉVELOPPEMENT
+# ============================================
+# Services : App (hot-reload) + PostgreSQL
+# Usage : docker-compose -f docker-compose.dev.yml up
+# ============================================
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # SERVICE : PostgreSQL Database
+  # ==========================================
+  db:
+    image: postgres:16-alpine
+    container_name: mppeep-db-dev
+    restart: unless-stopped
+    
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mppeep_dev
+    
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    
+    ports:
+      - "5432:5432"
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    networks:
+      - mppeep-dev-network
+
+  # ==========================================
+  # SERVICE : Application FastAPI (DEV)
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    
+    container_name: mppeep-app-dev
+    restart: unless-stopped
+    
+    environment:
+      APP_NAME: MPPEEP Dashboard (DEV)
+      ENV: dev
+      DEBUG: "true"
+      SECRET_KEY: dev-secret-key-change-in-prod
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mppeep_dev
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      CORS_ALLOW_ALL: "true"
+    
+    ports:
+      - "8000:8000"
+    
+    volumes:
+      # Mount le code pour hot-reload
+      - ./app:/app/app:rw
+      - ./scripts:/app/scripts:rw
+      - ./tests:/app/tests:rw
+      - ./logs:/app/logs:rw
+    
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    networks:
+      - mppeep-dev-network
+    
+    # Commande avec hot-reload
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  postgres_dev_data:
+    name: mppeep-postgres-dev-data
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  mppeep-dev-network:
+    name: mppeep-dev-network
+    driver: bridge
+

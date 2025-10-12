@@ -1,0 +1,134 @@
+<style>
+    /* --- NAVBAR --- */
+    .navbar { background:var(--white-color); border-bottom:1px solid var(--primary-color); }
+    .navbar-container{
+      max-width:1200px; margin:0 auto; display:flex; align-items:center;
+      justify-content:space-between; gap:1rem; padding:.5rem 1rem;
+    }
+
+    .nav-link:hover{
+      background:var(--primary-color);
+      color:var(--white-color);
+    }
+    
+    /* --- BRAND --- */
+    .navbar-brand a{ display:flex; align-items:center; gap:.5rem; text-decoration:none; color:#222; font-weight:600; }
+    .navbar-logo{ height:36px; width:auto; border-radius:6px; }
+    
+    /* --- MENU (bandeau) --- */
+    .navbar-menu{ display:flex; align-items:center; gap:.5rem; }
+    .menu{
+      padding:.4rem; background:var(--white-color); display:flex; gap:.25rem;
+      
+    }
+    
+    /* item */
+    .link{
+      display:inline-flex; justify-content:center; align-items:center;
+      width:100px; height:50px; border-radius:8px; position:relative; z-index:1;
+      overflow:hidden; transform-origin:center left; transition:width .2s ease-in, color .2s ease-in;
+      text-decoration:none; color:#222; font-weight:500;
+    }
+    .link::before{
+      content:""; position:absolute; inset:0; border-radius:8px; background:var(--primary-color);
+      transform:translateX(100%); transition:transform .2s ease-in; transform-origin:center right; z-index:-1;
+    }
+    .link:hover,.link:focus{ outline:0; width:138px; color:#111; }
+    .link:hover::before,.link:focus::before{ transform:translateX(0); }
+    
+    /* icône */
+    .link-icon{ width:50px; height:28px; position:absolute; left:18px; display:block; padding-right: 12px }
+    .link-icon img{ width:100%; height:28px; padding-right: 10px}
+    
+    /* label */
+    .link-title{
+      transform:translateX(100%); transition:transform .2s ease-in, opacity .2s ease-in;
+      transform-origin:center right; display:block; text-align:center; text-indent:28px; width:100%; opacity:0;
+      text-indent: 48px;
+    }
+    .link:hover .link-title, .link:focus .link-title{ transform:translateX(0); opacity:1; }
+    
+    /* user chip */
+    .nav-user{
+      display:flex; align-items:center; gap:.5rem; margin-left:.5rem;
+      padding:.35rem .6rem; border-radius:999px; background:var(--secondary-color);color:var(--white-color); font-size:.95rem;
+    }
+    .nav-user-photo{ width:28px; height:28px; border-radius:50%; object-fit:cover; }
+    
+    /* responsive */
+    @media (max-width:900px){ .navbar-container{flex-wrap:wrap; gap:.75rem;} .navbar-menu{width:100%; justify-content:center;} }
+    </style>
+    
+    <nav class="navbar">
+      <div class="navbar-container">
+        <!-- Brand -->
+        <div class="navbar-brand">
+          <a href="{{ url_for('read_root') }}">
+            <img src="{{ static_url(system_settings.logo_path or 'images/logo.jpg') }}" alt="Logo" class="navbar-logo">
+            <span>{{ system_settings.company_name or app_name }}</span>
+          </a>
+        </div>
+    
+        <!-- Menu (icônes + libellés au hover) -->
+        <div class="navbar-menu">
+          <div class="menu">
+            <!-- Accueil -->
+            <a href="{{ url_for('accueil') }}" class="link" aria-label="Accueil">
+              <span class="link-icon">
+                <img src="{{ static_url('images/navbar/accueil.png') }}" alt="">
+              </span>
+              <span class="link-title">Accueil</span>
+            </a>
+    
+            <!-- Dashboard -->
+            <a href="{{ url_for('dashboard') }}" class="link" aria-label="Dashboard">
+              <span class="link-icon">
+                <img src="{{ static_url('images/navbar/dashboard.png') }}" alt="">
+              </span>
+              <span class="link-title">Dashboard</span>
+            </a>
+    
+            <!-- Budget -->
+            <a href="#" class="link" aria-label="Fichiers">
+              <span class="link-icon">
+                <img src="{{ static_url('images/navbar/budget.png') }}" alt="">
+              </span>
+              <span class="link-title">Budget</span>
+            </a>
+    
+            <!-- RH -->
+            <a href="{{ url_for('rh_home') }}" class="link" aria-label="RH">
+              <span class="link-icon">
+                <img src="{{ static_url('images/navbar/rh.png') }}" alt="">
+              </span>
+              <span class="link-title">RH</span>
+            </a>
+    
+            <!--Stocks-->
+            <a href="#" class="link" aria-label="RH">
+              <span class="link-icon">
+                <img src="{{ static_url('images/navbar/stocks.png') }}" alt="">
+              </span>
+              <span class="link-title">Stocks</span>
+            </a>
+
+          </div>
+    
+          {% if current_user %}
+            <!-- Chip à droite (avec vraie photo si dispo) -->
+            <a href="{{ url_for('logout') }}" class="nav-link" style="margin-left:.5rem;color:black">Déconnexion</a>
+            <span class="nav-user">
+              {% if current_user.profile_picture %}
+                <img src="/uploads/{{ current_user.profile_picture }}?v={{ current_user.id }}_{{ now().timestamp() }}" alt="Photo profil" class="nav-user-photo">
+              {% else %}
+                <img src="{{ static_url('images/nav/user.png') }}" alt="Photo profil" class="nav-user-photo">
+              {% endif %}
+              {{ current_user.full_name or current_user.email }}
+            </span>
+          {% else %}
+            <a href="{{ url_for('login_page') }}" class="nav-link" style="margin-left:.5rem;color:black">Connexion</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+    

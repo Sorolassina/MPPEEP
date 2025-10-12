@@ -1,0 +1,550 @@
+{% extends "layouts/base.html" %}
+{% block title %}Circuit administratif · {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.wrap{
+  max-width:1100px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:1.5rem;
+  padding: 1.5rem;
+}
+
+.card{
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,.06);
+  padding:1.5rem;
+}
+
+.card h2, .card h3 {
+  margin: 0 0 1rem 0;
+  color: #222;
+}
+
+/* Informations de la demande */
+.meta{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap:.75rem;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.meta-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.meta-value {
+  font-size: 1rem;
+  color: #222;
+  font-weight: 600;
+}
+
+/* Badge type de demande */
+.badge{
+  display:inline-block;
+  padding:.4rem .8rem;
+  border-radius:999px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight:600;
+  font-size: 0.9rem;
+}
+
+/* État actuel */
+.current-state {
+  font-size: 1.1rem;
+  color: #1f6feb;
+  font-weight: 700;
+}
+
+.assignee {
+  background: #fff3cd;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  color: #856404;
+  font-size: 0.85rem;
+}
+
+/* Circuit de validation visuel */
+.workflow-circuit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: #f8f9fa;
+  border-left: 4px solid #dee2e6;
+  position: relative;
+}
+
+.workflow-step.completed {
+  background: #d1e7dd;
+  border-left-color: #0f5132;
+}
+
+.workflow-step.current {
+  background: #cfe2ff;
+  border-left-color: #084298;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+.workflow-step.pending {
+  background: #f8f9fa;
+  border-left-color: #dee2e6;
+  opacity: 0.7;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #6c757d;
+  color: white;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.workflow-step.completed .step-number {
+  background: #198754;
+}
+
+.workflow-step.current .step-number {
+  background: #0d6efd;
+}
+
+.step-info {
+  flex: 1;
+}
+
+.step-title {
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 0.25rem;
+}
+
+.step-role {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.step-icon {
+  font-size: 1.5rem;
+}
+
+.workflow-step.completed .step-icon::before {
+  content: "✅";
+}
+
+.workflow-step.current .step-icon::before {
+  content: "⏳";
+}
+
+.workflow-step.pending .step-icon::before {
+  content: "⏸️";
+}
+
+/* Timeline historique */
+.timeline{
+  position:relative;
+  margin:1rem 0;
+  padding-left:2rem;
+}
+
+.timeline::before{
+  content:"";
+  position:absolute;
+  left:.5rem;
+  top:0;
+  bottom:0;
+  width:2px;
+  background:#e5e7eb;
+}
+
+.t-item{
+  position:relative;
+  margin-bottom:1.25rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.t-item::before{
+  content:"";
+  position:absolute;
+  left:-1.6rem;
+  top:1rem;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:#1f6feb;
+  border: 2px solid white;
+}
+
+.t-title{
+  font-weight:600;
+  color: #222;
+  margin-bottom: 0.25rem;
+}
+
+.t-meta{
+  color:#666;
+  font-size:.9rem;
+}
+
+/* Actions */
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.75rem;
+  margin-top:1rem;
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+  padding:.75rem 1.25rem;
+  border-radius:10px;
+  border:2px solid #ddd;
+  background:#fff;
+  color:#222;
+  cursor:pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+}
+
+.btn.primary{
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color:#fff;
+  border-color:#667eea;
+}
+
+.btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+small.code{
+  font-family: monospace;
+  background:#f6f8fa;
+  padding:.25rem .5rem;
+  border-radius:6px;
+  font-size: 0.85rem;
+  color: #666;
+  display: block;
+  margin-top: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .meta {
+    grid-template-columns: 1fr;
+  }
+  
+  .wrap {
+    padding: 1rem;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  
+  <!-- Informations de la demande -->
+  <div class="card">
+    <h2>📄 Détails de la Demande #{{ req.id }}</h2>
+    
+    <div class="meta">
+      <div class="meta-item">
+        <span class="meta-label">Type de demande</span>
+        <span class="meta-value"><span class="badge">{{ req.type.value }}</span></span>
+      </div>
+      
+      <div class="meta-item">
+        <span class="meta-label">Agent</span>
+        <span class="meta-value">#{{ req.agent_id }}</span>
+      </div>
+      
+      <div class="meta-item">
+        <span class="meta-label">Date de création</span>
+        <span class="meta-value">{{ req.created_at.strftime('%d/%m/%Y à %H:%M') if req.created_at else '—' }}</span>
+      </div>
+      
+      <div class="meta-item">
+        <span class="meta-label">Dernière modification</span>
+        <span class="meta-value">{{ req.updated_at.strftime('%d/%m/%Y à %H:%M') if req.updated_at else '—' }}</span>
+      </div>
+      
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">Objet de la demande</span>
+        <span class="meta-value">{{ req.objet }}</span>
+      </div>
+      
+      {% if req.acte_type %}
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">📄 Type d'acte administratif</span>
+        <span class="meta-value">
+          <span class="badge" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            {{ req.acte_type }}
+          </span>
+        </span>
+      </div>
+      {% endif %}
+      
+      {% if req.motif %}
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">Motif détaillé</span>
+        <span class="meta-value">{{ req.motif }}</span>
+      </div>
+      {% endif %}
+      
+      {% if req.document_joint %}
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">📎 Document joint</span>
+        <span class="meta-value">
+          <a href="/{{ req.document_joint }}" target="_blank" style="color: #667eea; text-decoration: underline;">
+            📥 {{ req.document_filename or 'Télécharger le document' }}
+          </a>
+        </span>
+      </div>
+      {% endif %}
+      
+      {% if req.date_debut %}
+      <div class="meta-item">
+        <span class="meta-label">Date de début</span>
+        <span class="meta-value">{{ req.date_debut.strftime('%d/%m/%Y') if req.date_debut else '—' }}</span>
+      </div>
+      {% endif %}
+      
+      {% if req.date_fin %}
+      <div class="meta-item">
+        <span class="meta-label">Date de fin</span>
+        <span class="meta-value">{{ req.date_fin.strftime('%d/%m/%Y') if req.date_fin else '—' }}</span>
+      </div>
+      {% endif %}
+      
+      {% if req.nb_jours %}
+      <div class="meta-item">
+        <span class="meta-label">Nombre de jours</span>
+        <span class="meta-value">{{ req.nb_jours }} jour(s)</span>
+      </div>
+      {% endif %}
+      
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">État actuel du circuit</span>
+        <span class="meta-value">
+          <span class="current-state">{{ req.current_state.value }}</span>
+          {% if req.current_assignee_role %}
+          <span class="assignee">En attente : {{ req.current_assignee_role }}</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Circuit de validation complet -->
+  <div class="card">
+    <h3>🔄 Circuit de Validation Administratif</h3>
+    <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+      Toutes les étapes du circuit sont <strong>obligatoires</strong>. La demande doit passer par l'ensemble du processus.
+    </p>
+    
+    <div class="workflow-circuit">
+      <!-- Étape 1 : DRAFT -->
+      <div class="workflow-step {% if req.current_state == 'Brouillon' %}current{% elif req.current_state != 'Brouillon' %}completed{% else %}pending{% endif %}">
+        <span class="step-number">1</span>
+        <div class="step-info">
+          <div class="step-title">📝 Brouillon (DRAFT)</div>
+          <div class="step-role">Agent crée la demande</div>
+        </div>
+        <span class="step-icon"></span>
+      </div>
+
+      <!-- Étape 2 : SUBMITTED -->
+      <div class="workflow-step {% if req.current_state == 'Soumis' %}current{% elif req.current_state not in ['Brouillon', 'Soumis'] %}completed{% else %}pending{% endif %}">
+        <span class="step-number">2</span>
+        <div class="step-info">
+          <div class="step-title">📤 Soumis (SUBMITTED)</div>
+          <div class="step-role">Demande soumise pour traitement</div>
+        </div>
+        <span class="step-icon"></span>
+      </div>
+
+      <!-- Étape 3 : VALIDATION_N1 -->
+      <div class="workflow-step {% if req.current_state == 'Validation N1' %}current{% elif req.current_state in ['Validation N2', 'Validation DRH', 'Signature DG', 'Signature DAF', 'Archivé'] %}completed{% else %}pending{% endif %}">
+        <span class="step-number">3</span>
+        <div class="step-info">
+          <div class="step-title">👤 Validation N+11</div>
+          <div class="step-role">Chef de service / Hiérarchie niveau 1</div>
+        </div>
+        <span class="step-icon"></span>
+      </div>
+
+      <!-- Étape 4 : VALIDATION_N2 ⭐ OBLIGATOIRE -->
+      <div class="workflow-step {% if req.current_state == 'Validation N2' %}current{% elif req.current_state in ['Validation DRH', 'Signature DG', 'Signature DAF', 'Archivé'] %}completed{% else %}pending{% endif %}">
+        <span class="step-number">4</span>
+        <div class="step-info">
+          <div class="step-title">👥 Validation N+2 ⭐ OBLIGATOIRE</div>
+          <div class="step-role">Chef de direction / Hiérarchie niveau 2</div>
+        </div>
+        <span class="step-icon"></span>
+      </div>
+
+      <!-- Étape 5 : VALIDATION_DRH -->
+      <div class="workflow-step {% if req.current_state == 'Validation DRH' %}current{% elif req.current_state in ['Signature DG', 'Signature DAF', 'Archivé'] %}completed{% else %}pending{% endif %}">
+        <span class="step-number">5</span>
+        <div class="step-info">
+          <div class="step-title">🏢 Validation DRH</div>
+          <div class="step-role">Direction des Ressources Humaines</div>
+        </div>
+        <span class="step-icon"></span>
+      </div>
+
+      <!-- Étape 7 : SIGNATURE_DAF ⭐ OBLIGATOIRE -->
+      <div class="workflow-step {% if req.current_state == 'Signature DAF' %}current{% elif req.current_state == 'Archivé' %}completed{% else %}pending{% endif %}">
+        <span class="step-number">6</span>
+        <div class="step-info">
+          <div class="step-title">💼 Signature DAF ⭐ OBLIGATOIRE</div>
+          <div class="step-role">Directeur Administratif et Financier</div>
+        </div>
+        <span class="step-icon"></span>
+      </div>
+
+      <!-- Étape 8 : ARCHIVED -->
+      <div class="workflow-step {% if req.current_state == 'Archivé' %}completed{% else %}pending{% endif %}">
+        <span class="step-number">7</span>
+        <div class="step-info">
+          <div class="step-title">📦 Archivé</div>
+          <div class="step-role">Demande traitée et archivée</div>
+        </div>
+        <span class="step-icon"></span>
+      </div>
+    </div>
+
+    <!-- Actions possibles -->
+    <div class="actions">
+      {% if next_steps and next_steps|length > 0 %}
+        <div style="width: 100%; margin-bottom: 0.5rem;">
+          <strong>Actions disponibles :</strong>
+        </div>
+        {% for step in next_steps %}
+          <button class="btn primary" data-to="{{ step.to_state }}">
+            ➡️ Passer à {{ step.to_state.value }}
+          </button>
+        {% endfor %}
+      {% else %}
+        {% if req.current_state == 'Archivé' %}
+          <span style="color: #198754; font-weight: 600;">✅ Demande terminée et archivée</span>
+        {% elif req.current_state == 'Rejeté' %}
+          <span style="color: #dc3545; font-weight: 600;">❌ Demande rejetée</span>
+        {% else %}
+          <span style="color: #856404;">⏳ En attente de traitement par {{ req.current_assignee_role or 'le prochain responsable' }}</span>
+        {% endif %}
+      {% endif %}
+    </div>
+    
+    <small class="code">POST /api/v1/rh/demandes/{{ req.id }}/advance { "to_state": "..." }</small>
+  </div>
+
+  <!-- Historique détaillé -->
+  <div class="card">
+    <h3>📜 Historique des Transitions</h3>
+    <div class="timeline">
+      {% if history and history|length > 0 %}
+        {% for h in history %}
+          <div class="t-item">
+            <div class="t-title">{{ h.from_state.value }} ➡️ {{ h.to_state.value }}</div>
+            <div class="t-meta">
+              🕐 {{ h.acted_at.strftime('%d/%m/%Y à %H:%M') if h.acted_at else '—' }}
+              {% if h.acted_by_role %} • 👤 Rôle : <strong>{{ h.acted_by_role }}</strong>{% endif %}
+              {% if h.acted_by_user_id %} • 🆔 Utilisateur #{{ h.acted_by_user_id }}{% endif %}
+              {% if h.comment %}<br>💬 Commentaire : <em>{{ h.comment }}</em>{% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="t-item">
+          <div class="t-title">📝 Création de la demande</div>
+          <div class="t-meta">
+            🕐 {{ req.created_at.strftime('%d/%m/%Y à %H:%M') if req.created_at else '—' }}
+            <br>État initial : <strong>{{ req.current_state.value }}</strong>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bouton retour -->
+  <div style="text-align: center;">
+    <a href="{{ url_for('rh_home') }}" class="btn">
+      ⬅️ Retour au tableau de bord RH
+    </a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function advance(to_state){
+  const confirmMsg = `Êtes-vous sûr de vouloir faire passer cette demande à l'état "${to_state}" ?`;
+  if (!confirm(confirmMsg)) return;
+  
+  try {
+    const res = await fetch("{{ url_for('rh_demande_advance', request_id=req.id) }}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({ to_state })
+    });
+    
+    const data = await res.json();
+    
+    if (data.ok) {
+      alert(`✅ Transition réussie vers "${to_state}"`);
+      location.reload();
+    } else {
+      alert("❌ Transition refusée");
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    alert("❌ Erreur lors de la transition");
+  }
+}
+
+// Attacher les événements aux boutons
+document.querySelectorAll('button[data-to]').forEach(btn => {
+  btn.addEventListener('click', () => advance(btn.dataset.to));
+});
+</script>
+{% endblock %}

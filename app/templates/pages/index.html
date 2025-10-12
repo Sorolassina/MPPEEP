@@ -1,0 +1,65 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h2>Bienvenue sur {{ app_name }} 👋</h2>
+        <p class="hero-subtitle">
+            Votre application FastAPI est prête !
+        </p>
+        
+        <div class="hero-actions">
+            <a href="{{ url_for('login_page') }}" class="btn btn-primary btn-lg">Se connecter</a>
+            <a href="/api/v1/ping" class="btn btn-secondary btn-lg">Test API</a>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🔐</div>
+            <h3>Authentification</h3>
+            <p>Système de login complet avec récupération de mot de passe</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">🗄️</div>
+            <h3>Base de Données</h3>
+            <p>SQLite en dev, PostgreSQL en production</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">🧪</div>
+            <h3>Tests</h3>
+            <p>40 tests automatisés (unitaires, intégration, fonctionnels)</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon">📚</div>
+            <h3>Documentation</h3>
+            <p>Documentation complète et accessible</p>
+        </div>
+    </div>
+</section>
+
+<section class="quick-start">
+    <h2>Démarrage Rapide</h2>
+    <div class="code-block">
+        <pre><code># Installation
+uv sync
+
+# Créer un utilisateur admin
+python scripts/create_user.py
+
+# Lancer le serveur
+uvicorn app.main:app --reload
+
+# Lancer les tests
+pytest</code></pre>
+    </div>
+</section>
+{% endblock %}
+

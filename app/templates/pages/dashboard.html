@@ -1,0 +1,104 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block styles %}
+<style>
+  .main-content{height:100%;padding-top:3px; }
+  .pbi-container {
+    width: 100%;
+    height:100%
+  }
+
+  .pbi-card {
+    position: relative;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(0,0,0,.06);
+    overflow: hidden;
+  }
+  .pbi-frame-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+  .pbi-frame-wrap::before {
+    content: "";
+    display: block;
+    padding-top: calc(100% * 9 / 16);
+  }
+  .pbi-frame, .pbi-loader {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+  }
+  .pbi-frame { border: 0; display: block; }
+  .pbi-loader {
+    display: grid; place-items: center;
+    background: linear-gradient(120deg, rgba(0,0,0,.02), rgba(0,0,0,0) 40%), var(--primary-light, #f7f9fc);
+  }
+  .pbi-spinner {
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 3px solid rgba(0,0,0,.15);
+    border-top-color: var(--primary-color, #4f46e5);
+    animation: pbi-spin 1s linear infinite;
+    margin: 0 auto;
+  }
+  .pbi-hint { margin-top: .75rem; font-size: .9rem; color: #555; text-align:center; }
+  @keyframes pbi-spin { to { transform: rotate(360deg); } }
+
+  .pbi-actions { display: flex; gap: .5rem; }
+  .btn {
+    appearance: none; border: 0; border-radius: 999px;
+    padding: .55rem .9rem; font-size: .9rem;
+    background: var(--primary-color, #4f46e5); color: #fff;
+    box-shadow: 0 6px 14px rgba(79,70,229,.25); cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pbi-container">
+
+  <div class="pbi-card">
+    <div class="pbi-frame-wrap">
+      <div id="pbiLoader" class="pbi-loader" aria-hidden="false">
+        <div>
+          <div class="pbi-spinner" aria-label="Chargement du rapport..."></div>
+          <div class="pbi-hint">Chargement du rapport Power BI…</div>
+        </div>
+      </div>
+
+      <!-- Iframe Publish to web (public) -->
+      <iframe
+        id="pbiFrame"
+        class="pbi-frame"
+        title="Rapport_budgetaire_Portefeuille"
+        src="https://app.powerbi.com/view?r=eyJrIjoiMWY4MDBiYTMtZTRhZS00NGM5LTk4YTItNjMxMzAxMjM3MTljIiwidCI6IjgxMzg2OTIwLTdiMTItNDVkNi1hMTA4LTZlYWZkMzRkYjY3NSJ9"
+        allowfullscreen
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin">
+      </iframe>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const frame = document.getElementById('pbiFrame');
+    const loader = document.getElementById('pbiLoader');
+    const btnFs  = document.getElementById('btnFullscreen');
+
+    frame.addEventListener('load', () => { if (loader) loader.style.display = 'none'; });
+
+    btnFs?.addEventListener('click', () => {
+      const wrap = frame.closest('.pbi-frame-wrap');
+      if (!wrap) return;
+      const req = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.msRequestFullscreen;
+      req?.call(wrap);
+    });
+
+    // Sécurité : si l’iframe ne finit jamais de charger, on cache le loader au bout de 15s
+    setTimeout(() => { if (loader && loader.style.display !== 'none') loader.style.display = 'none'; }, 15000);
+  })();
+</script>
+{% endblock %}

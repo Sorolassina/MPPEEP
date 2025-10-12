@@ -1,0 +1,74 @@
+# Workflow de Release
+# Crée une release et un changelog automatiquement
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # v1.0.0, v1.2.3, etc.
+
+jobs:
+  create-release:
+    name: Créer une Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Historique complet pour changelog
+    
+    - name: 📝 Générer le Changelog
+      id: changelog
+      uses: mikepenz/release-changelog-builder-action@v4
+      with:
+        configuration: |
+          {
+            "categories": [
+              {
+                "title": "## 🚀 Nouvelles Fonctionnalités",
+                "labels": ["feat", "feature"]
+              },
+              {
+                "title": "## 🐛 Corrections de Bugs",
+                "labels": ["fix", "bugfix"]
+              },
+              {
+                "title": "## 📚 Documentation",
+                "labels": ["docs", "documentation"]
+              },
+              {
+                "title": "## ⚡ Performance",
+                "labels": ["perf", "performance"]
+              },
+              {
+                "title": "## 🔒 Sécurité",
+                "labels": ["security"]
+              }
+            ]
+          }
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🎉 Créer la Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: false
+        prerelease: false
+    
+    - name: 📢 Notification Release
+      uses: 8398a7/action-slack@v3
+      with:
+        status: 'success'
+        text: |
+          🎉 Nouvelle version disponible : ${{ github.ref_name }}
+          
+          ${{ steps.changelog.outputs.changelog }}
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+

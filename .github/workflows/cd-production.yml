@@ -1,0 +1,131 @@
+# CD - Déploiement Production
+# Déploiement manuel en production (nécessite approbation)
+
+name: CD - Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Taper "DEPLOY" pour confirmer'
+        required: true
+        default: ''
+
+jobs:
+  check-confirmation:
+    name: Vérification Confirmation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: ✅ Vérifier la confirmation
+      run: |
+        if [ "${{ github.event.inputs.confirm }}" != "DEPLOY" ]; then
+          echo "❌ Confirmation incorrecte. Tapez exactement 'DEPLOY'"
+          exit 1
+        fi
+        echo "✅ Confirmation validée"
+
+  tests-pre-deploy:
+    name: Tests Pré-Déploiement
+    runs-on: ubuntu-latest
+    needs: check-confirmation
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Configuration Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: 📦 Installation
+      run: |
+        pip install uv
+        cd mppeep
+        uv sync
+    
+    - name: 🧪 Tous les tests
+      run: |
+        cd mppeep
+        uv run pytest -v --tb=short
+    
+    - name: 🔒 Scan sécurité
+      run: |
+        pip install bandit safety
+        cd mppeep
+        bandit -r app/
+        safety check
+
+  deploy-production:
+    name: Déploiement Production
+    runs-on: ubuntu-latest
+    needs: tests-pre-deploy
+    
+    environment:
+      name: production
+      url: https://mondomaine.com
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🚀 Déploiement vers Production (SSH)
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: 22
+        script: |
+          cd /var/www/mppeep
+          
+          # Backup
+          cp app.db backups/backup_$(date +%Y%m%d_%H%M%S).db
+          
+          # Mise à jour
+          git pull origin main
+          .venv/bin/uv sync
+          
+          # Migrations
+          .venv/bin/python -c "from app.db.session import init_db; init_db()"
+          
+          # Redémarrage
+          sudo systemctl restart mppeep-prod
+    
+    - name: ⏳ Attendre le démarrage
+      run: sleep 15
+    
+    - name: 🏥 Health Check Production
+      run: |
+        for i in {1..5}; do
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://mondomaine.com/api/v1/ping)
+          
+          if [ $response -eq 200 ]; then
+            echo "✅ Production opérationnelle (tentative $i/5)"
+            exit 0
+          fi
+          
+          echo "⏳ Tentative $i/5 - Attente 5s..."
+          sleep 5
+        done
+        
+        echo "❌ Production ne répond pas après 5 tentatives"
+        exit 1
+    
+    - name: 📢 Notification Succès
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: 'success'
+        text: '🎉 Déploiement Production RÉUSSI !'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+    
+    - name: 🚨 Notification Échec
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: 'failure'
+        text: '🚨 Déploiement Production ÉCHOUÉ !'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
