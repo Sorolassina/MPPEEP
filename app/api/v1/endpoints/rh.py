@@ -103,7 +103,7 @@ async def rh_create_demande(
     acte_type: Optional[str] = Form(None),
     date_debut: Optional[str] = Form(None),
     date_fin: Optional[str] = Form(None),
-    nb_jours: Optional[float] = Form(None),
+    nb_jours: Optional[str] = Form(None),  # Reçu comme string pour gérer les valeurs vides
     document: Optional[UploadFile] = File(None),
 ):
     """
@@ -138,6 +138,23 @@ async def rh_create_demande(
             
             logger.info(f"📁 Document uploadé : {document_filename} → {document_path}")
         
+        # Nettoyer les champs : convertir les chaînes vides en None
+        # Cela résout le problème de parsing pour les actes administratifs
+        if date_debut and date_debut.strip() == "":
+            date_debut = None
+        if date_fin and date_fin.strip() == "":
+            date_fin = None
+        if acte_type and acte_type.strip() == "":
+            acte_type = None
+        
+        # Convertir nb_jours : string -> float, en gérant les valeurs vides
+        nb_jours_float = None
+        if nb_jours and nb_jours.strip():
+            try:
+                nb_jours_float = float(nb_jours)
+            except ValueError:
+                nb_jours_float = None
+            
         # Créer le payload
         payload_data = {
             "type": request_type,
@@ -145,7 +162,7 @@ async def rh_create_demande(
             "motif": motif,
             "date_debut": date.fromisoformat(date_debut) if date_debut else None,
             "date_fin": date.fromisoformat(date_fin) if date_fin else None,
-            "nb_jours": nb_jours,
+            "nb_jours": nb_jours_float,
             "acte_type": acte_type if acte_type else None,
             "document_joint": document_path,
             "document_filename": document_filename
@@ -288,7 +305,7 @@ def transition_demande(
     Faire avancer une demande dans le workflow
     """
     try:
-        # TODO: Ajouter contrôle d'accès par rôle (N1/DRH/DG)
+        # TODO: Ajouter contrôle d'accès par rôle (N1/N2/DRH/DAF)
         updated = RHService.transition(
             session,
             request_id,

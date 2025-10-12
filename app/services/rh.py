@@ -53,10 +53,6 @@ class RHService:
             select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.VALIDATION_DRH)
         ).one()
         
-        en_attente_dg = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.SIGNATURE_DG)
-        ).one()
-        
         en_attente_daf = session.exec(
             select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.SIGNATURE_DAF)
         ).one()
@@ -106,7 +102,6 @@ class RHService:
             "en_attente_n1": en_attente_n1,
             "en_attente_n2": en_attente_n2,
             "en_attente_drh": en_attente_drh,
-            "en_attente_dg": en_attente_dg,
             "en_attente_daf": en_attente_daf,
             
             # Demandes par type

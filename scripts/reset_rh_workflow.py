@@ -37,7 +37,7 @@ try:
     
     # Afficher le nouveau circuit
     print("\n📊 Nouveau circuit configuré :")
-    print("   DRAFT → SUBMITTED → VALIDATION_N1 → VALIDATION_N2 → VALIDATION_DRH → SIGNATURE_DG → SIGNATURE_DAF/ARCHIVED")
+    print("   DRAFT → SUBMITTED → VALIDATION_N1 → VALIDATION_N2 → VALIDATION_DRH → SIGNATURE_DAF → ARCHIVED")
     
     # Compter les nouvelles étapes
     new_steps = session.exec(select(WorkflowStep)).all()
@@ -46,7 +46,7 @@ try:
     print("\n" + "=" * 60)
     print("✅ RÉINITIALISATION TERMINÉE AVEC SUCCÈS")
     print("=" * 60)
-    print("\n💡 N2 (Chef de direction) est maintenant une étape obligatoire du circuit.")
+    print("\n💡 N2 et DAF sont maintenant des étapes obligatoires du circuit.")
     
 except Exception as e:
     session.rollback()

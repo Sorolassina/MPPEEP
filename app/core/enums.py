@@ -31,10 +31,9 @@ class WorkflowState(str, Enum):
     DRAFT = "Brouillon"                      # brouillon (agent)
     SUBMITTED = "Soumis"                     # soumis
     VALIDATION_N1 = "Validation N1"          # chef service / hiérarchie 1
-    VALIDATION_N2 = "Validation N2"          # chef direction / hiérarchie 2 (optionnel)
+    VALIDATION_N2 = "Validation N2"          # chef direction / hiérarchie 2
     VALIDATION_DRH = "Validation DRH"        # DRH
-    SIGNATURE_DG = "Signature DG"            # Signature Directeur Général
-    SIGNATURE_DAF = "Signature DAF"          # Directeur administratif / Autorité (optionnel)
+    SIGNATURE_DAF = "Signature DAF"          # Directeur administratif et financier
     ARCHIVED = "Archivé"                     # Archivé (terminé)
     REJECTED = "Rejeté"                      # Rejeté
 
@@ -44,9 +43,12 @@ class UserType(str, Enum):
     Stockés comme VARCHAR dans la base de données
     """
     ADMIN = "admin"
-    USER = "user"
-    MODERATOR = "moderator"
-    GUEST = "guest"
+    USER = "agent"
+    N1 = "chef service"
+    N2 = "directeur"
+    DRH = "directeur des ressources humaines"
+    DAF = "directeur administratif et financier"
+    INVITE = "invité"
     
     def __str__(self):
         return self.value
@@ -81,13 +83,12 @@ class FileType(str, Enum):
     """
     Types de fichiers supportés
     """
-    BUDGET = "budget"
-    DEPENSES = "depenses"
-    REVENUS = "revenus"
-    PERSONNEL = "personnel"
-    RAPPORT_ACTIVITE = "rapport_activite"
-    BENEFICIAIRES = "beneficiaires"
-    INDICATEURS = "indicateurs"
+    FICHE_SYNTHETIQUE = "fiche synthetique"
+    BUDGET = "données budgétaires"
+    FICHE_PERSONNEL = "fiche personnel"
+    RAPPORT_ACTIVITE = "rapport d'activite"
+    LISTE_BENEFICIAIRES = "liste des beneficiaires"
+    INDICATEURS_PERFORMANCE = "indicateurs de performance"
     AUTRE = "autre"
     
     def __str__(self):
@@ -98,11 +99,11 @@ class FileStatus(str, Enum):
     """
     Statuts de traitement des fichiers
     """
-    UPLOADED = "uploaded"          # Fichier téléchargé
-    PROCESSING = "processing"      # En cours de traitement
-    PROCESSED = "processed"        # Traité avec succès
-    ERROR = "error"                # Erreur de traitement
-    ARCHIVED = "archived"          # Archivé
+    UPLOADED = "téléchargé"          # Fichier téléchargé
+    PROCESSING = "en traitement"      # En cours de traitement
+    PROCESSED = "traité"        # Traité avec succès
+    ERROR = "erreur"                # Erreur de traitement
+    ARCHIVED = "archivé"          # Archivé
     
     def __str__(self):
         return self.value
@@ -112,18 +113,94 @@ class ProgramType(str, Enum):
     """
     Types de programmes
     """
-    EDUCATION = "education"
-    SANTE = "sante"
-    AGRICULTURE = "agriculture"
-    INFRASTRUCTURE = "infrastructure"
-    PROTECTION_SOCIALE = "protection_sociale"
-    ENVIRONNEMENT = "environnement"
-    GOUVERNANCE = "gouvernance"
+    ADMINISTRATION_GENERALE = "administration générale"
+    GESTION_ETABLISSEMENTS_PUBLICS_NATIONAUX = "gestion des établissements publics nationaux"
+    PORTEFEUILLE_ETAT = "portefeuille de l'état"
+    
+    
+    def __str__(self):
+        return self.value
+
+class DirectionType(str, Enum):
+    """
+    Types de programmes
+    """
+    MOYENS_GENERAUX = "moyens généraux"
+    RESSOURCES_HUMAINES = "ressources humaines"
+    BUDGET = "budget"
+    
+    
+    def __str__(self):
+        return self.value
+
+class ServiceType(str, Enum):
+    """
+    Types de programmes
+    """
+    SOCIALE = "Social"
+    BUDGET_RAPPORTAGE = "Budget et rapportage"
+    COMPTABILITE = "comptabilité"
+    INFORMATIQUE = "informatique"
+    FORMATION = "formation"
+    STOCK = "stock"
+    SECURITE = "sécurité"
     AUTRE = "autre"
     
     def __str__(self):
         return self.value
 
+class GradeCategory(str, Enum):
+    """Catégories de grades de la fonction publique"""
+    A = "Catégorie A - Cadres supérieurs"
+    B = "Catégorie B - Cadres moyens"
+    C = "Catégorie C - Agents d'exécution"
+    D = "Catégorie D - Personnel de soutien"
+    
+    def __str__(self):
+        return self.value
+
+class PositionAdministrative(str, Enum):
+    """Position administrative de l'agent"""
+    EN_ACTIVITE = "En activité"
+    DETACHEMENT = "Détachement"
+    DISPONIBILITE = "Disponibilité"
+    CONGE_LONGUE_DUREE = "Congé de longue durée"
+    SOUS_LES_DRAPEAUX = "Sous les drapeaux"
+    HORS_CADRE = "Hors cadre"
+    SUSPENSION = "Suspension"
+    RETRAITE = "Retraite"
+    
+    def __str__(self):
+        return self.value
+
+class SituationFamiliale(str, Enum):
+    """Situation familiale"""
+    CELIBATAIRE = "Célibataire"
+    MARIE = "Marié(e)"
+    DIVORCE = "Divorcé(e)"
+    VEUF = "Veuf(ve)"
+    UNION_LIBRE = "Union libre"
+    
+    def __str__(self):
+        return self.value
+
+class TypeDocument(str, Enum):
+    """Types de documents agent"""
+    CNI = "Carte nationale d'identité"
+    PASSEPORT = "Passeport"
+    ACTE_NAISSANCE = "Acte de naissance"
+    DIPLOME = "Diplôme"
+    CERTIFICAT = "Certificat"
+    CONTRAT = "Contrat"
+    ARRETE_NOMINATION = "Arrêté de nomination"
+    DECISION_AVANCEMENT = "Décision d'avancement"
+    FICHE_NOTATION = "Fiche de notation"
+    CERTIFICAT_MEDICAL = "Certificat médical"
+    ATTESTATION_TRAVAIL = "Attestation de travail"
+    AUTRE = "Autre document"
+    
+    def __str__(self):
+        return self.value
 
 # Pour faciliter les imports
 __all__ = [
@@ -136,5 +213,11 @@ __all__ = [
     "FileType",
     "FileStatus",
     "ProgramType",
+    "DirectionType",
+    "ServiceType",
+    "GradeCategory",
+    "PositionAdministrative",
+    "SituationFamiliale",
+    "TypeDocument"
 ]
 

@@ -370,6 +370,14 @@ document.querySelector('form').addEventListener('submit', function(e) {
       acteTypeSelect.focus();
       return false;
     }
+    
+    // Désactiver les champs de dates qui ne sont pas pertinents pour les actes
+    document.getElementById('date_debut').disabled = true;
+    document.getElementById('date_fin').disabled = true;
+    document.getElementById('nb_jours').disabled = true;
+  } else {
+    // Pour les autres types (congé, permission, formation), désactiver le champ acte_type
+    acteTypeSelect.disabled = true;
   }
   
   console.log('✅ Formulaire validé, envoi en cours...');

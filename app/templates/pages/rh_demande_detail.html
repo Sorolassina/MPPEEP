@@ -519,16 +519,16 @@ async function advance(to_state){
   if (!confirm(confirmMsg)) return;
   
   try {
-    const res = await fetch("{{ url_for('rh_demande_advance', request_id=req.id) }}", {
+  const res = await fetch("{{ url_for('rh_demande_advance', request_id=req.id) }}", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json"
       },
-      body: JSON.stringify({ to_state })
-    });
+    body: JSON.stringify({ to_state })
+  });
     
-    const data = await res.json();
+  const data = await res.json();
     
     if (data.ok) {
       alert(`✅ Transition réussie vers "${to_state}"`);

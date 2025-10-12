@@ -6,41 +6,7 @@
 
 {% block content %}
 <div class="dashboard-grid">
-    <!-- Statistiques -->
-    <div class="stats-row">
-        <div class="stat-card">
-            <div class="stat-icon">👥</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ stats.users_count or 0 }}</div>
-                <div class="stat-label">Utilisateurs</div>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon">📊</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ stats.items_count or 0 }}</div>
-                <div class="stat-label">Éléments</div>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ stats.completed_count or 0 }}</div>
-                <div class="stat-label">Complétés</div>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon">📈</div>
-            <div class="stat-content">
-                <div class="stat-value">+{{ stats.growth or 0 }}%</div>
-                <div class="stat-label">Croissance</div>
-            </div>
-        </div>
-    </div>
-    
+       
     <!-- Activité récente -->
     <div class="activity-section">
         <h3>📋 Activité Récente (7 derniers jours)</h3>

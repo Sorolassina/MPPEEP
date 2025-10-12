@@ -1,0 +1,707 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ 'Nouvel Agent' if mode == 'create' else 'Modifier Agent' }} - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+body {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+.form-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 2rem;
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-card {
+  background: white;
+  border-radius: 25px;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+  padding: 3rem;
+  margin-bottom: 2rem;
+  transition: transform 0.3s;
+}
+
+.form-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 3px solid transparent;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.form-header h1 {
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.form-section {
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+  border-radius: 20px;
+  border-left: 5px solid #667eea;
+  transition: all 0.3s;
+}
+
+.form-section:hover {
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
+  transform: translateX(5px);
+}
+
+.form-section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.form-group label.required::after {
+  content: " *";
+  color: #dc3545;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 1rem 1.25rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+  background: #fafbfc;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-group small {
+  margin-top: 0.25rem;
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 2rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.btn {
+  padding: 1rem 2.5rem;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  color: white;
+  box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(108, 117, 125, 0.4);
+}
+
+.photo-upload {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.photo-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  font-size: 3rem;
+  color: #ccc;
+}
+
+.file-input-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.file-input-wrapper input[type=file] {
+  position: absolute;
+  left: -9999px;
+}
+
+.file-input-label {
+  padding: 0.5rem 1rem;
+  background: #667eea;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.file-input-label:hover {
+  background: #5568d3;
+}
+
+.alert {
+  padding: 1.5rem 2rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  animation: slideDown 0.5s ease-out;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.alert-info {
+  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  color: #0c5460;
+  border-left: 5px solid #17a2b8;
+  font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+  
+  <div class="form-card">
+    <div class="form-header">
+      <h1>{{ '➕ Nouvel Agent' if mode == 'create' else '✏️ Modifier Agent' }}</h1>
+      <a href="/api/v1/personnel/" class="btn btn-secondary">← Retour</a>
+    </div>
+
+    <div class="alert alert-info">
+      ℹ️ Les champs marqués d'un astérisque (*) sont obligatoires
+    </div>
+
+    <form method="POST" action="/api/v1/personnel/api/agents" enctype="multipart/form-data">
+      
+      <!-- IDENTIFICATION -->
+      <div class="form-section">
+        <div class="form-section-title">
+          🆔 Identification
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="matricule" class="required">Matricule</label>
+            <input type="text" id="matricule" name="matricule" required 
+                   placeholder="Ex: AG2024001">
+            <small>Identifiant unique de l'agent</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="numero_cni">Numéro CNI</label>
+            <input type="text" id="numero_cni" name="numero_cni" 
+                   placeholder="Ex: 1234567890123">
+          </div>
+          
+          <div class="form-group">
+            <label for="numero_passeport">Numéro Passeport</label>
+            <input type="text" id="numero_passeport" name="numero_passeport" 
+                   placeholder="Ex: A1234567">
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉTAT CIVIL -->
+      <div class="form-section">
+        <div class="form-section-title">
+          👤 État Civil
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="nom" class="required">Nom</label>
+            <input type="text" id="nom" name="nom" required 
+                   placeholder="Ex: DIOP">
+          </div>
+          
+          <div class="form-group">
+            <label for="prenom" class="required">Prénom</label>
+            <input type="text" id="prenom" name="prenom" required 
+                   placeholder="Ex: Amadou">
+          </div>
+          
+          <div class="form-group">
+            <label for="nom_jeune_fille">Nom de jeune fille</label>
+            <input type="text" id="nom_jeune_fille" name="nom_jeune_fille" 
+                   placeholder="Si applicable">
+          </div>
+          
+          <div class="form-group">
+            <label for="date_naissance">Date de naissance</label>
+            <input type="date" id="date_naissance" name="date_naissance">
+          </div>
+          
+          <div class="form-group">
+            <label for="lieu_naissance">Lieu de naissance</label>
+            <input type="text" id="lieu_naissance" name="lieu_naissance" 
+                   placeholder="Ex: Dakar">
+          </div>
+          
+          <div class="form-group">
+            <label for="nationalite">Nationalité</label>
+            <input type="text" id="nationalite" name="nationalite" 
+                   value="Sénégalaise" placeholder="Ex: Sénégalaise">
+          </div>
+          
+          <div class="form-group">
+            <label for="sexe">Sexe</label>
+            <select id="sexe" name="sexe">
+              <option value="">-- Sélectionner --</option>
+              <option value="M">Masculin</option>
+              <option value="F">Féminin</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="situation_familiale">Situation familiale</label>
+            <select id="situation_familiale" name="situation_familiale">
+              <option value="">-- Sélectionner --</option>
+              {% for sf in SituationFamiliale %}
+              <option value="{{ sf.value }}">{{ sf.value }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="nombre_enfants">Nombre d'enfants</label>
+            <input type="number" id="nombre_enfants" name="nombre_enfants" 
+                   min="0" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- COORDONNÉES -->
+      <div class="form-section">
+        <div class="form-section-title">
+          📞 Coordonnées
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="email_professionnel">Email professionnel</label>
+            <input type="email" id="email_professionnel" name="email_professionnel" 
+                   placeholder="prenom.nom@ministere.sn">
+          </div>
+          
+          <div class="form-group">
+            <label for="email_personnel">Email personnel</label>
+            <input type="email" id="email_personnel" name="email_personnel" 
+                   placeholder="exemple@email.com">
+          </div>
+          
+          <div class="form-group">
+            <label for="telephone_1">Téléphone 1</label>
+            <input type="tel" id="telephone_1" name="telephone_1" 
+                   placeholder="77 123 45 67">
+          </div>
+          
+          <div class="form-group">
+            <label for="telephone_2">Téléphone 2</label>
+            <input type="tel" id="telephone_2" name="telephone_2" 
+                   placeholder="33 123 45 67">
+          </div>
+          
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label for="adresse">Adresse</label>
+            <input type="text" id="adresse" name="adresse" 
+                   placeholder="Adresse complète">
+          </div>
+          
+          <div class="form-group">
+            <label for="ville">Ville</label>
+            <input type="text" id="ville" name="ville" 
+                   placeholder="Ex: Dakar">
+          </div>
+          
+          <div class="form-group">
+            <label for="code_postal">Code postal</label>
+            <input type="text" id="code_postal" name="code_postal" 
+                   placeholder="Ex: 12500">
+          </div>
+        </div>
+      </div>
+
+      <!-- CARRIÈRE -->
+      <div class="form-section">
+        <div class="form-section-title">
+          💼 Carrière
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="date_recrutement">Date de recrutement</label>
+            <input type="date" id="date_recrutement" name="date_recrutement">
+          </div>
+          
+          <div class="form-group">
+            <label for="date_prise_service">Date de prise de service</label>
+            <input type="date" id="date_prise_service" name="date_prise_service">
+          </div>
+          
+          <div class="form-group">
+            <label for="date_depart_retraite_prevue">Départ retraite prévu</label>
+            <input type="date" id="date_depart_retraite_prevue" name="date_depart_retraite_prevue">
+          </div>
+          
+          <div class="form-group">
+            <label for="position_administrative">Position administrative</label>
+            <select id="position_administrative" name="position_administrative">
+              {% for pa in PositionAdministrative %}
+              <option value="{{ pa.value }}" {{ 'selected' if pa.value == 'En activité' else '' }}>
+                {{ pa.value }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- AFFECTATION -->
+      <div class="form-section">
+        <div class="form-section-title">
+          🏢 Affectation actuelle
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="grade_id">Grade</label>
+            <select id="grade_id" name="grade_id">
+              <option value="">-- Sélectionner --</option>
+              {% for grade in grades %}
+              <option value="{{ grade.id }}">{{ grade.code }} - {{ grade.libelle }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="echelon">Échelon</label>
+            <input type="number" id="echelon" name="echelon" 
+                   min="1" max="10" value="1">
+          </div>
+          
+          <div class="form-group">
+            <label for="indice">Indice</label>
+            <input type="number" id="indice" name="indice" 
+                   placeholder="Ex: 600">
+            <small>Indice de rémunération</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="programme_id">Programme</label>
+            <select id="programme_id" name="programme_id">
+              <option value="">-- Sélectionner --</option>
+              {% for prog in programmes %}
+              <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="direction_id">Direction</label>
+            <select id="direction_id" name="direction_id">
+              <option value="">-- Sélectionner --</option>
+              {% for dir in directions %}
+              <option value="{{ dir.id }}" data-programme="{{ dir.programme_id }}">
+                {{ dir.code }} - {{ dir.libelle }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="service_id">Service</label>
+            <select id="service_id" name="service_id">
+              <option value="">-- Sélectionner --</option>
+              {% for serv in services %}
+              <option value="{{ serv.id }}" data-direction="{{ serv.direction_id }}">
+                {{ serv.code }} - {{ serv.libelle }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label for="fonction">Fonction</label>
+            <input type="text" id="fonction" name="fonction" 
+                   placeholder="Ex: Chef de division comptabilité">
+          </div>
+        </div>
+      </div>
+
+      <!-- CONGÉS -->
+      <div class="form-section">
+        <div class="form-section-title">
+          🏖️ Congés annuels
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="solde_conges_annuel">Solde de congés restant</label>
+            <input type="number" id="solde_conges_annuel" name="solde_conges_annuel" 
+                   min="0" step="0.5" value="30" placeholder="30">
+            <small>Jours de congé disponibles</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="conges_annee_en_cours">Congés alloués cette année</label>
+            <input type="number" id="conges_annee_en_cours" name="conges_annee_en_cours" 
+                   min="0" value="30" placeholder="30">
+            <small>Nombre de jours de congé par an</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="form-section">
+        <div class="form-section-title">
+          📝 Notes et remarques
+        </div>
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes" 
+                    placeholder="Informations complémentaires..."></textarea>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="form-actions">
+        <a href="/api/v1/personnel/" class="btn btn-secondary">Annuler</a>
+        <button type="submit" class="btn btn-primary">
+          {{ '➕ Créer l\'agent' if mode == 'create' else '💾 Enregistrer' }}
+        </button>
+      </div>
+      
+    </form>
+  </div>
+
+</div>
+
+<script>
+// Filtrage hiérarchique Programme → Direction → Service
+const programmeSelect = document.getElementById('programme_id');
+const directionSelect = document.getElementById('direction_id');
+const serviceSelect = document.getElementById('service_id');
+
+// Sauvegarder toutes les options
+const allDirections = Array.from(directionSelect.querySelectorAll('option')).slice(1);
+const allServices = Array.from(serviceSelect.querySelectorAll('option')).slice(1);
+
+// Filtrer les directions en fonction du programme
+programmeSelect.addEventListener('change', function() {
+  const programmeId = this.value;
+  
+  // Réinitialiser direction et service
+  directionSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+  serviceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+  
+  if (!programmeId) {
+    // Remettre toutes les directions
+    allDirections.forEach(opt => directionSelect.appendChild(opt.cloneNode(true)));
+    allServices.forEach(opt => serviceSelect.appendChild(opt.cloneNode(true)));
+    return;
+  }
+  
+  // Filtrer les directions
+  allDirections.forEach(opt => {
+    if (opt.dataset.programme === programmeId) {
+      directionSelect.appendChild(opt.cloneNode(true));
+    }
+  });
+});
+
+// Filtrer les services en fonction de la direction
+directionSelect.addEventListener('change', function() {
+  const directionId = this.value;
+  
+  // Réinitialiser service
+  serviceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+  
+  if (!directionId) {
+    allServices.forEach(opt => serviceSelect.appendChild(opt.cloneNode(true)));
+    return;
+  }
+  
+  // Filtrer les services
+  allServices.forEach(opt => {
+    if (opt.dataset.direction === directionId) {
+      serviceSelect.appendChild(opt.cloneNode(true));
+    }
+  });
+});
+
+// Soumission du formulaire
+document.querySelector('form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  // Afficher l'overlay de chargement
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) {
+    overlay.querySelector('.loading-text').textContent = 'Enregistrement en cours...';
+    overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
+    overlay.classList.add('show');
+  }
+  
+  // Collecter les données
+  const formData = new FormData(this);
+  const data = {};
+  
+  formData.forEach((value, key) => {
+    if (value !== '') {
+      // Convertir les nombres
+      if (['echelon', 'indice', 'nombre_enfants', 'solde_conges_annuel', 'conges_annee_en_cours', 'grade_id', 'service_id', 'direction_id', 'programme_id'].includes(key)) {
+        data[key] = value ? parseFloat(value) : null;
+      } else {
+        data[key] = value;
+      }
+    }
+  });
+  
+  try {
+    const response = await fetch('/api/v1/personnel/api/agents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      if (overlay) {
+        overlay.querySelector('.loading-text').textContent = '✅ Agent créé avec succès';
+        overlay.querySelector('.loading-subtext').textContent = 'Redirection...';
+      }
+      
+      // Rediriger vers la fiche de l'agent
+      setTimeout(() => {
+        window.location.href = `/api/v1/personnel/${result.agent_id}`;
+      }, 1000);
+    } else {
+      if (overlay) overlay.classList.remove('show');
+      alert('❌ Erreur : ' + (result.detail || 'Impossible de créer l\'agent'));
+    }
+  } catch (error) {
+    if (overlay) overlay.classList.remove('show');
+    console.error('Erreur:', error);
+    alert('❌ Erreur lors de la création de l\'agent');
+  }
+});
+
+console.log('✅ Formulaire agent chargé');
+</script>
+{% endblock %}
+
