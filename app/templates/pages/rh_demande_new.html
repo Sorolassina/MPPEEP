@@ -5,11 +5,10 @@
 <style>
 .form-card{
   background:#fff;
-  border-radius:14px;
+  border-radius:20px;
   box-shadow:0 10px 25px rgba(0,0,0,.06);
-  padding:2rem;
-  max-width:900px;
-  margin:0 auto;
+  padding:2.5rem;
+  width: 100%;
 }
 
 .form-card h2 {
@@ -19,12 +18,16 @@
 
 .grid{
   display:grid;
-  gap:1rem;
+  gap:1.5rem;
   margin-top: 1.5rem;
 }
 
 @media(min-width:760px){
   .grid{grid-template-columns:1fr 1fr;}
+}
+
+@media(min-width:1024px){
+  .grid{grid-template-columns:1fr 1fr 1fr;}
 }
 
 .row{
@@ -160,12 +163,24 @@ input:focus, select:focus, textarea:focus {
 {% endblock %}
 
 {% block content %}
-<div class="form-card">
-  <h2>📝 Nouvelle Demande Administrative</h2>
-  <p class="help">
-    Créez une nouvelle demande administrative. Elle suivra automatiquement le circuit complet de validation : 
-    <strong>N1 → N2 → DRH → DG → DAF → Archivage</strong>
-  </p>
+<div class="page-grid" style="max-width: 1400px; padding: 1.5rem 1rem;">
+  
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">📝 Nouvelle Demande Administrative</h1>
+      <a href="{{ url_for('rh_home') }}" class="btn-back" title="Retour à RH">
+        <span style="font-size: 1.2rem;">←</span> Retour à RH
+      </a>
+    </div>
+    <p style="color: #6c757d; margin: 0;">
+      Créez une nouvelle demande. Elle suivra automatiquement le circuit complet de validation : 
+      <strong>N1 → N2 → DRH → DG → DAF → Archivage</strong>
+    </p>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="form-card">
 
   <form method="post" action="{{ url_for('rh_create_demande') }}" enctype="multipart/form-data">
     
@@ -271,11 +286,34 @@ input:focus, select:focus, textarea:focus {
       <a href="{{ url_for('rh_home') }}" class="btn">❌ Annuler</a>
     </div>
   </form>
+  
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// ============================================
+// 0. Activer l'overlay pour le bouton retour
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+  const btnBack = document.querySelector('.btn-back');
+  if (btnBack) {
+    btnBack.addEventListener('click', function(e) {
+      e.preventDefault();
+      const overlay = document.getElementById('globalLoadingOverlay');
+      if (overlay) {
+        overlay.querySelector('.loading-text').textContent = 'Retour à RH...';
+        overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
+        overlay.classList.add('show');
+      }
+      setTimeout(() => {
+        window.location.href = this.href;
+      }, 300);
+    });
+  }
+});
+
 // ============================================
 // 1. Gestion du type de demande
 // ============================================
@@ -378,6 +416,14 @@ document.querySelector('form').addEventListener('submit', function(e) {
   } else {
     // Pour les autres types (congé, permission, formation), désactiver le champ acte_type
     acteTypeSelect.disabled = true;
+  }
+  
+  // Afficher l'overlay de chargement
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) {
+    overlay.querySelector('.loading-text').textContent = 'Création de la demande...';
+    overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
+    overlay.classList.add('show');
   }
   
   console.log('✅ Formulaire validé, envoi en cours...');

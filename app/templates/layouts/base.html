@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/theme.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/pages.css') }}">
     
     <!-- Couleurs dynamiques depuis les paramètres système -->
     {% if system_settings %}
@@ -43,6 +44,12 @@
         </div>
     </div>
 
+    <!-- Bouton d'aide flottant -->
+    <a href="{{ url_for('aide_home') }}" class="floating-help-button" title="Centre d'Aide">
+        ❓
+        <span class="help-tooltip">Besoin d'aide ?</span>
+    </a>
+
     {% block body %}
         <!-- Header / Navigation -->
         {% block header %}
@@ -70,10 +77,16 @@
     
     <!-- Script global pour l'overlay de navigation -->
     <script>
+        // ============================================
+        // GESTION DE L'OVERLAY GLOBAL
+        // ============================================
+        
         // Fonction pour afficher l'overlay global
-        function showGlobalLoading() {
+        function showGlobalLoading(text = 'Chargement...', subtext = 'Veuillez patienter') {
             const overlay = document.getElementById('globalLoadingOverlay');
             if (overlay) {
+                overlay.querySelector('.loading-text').textContent = text;
+                overlay.querySelector('.loading-subtext').textContent = subtext;
                 overlay.classList.add('show');
             }
         }
@@ -85,6 +98,84 @@
                 overlay.classList.remove('show');
             }
         }
+
+        // Fonction pour afficher une erreur et fermer l'overlay
+        function showError(message, title = 'Erreur') {
+            hideGlobalLoading();
+            
+            // Créer une notification d'erreur
+            const notification = document.createElement('div');
+            notification.className = 'error-notification';
+            notification.innerHTML = `
+                <div class="error-notification-content">
+                    <div class="error-notification-icon">❌</div>
+                    <div class="error-notification-text">
+                        <div class="error-notification-title">${title}</div>
+                        <div class="error-notification-message">${message}</div>
+                    </div>
+                    <button class="error-notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-suppression après 5 secondes
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        // Fonction pour afficher un succès
+        function showSuccess(message, title = 'Succès') {
+            hideGlobalLoading();
+            
+            const notification = document.createElement('div');
+            notification.className = 'success-notification';
+            notification.innerHTML = `
+                <div class="success-notification-content">
+                    <div class="success-notification-icon">✅</div>
+                    <div class="success-notification-text">
+                        <div class="success-notification-title">${title}</div>
+                        <div class="success-notification-message">${message}</div>
+                    </div>
+                    <button class="success-notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Gestionnaire d'erreur global pour les fetch
+        window.handleFetchError = async function(response, defaultMessage = 'Une erreur est survenue') {
+            hideGlobalLoading();
+            
+            try {
+                const data = await response.json();
+                const errorMessage = data.detail || data.message || defaultMessage;
+                showError(errorMessage);
+            } catch {
+                showError(defaultMessage);
+            }
+        }
+
+        // Intercepter les erreurs non gérées
+        window.addEventListener('error', function(event) {
+            console.error('Erreur non gérée:', event.error);
+            hideGlobalLoading();
+        });
+
+        // Intercepter les rejections de promesses non gérées
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Promise rejetée:', event.reason);
+            hideGlobalLoading();
+            showError('Une erreur s\'est produite. Veuillez réessayer.');
+        });
 
         // Intercepter les clics sur les liens pour afficher l'overlay
         document.addEventListener('DOMContentLoaded', function() {

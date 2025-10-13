@@ -46,11 +46,15 @@
                 <span class="action-icon">⚙️</span>
                 <span class="action-text">Paramètres</span>
             </a>
+            <a href="{{ url_for('referentiels_home') }}" class="action-button">
+                <span class="action-icon">📚</span>
+                <span class="action-text">Référentiels</span>
+            </a>
             <a href="{{ url_for('rapports') }}" class="action-button">
                 <span class="action-icon">📊</span>
                 <span class="action-text">Rapports</span>
             </a>
-            <a href="#" class="action-button" onclick="alert('Fonctionnalité en développement'); return false;">
+            <a href="{{ url_for('aide_home') }}" class="action-button">
                 <span class="action-icon">❓</span>
                 <span class="action-text">Aide</span>
             </a>

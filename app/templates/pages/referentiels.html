@@ -1,0 +1,894 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Gestion des Référentiels - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tab {
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+  color: #6c757d;
+  transition: all 0.3s;
+  font-size: 1rem;
+}
+
+.tab:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.modal-close {
+  font-size: 2rem;
+  color: #6c757d;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #dc3545;
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid #e0e0e0;
+}
+
+.btn-modal {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-modal.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-modal.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-modal.secondary {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.btn-modal.secondary:hover {
+  background: #dee2e6;
+}
+
+/* Table actions */
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.table-header h3 {
+  margin: 0;
+}
+
+/* Action icons avec couleurs spécifiques */
+.action-icon.edit {
+  color: #667eea;
+}
+
+.action-icon.deactivate {
+  color: #ffc107;
+}
+
+.action-icon.deactivate:hover {
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important;
+}
+
+.action-icon.reactivate {
+  color: #28a745;
+}
+
+.action-icon.reactivate:hover {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  color: white;
+}
+
+.action-icon.delete {
+  color: #dc3545;
+}
+
+.action-icon.delete:hover {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-grid">
+  
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">⚙️ Gestion des Référentiels</h1>
+      <a href="/accueil" class="btn-back" title="Retour à l'accueil">
+        <span style="font-size: 1.2rem;">←</span> Retour
+      </a>
+    </div>
+    <p style="color: #6c757d; margin: 0;">Gérez les programmes, directions, services et grades de l'organisation</p>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-cards">
+    <div class="stat-card">
+      <div class="stat-label">Programmes</div>
+      <div class="stat-number">{{ nb_programmes }}</div>
+    </div>
+    
+    <div class="stat-card success">
+      <div class="stat-label">Directions</div>
+      <div class="stat-number">{{ nb_directions }}</div>
+    </div>
+    
+    <div class="stat-card secondary">
+      <div class="stat-label">Services</div>
+      <div class="stat-number">{{ nb_services }}</div>
+    </div>
+    
+    <div class="stat-card warning">
+      <div class="stat-label">Grades</div>
+      <div class="stat-number">{{ nb_grades }}</div>
+    </div>
+  </div>
+
+  <!-- Onglets -->
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('programmes')">📁 Programmes</button>
+      <button class="tab" onclick="switchTab('directions')">🏢 Directions</button>
+      <button class="tab" onclick="switchTab('services')">📋 Services</button>
+      <button class="tab" onclick="switchTab('grades')">🎓 Grades</button>
+    </div>
+
+    <!-- TAB PROGRAMMES -->
+    <div id="tab-programmes" class="tab-content active">
+      <div class="table-header">
+        <h3>📁 Programmes Budgétaires</h3>
+        <button class="btn-primary" onclick="openModal('programme')">➕ Nouveau Programme</button>
+      </div>
+      
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Description</th>
+              <th>Statut</th>
+              <th style="text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="programmes-tbody">
+            <!-- Rempli dynamiquement -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB DIRECTIONS -->
+    <div id="tab-directions" class="tab-content">
+      <div class="table-header">
+        <h3>🏢 Directions</h3>
+        <button class="btn-primary" onclick="openModal('direction')">➕ Nouvelle Direction</button>
+      </div>
+      
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Programme</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="directions-tbody">
+            <!-- Rempli dynamiquement -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB SERVICES -->
+    <div id="tab-services" class="tab-content">
+      <div class="table-header">
+        <h3>📋 Services</h3>
+        <button class="btn-primary" onclick="openModal('service')">➕ Nouveau Service</button>
+      </div>
+      
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Direction</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="services-tbody">
+            <!-- Rempli dynamiquement -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB GRADES -->
+    <div id="tab-grades" class="tab-content">
+      <div class="table-header">
+        <h3>🎓 Grades</h3>
+        <button class="btn-primary" onclick="openModal('grade')">➕ Nouveau Grade</button>
+      </div>
+      
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Catégorie</th>
+              <th>Échelons</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="grades-tbody">
+            <!-- Rempli dynamiquement -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal CRUD -->
+<div id="crudModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-title">Titre</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    
+    <form id="crudForm" onsubmit="handleSubmit(event)">
+      <div class="form-grid" id="modal-form-content">
+        <!-- Contenu dynamique -->
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-modal secondary" onclick="closeModal()">Annuler</button>
+        <button type="submit" class="btn-modal primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentType = '';
+let editingId = null;
+
+// Charger les données au démarrage
+document.addEventListener('DOMContentLoaded', function() {
+  loadProgrammes();
+  loadDirections();
+  loadServices();
+  loadGrades();
+});
+
+// ============================================
+// GESTION DES ONGLETS
+// ============================================
+function switchTab(tabName) {
+  // Désactiver tous les onglets
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  
+  // Activer l'onglet sélectionné
+  event.target.classList.add('active');
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+}
+
+// ============================================
+// CHARGEMENT DES DONNÉES
+// ============================================
+async function loadProgrammes() {
+  const response = await fetch('/api/v1/referentiels/api/programmes');
+  const programmes = await response.json();
+  
+  const tbody = document.getElementById('programmes-tbody');
+  tbody.innerHTML = programmes.map(p => `
+    <tr>
+      <td><strong>${p.code}</strong></td>
+      <td>${p.libelle}</td>
+      <td>${p.description || '-'}</td>
+      <td>
+        <span class="badge ${p.actif ? 'badge-success' : 'badge-danger'}">
+          ${p.actif ? 'Actif' : 'Inactif'}
+        </span>
+      </td>
+      <td>
+        <div class="action-icons">
+          <span class="action-icon edit" onclick="editProgramme(${p.id})" title="Modifier">✏️</span>
+          ${p.actif 
+            ? `<span class="action-icon deactivate" onclick="deactivateProgramme(${p.id})" title="Désactiver (réversible)">🔒</span>`
+            : `<span class="action-icon reactivate" onclick="reactivateProgramme(${p.id})" title="Réactiver">🔓</span>`
+          }
+          <span class="action-icon delete" onclick="deleteProgramme(${p.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function loadDirections() {
+  const response = await fetch('/api/v1/referentiels/api/directions');
+  const directions = await response.json();
+  
+  const tbody = document.getElementById('directions-tbody');
+  tbody.innerHTML = directions.map(d => `
+    <tr>
+      <td><strong>${d.code}</strong></td>
+      <td>${d.libelle}</td>
+      <td>${d.programme_libelle || '-'}</td>
+      <td>
+        <span class="badge ${d.actif ? 'badge-success' : 'badge-danger'}">
+          ${d.actif ? 'Actif' : 'Inactif'}
+        </span>
+      </td>
+      <td>
+        <div class="action-icons">
+          <span class="action-icon edit" onclick="editDirection(${d.id})" title="Modifier">✏️</span>
+          ${d.actif 
+            ? `<span class="action-icon deactivate" onclick="deactivateDirection(${d.id})" title="Désactiver (réversible)">🔒</span>`
+            : `<span class="action-icon reactivate" onclick="reactivateDirection(${d.id})" title="Réactiver">🔓</span>`
+          }
+          <span class="action-icon delete" onclick="deleteDirection(${d.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function loadServices() {
+  const response = await fetch('/api/v1/referentiels/api/services');
+  const services = await response.json();
+  
+  const tbody = document.getElementById('services-tbody');
+  tbody.innerHTML = services.map(s => `
+    <tr>
+      <td><strong>${s.code}</strong></td>
+      <td>${s.libelle}</td>
+      <td>${s.direction_libelle || '-'}</td>
+      <td>
+        <span class="badge ${s.actif ? 'badge-success' : 'badge-danger'}">
+          ${s.actif ? 'Actif' : 'Inactif'}
+        </span>
+      </td>
+      <td>
+        <div class="action-icons">
+          <span class="action-icon edit" onclick="editService(${s.id})" title="Modifier">✏️</span>
+          ${s.actif 
+            ? `<span class="action-icon deactivate" onclick="deactivateService(${s.id})" title="Désactiver (réversible)">🔒</span>`
+            : `<span class="action-icon reactivate" onclick="reactivateService(${s.id})" title="Réactiver">🔓</span>`
+          }
+          <span class="action-icon delete" onclick="deleteService(${s.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function loadGrades() {
+  const response = await fetch('/api/v1/referentiels/api/grades');
+  const grades = await response.json();
+  
+  const tbody = document.getElementById('grades-tbody');
+  tbody.innerHTML = grades.map(g => `
+    <tr>
+      <td><strong>${g.code}</strong></td>
+      <td>${g.libelle}</td>
+      <td><span class="badge badge-info">${g.categorie_libelle || g.categorie}</span></td>
+      <td>${g.echelon_min} - ${g.echelon_max}</td>
+      <td>
+        <span class="badge ${g.actif ? 'badge-success' : 'badge-danger'}">
+          ${g.actif ? 'Actif' : 'Inactif'}
+        </span>
+      </td>
+      <td>
+        <div class="action-icons">
+          <span class="action-icon edit" onclick="editGrade(${g.id})" title="Modifier">✏️</span>
+          ${g.actif 
+            ? `<span class="action-icon deactivate" onclick="deactivateGrade(${g.id})" title="Désactiver (réversible)">🔒</span>`
+            : `<span class="action-icon reactivate" onclick="reactivateGrade(${g.id})" title="Réactiver">🔓</span>`
+          }
+          <span class="action-icon delete" onclick="deleteGrade(${g.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ============================================
+// MODAL
+// ============================================
+function openModal(type, id = null) {
+  currentType = type;
+  editingId = id;
+  
+  const modal = document.getElementById('crudModal');
+  const title = document.getElementById('modal-title');
+  const formContent = document.getElementById('modal-form-content');
+  
+  // Définir le titre
+  const titles = {
+    'programme': id ? 'Modifier Programme' : 'Nouveau Programme',
+    'direction': id ? 'Modifier Direction' : 'Nouvelle Direction',
+    'service': id ? 'Modifier Service' : 'Nouveau Service',
+    'grade': id ? 'Modifier Grade' : 'Nouveau Grade'
+  };
+  title.textContent = titles[type];
+  
+  // Générer le formulaire selon le type
+  if (type === 'programme') {
+    formContent.innerHTML = `
+      <div class="form-group">
+        <label>Code *</label>
+        <input type="text" name="code" id="field-code" required placeholder="Ex: P01">
+      </div>
+      <div class="form-group">
+        <label>Libellé *</label>
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Pilotage">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" id="field-description" rows="3"></textarea>
+      </div>
+      ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
+    `;
+  } else if (type === 'direction') {
+    formContent.innerHTML = `
+      <div class="form-group">
+        <label>Code *</label>
+        <input type="text" name="code" id="field-code" required placeholder="Ex: DAF">
+      </div>
+      <div class="form-group">
+        <label>Libellé *</label>
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Direction Administrative">
+      </div>
+      <div class="form-group">
+        <label>Programme</label>
+        <select name="programme_id" id="field-programme_id">
+          <option value="">-- Aucun --</option>
+          {% for prog in programmes %}
+          <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" id="field-description" rows="3"></textarea>
+      </div>
+      ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
+    `;
+  } else if (type === 'service') {
+    formContent.innerHTML = `
+      <div class="form-group">
+        <label>Code *</label>
+        <input type="text" name="code" id="field-code" required placeholder="Ex: SCPT">
+      </div>
+      <div class="form-group">
+        <label>Libellé *</label>
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Service Comptabilité">
+      </div>
+      <div class="form-group">
+        <label>Direction</label>
+        <select name="direction_id" id="field-direction_id">
+          <option value="">-- Aucune --</option>
+          {% for dir in directions %}
+          <option value="{{ dir.id }}">{{ dir.code }} - {{ dir.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" id="field-description" rows="3"></textarea>
+      </div>
+      ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
+    `;
+  } else if (type === 'grade') {
+    formContent.innerHTML = `
+      <div class="form-group">
+        <label>Code *</label>
+        <input type="text" name="code" id="field-code" required placeholder="Ex: A1">
+      </div>
+      <div class="form-group">
+        <label>Libellé *</label>
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Administrateur Civil">
+      </div>
+      <div class="form-group">
+        <label>Catégorie *</label>
+        <select name="categorie" id="field-categorie" required>
+          <option value="A">A - Cadres supérieurs</option>
+          <option value="B">B - Cadres moyens</option>
+          <option value="C">C - Agents d'exécution</option>
+          <option value="D">D - Personnel de soutien</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Échelon Min *</label>
+        <input type="number" name="echelon_min" id="field-echelon_min" required value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>Échelon Max *</label>
+        <input type="number" name="echelon_max" id="field-echelon_max" required value="5" min="1">
+      </div>
+      ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
+    `;
+  }
+  
+  // Si édition, charger les données
+  if (id) {
+    loadFormData(type, id);
+  }
+  
+  modal.classList.add('show');
+}
+
+function closeModal() {
+  const modal = document.getElementById('crudModal');
+  modal.classList.remove('show');
+  document.getElementById('crudForm').reset();
+  editingId = null;
+}
+
+async function loadFormData(type, id) {
+  const response = await fetch(`/api/v1/referentiels/api/${type}s`);
+  const items = await response.json();
+  const item = items.find(i => i.id === id);
+  
+  if (item) {
+    Object.keys(item).forEach(key => {
+      const field = document.getElementById(`field-${key}`);
+      if (field) {
+        field.value = item[key] || '';
+      }
+    });
+  }
+}
+
+// ============================================
+// SOUMISSION DU FORMULAIRE
+// ============================================
+async function handleSubmit(event) {
+  event.preventDefault();
+  
+  showGlobalLoading('Enregistrement...', 'Veuillez patienter');
+  
+  const formData = new FormData(event.target);
+  const url = editingId 
+    ? `/api/v1/referentiels/api/${currentType}s/${editingId}`
+    : `/api/v1/referentiels/api/${currentType}s`;
+  
+  try {
+    const response = await fetch(url, {
+      method: editingId ? 'PUT' : 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess(result.message || 'Enregistrement réussi !');
+      closeModal();
+      
+      // Recharger les données
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement des données');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de l\'enregistrement');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// ============================================
+// FONCTIONS D'ÉDITION
+// ============================================
+function editProgramme(id) {
+  openModal('programme', id);
+}
+
+function editDirection(id) {
+  openModal('direction', id);
+}
+
+function editService(id) {
+  openModal('service', id);
+}
+
+function editGrade(id) {
+  openModal('grade', id);
+}
+
+// ============================================
+// FONCTIONS DE RÉACTIVATION
+// ============================================
+async function reactivateProgramme(id) {
+  if (!confirm('✅ Réactiver ce programme ?\n\nIl redeviendra visible et utilisable.')) return;
+  await reactivateItem('programme', id);
+}
+
+async function reactivateDirection(id) {
+  if (!confirm('✅ Réactiver cette direction ?\n\nElle redeviendra visible et utilisable.')) return;
+  await reactivateItem('direction', id);
+}
+
+async function reactivateService(id) {
+  if (!confirm('✅ Réactiver ce service ?\n\nIl redeviendra visible et utilisable.')) return;
+  await reactivateItem('service', id);
+}
+
+async function reactivateGrade(id) {
+  if (!confirm('✅ Réactiver ce grade ?\n\nIl redeviendra visible et utilisable.')) return;
+  await reactivateItem('grade', id);
+}
+
+async function reactivateItem(type, id) {
+  showGlobalLoading('Réactivation...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/referentiels/api/${type}s/${id}/reactivate`, {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Élément réactivé avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement...');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la réactivation');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// ============================================
+// FONCTIONS DE DÉSACTIVATION (Soft Delete)
+// ============================================
+async function deactivateProgramme(id) {
+  if (!confirm('⚠️ Désactiver ce programme ?\n\nIl sera masqué mais restera en base de données.')) return;
+  await deactivateItem('programme', id);
+}
+
+async function deactivateDirection(id) {
+  if (!confirm('⚠️ Désactiver cette direction ?\n\nElle sera masquée mais restera en base de données.')) return;
+  await deactivateItem('direction', id);
+}
+
+async function deactivateService(id) {
+  if (!confirm('⚠️ Désactiver ce service ?\n\nIl sera masqué mais restera en base de données.')) return;
+  await deactivateItem('service', id);
+}
+
+async function deactivateGrade(id) {
+  if (!confirm('⚠️ Désactiver ce grade ?\n\nIl sera masqué mais restera en base de données.')) return;
+  await deactivateItem('grade', id);
+}
+
+async function deactivateItem(type, id) {
+  showGlobalLoading('Désactivation...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/referentiels/api/${type}s/${id}`, {
+      method: 'DELETE'  // Soft delete par défaut (hard_delete=false)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Élément désactivé avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement...');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la désactivation');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// ============================================
+// FONCTIONS DE SUPPRESSION (Hard Delete)
+// ============================================
+async function deleteProgramme(id) {
+  if (!confirm('🗑️ SUPPRIMER DÉFINITIVEMENT ce programme ?\n\n⚠️ ATTENTION : Cette action est IRRÉVERSIBLE !\nToutes les données seront perdues.\n\nPréférez "Désactiver" pour une suppression réversible.')) return;
+  await deleteItem('programme', id);
+}
+
+async function deleteDirection(id) {
+  if (!confirm('🗑️ SUPPRIMER DÉFINITIVEMENT cette direction ?\n\n⚠️ ATTENTION : Cette action est IRRÉVERSIBLE !\nToutes les données seront perdues.\n\nPréférez "Désactiver" pour une suppression réversible.')) return;
+  await deleteItem('direction', id);
+}
+
+async function deleteService(id) {
+  if (!confirm('🗑️ SUPPRIMER DÉFINITIVEMENT ce service ?\n\n⚠️ ATTENTION : Cette action est IRRÉVERSIBLE !\nToutes les données seront perdues.\n\nPréférez "Désactiver" pour une suppression réversible.')) return;
+  await deleteItem('service', id);
+}
+
+async function deleteGrade(id) {
+  if (!confirm('🗑️ SUPPRIMER DÉFINITIVEMENT ce grade ?\n\n⚠️ ATTENTION : Cette action est IRRÉVERSIBLE !\nToutes les données seront perdues.\n\nPréférez "Désactiver" pour une suppression réversible.')) return;
+  await deleteItem('grade', id);
+}
+
+async function deleteItem(type, id) {
+  showGlobalLoading('Suppression...', 'Suppression définitive en cours');
+  
+  try {
+    const response = await fetch(`/api/v1/referentiels/api/${type}s/${id}?hard_delete=true`, {
+      method: 'DELETE'  // Hard delete avec paramètre
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Élément supprimé définitivement');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement...');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,789 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Suivi des Besoins en Agents - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Filtre année/période */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.filter-group select {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  min-width: 150px;
+  transition: all 0.3s;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Badges urgence */
+.badge-urgence {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-urgence.faible {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-urgence.normale {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-urgence.elevee {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-urgence.critique {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Badges statut */
+.badge-statut {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badge-statut.exprime {
+  background: #adb5bd;
+  color: white;
+}
+
+.badge-statut.transmis {
+  background: #0dcaf0;
+  color: white;
+}
+
+.badge-statut.en-attente {
+  background: #ffc107;
+  color: white;
+}
+
+.badge-statut.partiel {
+  background: #fd7e14;
+  color: white;
+}
+
+.badge-statut.satisfait {
+  background: #198754;
+  color: white;
+}
+
+.badge-statut.rejete {
+  background: #dc3545;
+  color: white;
+}
+
+/* Progress bar */
+.progress-container {
+  width: 100%;
+  background: #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 20px;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+  transition: width 0.5s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.progress-bar.low {
+  background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+}
+
+.progress-bar.medium {
+  background: linear-gradient(90deg, #ffc107 0%, #e0a800 100%);
+}
+
+.progress-bar.high {
+  background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-grid">
+  
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">📊 Suivi des Besoins en Agents</h1>
+      <a href="/api/v1/rh/" class="btn-back" title="Retour à RH">
+        <span style="font-size: 1.2rem;">←</span> Retour à RH
+      </a>
+    </div>
+    <p style="color: #6c757d; margin: 0;">
+      Gérez les besoins en agents exprimés par les services, suivez les demandes au ministère et évaluez le taux de satisfaction
+    </p>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-cards">
+    <div class="stat-card">
+      <div class="stat-label">Total Besoins</div>
+      <div class="stat-number">{{ total_besoins }}</div>
+      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
+    </div>
+    
+    <div class="stat-card warning">
+      <div class="stat-label">Agents Demandés</div>
+      <div class="stat-number">{{ total_demande }}</div>
+      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
+    </div>
+    
+    <div class="stat-card success">
+      <div class="stat-label">Agents Obtenus</div>
+      <div class="stat-number">{{ total_obtenu }}</div>
+      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
+    </div>
+    
+    <div class="stat-card secondary">
+      <div class="stat-label">Taux Satisfaction</div>
+      <div class="stat-number">{{ taux_satisfaction }}%</div>
+      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
+    </div>
+  </div>
+
+  <!-- Filtres et Actions -->
+  <div class="card">
+    <div class="actions-bar">
+      <div class="filters-bar">
+        <div class="filter-group">
+          <label>Année</label>
+          <select id="filter-annee" onchange="filtrerBesoins()">
+            <option value="{{ annee_actuelle }}" selected>{{ annee_actuelle }}</option>
+            <option value="{{ annee_actuelle - 1 }}">{{ annee_actuelle - 1 }}</option>
+            <option value="{{ annee_actuelle - 2 }}">{{ annee_actuelle - 2 }}</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>Statut</label>
+          <select id="filter-statut" onchange="filtrerBesoins()">
+            <option value="">Tous</option>
+            <option value="Exprimé">Exprimé</option>
+            <option value="Transmis">Transmis</option>
+            <option value="En attente">En attente</option>
+            <option value="Partiellement satisfait">Partiellement satisfait</option>
+            <option value="Satisfait">Satisfait</option>
+            <option value="Rejeté">Rejeté</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="/api/v1/besoins/nouveau" class="btn-primary">
+          ➕ Exprimer un Besoin
+        </a>
+        <a href="/api/v1/besoins/consolidation" class="btn-primary" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+          📋 Vue Consolidée
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des besoins -->
+  <div class="card">
+    <h3 style="margin-bottom: 1.5rem;">📋 Liste des Besoins</h3>
+    
+    <div class="data-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Poste</th>
+            <th>Grade</th>
+            <th>Demandé</th>
+            <th>Obtenu</th>
+            <th>Satisfaction</th>
+            <th>Urgence</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="besoins-tbody">
+          {% if besoins %}
+            {% for b in besoins %}
+            <tr>
+              <td>
+                <strong>{{ services[b.service_id].code if b.service_id and b.service_id in services else '-' }}</strong>
+                <br>
+                <small style="color: #666;">{{ services[b.service_id].libelle if b.service_id and b.service_id in services else '-' }}</small>
+              </td>
+              <td>
+                <strong>{{ b.poste_libelle }}</strong>
+                {% if b.periode %}
+                <br><small style="color: #666;">{{ b.periode }}</small>
+                {% endif %}
+              </td>
+              <td>
+                {% if b.grade_id and b.grade_id in grades %}
+                  <span class="badge badge-info">{{ grades[b.grade_id].code }}</span>
+                {% elif b.categorie_souhaitee %}
+                  <span class="badge badge-warning">Cat. {{ b.categorie_souhaitee }}</span>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td><strong style="font-size: 1.1rem;">{{ b.nombre_demande }}</strong></td>
+              <td><strong style="font-size: 1.1rem; color: #28a745;">{{ b.nombre_obtenu }}</strong></td>
+              <td>
+                {% set progress = (b.nombre_obtenu / b.nombre_demande * 100) if b.nombre_demande > 0 else 0 %}
+                <div class="progress-container">
+                  <div class="progress-bar {% if progress < 50 %}low{% elif progress < 100 %}medium{% else %}high{% endif %}" 
+                       style="width: {{ progress }}%;">
+                    {{ progress|round(0)|int }}%
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge-urgence {{ b.urgence|lower }}">{{ b.urgence }}</span>
+              </td>
+              <td>
+                {% set statut_class = b.statut|lower|replace(' ', '-')|replace('é', 'e')|replace('è', 'e') %}
+                <span class="badge-statut {{ statut_class }}">{{ b.statut }}</span>
+              </td>
+              <td>
+                <div class="action-icons">
+                  <span class="action-icon" onclick="voirDetail({{ b.id }})" title="Voir détail">👁️</span>
+                  <span class="action-icon" onclick="mettreAJour({{ b.id }})" title="Mettre à jour">📝</span>
+                  <span class="action-icon" onclick="supprimerBesoin({{ b.id }})" title="Supprimer">🗑️</span>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="9">
+                <div class="empty-state">
+                  <div class="empty-state-icon">📭</div>
+                  <p><strong>Aucun besoin exprimé pour {{ annee_actuelle }}</strong></p>
+                  <p>Commencez par exprimer un besoin</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Mise à jour -->
+<div id="updateModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2>📝 Mettre à Jour le Besoin</h2>
+      <button class="modal-close" onclick="closeUpdateModal()">&times;</button>
+    </div>
+    
+    <form id="updateForm" onsubmit="handleUpdate(event)">
+      <div class="form-grid" style="gap: 1rem;">
+        <div class="form-group">
+          <label>Nombre obtenu</label>
+          <input type="number" name="nombre_obtenu" id="update-nombre-obtenu" min="0" required>
+          <small style="color: #666;">Agents effectivement obtenus</small>
+        </div>
+        
+        <div class="form-group">
+          <label>Statut</label>
+          <select name="statut" id="update-statut">
+            <option value="Exprimé">Exprimé</option>
+            <option value="Transmis">Transmis au Ministère</option>
+            <option value="En attente">En attente de réponse</option>
+            <option value="Partiellement satisfait">Partiellement satisfait</option>
+            <option value="Satisfait">Satisfait</option>
+            <option value="Rejeté">Rejeté</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Date de transmission</label>
+          <input type="date" name="date_transmission" id="update-date-transmission">
+          <small style="color: #666;">Date d'envoi au Ministère de la Fonction Publique</small>
+        </div>
+        
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Observations</label>
+          <textarea name="observations" id="update-observations" rows="3" placeholder="Commentaires sur l'évolution du besoin..."></textarea>
+        </div>
+      </div>
+      
+      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
+        <button type="button" class="btn-modal secondary" onclick="closeUpdateModal()">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Détail -->
+<div id="detailModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h2>📊 Détail du Besoin</h2>
+      <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+    </div>
+    
+    <div id="detail-content">
+      <!-- Rempli dynamiquement -->
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentBesoinId = null;
+
+// Bouton retour avec overlay
+document.addEventListener('DOMContentLoaded', function() {
+  const btnBack = document.querySelector('.btn-back');
+  if (btnBack) {
+    btnBack.addEventListener('click', function(e) {
+      e.preventDefault();
+      showGlobalLoading('Retour à RH...', 'Veuillez patienter');
+      setTimeout(() => {
+        window.location.href = this.href;
+      }, 300);
+    });
+  }
+});
+
+// Filtrer les besoins
+async function filtrerBesoins() {
+  const annee = document.getElementById('filter-annee').value;
+  const statut = document.getElementById('filter-statut').value;
+  
+  showGlobalLoading('Filtrage...', 'Recherche des besoins');
+  
+  try {
+    let url = `/api/v1/besoins/api/besoins?annee=${annee}`;
+    if (statut) url += `&statut=${encodeURIComponent(statut)}`;
+    
+    const response = await fetch(url);
+    const besoins = await response.json();
+    
+    const tbody = document.getElementById('besoins-tbody');
+    
+    if (besoins.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <div class="empty-state-icon">📭</div>
+              <p><strong>Aucun besoin trouvé</strong></p>
+              <p>Modifiez les filtres ou créez un nouveau besoin</p>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = besoins.map(b => {
+        const progress = b.nombre_demande > 0 ? Math.round((b.nombre_obtenu / b.nombre_demande) * 100) : 0;
+        const progressClass = progress < 50 ? 'low' : progress < 100 ? 'medium' : 'high';
+        const statutClass = b.statut.toLowerCase().replace(/ /g, '-').replace(/é/g, 'e').replace(/è/g, 'e');
+        
+        return `
+          <tr>
+            <td>
+              <strong>${b.service_libelle || '-'}</strong>
+            </td>
+            <td><strong>${b.poste_libelle}</strong></td>
+            <td>${b.grade_code ? '<span class="badge badge-info">' + b.grade_code + '</span>' : '-'}</td>
+            <td><strong style="font-size: 1.1rem;">${b.nombre_demande}</strong></td>
+            <td><strong style="font-size: 1.1rem; color: #28a745;">${b.nombre_obtenu}</strong></td>
+            <td>
+              <div class="progress-container">
+                <div class="progress-bar ${progressClass}" style="width: ${progress}%;">
+                  ${progress}%
+                </div>
+              </div>
+            </td>
+            <td><span class="badge-urgence ${b.urgence?.toLowerCase() || 'normale'}">${b.urgence}</span></td>
+            <td><span class="badge-statut ${statutClass}">${b.statut}</span></td>
+            <td>
+              <div class="action-icons">
+                <span class="action-icon" onclick="voirDetail(${b.id})" title="Voir détail">👁️</span>
+                <span class="action-icon" onclick="mettreAJour(${b.id})" title="Mettre à jour">📝</span>
+                <span class="action-icon" onclick="supprimerBesoin(${b.id})" title="Supprimer">🗑️</span>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    hideGlobalLoading();
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur lors du filtrage');
+  }
+}
+
+// Voir détail d'un besoin
+async function voirDetail(besoinId) {
+  showGlobalLoading('Chargement...', 'Récupération des détails');
+  
+  try {
+    const response = await fetch(`/api/v1/besoins/api/besoins`);
+    const besoins = await response.json();
+    const besoin = besoins.find(b => b.id === besoinId);
+    
+    if (!besoin) {
+      showError('Besoin non trouvé');
+      return;
+    }
+    
+    const progress = besoin.nombre_demande > 0 ? Math.round((besoin.nombre_obtenu / besoin.nombre_demande) * 100) : 0;
+    const progressClass = progress < 50 ? 'low' : progress < 100 ? 'medium' : 'high';
+    
+    document.getElementById('detail-content').innerHTML = `
+      <div style="display: grid; gap: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+          <div>
+            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Année</div>
+            <div style="font-size: 1.2rem; color: #333;">${besoin.annee} ${besoin.periode ? '- ' + besoin.periode : ''}</div>
+          </div>
+          
+          <div>
+            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Statut</div>
+            <div><span class="badge-statut ${besoin.statut.toLowerCase().replace(/ /g, '-')}">${besoin.statut}</span></div>
+          </div>
+        </div>
+        
+        <hr style="border: none; border-top: 2px solid #e0e0e0;">
+        
+        <div>
+          <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Poste demandé</div>
+          <div style="font-size: 1.2rem; color: #333;">${besoin.poste_libelle}</div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+          <div>
+            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Service</div>
+            <div>${besoin.service_libelle || '-'}</div>
+          </div>
+          
+          <div>
+            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Direction</div>
+            <div>${besoin.direction_libelle || '-'}</div>
+          </div>
+          
+          <div>
+            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Grade souhaité</div>
+            <div>${besoin.grade_code ? '<span class="badge badge-info">' + besoin.grade_code + '</span>' : '-'}</div>
+          </div>
+        </div>
+        
+        <hr style="border: none; border-top: 2px solid #e0e0e0;">
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+          <div style="text-align: center; padding: 1rem; background: #fff3cd; border-radius: 10px;">
+            <div style="font-size: 2rem; font-weight: 700; color: #856404;">${besoin.nombre_demande}</div>
+            <div style="font-weight: 600; color: #856404;">Agents Demandés</div>
+          </div>
+          
+          <div style="text-align: center; padding: 1rem; background: #d4edda; border-radius: 10px;">
+            <div style="font-size: 2rem; font-weight: 700; color: #155724;">${besoin.nombre_obtenu}</div>
+            <div style="font-weight: 600; color: #155724;">Agents Obtenus</div>
+          </div>
+        </div>
+        
+        <div>
+          <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Taux de Satisfaction</div>
+          <div class="progress-container" style="height: 30px;">
+            <div class="progress-bar ${progressClass}" style="width: ${progress}%; font-size: 1rem;">
+              ${progress}%
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+          <div>
+            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Urgence</div>
+            <div><span class="badge-urgence ${besoin.urgence?.toLowerCase() || 'normale'}">${besoin.urgence}</span></div>
+          </div>
+          
+          <div>
+            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date d'expression</div>
+            <div>${besoin.date_expression || '-'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('detailModal').classList.add('show');
+    hideGlobalLoading();
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur lors du chargement des détails');
+  }
+}
+
+// Mettre à jour un besoin
+function mettreAJour(besoinId) {
+  currentBesoinId = besoinId;
+  
+  // Récupérer les données actuelles du besoin
+  fetch(`/api/v1/besoins/api/besoins`)
+    .then(res => res.json())
+    .then(besoins => {
+      const besoin = besoins.find(b => b.id === besoinId);
+      if (besoin) {
+        document.getElementById('update-nombre-obtenu').value = besoin.nombre_obtenu || 0;
+        document.getElementById('update-statut').value = besoin.statut || 'Exprimé';
+      }
+      document.getElementById('updateModal').classList.add('show');
+    });
+}
+
+// Soumettre la mise à jour
+async function handleUpdate(event) {
+  event.preventDefault();
+  
+  if (!currentBesoinId) return;
+  
+  showGlobalLoading('Mise à jour...', 'Enregistrement des modifications');
+  
+  const formData = new FormData(event.target);
+  
+  try {
+    const response = await fetch(`/api/v1/besoins/api/besoins/${currentBesoinId}`, {
+      method: 'PUT',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Besoin mis à jour avec succès');
+      closeUpdateModal();
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement des données');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la mise à jour');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Supprimer un besoin
+async function supprimerBesoin(besoinId) {
+  if (!confirm('⚠️ Supprimer ce besoin ?\n\nCette action est irréversible.')) return;
+  
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/besoins/api/besoins/${besoinId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Besoin supprimé avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement...');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Fermer les modaux
+function closeUpdateModal() {
+  document.getElementById('updateModal').classList.remove('show');
+  document.getElementById('updateForm').reset();
+  currentBesoinId = null;
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('show');
+}
+
+// Styles pour les modaux (réutilisation du style référentiels)
+const style = document.createElement('style');
+style.textContent = `
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-overlay.show {
+    display: flex;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    color: #333;
+  }
+
+  .modal-close {
+    font-size: 2rem;
+    color: #6c757d;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .modal-close:hover {
+    color: #dc3545;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+
+  .btn-modal {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .btn-modal.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .btn-modal.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-modal.secondary {
+    background: #e9ecef;
+    color: #495057;
+  }
+
+  .btn-modal.secondary:hover {
+    background: #dee2e6;
+  }
+`;
+document.head.appendChild(style);
+
+console.log('✅ Page suivi des besoins chargée');
+</script>
+{% endblock %}
+

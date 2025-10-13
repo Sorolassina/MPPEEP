@@ -3,25 +3,7 @@
 
 {% block styles %}
 <style>
-/* Grille principale RH - UNE SEULE COLONNE */
-.rh-grid{
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-
-/* Cards */
-.card{ 
-  background:#fff; 
-  border-radius:14px; 
-  box-shadow:0 10px 25px rgba(0,0,0,.06); 
-  padding:1.5rem;
-  height: fit-content;
-}
-
+/* Styles spécifiques page RH (les styles communs sont dans pages.css) */
 .card h2, .card h3 {
   margin: 0 0 1rem 0;
   color: #222;
@@ -112,41 +94,7 @@
   min-height: 300px;
 }
 
-/* Liste des demandes */
-.demandes-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin-top: 1rem;
-}
-
-.demandes-table thead {
-  background: #f8f9fa;
-}
-
-.demandes-table th {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: #495057;
-  border-bottom: 2px solid #dee2e6;
-  font-size: 0.9rem;
-}
-
-.demandes-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e9ecef;
-  color: #495057;
-}
-
-.demandes-table tbody tr {
-  transition: background 0.2s;
-}
-
-.demandes-table tbody tr:hover {
-  background: #f8f9fa;
-}
-
+/* Badges spécifiques RH */
 .badge-type {
   display: inline-block;
   padding: 0.25rem 0.6rem;
@@ -173,57 +121,26 @@
 .badge-state.signature { background: #fd7e14; }
 .badge-state.archived { background: #198754; }
 .badge-state.rejected { background: #dc3545; }
-
-.action-icons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: #e9ecef;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.icon-btn:hover {
-  background: #667eea;
-  color: white;
-  transform: scale(1.1);
-}
-
-.icon-btn.delete:hover {
-  background: #dc3545;
-}
-
-.icon-btn svg {
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
-}
-
-.no-demandes {
-  text-align: center;
-  padding: 2rem;
-  color: #6c757d;
-}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="rh-grid">
+<div class="page-grid">
   
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">📋 Gestion des Ressources Humaines</h1>
+      <a href="/accueil" class="btn-back" title="Retour à l'accueil">
+        <span style="font-size: 1.2rem;">←</span> Retour
+      </a>
+    </div>
+    <p style="color: #6c757d; margin: 0;">Gérez les demandes administratives, le workflow et les effectifs</p>
+  </div>
+
   <!-- KPIs et Actions -->
-    <div class="card">
-    <h2>Gestion des ressources humaines</h2>
+  <div class="card">
+    <h2 style="margin: 0 0 1.5rem 0; color: #222; font-size: 1.3rem;">📊 Statistiques et Indicateurs</h2>
     
     <!-- KPIs Agents -->
     <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">👥 Effectifs</h3>
@@ -290,8 +207,8 @@
           <svg viewBox="0 0 24 24"><path d="M7 3v4M17 3v4M3 9h18M5 12h14M5 16h10"/></svg>
         Personnel
         </a>
-        <a href="#" class="btn" title="Besoins d'actes administratifs">
-          <svg viewBox="0 0 24 24"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg>
+        <a href="{{ url_for('besoins_home') }}" class="btn" title="Suivi des besoins en agents">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Suivi des besoins agents
         </a>
       </div>
@@ -326,7 +243,8 @@
     <h3>📋 Demandes Récentes ({{ demandes|length }})</h3>
     
     {% if demandes and demandes|length > 0 %}
-    <table class="demandes-table">
+    <div class="data-table">
+    <table>
       <thead>
         <tr>
           <th>ID</th>
@@ -368,20 +286,25 @@
           </td>
           <td>
             <div class="action-icons">
-              <a href="{{ url_for('rh_demande_detail', request_id=d.id) }}" class="icon-btn" title="Voir les détails">
-                <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <a href="{{ url_for('rh_demande_detail', request_id=d.id) }}" class="action-icon" title="Voir les détails">
+                👁️
               </a>
-              <button class="icon-btn delete" onclick="supprimerDemande({{ d.id }})" title="Supprimer">
-                <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14"/></svg>
-              </button>
+              <span class="action-icon" onclick="supprimerDemande({{ d.id }})" title="Supprimer" style="cursor: pointer;">
+                🗑️
+              </span>
             </div>
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
-    <div class="no-demandes">📭 Aucune demande pour le moment</div>
+    <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <p><strong>Aucune demande pour le moment</strong></p>
+      <p>Les demandes apparaîtront ici</p>
+    </div>
     {% endif %}
   </div>
   
@@ -391,6 +314,25 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Activer l'overlay pour le bouton retour
+document.addEventListener('DOMContentLoaded', function() {
+  const btnBack = document.querySelector('.btn-back');
+  if (btnBack) {
+    btnBack.addEventListener('click', function(e) {
+      e.preventDefault();
+      const overlay = document.getElementById('globalLoadingOverlay');
+      if (overlay) {
+        overlay.querySelector('.loading-text').textContent = 'Retour à l\'accueil...';
+        overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
+        overlay.classList.add('show');
+      }
+      setTimeout(() => {
+        window.location.href = this.href;
+      }, 300);
+    });
+  }
+});
+
 async function getJSON(url){ 
   const r = await fetch(url, {headers:{'Accept':'application/json'}}); 
   return r.json(); 
@@ -463,13 +405,7 @@ async function supprimerDemande(demandeId) {
     return;
   }
   
-  // Afficher l'overlay global
-  const overlay = document.getElementById('globalLoadingOverlay');
-  if (overlay) {
-    overlay.querySelector('.loading-text').textContent = 'Suppression en cours...';
-    overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
-    overlay.classList.add('show');
-  }
+  showGlobalLoading('Suppression en cours...', 'Veuillez patienter');
   
   try {
     const res = await fetch(`/api/v1/rh/api/demandes/${demandeId}`, {
@@ -480,29 +416,17 @@ async function supprimerDemande(demandeId) {
     const data = await res.json();
     
     if (res.ok && data.ok) {
-      // Mettre à jour l'overlay avec un message de succès
-      if (overlay) {
-        overlay.querySelector('.loading-text').textContent = '✅ Suppression réussie';
-        overlay.querySelector('.loading-subtext').textContent = 'Rechargement de la page...';
-      }
-      // Recharger après un court délai pour que l'utilisateur voie le message de succès
+      showSuccess('Demande supprimée avec succès');
       setTimeout(() => {
+        showGlobalLoading('Rechargement...', 'Actualisation de la liste');
         location.reload();
       }, 800);
     } else {
-      // Masquer l'overlay et afficher l'erreur
-      if (overlay) {
-        overlay.classList.remove('show');
-      }
-      alert('❌ ' + (data.detail || 'Impossible de supprimer cette demande'));
+      await handleFetchError(res, 'Impossible de supprimer cette demande');
     }
   } catch (error) {
-    // Masquer l'overlay en cas d'erreur
-    if (overlay) {
-      overlay.classList.remove('show');
-    }
     console.error('Erreur:', error);
-    alert('❌ Erreur lors de la suppression');
+    showError('Erreur réseau. Vérifiez votre connexion.');
   }
 }
 </script>

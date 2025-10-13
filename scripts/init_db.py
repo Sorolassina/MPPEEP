@@ -13,12 +13,13 @@ from app.models.user import User
 from app.models.system_settings import SystemSettings
 from app.models.activity import Activity
 from app.models.file import File  # Import du modèle File pour créer la table
+from app.models.personnel import Programme, Direction, Service, GradeComplet
 from app.core.config import settings
 from app.services.user_service import UserService
 from app.services.system_settings_service import SystemSettingsService
-from app.core.enums import UserType
+from app.core.enums import UserType, GradeCategory
 from app.core.logging_config import get_logger
-from sqlmodel import SQLModel, Session
+from sqlmodel import SQLModel, Session, select
 
 # Logger pour ce script
 logger = get_logger(__name__)
@@ -101,6 +102,92 @@ def initialize_system_settings():
         logger.error(f"❌ Erreur initialisation paramètres système: {e}")
         return False
 
+def initialize_personnel_data():
+    """Initialise les données de référence du personnel (programmes, directions, services, grades)"""
+    try:
+        with Session(engine) as session:
+            # Vérifier si les données existent déjà
+            existing_programmes = session.exec(select(Programme)).first()
+            if existing_programmes:
+                logger.info("ℹ️  Données de référence du personnel déjà initialisées")
+                return True
+            
+            logger.info("📋 Initialisation des données de référence du personnel...")
+            
+            # Programmes
+            programmes_data = [
+                {"code": "P01", "libelle": "Pilotage et Soutien Institutionnel", "description": "Programme de pilotage"},
+                {"code": "P02", "libelle": "Gestion du Portefeuille de l'État", "description": "Gestion des participations"},
+                {"code": "P03", "libelle": "Gestion du Patrimoine de l'État", "description": "Gestion du patrimoine"},
+            ]
+            for prog_data in programmes_data:
+                prog = Programme(**prog_data)
+                session.add(prog)
+            session.commit()
+            logger.info("✅ 3 Programmes créés")
+            
+            # Directions
+            programmes = {p.code: p for p in session.exec(select(Programme)).all()}
+            directions_data = [
+                {"code": "DG", "libelle": "Direction Générale", "programme_id": programmes["P01"].id},
+                {"code": "DAF", "libelle": "Direction Administrative et Financière", "programme_id": programmes["P01"].id},
+                {"code": "DRH", "libelle": "Direction des Ressources Humaines", "programme_id": programmes["P01"].id},
+                {"code": "DPE", "libelle": "Direction du Portefeuille de l'État", "programme_id": programmes["P02"].id},
+                {"code": "DPAT", "libelle": "Direction du Patrimoine de l'État", "programme_id": programmes["P03"].id},
+            ]
+            for dir_data in directions_data:
+                direction = Direction(**dir_data)
+                session.add(direction)
+            session.commit()
+            logger.info("✅ 5 Directions créées")
+            
+            # Services
+            directions = {d.code: d for d in session.exec(select(Direction)).all()}
+            services_data = [
+                {"code": "SCPT", "libelle": "Service Comptabilité", "direction_id": directions["DAF"].id},
+                {"code": "SBUD", "libelle": "Service Budget", "direction_id": directions["DAF"].id},
+                {"code": "SAPV", "libelle": "Service Approvisionnement", "direction_id": directions["DAF"].id},
+                {"code": "SCAR", "libelle": "Service Carrière", "direction_id": directions["DRH"].id},
+                {"code": "SPAY", "libelle": "Service Paie", "direction_id": directions["DRH"].id},
+                {"code": "SFOR", "libelle": "Service Formation", "direction_id": directions["DRH"].id},
+                {"code": "SPAR", "libelle": "Service Participations", "direction_id": directions["DPE"].id},
+                {"code": "SETU", "libelle": "Service Études", "direction_id": directions["DPE"].id},
+                {"code": "SGIM", "libelle": "Service Gestion Immobilière", "direction_id": directions["DPAT"].id},
+                {"code": "SINV", "libelle": "Service Inventaire", "direction_id": directions["DPAT"].id},
+            ]
+            for serv_data in services_data:
+                service = Service(**serv_data)
+                session.add(service)
+            session.commit()
+            logger.info("✅ 10 Services créés")
+            
+            # Grades
+            grades_data = [
+                {"code": "A1", "libelle": "Administrateur Civil", "categorie": GradeCategory.A, "echelon_min": 1, "echelon_max": 7},
+                {"code": "A2", "libelle": "Attaché d'Administration", "categorie": GradeCategory.A, "echelon_min": 1, "echelon_max": 6},
+                {"code": "A3", "libelle": "Secrétaire d'Administration", "categorie": GradeCategory.A, "echelon_min": 1, "echelon_max": 5},
+                {"code": "B1", "libelle": "Contrôleur des Services Administratifs", "categorie": GradeCategory.B, "echelon_min": 1, "echelon_max": 6},
+                {"code": "B2", "libelle": "Contrôleur du Trésor", "categorie": GradeCategory.B, "echelon_min": 1, "echelon_max": 5},
+                {"code": "B3", "libelle": "Secrétaire d'Administration", "categorie": GradeCategory.B, "echelon_min": 1, "echelon_max": 5},
+                {"code": "C1", "libelle": "Commis des Services Administratifs", "categorie": GradeCategory.C, "echelon_min": 1, "echelon_max": 5},
+                {"code": "C2", "libelle": "Agent Administratif", "categorie": GradeCategory.C, "echelon_min": 1, "echelon_max": 4},
+                {"code": "C3", "libelle": "Aide Administratif", "categorie": GradeCategory.C, "echelon_min": 1, "echelon_max": 3},
+                {"code": "D1", "libelle": "Agent de Bureau", "categorie": GradeCategory.D, "echelon_min": 1, "echelon_max": 4},
+                {"code": "D2", "libelle": "Homme de Service", "categorie": GradeCategory.D, "echelon_min": 1, "echelon_max": 3},
+            ]
+            for grade_data in grades_data:
+                grade = GradeComplet(**grade_data)
+                session.add(grade)
+            session.commit()
+            logger.info("✅ 11 Grades créés")
+            
+            logger.info("🎉 Données de référence du personnel initialisées avec succès !")
+            return True
+            
+    except Exception as e:
+        logger.error(f"❌ Erreur initialisation données personnel: {e}", exc_info=True)
+        return False
+
 def create_admin_user():
     """Crée l'utilisateur admin par défaut SI aucun admin n'existe"""
     try:
@@ -160,7 +247,8 @@ def initialize_database():
     0. Crée la base de données PostgreSQL si nécessaire
     1. Crée les tables si elles n'existent pas
     2. Initialise les paramètres système
-    3. Crée l'utilisateur admin si aucun utilisateur n'existe
+    3. Initialise les données de référence du personnel
+    4. Crée l'utilisateur admin si aucun utilisateur n'existe
     """
     logger.info("\n" + "="*60)
     logger.info("🚀 Initialisation de la base de données...")
@@ -184,7 +272,12 @@ def initialize_database():
         logger.error("❌ Échec de l'initialisation des paramètres système")
         return False
     
-    # Étape 3: Créer l'admin si besoin
+    # Étape 3: Initialiser les données de référence du personnel
+    if not initialize_personnel_data():
+        logger.error("❌ Échec de l'initialisation des données de référence")
+        return False
+    
+    # Étape 4: Créer l'admin si besoin
     if not create_admin_user():
         logger.error("❌ Échec de la création de l'utilisateur admin")
         return False

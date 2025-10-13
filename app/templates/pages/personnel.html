@@ -3,327 +3,20 @@
 {% block title %}Gestion du Personnel - {{ app_name }}{% endblock %}
 
 {% block styles %}
-<style>
-.personnel-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  min-height: 100vh;
-}
-
-.card {
-  background: white;
-  padding: 2rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 50px rgba(0,0,0,0.15);
-}
-
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 2rem;
-}
-
-.stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.stat-card:hover::before {
-  opacity: 1;
-}
-
-.stat-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
-}
-
-.stat-card.secondary {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  box-shadow: 0 10px 30px rgba(245, 87, 108, 0.3);
-}
-
-.stat-card.secondary:hover {
-  box-shadow: 0 15px 40px rgba(245, 87, 108, 0.4);
-}
-
-.stat-card.success {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  box-shadow: 0 10px 30px rgba(79, 172, 254, 0.3);
-}
-
-.stat-card.success:hover {
-  box-shadow: 0 15px 40px rgba(79, 172, 254, 0.4);
-}
-
-.stat-card.warning {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  box-shadow: 0 10px 30px rgba(250, 112, 154, 0.3);
-}
-
-.stat-card.warning:hover {
-  box-shadow: 0 15px 40px rgba(250, 112, 154, 0.4);
-}
-
-.stat-number {
-  font-size: 3rem;
-  font-weight: bold;
-  margin: 0.5rem 0;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  animation: countUp 0.5s ease-out;
-}
-
-@keyframes countUp {
-  from { transform: scale(0.5); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.stat-label {
-  font-size: 1rem;
-  opacity: 0.95;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.actions-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  background: white;
-  padding: 1.5rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-}
-
-.search-box {
-  flex: 1;
-  min-width: 300px;
-  position: relative;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 1rem 1.5rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 50px;
-  font-size: 1rem;
-  transition: all 0.3s;
-  background: #f8f9fa;
-}
-
-.search-box input:focus {
-  outline: none;
-  border-color: #667eea;
-  background: white;
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
-  transform: translateY(-2px);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 50px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s;
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  transform: translate(-50%, -50%);
-  transition: width 0.5s, height 0.5s;
-}
-
-.btn-primary:hover::before {
-  width: 300px;
-  height: 300px;
-}
-
-.btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
-}
-
-.personnel-table {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-  overflow: hidden;
-  animation: slideUp 0.5s ease-out;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.personnel-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.personnel-table thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.personnel-table th {
-  padding: 1.25rem 1.5rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.personnel-table td {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #f0f0f0;
-  transition: all 0.2s;
-}
-
-.personnel-table tbody tr {
-  transition: all 0.3s ease;
-}
-
-.personnel-table tbody tr:hover {
-  background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
-  transform: scale(1.005);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-}
-
-.badge {
-  padding: 0.4rem 1rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.badge-success {
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  color: white;
-}
-
-.badge-danger {
-  background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
-  color: white;
-}
-
-.action-icons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.action-icon {
-  cursor: pointer;
-  padding: 0.6rem;
-  border-radius: 12px;
-  transition: all 0.3s;
-  text-decoration: none;
-  color: inherit;
-  font-size: 1.2rem;
-  background: #f8f9fa;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.action-icon:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  transform: scale(1.1) rotate(5deg);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #6c757d;
-}
-
-.empty-state-icon {
-  font-size: 5rem;
-  margin-bottom: 1.5rem;
-  opacity: 0.3;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.05); }
-}
-
-.empty-state p {
-  font-size: 1.1rem;
-  margin: 0.5rem 0;
-}
-</style>
+<!-- Styles déjà chargés via base.html -->
 {% endblock %}
 
 {% block content %}
-<div class="personnel-grid">
+<div class="page-grid">
   
   <!-- En-tête -->
   <div class="card">
-    <h1 style="margin: 0 0 0.5rem 0;">👥 Gestion du Personnel</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">👥 Gestion du Personnel</h1>
+      <a href="/api/v1/rh/" class="btn-back" title="Retour à RH">
+        <span style="font-size: 1.2rem;">←</span> Retour à RH
+      </a>
+    </div>
     <p style="color: #6c757d; margin: 0;">Gérez les agents, leurs informations et documents</p>
   </div>
 
@@ -366,7 +59,7 @@
   </div>
 
   <!-- Tableau des agents -->
-  <div class="personnel-table">
+  <div class="data-table">
     <table>
       <thead>
         <tr>
@@ -428,6 +121,25 @@
 </div>
 
 <script>
+// Activer l'overlay pour le bouton retour
+document.addEventListener('DOMContentLoaded', function() {
+  const btnBack = document.querySelector('.btn-back');
+  if (btnBack) {
+    btnBack.addEventListener('click', function(e) {
+      e.preventDefault();
+      const overlay = document.getElementById('globalLoadingOverlay');
+      if (overlay) {
+        overlay.querySelector('.loading-text').textContent = 'Retour à RH...';
+        overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
+        overlay.classList.add('show');
+      }
+      setTimeout(() => {
+        window.location.href = this.href;
+      }, 300);
+    });
+  }
+});
+
 // Recherche en temps réel
 const searchInput = document.getElementById('searchInput');
 const tableBody = document.getElementById('agentsTableBody');
@@ -487,13 +199,7 @@ async function supprimerAgent(agentId) {
     return;
   }
   
-  // Afficher l'overlay global
-  const overlay = document.getElementById('globalLoadingOverlay');
-  if (overlay) {
-    overlay.querySelector('.loading-text').textContent = 'Désactivation en cours...';
-    overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
-    overlay.classList.add('show');
-  }
+  showGlobalLoading('Désactivation en cours...', 'Veuillez patienter');
   
   try {
     const res = await fetch(`/api/v1/personnel/api/agents/${agentId}`, {
@@ -504,19 +210,17 @@ async function supprimerAgent(agentId) {
     const data = await res.json();
     
     if (res.ok && data.ok) {
-      if (overlay) {
-        overlay.querySelector('.loading-text').textContent = '✅ Agent désactivé';
-        overlay.querySelector('.loading-subtext').textContent = 'Rechargement...';
-      }
-      setTimeout(() => location.reload(), 800);
+      showSuccess('Agent désactivé avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Rechargement...', 'Actualisation de la liste');
+        location.reload();
+      }, 800);
     } else {
-      if (overlay) overlay.classList.remove('show');
-      alert('❌ ' + (data.detail || 'Erreur lors de la désactivation'));
+      await handleFetchError(res, 'Erreur lors de la désactivation');
     }
   } catch (error) {
-    if (overlay) overlay.classList.remove('show');
     console.error('Erreur:', error);
-    alert('❌ Erreur lors de la désactivation');
+    showError('Erreur réseau. Vérifiez votre connexion.');
   }
 }
 </script>

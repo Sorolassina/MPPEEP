@@ -278,14 +278,23 @@ body {
 {% endblock %}
 
 {% block content %}
-<div class="form-container">
+<div class="page-grid" style="max-width: 1200px;">
   
-  <div class="form-card">
-    <div class="form-header">
-      <h1>{{ '➕ Nouvel Agent' if mode == 'create' else '✏️ Modifier Agent' }}</h1>
-      <a href="/api/v1/personnel/" class="btn btn-secondary">← Retour</a>
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">{{ '➕ Nouvel Agent' if mode == 'create' else '✏️ Modifier Agent' }}</h1>
+      <a href="/api/v1/personnel/" class="btn-back" title="Retour au Personnel">
+        <span style="font-size: 1.2rem;">←</span> Retour au Personnel
+      </a>
     </div>
+    <p style="color: #6c757d; margin: 0;">
+      {{ 'Créez un nouveau dossier agent avec toutes les informations nécessaires' if mode == 'create' else 'Modifiez les informations de l\'agent' }}
+    </p>
+  </div>
 
+  <!-- Formulaire -->
+  <div class="form-card">
     <div class="alert alert-info">
       ℹ️ Les champs marqués d'un astérisque (*) sont obligatoires
     </div>
@@ -646,13 +655,7 @@ directionSelect.addEventListener('change', function() {
 document.querySelector('form').addEventListener('submit', async function(e) {
   e.preventDefault();
   
-  // Afficher l'overlay de chargement
-  const overlay = document.getElementById('globalLoadingOverlay');
-  if (overlay) {
-    overlay.querySelector('.loading-text').textContent = 'Enregistrement en cours...';
-    overlay.querySelector('.loading-subtext').textContent = 'Veuillez patienter';
-    overlay.classList.add('show');
-  }
+  showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
   
   // Collecter les données
   const formData = new FormData(this);
@@ -681,23 +684,19 @@ document.querySelector('form').addEventListener('submit', async function(e) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      if (overlay) {
-        overlay.querySelector('.loading-text').textContent = '✅ Agent créé avec succès';
-        overlay.querySelector('.loading-subtext').textContent = 'Redirection...';
-      }
+      showSuccess('Agent créé avec succès !');
       
       // Rediriger vers la fiche de l'agent
       setTimeout(() => {
+        showGlobalLoading('Redirection...', 'Ouverture de la fiche agent');
         window.location.href = `/api/v1/personnel/${result.agent_id}`;
       }, 1000);
     } else {
-      if (overlay) overlay.classList.remove('show');
-      alert('❌ Erreur : ' + (result.detail || 'Impossible de créer l\'agent'));
+      await handleFetchError(response, 'Impossible de créer l\'agent');
     }
   } catch (error) {
-    if (overlay) overlay.classList.remove('show');
     console.error('Erreur:', error);
-    alert('❌ Erreur lors de la création de l\'agent');
+    showError('Erreur réseau. Vérifiez votre connexion.');
   }
 });
 

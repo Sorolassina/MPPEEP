@@ -7,6 +7,11 @@ from app.models.system_settings import SystemSettings
 from app.models.activity import Activity
 from app.models.file import File
 from app.models.rh import Agent, Grade, ServiceDept, HRRequest, WorkflowStep, WorkflowHistory
+from app.models.personnel import (
+    Programme, Direction, Service, GradeComplet,
+    AgentComplet, DocumentAgent, HistoriqueCarriere, EvaluationAgent
+)
+from app.models.besoins import BesoinAgent, SuiviBesoin, ConsolidationBesoin
 
 __all__ = [
     "User", 
@@ -19,6 +24,17 @@ __all__ = [
     "ServiceDept", 
     "HRRequest", 
     "WorkflowStep", 
-    "WorkflowHistory"
+    "WorkflowHistory",
+    "Programme",
+    "Direction", 
+    "Service",
+    "GradeComplet",
+    "AgentComplet",
+    "DocumentAgent",
+    "HistoriqueCarriere",
+    "EvaluationAgent",
+    "BesoinAgent",
+    "SuiviBesoin",
+    "ConsolidationBesoin"
     ]
 

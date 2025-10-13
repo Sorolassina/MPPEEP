@@ -11,6 +11,7 @@
     <!-- CSS de base -->
     <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/theme.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
     
     <style>
         /* ========================================
@@ -409,6 +410,15 @@
     </style>
 </head>
 <body>
+    <!-- Global Loading Overlay pour navigation -->
+    <div id="globalLoadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Connexion en cours...</div>
+            <div class="loading-subtext">Veuillez patienter</div>
+        </div>
+    </div>
+
     <div class="login-container">
         <div class="login-wrapper">
             <div class="login-content">
@@ -536,6 +546,22 @@
     </div>
 
     <script>
+        // Fonction pour afficher l'overlay global
+        function showGlobalLoading() {
+            const overlay = document.getElementById('globalLoadingOverlay');
+            if (overlay) {
+                overlay.classList.add('show');
+            }
+        }
+
+        // Fonction pour masquer l'overlay global
+        function hideGlobalLoading() {
+            const overlay = document.getElementById('globalLoadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('login-form');
             const emailInput = document.getElementById('email');
@@ -548,6 +574,9 @@
             const errorMessage = document.getElementById('error-message');
             const successMessage = document.getElementById('success-message');
             const errorText = document.getElementById('error-text');
+
+            // Masquer l'overlay au chargement de la page
+            hideGlobalLoading();
 
             // Toggle password visibility
             togglePassword.addEventListener('click', function () {
@@ -567,10 +596,13 @@
                 }
             });
 
-            // Form submission
+            // Form submission - Afficher l'overlay global
             form.addEventListener('submit', function (e) {
-                // Let the form submit naturally - no need to prevent default
-                // The server will handle the authentication and redirect
+                // Afficher l'overlay lors de la soumission
+                showGlobalLoading();
+                
+                // Le formulaire se soumet naturellement
+                // L'overlay restera affiché jusqu'à la navigation vers la page suivante
             });
 
             // Auto-hide error message after 5 seconds

@@ -1,0 +1,800 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Centre d'Aide - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Barre de recherche */
+.search-help {
+  margin-bottom: 2rem;
+}
+
+.search-help input {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  transition: all 0.3s;
+  background: white;
+}
+
+.search-help input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Sections d'aide */
+.help-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.help-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: all 0.3s;
+  border-left: 5px solid;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.help-card.primary {
+  border-left-color: #667eea;
+}
+
+.help-card.success {
+  border-left-color: #28a745;
+}
+
+.help-card.warning {
+  border-left-color: #ffc107;
+}
+
+.help-card.info {
+  border-left-color: #17a2b8;
+}
+
+.help-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+}
+
+.help-card-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.help-card-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.help-card-description {
+  color: #6c757d;
+  line-height: 1.6;
+}
+
+/* Accordéon FAQ */
+.faq-section {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.faq-item {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1.5rem 0;
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-question {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #333;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.faq-question:hover {
+  background: #f8f9fa;
+  color: #667eea;
+}
+
+.faq-question-icon {
+  font-size: 1.5rem;
+  transition: transform 0.3s;
+}
+
+.faq-item.active .faq-question-icon {
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  display: none;
+  padding: 1rem 0.5rem;
+  color: #6c757d;
+  line-height: 1.8;
+}
+
+.faq-item.active .faq-answer {
+  display: block;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Guides rapides */
+.quick-guides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.quick-guide {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: block;
+}
+
+.quick-guide:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+
+.quick-guide-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.quick-guide-description {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+/* Contact support */
+.support-info {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 2rem;
+  border-radius: 20px;
+  border-left: 5px solid #667eea;
+}
+
+.support-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.support-method {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.support-method:hover {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.support-icon {
+  font-size: 2rem;
+}
+
+.support-text {
+  flex: 1;
+}
+
+.support-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.support-value {
+  color: #667eea;
+  font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-grid">
+  
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">❓ Centre d'Aide</h1>
+      <a href="/accueil" class="btn-back" title="Retour à l'accueil">
+        <span style="font-size: 1.2rem;">←</span> Retour
+      </a>
+    </div>
+    <p style="color: #6c757d; margin: 0;">Trouvez rapidement des réponses à vos questions et apprenez à utiliser {{ app_name }}</p>
+  </div>
+
+  <!-- Barre de recherche -->
+  <div class="card search-help">
+    <input type="text" id="search-help" placeholder="🔍 Rechercher dans l'aide (ex: comment créer un agent, workflow RH...)">
+  </div>
+
+  <!-- Guides rapides -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">🚀 Guides Rapides</h2>
+    <div class="quick-guides">
+      <a href="#guide-demarrage" class="quick-guide" onclick="scrollToSection('guide-demarrage'); return false;">
+        <div class="quick-guide-title">🎯 Démarrage Rapide</div>
+        <div class="quick-guide-description">Premiers pas avec l'application</div>
+      </a>
+      
+      <a href="#guide-rh" class="quick-guide" onclick="scrollToSection('guide-rh'); return false;">
+        <div class="quick-guide-title">📋 Gestion RH</div>
+        <div class="quick-guide-description">Créer et gérer des demandes</div>
+      </a>
+      
+      <a href="#guide-personnel" class="quick-guide" onclick="scrollToSection('guide-personnel'); return false;">
+        <div class="quick-guide-title">👥 Gestion Personnel</div>
+        <div class="quick-guide-description">Gérer les agents</div>
+      </a>
+      
+      <a href="#guide-referentiels" class="quick-guide" onclick="scrollToSection('guide-referentiels'); return false;">
+        <div class="quick-guide-title">⚙️ Référentiels</div>
+        <div class="quick-guide-description">Configurer l'organigramme</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Sections Principales -->
+  <div class="help-sections">
+    <a href="#guide-demarrage" class="help-card primary" onclick="scrollToSection('guide-demarrage'); return false;">
+      <div class="help-card-icon">🎯</div>
+      <div class="help-card-title">Guide de Démarrage</div>
+      <div class="help-card-description">
+        Apprenez les bases : connexion, navigation, interface
+      </div>
+    </a>
+
+    <a href="#faq" class="help-card success" onclick="scrollToSection('faq'); return false;">
+      <div class="help-card-icon">💬</div>
+      <div class="help-card-title">FAQ</div>
+      <div class="help-card-description">
+        Questions fréquentes et réponses rapides
+      </div>
+    </a>
+
+    <a href="#tutoriels" class="help-card warning" onclick="scrollToSection('tutoriels'); return false;">
+      <div class="help-card-icon">📺</div>
+      <div class="help-card-title">Tutoriels</div>
+      <div class="help-card-description">
+        Guides pas-à-pas pour chaque fonctionnalité
+      </div>
+    </a>
+
+    <a href="#support" class="help-card info" onclick="scrollToSection('support'); return false;">
+      <div class="help-card-icon">📞</div>
+      <div class="help-card-title">Support</div>
+      <div class="help-card-description">
+        Contactez l'équipe support pour de l'aide
+      </div>
+    </a>
+  </div>
+
+  <!-- Guide de démarrage -->
+  <div class="card" id="guide-demarrage">
+    <h2>🎯 Guide de Démarrage Rapide</h2>
+    
+    <div style="margin-top: 1.5rem;">
+      <h3 style="color: #667eea; margin-bottom: 1rem;">1. Première Connexion</h3>
+      <ol style="line-height: 2; color: #6c757d;">
+        <li>Accédez à l'application via votre navigateur</li>
+        <li>Entrez votre <strong>email</strong> et <strong>mot de passe</strong></li>
+        <li>Cliquez sur <strong>"Se connecter"</strong></li>
+        <li>Vous arrivez sur la page d'<strong>Accueil</strong></li>
+      </ol>
+    </div>
+
+    <div style="margin-top: 2rem;">
+      <h3 style="color: #667eea; margin-bottom: 1rem;">2. Navigation</h3>
+      <ul style="line-height: 2; color: #6c757d;">
+        <li><strong>Barre de navigation</strong> : Accueil, Dashboard, RH, Budget, Stocks</li>
+        <li><strong>Actions rapides</strong> : Boutons pour les tâches fréquentes</li>
+        <li><strong>Boutons retour</strong> : En haut à droite de chaque page</li>
+        <li><strong>Profil utilisateur</strong> : Cliquez sur votre photo en haut à droite</li>
+      </ul>
+    </div>
+
+    <div style="margin-top: 2rem;">
+      <h3 style="color: #667eea; margin-bottom: 1rem;">3. Modules Principaux</h3>
+      <ul style="line-height: 2; color: #6c757d;">
+        <li>📋 <strong>RH</strong> : Gestion des demandes administratives et workflow</li>
+        <li>👥 <strong>Personnel</strong> : Gestion des agents et dossiers</li>
+        <li>⚙️ <strong>Paramètres</strong> : Configuration système et référentiels</li>
+        <li>📚 <strong>Référentiels</strong> : Programmes, Directions, Services, Grades</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-section" id="faq">
+    <h2 style="margin-bottom: 2rem;">💬 Questions Fréquentes (FAQ)</h2>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment créer un nouvel agent ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <ol>
+          <li>Allez dans <strong>RH → Personnel</strong></li>
+          <li>Cliquez sur <strong>"➕ Nouvel Agent"</strong></li>
+          <li>Remplissez le formulaire (les champs avec * sont obligatoires)</li>
+          <li>Sélectionnez le <strong>Grade</strong>, <strong>Service</strong>, etc.</li>
+          <li>Cliquez sur <strong>"➕ Créer l'agent"</strong></li>
+          <li>✅ L'agent est créé et apparaît dans la liste !</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment faire une demande administrative ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <ol>
+          <li>Allez dans <strong>RH</strong></li>
+          <li>Cliquez sur <strong>"📝 Nouvelle demande"</strong></li>
+          <li>Renseignez le <strong>Matricule de l'agent</strong></li>
+          <li>Choisissez le <strong>Type de demande</strong> (Congé, Permission, Acte administratif, etc.)</li>
+          <li>Remplissez les informations spécifiques au type choisi</li>
+          <li>Joindre un document si nécessaire (PDF, Word, Image)</li>
+          <li>Cliquez sur <strong>"📤 Créer la demande"</strong></li>
+          <li>✅ La demande suit automatiquement le circuit de validation !</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment modifier un programme ou un service ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <ol>
+          <li>Accueil → <strong>Paramètres</strong> → <strong>Référentiels</strong></li>
+          <li>Ou directement : Accueil → <strong>Référentiels</strong></li>
+          <li>Choisissez l'onglet (Programmes, Directions, Services, Grades)</li>
+          <li>Trouvez l'élément dans le tableau</li>
+          <li>Cliquez sur <strong>✏️ Modifier</strong></li>
+          <li>Modifiez les informations dans le formulaire</li>
+          <li>Cliquez sur <strong>"Enregistrer"</strong></li>
+          <li>✅ Les modifications sont appliquées partout !</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Quelle est la différence entre Désactiver et Supprimer ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <p><strong>🔒 Désactiver (Recommandé)</strong> :</p>
+        <ul>
+          <li>✅ Masque l'élément des listes</li>
+          <li>✅ Conserve toutes les données</li>
+          <li>✅ Peut être réactivé (🔓)</li>
+          <li>✅ Historique préservé</li>
+          <li><strong>Usage</strong> : Quand un service n'est plus utilisé mais pourrait revenir</li>
+        </ul>
+        
+        <p style="margin-top: 1rem;"><strong>🗑️ Supprimer (Avec Précaution)</strong> :</p>
+        <ul>
+          <li>❌ Supprime définitivement</li>
+          <li>❌ Toutes les données sont perdues</li>
+          <li>❌ Impossible de récupérer</li>
+          <li>⚠️ Peut casser des références</li>
+          <li><strong>Usage</strong> : Seulement pour les erreurs de saisie ou doublons</li>
+        </ul>
+        
+        <p style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
+          <strong>💡 Conseil</strong> : Toujours désactiver d'abord, supprimer seulement si vraiment nécessaire !
+        </p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment suivre le circuit de validation d'une demande ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <ol>
+          <li>Allez dans <strong>RH</strong></li>
+          <li>Trouvez la demande dans le tableau <strong>"Demandes Récentes"</strong></li>
+          <li>Cliquez sur <strong>👁️</strong> pour voir les détails</li>
+          <li>Vous verrez :
+            <ul>
+              <li>État actuel de la demande</li>
+              <li>Prochaines étapes du workflow</li>
+              <li>Historique complet des validations</li>
+              <li>Qui a validé à chaque étape</li>
+            </ul>
+          </li>
+        </ol>
+        
+        <p style="margin-top: 1rem;"><strong>Circuit type</strong> : DRAFT → SUBMITTED → N+1 → N+2 → DRH → DG → DAF → ARCHIVED</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Comment modifier mon profil ou changer mon mot de passe ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <ol>
+          <li>Cliquez sur <strong>votre photo de profil</strong> en haut à droite</li>
+          <li>Sélectionnez <strong>"Mon Profil"</strong> dans le menu déroulant</li>
+          <li>Pour modifier :
+            <ul>
+              <li><strong>Photo</strong> : Cliquez sur "Changer la photo"</li>
+              <li><strong>Informations</strong> : Modifiez nom, email, etc.</li>
+              <li><strong>Mot de passe</strong> : Section "Sécurité"</li>
+            </ul>
+          </li>
+          <li>Cliquez sur <strong>"💾 Enregistrer"</strong></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>J'ai oublié mon mot de passe, que faire ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <ol>
+          <li>Sur la page de connexion, cliquez sur <strong>"Mot de passe oublié ?"</strong></li>
+          <li>Entrez votre <strong>adresse email</strong></li>
+          <li>Vous recevrez un <strong>code de vérification</strong> par email</li>
+          <li>Entrez le code reçu</li>
+          <li>Définissez votre <strong>nouveau mot de passe</strong></li>
+          <li>✅ Vous pouvez maintenant vous connecter avec le nouveau mot de passe !</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Que signifient les différents badges de couleur ?</span>
+        <span class="faq-question-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <p><strong>Statuts généraux</strong> :</p>
+        <ul>
+          <li><span class="badge badge-success">Actif</span> : Élément en cours d'utilisation</li>
+          <li><span class="badge badge-danger">Inactif</span> : Élément désactivé</li>
+        </ul>
+        
+        <p style="margin-top: 1rem;"><strong>États de demandes RH</strong> :</p>
+        <ul>
+          <li><span style="background: #adb5bd; color: white; padding: 0.25rem 0.5rem; border-radius: 12px;">Brouillon</span> : Demande en cours de rédaction</li>
+          <li><span style="background: #0dcaf0; color: white; padding: 0.25rem 0.5rem; border-radius: 12px;">Soumise</span> : Demande envoyée pour validation</li>
+          <li><span style="background: #ffc107; color: white; padding: 0.25rem 0.5rem; border-radius: 12px;">En validation</span> : En cours de traitement</li>
+          <li><span style="background: #198754; color: white; padding: 0.25rem 0.5rem; border-radius: 12px;">Archivée</span> : Demande traitée et archivée</li>
+          <li><span style="background: #dc3545; color: white; padding: 0.25rem 0.5rem; border-radius: 12px;">Rejetée</span> : Demande refusée</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tutoriels par module -->
+  <div class="card" id="tutoriels">
+    <h2 style="margin-bottom: 1.5rem;">📺 Tutoriels par Module</h2>
+    
+    <div id="guide-rh" style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px;">
+      <h3 style="color: #667eea;">📋 Module RH - Ressources Humaines</h3>
+      <ul style="line-height: 2; color: #6c757d; margin-top: 1rem;">
+        <li><strong>Créer une demande</strong> : RH → Nouvelle demande → Remplir formulaire → Soumettre</li>
+        <li><strong>Suivre une demande</strong> : RH → Cliquer sur 👁️ → Voir timeline et étapes</li>
+        <li><strong>Valider une demande</strong> : Ouvrir détail → Cliquer sur "Valider" → Confirmer</li>
+        <li><strong>Voir les statistiques</strong> : Page RH affiche KPIs en temps réel</li>
+      </ul>
+    </div>
+
+    <div id="guide-personnel" style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px;">
+      <h3 style="color: #667eea;">👥 Module Personnel</h3>
+      <ul style="line-height: 2; color: #6c757d; margin-top: 1rem;">
+        <li><strong>Ajouter un agent</strong> : Personnel → Nouvel Agent → Remplir toutes les sections → Créer</li>
+        <li><strong>Rechercher un agent</strong> : Utilisez la barre de recherche (matricule, nom, prénom)</li>
+        <li><strong>Modifier un agent</strong> : Cliquez sur ✏️ → Modifier → Enregistrer</li>
+        <li><strong>Désactiver un agent</strong> : Cliquez sur 🗑️ → Confirmer</li>
+        <li><strong>Voir la fiche complète</strong> : Cliquez sur 👁️</li>
+      </ul>
+    </div>
+
+    <div id="guide-referentiels" style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px;">
+      <h3 style="color: #667eea;">⚙️ Module Référentiels</h3>
+      <ul style="line-height: 2; color: #6c757d; margin-top: 1rem;">
+        <li><strong>Accéder</strong> : Accueil → Référentiels (ou Paramètres → Référentiels)</li>
+        <li><strong>Naviguer</strong> : Onglets pour Programmes / Directions / Services / Grades</li>
+        <li><strong>Créer</strong> : Bouton "➕ Nouveau..." → Remplir modal → Enregistrer</li>
+        <li><strong>Modifier</strong> : ✏️ → Modifier → Enregistrer</li>
+        <li><strong>Désactiver</strong> : 🔒 → Confirmer (réversible)</li>
+        <li><strong>Réactiver</strong> : 🔓 → Confirmer (si désactivé)</li>
+        <li><strong>Supprimer</strong> : 🗑️ → Confirmer avertissement (irréversible)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Raccourcis clavier -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">⌨️ Raccourcis Clavier</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+        <strong style="color: #667eea;">Navigation</strong>
+        <ul style="margin-top: 0.5rem; color: #6c757d;">
+          <li><kbd>Alt + H</kbd> : Accueil</li>
+          <li><kbd>Alt + R</kbd> : RH</li>
+          <li><kbd>Alt + P</kbd> : Personnel</li>
+          <li><kbd>Échap</kbd> : Fermer modal</li>
+        </ul>
+      </div>
+      
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+        <strong style="color: #667eea;">Formulaires</strong>
+        <ul style="margin-top: 0.5rem; color: #6c757d;">
+          <li><kbd>Tab</kbd> : Champ suivant</li>
+          <li><kbd>Shift + Tab</kbd> : Champ précédent</li>
+          <li><kbd>Ctrl + S</kbd> : Sauvegarder (si applicable)</li>
+        </ul>
+      </div>
+      
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+        <strong style="color: #667eea;">Recherche</strong>
+        <ul style="margin-top: 0.5rem; color: #6c757d;">
+          <li><kbd>Ctrl + F</kbd> : Rechercher dans la page</li>
+          <li><kbd>/</kbd> : Focus barre de recherche</li>
+        </ul>
+      </div>
+    </div>
+    
+    <p style="margin-top: 1.5rem; padding: 1rem; background: #e7f3ff; border-left: 4px solid #17a2b8; border-radius: 8px; color: #6c757d;">
+      <strong>💡 Astuce</strong> : Les raccourcis <kbd>Alt + ...</kbd> fonctionnent depuis n'importe quelle page de l'application !
+    </p>
+  </div>
+
+  <!-- Support -->
+  <div class="support-info" id="support">
+    <h2 style="margin-bottom: 1rem;">📞 Besoin d'Aide Supplémentaire ?</h2>
+    <p style="color: #6c757d; margin-bottom: 1.5rem;">
+      Notre équipe support est là pour vous aider. Contactez-nous par votre moyen préféré :
+    </p>
+    
+    <div class="support-methods">
+      <div class="support-method">
+        <div class="support-icon">📧</div>
+        <div class="support-text">
+          <div class="support-label">Email</div>
+          <div class="support-value">support@mppeep.com</div>
+        </div>
+      </div>
+      
+      <div class="support-method">
+        <div class="support-icon">📞</div>
+        <div class="support-text">
+          <div class="support-label">Téléphone</div>
+          <div class="support-value">+221 33 XXX XX XX</div>
+        </div>
+      </div>
+      
+      <div class="support-method">
+        <div class="support-icon">💬</div>
+        <div class="support-text">
+          <div class="support-label">Chat</div>
+          <div class="support-value">Lun-Ven 8h-18h</div>
+        </div>
+      </div>
+      
+      <div class="support-method">
+        <div class="support-icon">📚</div>
+        <div class="support-text">
+          <div class="support-label">Documentation</div>
+          <div class="support-value"><a href="/docs" style="color: #667eea;">Consulter</a></div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 10px;">
+      <h4 style="margin-bottom: 1rem; color: #333;">🕐 Heures d'Ouverture du Support</h4>
+      <ul style="color: #6c757d; line-height: 2;">
+        <li><strong>Lundi - Vendredi</strong> : 8h00 - 18h00</li>
+        <li><strong>Samedi</strong> : 9h00 - 13h00</li>
+        <li><strong>Dimanche</strong> : Fermé</li>
+        <li><strong>Urgences</strong> : support.urgent@mppeep.com (24/7)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Informations système -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">ℹ️ Informations Système</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+        <div style="font-weight: 600; color: #333; margin-bottom: 0.5rem;">Version</div>
+        <div style="color: #667eea; font-size: 1.2rem;">v1.0.0</div>
+      </div>
+      
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+        <div style="font-weight: 600; color: #333; margin-bottom: 0.5rem;">Dernière mise à jour</div>
+        <div style="color: #6c757d;">Octobre 2025</div>
+      </div>
+      
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+        <div style="font-weight: 600; color: #333; margin-bottom: 0.5rem;">Navigateur recommandé</div>
+        <div style="color: #6c757d;">Chrome, Firefox, Edge</div>
+      </div>
+      
+      <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+        <div style="font-weight: 600; color: #333; margin-bottom: 0.5rem;">Votre rôle</div>
+        <div style="color: #667eea;">{{ current_user.type_user }}</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle FAQ
+function toggleFaq(element) {
+  const faqItem = element.parentElement;
+  faqItem.classList.toggle('active');
+}
+
+// Scroll vers une section
+function scrollToSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (section) {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Highlight temporaire
+    section.style.transition = 'background 0.5s';
+    section.style.background = 'rgba(102, 126, 234, 0.1)';
+    setTimeout(() => {
+      section.style.background = '';
+    }, 2000);
+  }
+}
+
+// Recherche dans l'aide
+const searchInput = document.getElementById('search-help');
+searchInput.addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  
+  // Rechercher dans les questions FAQ
+  const faqItems = document.querySelectorAll('.faq-item');
+  let foundCount = 0;
+  
+  faqItems.forEach(item => {
+    const question = item.querySelector('.faq-question').textContent.toLowerCase();
+    const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+    
+    if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+      item.style.display = '';
+      foundCount++;
+      
+      // Ouvrir automatiquement si recherche active
+      if (searchTerm.length > 2) {
+        item.classList.add('active');
+      }
+    } else {
+      item.style.display = searchTerm.length > 0 ? 'none' : '';
+    }
+  });
+  
+  // Rechercher dans les sections de tutoriels
+  const guideRh = document.getElementById('guide-rh');
+  const guidePersonnel = document.getElementById('guide-personnel');
+  const guideReferentiels = document.getElementById('guide-referentiels');
+  
+  [guideRh, guidePersonnel, guideReferentiels].forEach(guide => {
+    const text = guide.textContent.toLowerCase();
+    if (text.includes(searchTerm) && searchTerm.length > 2) {
+      guide.style.display = '';
+      guide.style.background = 'rgba(102, 126, 234, 0.05)';
+    } else if (searchTerm.length > 2) {
+      guide.style.background = '';
+    }
+  });
+});
+
+// Raccourcis clavier
+document.addEventListener('keydown', function(e) {
+  // Alt + H : Accueil
+  if (e.altKey && e.key === 'h') {
+    e.preventDefault();
+    showGlobalLoading('Navigation...', 'Retour à l\'accueil');
+    window.location.href = '/accueil';
+  }
+  
+  // Alt + R : RH
+  if (e.altKey && e.key === 'r') {
+    e.preventDefault();
+    showGlobalLoading('Navigation...', 'Ouverture du module RH');
+    window.location.href = '/api/v1/rh/';
+  }
+  
+  // Alt + P : Personnel
+  if (e.altKey && e.key === 'p') {
+    e.preventDefault();
+    showGlobalLoading('Navigation...', 'Ouverture du module Personnel');
+    window.location.href = '/api/v1/personnel/';
+  }
+  
+  // Échap : Fermer modals
+  if (e.key === 'Escape') {
+    const modals = document.querySelectorAll('.modal-overlay.show');
+    modals.forEach(modal => modal.classList.remove('show'));
+  }
+  
+  // / : Focus recherche
+  if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    searchInput.focus();
+  }
+});
+
+// Bouton retour avec overlay
+document.addEventListener('DOMContentLoaded', function() {
+  const btnBack = document.querySelector('.btn-back');
+  if (btnBack) {
+    btnBack.addEventListener('click', function(e) {
+      e.preventDefault();
+      showGlobalLoading('Retour à l\'accueil...', 'Veuillez patienter');
+      setTimeout(() => {
+        window.location.href = this.href;
+      }, 300);
+    });
+  }
+});
+
+console.log('✅ Page d\'aide chargée');
+console.log('💡 Appuyez sur / pour rechercher');
+console.log('💡 Alt+H : Accueil | Alt+R : RH | Alt+P : Personnel');
+</script>
+{% endblock %}
+

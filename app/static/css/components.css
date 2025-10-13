@@ -262,3 +262,177 @@
 .bg-warning { background-color: var(--warning-light); }
 .bg-info { background-color: var(--info-light); }
 
+/* ========================================
+   7. NOTIFICATIONS (Error & Success)
+   ======================================== */
+
+.error-notification,
+.success-notification {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    z-index: 10000;
+    min-width: 350px;
+    max-width: 500px;
+    animation: slideInRight 0.3s ease;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.error-notification-content,
+.success-notification-content {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    border-left: 5px solid;
+}
+
+.error-notification-content {
+    border-left-color: var(--danger-color);
+}
+
+.success-notification-content {
+    border-left-color: var(--success-color);
+}
+
+.error-notification-icon,
+.success-notification-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.error-notification-text,
+.success-notification-text {
+    flex: 1;
+}
+
+.error-notification-title,
+.success-notification-title {
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+}
+
+.error-notification-title {
+    color: var(--danger-color);
+}
+
+.success-notification-title {
+    color: var(--success-color);
+}
+
+.error-notification-message,
+.success-notification-message {
+    font-size: 0.9rem;
+    color: var(--gray-700);
+    line-height: 1.4;
+}
+
+.error-notification-close,
+.success-notification-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.error-notification-close:hover,
+.success-notification-close:hover {
+    color: var(--gray-900);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ========================================
+   8. BOUTON D'AIDE FLOTTANT
+   ======================================== */
+
+.floating-help-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    z-index: 9998;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    animation: pulse 2s infinite;
+}
+
+.floating-help-button:hover {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+    animation: none;
+}
+
+.help-tooltip {
+    position: absolute;
+    right: 70px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.floating-help-button:hover .help-tooltip {
+    opacity: 1;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    50% {
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.6);
+        transform: scale(1.05);
+    }
+}
+
+/* ========================================
+   9. TOUCHES CLAVIER (KBD)
+   ======================================== */
+
+kbd {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    font-family: monospace;
+    color: #495057;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+}
+
