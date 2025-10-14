@@ -175,12 +175,14 @@ async function supprimerFiche(ficheId) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Fiche supprimée avec succès');
-      setTimeout(() => location.reload(), 1000);
+      showGlobalLoading('✅ Fiche supprimée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la suppression');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }

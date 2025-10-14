@@ -376,3 +376,142 @@ class LigneBudgetaireDetail(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+
+class DocumentLigneBudgetaire(SQLModel, table=True):
+    """
+    Documents justificatifs attachés aux lignes budgétaires
+    Chaque document est renommé selon le format: CodeAction_CodeActivité_CodeLigne_NomOriginal.ext
+    """
+    __tablename__ = "documents_lignes_budgetaires"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ligne_budgetaire_id: int = Field(foreign_key="lignes_budgetaires_detail.id")
+    fiche_technique_id: int = Field(foreign_key="fiche_technique.id")
+    
+    # Informations du fichier
+    nom_fichier_original: str = Field(max_length=255)  # Nom original
+    nom_fichier_stocke: str = Field(max_length=500)    # Format: CodeAction_CodeActivité_CodeLigne_NomOriginal.ext
+    chemin_fichier: str = Field(max_length=1000)       # Chemin complet: uploads/budget/lignes/{ligne_id}/...
+    type_fichier: str = Field(max_length=50)           # Extension: .pdf, .xlsx, etc.
+    taille_octets: int = Field(default=0)              # Taille en octets
+    
+    # Codes pour identification rapide et traçabilité
+    code_action: str = Field(max_length=50)
+    code_activite: str = Field(max_length=50)
+    code_ligne: str = Field(max_length=50)
+    
+    # Metadata
+    uploaded_by_user_id: int = Field(foreign_key="user.id")
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    actif: bool = Field(default=True)
+
+
+# ============================================
+# SIGOBE - Système d'Information de Gestion et d'Observation Budgétaire
+# ============================================
+
+class SigobeChargement(SQLModel, table=True):
+    """
+    Historique des chargements SIGOBE
+    Trace chaque import de fichier d'exécution budgétaire
+    """
+    __tablename__ = "sigobe_chargement"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Période
+    annee: int
+    trimestre: Optional[int] = None  # 1, 2, 3, 4 (null si annuel)
+    periode_libelle: str  # "T1 2024", "Annuel 2024", etc.
+    
+    # Métadonnées fichier
+    nom_fichier: str
+    taille_octets: int
+    chemin_fichier: str
+    
+    # Résumé import
+    nb_lignes_importees: int = 0
+    nb_programmes: int = 0
+    nb_actions: int = 0
+    
+    # Statut
+    statut: str = "En cours"  # En cours, Terminé, Erreur
+    message_erreur: Optional[str] = None
+    
+    # Traçabilité
+    uploaded_by_user_id: int = Field(foreign_key="user.id")
+    date_chargement: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SigobeExecution(SQLModel, table=True):
+    """
+    Données d'exécution budgétaire SIGOBE
+    Lignes détaillées d'exécution par programme/action/activité
+    """
+    __tablename__ = "sigobe_execution"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Lien avec le chargement
+    chargement_id: int = Field(foreign_key="sigobe_chargement.id", index=True)
+    
+    # Période et classification
+    annee: int = Field(index=True)
+    trimestre: Optional[int] = None
+    periode: Optional[date] = None  # Date de période si disponible
+    section: Optional[str] = None  # Section budgétaire
+    categorie: Optional[str] = None  # Catégorie
+    type_credit: Optional[str] = None  # Type de crédit
+    
+    # Hiérarchie budgétaire (jusqu'à 6 niveaux)
+    programmes: Optional[str] = Field(max_length=500, index=True)
+    actions: Optional[str] = Field(max_length=500, index=True)
+    rprog: Optional[str] = Field(max_length=500)  # Responsable programme
+    type_depense: Optional[str] = Field(max_length=200, index=True)  # Nature dépense
+    activites: Optional[str] = Field(max_length=500)
+    taches: Optional[str] = Field(max_length=500)
+    
+    # Montants financiers (en FCFA)
+    budget_vote: Optional[Decimal] = Field(default=0, decimal_places=2, max_digits=18)
+    budget_actuel: Optional[Decimal] = Field(default=0, decimal_places=2, max_digits=18)
+    engagements_emis: Optional[Decimal] = Field(default=0, decimal_places=2, max_digits=18)
+    disponible_eng: Optional[Decimal] = Field(default=0, decimal_places=2, max_digits=18)
+    mandats_emis: Optional[Decimal] = Field(default=0, decimal_places=2, max_digits=18)
+    mandats_vise_cf: Optional[Decimal] = Field(default=0, decimal_places=2, max_digits=18)
+    mandats_pec: Optional[Decimal] = Field(default=0, decimal_places=2, max_digits=18)
+    
+    # Métadonnées
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SigobeKpi(SQLModel, table=True):
+    """
+    KPIs agrégés SIGOBE
+    Pré-calculs pour le dashboard (performance)
+    """
+    __tablename__ = "sigobe_kpi"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Période
+    annee: int = Field(index=True)
+    trimestre: Optional[int] = None
+    
+    # Dimension (Programme, Nature, Global)
+    dimension: str = Field(index=True)  # "global", "programme", "nature"
+    dimension_code: Optional[str] = None  # Code programme ou nature
+    dimension_libelle: Optional[str] = None
+    
+    # KPIs calculés
+    budget_vote_total: Decimal = Field(default=0, decimal_places=2, max_digits=18)
+    budget_actuel_total: Decimal = Field(default=0, decimal_places=2, max_digits=18)
+    engagements_total: Decimal = Field(default=0, decimal_places=2, max_digits=18)
+    mandats_total: Decimal = Field(default=0, decimal_places=2, max_digits=18)
+    
+    taux_engagement: Optional[Decimal] = Field(default=0, decimal_places=4, max_digits=8)  # %
+    taux_mandatement: Optional[Decimal] = Field(default=0, decimal_places=4, max_digits=8)  # %
+    taux_execution: Optional[Decimal] = Field(default=0, decimal_places=4, max_digits=8)  # %
+    
+    # Traçabilité
+    chargement_id: int = Field(foreign_key="sigobe_chargement.id")
+    date_calcul: datetime = Field(default_factory=datetime.utcnow)

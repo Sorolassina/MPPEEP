@@ -22,9 +22,6 @@
       <button onclick="document.getElementById('chargerModal').classList.add('show')" class="btn-primary" style="background: linear-gradient(135deg, #10b981, #059669);">
         📂 Charger une Fiche
       </button>
-      <a href="{{ url_for('budget_fiche_nouveau') }}" class="btn-primary">
-        ➕ Nouvelle Fiche Technique
-      </a>
       <button onclick="reinitialiserFiltres()" class="btn-primary" style="
         background: white;
         color: #e74c3c;
@@ -78,26 +75,6 @@
           {% endfor %}
         </select>
       </div>
-
-      <!-- Filtre Direction -->
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <label style="font-weight: 600; color: #2c3e50;">🏢 Direction :</label>
-        <select id="filter-direction" onchange="filtrerFiches()" style="
-          padding: 0.75rem 1rem; 
-          border: 2px solid #e0e0e0; 
-          border-radius: 10px; 
-          cursor: pointer; 
-          font-weight: 500;
-          min-width: 180px;
-          background: white;
-          font-size: 1rem;
-        ">
-          <option value="toutes" {{ 'selected' if direction_id == 'toutes' else '' }}>📋 Toutes</option>
-          {% for d in directions_list %}
-          <option value="{{ d.id }}" {{ 'selected' if direction_id|string == d.id|string else '' }}>{{ d.code }} - {{ d.libelle[:30] }}...</option>
-          {% endfor %}
-        </select>
-      </div>
     </div>
   </div>
 
@@ -111,8 +88,8 @@
         <thead>
           <tr>
             <th>Numéro</th>
+            <th>Année</th>
             <th>Programme</th>
-            <th>Direction</th>
             <th>Budget Total</th>
             <th>Phase</th>
             <th>Statut</th>
@@ -124,8 +101,15 @@
           {% for f in fiches %}
           <tr>
             <td><strong>{{ f.numero_fiche }}</strong></td>
-            <td>{{ programmes[f.programme_id].code if f.programme_id in programmes else '-' }}</td>
-            <td>{{ directions[f.direction_id].code if f.direction_id and f.direction_id in directions else '-' }}</td>
+            <td><span class="badge badge-info">{{ f.annee_budget }}</span></td>
+            <td>
+              {% if f.programme_id in programmes %}
+                <strong>{{ programmes[f.programme_id].libelle }}</strong><br>
+                <small style="color: #6c757d;">({{ programmes[f.programme_id].code }})</small>
+              {% else %}
+                -
+              {% endif %}
+            </td>
             <td><strong style="color: #27ae60;">{{ "{:,.0f}".format(f.budget_total_demande) }} FCFA</strong></td>
             <td><span class="badge badge-info">{{ f.phase }}</span></td>
             <td>
@@ -143,8 +127,8 @@
             <td>
               <div class="action-icons">
                 <span class="action-icon" onclick="voirFiche({{ f.id }})" title="Voir structure">👁️</span>
-                <span class="action-icon" onclick="editerFiche({{ f.id }})" title="Modifier">✏️</span>
                 <span class="action-icon" onclick="exporterPDF({{ f.id }})" title="Exporter PDF">📄</span>
+                <span class="action-icon" onclick="gererDocumentsFiche({{ f.id }})" title="Gérer documents">📎</span>
                 <span class="action-icon" onclick="supprimerFiche({{ f.id }})" title="Supprimer">🗑️</span>
               </div>
             </td>
@@ -271,6 +255,50 @@
   </div>
 </div>
 
+<!-- Modal Gérer Documents Fiche -->
+<div id="modalDocumentsFiche" class="modal-overlay">
+  <div class="modal-content" style="max-width: 900px;">
+    <div class="modal-header">
+      <h2>📎 Documents de la Fiche Technique</h2>
+      <button class="modal-close" onclick="closeModal('modalDocumentsFiche')">&times;</button>
+    </div>
+    
+    <div style="padding: 1rem; background: #e3f2fd; border-radius: 10px; margin-bottom: 1rem;">
+      <strong>ℹ️ Information :</strong> Gérez les documents attachés à cette fiche technique (justificatifs, annexes, etc.)
+    </div>
+    
+    <!-- Formulaire Upload -->
+    <form id="formUploadDocumentFiche" onsubmit="handleUploadDocumentFiche(event)" enctype="multipart/form-data" style="margin-bottom: 2rem;">
+      <input type="hidden" id="doc_fiche_id" name="fiche_id">
+      
+      <div class="form-group">
+        <label class="required">Fichier</label>
+        <input type="file" name="fichier" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        <small style="color: #6c757d; display: block; margin-top: 0.5rem;">
+          Formats acceptés : PDF, Word, Excel, Images (max 10 MB)
+        </small>
+      </div>
+      
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" name="description" placeholder="Description du document (optionnel)" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+      </div>
+      
+      <button type="submit" class="btn-modal primary" style="width: 100%;">
+        📤 Uploader le Document
+      </button>
+    </form>
+    
+    <!-- Liste des documents -->
+    <div style="border-top: 2px solid #e0e0e0; padding-top: 1rem;">
+      <h3 style="margin-bottom: 1rem;">📋 Documents existants</h3>
+      <div id="listeDocumentsFiche" style="max-height: 400px; overflow-y: auto;">
+        <!-- Sera rempli dynamiquement -->
+      </div>
+    </div>
+  </div>
+</div>
+
 
 {% endblock %}
 
@@ -279,15 +307,11 @@
 function filtrerFiches() {
   const annee = document.getElementById('filter-annee').value;
   const programmeId = document.getElementById('filter-programme').value;
-  const directionId = document.getElementById('filter-direction').value;
   
   // Construire l'URL avec les paramètres
   let url = `/api/v1/budget/fiches/hierarchique?annee=${annee}`;
   if (programmeId !== 'tous') {
     url += `&programme_id=${programmeId}`;
-  }
-  if (directionId !== 'toutes') {
-    url += `&direction_id=${directionId}`;
   }
   
   showGlobalLoading('Filtrage...', 'Chargement des fiches');
@@ -310,19 +334,119 @@ function voirFiche(ficheId) {
   }, 300);
 }
 
-function editerFiche(ficheId) {
-  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
-  setTimeout(() => {
-    window.location.href = `/api/v1/budget/fiches/${ficheId}/edit`;
-  }, 300);
-}
-
 function exporterPDF(ficheId) {
   showGlobalLoading('Génération PDF...', 'Veuillez patienter');
   setTimeout(() => {
     window.open(`/api/v1/budget/api/fiches/${ficheId}/export/pdf`, '_blank');
     hideGlobalLoading();
   }, 500);
+}
+
+async function gererDocumentsFiche(ficheId) {
+  document.getElementById('doc_fiche_id').value = ficheId;
+  document.getElementById('modalDocumentsFiche').classList.add('show');
+  document.getElementById('formUploadDocumentFiche').reset();
+  document.getElementById('doc_fiche_id').value = ficheId;
+  
+  // Charger les documents existants
+  await chargerDocumentsFiche(ficheId);
+}
+
+async function chargerDocumentsFiche(ficheId) {
+  try {
+    const response = await fetch(`/api/v1/budget/api/fiches/${ficheId}/documents`);
+    const result = await response.json();
+    
+    const listeDiv = document.getElementById('listeDocumentsFiche');
+    
+    if (response.ok && result.documents && result.documents.length > 0) {
+      listeDiv.innerHTML = result.documents.map(doc => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 10px; margin-bottom: 0.5rem;">
+          <div style="flex: 1;">
+            <strong>📄 ${doc.filename || doc.nom_fichier || 'Document'}</strong>
+            ${doc.description ? `<br><small style="color: #6c757d;">${doc.description}</small>` : ''}
+            <br><small style="color: #6c757d;">Uploadé le ${new Date(doc.date_upload || doc.created_at).toLocaleDateString('fr-FR')}</small>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button onclick="telechargerDocument(${ficheId}, ${doc.id})" class="btn-modal secondary" style="padding: 0.5rem 1rem;">
+              📥 Télécharger
+            </button>
+            <button onclick="supprimerDocumentFiche(${ficheId}, ${doc.id})" class="btn-modal secondary" style="padding: 0.5rem 1rem; background: #e74c3c; border-color: #e74c3c;">
+              🗑️ Supprimer
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      listeDiv.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 2rem;">Aucun document attaché à cette fiche.</p>';
+    }
+  } catch (error) {
+    console.error('Erreur chargement documents:', error);
+    document.getElementById('listeDocumentsFiche').innerHTML = '<p style="text-align: center; color: #e74c3c; padding: 2rem;">Erreur lors du chargement des documents.</p>';
+  }
+}
+
+async function handleUploadDocumentFiche(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const ficheId = formData.get('fiche_id');
+  
+  showGlobalLoading('Upload...', 'Upload du document en cours');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/fiches/${ficheId}/documents`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      hideGlobalLoading();
+      showSuccess('✅ Document uploadé avec succès');
+      document.getElementById('formUploadDocumentFiche').reset();
+      document.getElementById('doc_fiche_id').value = ficheId;
+      await chargerDocumentsFiche(ficheId);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de l\'upload');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+function telechargerDocument(ficheId, documentId) {
+  window.open(`/api/v1/budget/api/fiches/${ficheId}/documents/${documentId}/download`, '_blank');
+}
+
+async function supprimerDocumentFiche(ficheId, documentId) {
+  if (!confirm('⚠️ Supprimer ce document ?')) return;
+  
+  showGlobalLoading('Suppression...', 'Suppression du document');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/fiches/${ficheId}/documents/${documentId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      hideGlobalLoading();
+      showSuccess('✅ Document supprimé');
+      await chargerDocumentsFiche(ficheId);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
 }
 
 async function supprimerFiche(ficheId) {
@@ -338,12 +462,14 @@ async function supprimerFiche(ficheId) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Fiche supprimée avec succès');
-      setTimeout(() => location.reload(), 1000);
+      showGlobalLoading('✅ Fiche supprimée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la suppression');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -379,17 +505,16 @@ async function handleChargerFiche(event) {
         <strong>Budget total :</strong> ${result.budget_total.toLocaleString()} FCFA<br>
         ${result.errors.length > 0 ? '<br><strong>⚠️ Avertissements:</strong><br>' + result.errors.join('<br>') : ''}
       `;
-      hideGlobalLoading();
       
-      setTimeout(() => {
-        showSuccess(`Fiche technique créée : ${result.fiche_numero}`);
-        closeChargerModal();
-        location.reload();
-      }, 2000);
+      closeChargerModal();
+      showGlobalLoading('✅ Fiche créée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 1000);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors du chargement');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -400,6 +525,10 @@ function closeChargerModal() {
   document.getElementById('chargerModal').classList.remove('show');
   document.getElementById('chargerForm').reset();
   document.getElementById('chargerResult').style.display = 'none';
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('show');
 }
 
 

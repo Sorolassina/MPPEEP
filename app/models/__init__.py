@@ -15,7 +15,9 @@ from app.models.besoins import BesoinAgent, SuiviBesoin, ConsolidationBesoin
 from app.models.budget import (
     NatureDepense, Activite, FicheTechnique, LigneBudgetaire,
     DocumentBudget, HistoriqueBudget, ExecutionBudgetaire, ConferenceBudgetaire,
-    ActionBudgetaire, ServiceBeneficiaire, ActiviteBudgetaire, LigneBudgetaireDetail
+    ActionBudgetaire, ServiceBeneficiaire, ActiviteBudgetaire, LigneBudgetaireDetail,
+    DocumentLigneBudgetaire,
+    SigobeChargement, SigobeExecution, SigobeKpi
 )
 
 __all__ = [
@@ -52,6 +54,10 @@ __all__ = [
     "ActionBudgetaire",
     "ServiceBeneficiaire",
     "ActiviteBudgetaire",
-    "LigneBudgetaireDetail"
-    ]
+    "LigneBudgetaireDetail",
+    "DocumentLigneBudgetaire",
+    "SigobeChargement",
+    "SigobeExecution",
+    "SigobeKpi"
+]
 

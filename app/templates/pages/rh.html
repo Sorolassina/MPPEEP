@@ -416,15 +416,14 @@ async function supprimerDemande(demandeId) {
     const data = await res.json();
     
     if (res.ok && data.ok) {
-      showSuccess('Demande supprimée avec succès');
-      setTimeout(() => {
-        showGlobalLoading('Rechargement...', 'Actualisation de la liste');
-        location.reload();
-      }, 800);
+      showGlobalLoading('✅ Demande supprimée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(res, 'Impossible de supprimer cette demande');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }

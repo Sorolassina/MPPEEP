@@ -347,11 +347,8 @@ function confirmerDesactivation() {
     .then(response => response.json())
     .then(data => {
       if (data.ok) {
-        showSuccess(`Agent ${action} avec succès`);
-        setTimeout(() => {
-          showGlobalLoading('Actualisation...', 'Rechargement de la page');
-          location.reload();
-        }, 1000);
+        showGlobalLoading(`✅ Agent ${action}`, 'Actualisation de la page...');
+        setTimeout(() => location.reload(), 500);
       } else {
         hideGlobalLoading();
         showError(`Erreur lors de la ${action}`);

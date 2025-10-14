@@ -547,9 +547,11 @@
 
     <script>
         // Fonction pour afficher l'overlay global
-        function showGlobalLoading() {
+        function showGlobalLoading(text = 'Connexion en cours...', subtext = 'Veuillez patienter') {
             const overlay = document.getElementById('globalLoadingOverlay');
             if (overlay) {
+                overlay.querySelector('.loading-text').textContent = text;
+                overlay.querySelector('.loading-subtext').textContent = subtext;
                 overlay.classList.add('show');
             }
         }

@@ -176,33 +176,54 @@
 .filters-row {
   background: white;
   border-radius: 20px;
-  padding: 1.25rem 2rem;
+  padding: 1.25rem 1.5rem;
   box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
-  gap: 2rem;
-  flex-wrap: wrap;
+  gap: 1.25rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+/* Scrollbar personnalisée pour les filtres */
+.filters-row::-webkit-scrollbar {
+  height: 6px;
+}
+
+.filters-row::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.filters-row::-webkit-scrollbar-thumb {
+  background: var(--budget-primary);
+  border-radius: 10px;
+}
+
+.filters-row::-webkit-scrollbar-thumb:hover {
+  background: #5a6fcc;
 }
 
 .filter-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .filter-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #4b5563;
   white-space: nowrap;
 }
 
 .filter-select {
-  min-width: 180px;
-  padding: 0.625rem 1rem;
+  min-width: 130px;
+  padding: 0.5rem 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   background: white;
   cursor: pointer;
   transition: all 0.3s;
@@ -312,9 +333,9 @@
 }
 
 .kpi-badge {
-  padding: 0.3rem 0.65rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 16px;
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   font-weight: 700;
   background: linear-gradient(135deg, var(--kpi-color-1), var(--kpi-color-2));
   color: white;
@@ -322,7 +343,7 @@
 }
 
 .kpi-title {
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #6b7280;
   margin-bottom: 0.5rem;
@@ -342,8 +363,9 @@
 }
 
 .kpi-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: #9ca3af;
+  font-weight: 500;
 }
 
 /* ============================================
@@ -396,64 +418,98 @@
   gap: 1.25rem;
 }
 
-.prog-item {
+/* Programme Cards - Style Neumorphique Moderne */
+.prog-list {
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.prog-code {
-  width: 60px;
-  height: 60px;
+.prog-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1rem;
-  color: #4b5563;
-  flex-shrink: 0;
-  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05), inset -2px -2px 5px rgba(255,255,255,0.8);
+  background: #f9f9f9;
+  box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
+  transition: all 0.3s ease;
 }
 
-.prog-details {
+.prog-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 3px 3px 10px #d1d9e6, -3px -3px 10px #ffffff;
+}
+
+.prog-card-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   flex: 1;
 }
 
-.prog-name {
-  font-size: 0.9rem;
+.prog-card-icon {
+  min-width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 4px 4px 8px #d1d9e6, -2px -2px 6px #ffffff;
+  flex-shrink: 0;
+}
+
+.prog-card-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prog-card-name {
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.5rem;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.3;
 }
 
-.prog-track-container {
+.prog-card-budget {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.prog-card-bar-container {
   position: relative;
-  height: 12px;
-  background: #f3f4f6;
-  border-radius: 10px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 6px;
   overflow: hidden;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.1);
 }
 
-.prog-track-fill {
+.prog-card-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #059669);
-  border-radius: 10px;
-  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 6px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
 
-.prog-track-fill::after {
-  content: '';
+.prog-card-bar-shimmer {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  animation: shimmer-prog 2s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmer-prog 2.5s infinite;
+  display: block;
 }
 
 @keyframes shimmer-prog {
@@ -461,15 +517,33 @@
   100% { transform: translateX(100%); }
 }
 
-.prog-percent {
+.prog-card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   min-width: 70px;
-  text-align: right;
-  font-weight: 800;
-  font-size: 1rem;
-  background: linear-gradient(135deg, #10b981, #059669);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+}
+
+.prog-card-percent {
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.prog-card-percent.high {
+  color: #10b981;
+}
+
+.prog-card-percent.low {
+  color: #f59e0b;
+}
+
+.prog-card-label {
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Nature cards */
@@ -478,55 +552,89 @@
   gap: 1rem;
 }
 
-.nature-card {
+/* Nature de Dépenses - Style Neumorphique */
+.nature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nature-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f9f9f9;
+  box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
+  transition: all 0.3s ease;
+}
+
+.nature-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 2px 2px 8px #d1d9e6, -2px -2px 8px #ffffff;
+}
+
+.nature-item-left {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  padding: 1.25rem;
-  background: linear-gradient(135deg, #f9fafb, #f3f4f6);
-  border-radius: 16px;
-  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.03);
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
+  gap: 12px;
 }
 
-.nature-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 4px;
-  background: var(--nature-color);
-  transform: scaleY(0);
-  transition: transform 0.3s ease;
+.nature-item-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #eeeeee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+  box-shadow: 3px 3px 6px #d1d9e6, -3px -3px 6px #ffffff;
 }
 
-.nature-card:hover {
-  background: white;
-  box-shadow: var(--shadow-md);
-  transform: translateX(5px);
+.nature-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.nature-card:hover::before {
-  transform: scaleY(1);
+.nature-item-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
 }
 
-.nature-card.bs {
-  --nature-color: linear-gradient(180deg, #3b82f6, #1d4ed8);
+.nature-item-budget {
+  font-size: 12px;
+  color: #777;
 }
 
-.nature-card.p {
-  --nature-color: linear-gradient(180deg, #10b981, #059669);
+.nature-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.nature-card.i {
-  --nature-color: linear-gradient(180deg, #f59e0b, #d97706);
+.nature-item-percent {
+  font-weight: 700;
+  font-size: 15px;
 }
 
-.nature-card.t {
-  --nature-color: linear-gradient(180deg, #8b5cf6, #7c3aed);
+.nature-item-percent.positive {
+  color: #27ae60;
+}
+
+.nature-item-percent.negative {
+  color: #c0392b;
+}
+
+.nature-item-date {
+  font-size: 10px;
+  color: #aaa;
 }
 
 .nature-icon-wrap {
@@ -681,6 +789,14 @@
 /* ============================================
    RESPONSIVE
    ============================================ */
+
+/* Desktop : forcer les filtres en ligne */
+@media (min-width: 901px) {
+  .filters-row {
+    flex-wrap: nowrap !important;
+  }
+}
+
 @media (max-width: 1600px) {
   .kpis-row {
     grid-template-columns: repeat(3, 1fr);
@@ -810,7 +926,7 @@
       
       <!-- Titre (centre) -->
       <div class="header-title">
-        <h1>💰 Suivi Budgétaire {{ annee }}</h1>
+        <h1>💰 Suivi Budgétaire {{ annee }}{% if trimestre %} - Trimestre {{ trimestre }}{% endif %}</h1>
         <p class="header-subtitle">Tableau de bord de l'exécution budgétaire en temps réel</p>
       </div>
       
@@ -819,8 +935,8 @@
         <a href="{{ url_for('budget_fiches_hierarchique') }}" class="action-btn-sm primary">
           📋 Fiches Techniques
         </a>
-        <a href="{{ url_for('budget_conferences') }}" class="action-btn-sm secondary">
-          🤝 Conférences
+        <a href="{{ url_for('budget_sigobe') }}" class="action-btn-sm secondary" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+          📊 SIGOBE
         </a>
         <a href="{{ url_for('budget_home') }}" class="action-btn-sm back">
           ← Retour
@@ -832,11 +948,27 @@
     <div class="filters-row">
       <!-- Filtre Période -->
       <div class="filter-group">
-        <label class="filter-label">📅 Période</label>
+        <label class="filter-label">📅 Année</label>
         <select id="filter-annee" class="filter-select" onchange="filtrerDashboard()">
-          <option value="{{ annee }}" selected>{{ annee }}</option>
-          <option value="{{ annee - 1 }}">{{ annee - 1 }}</option>
-          <option value="{{ annee - 2 }}">{{ annee - 2 }}</option>
+          {% if annees_disponibles %}
+            {% for an in annees_disponibles %}
+              <option value="{{ an }}" {% if an == annee %}selected{% endif %}>{{ an }}</option>
+            {% endfor %}
+          {% else %}
+            <option value="{{ annee }}" selected>{{ annee }}</option>
+          {% endif %}
+        </select>
+      </div>
+      
+      <!-- Filtre Trimestre -->
+      <div class="filter-group">
+        <label class="filter-label">📊 Trimestre</label>
+        <select id="filter-trimestre" class="filter-select" onchange="filtrerDashboard()">
+          <option value="">Annuel</option>
+          <option value="1" {% if trimestre == 1 %}selected{% endif %}>T1</option>
+          <option value="2" {% if trimestre == 2 %}selected{% endif %}>T2</option>
+          <option value="3" {% if trimestre == 3 %}selected{% endif %}>T3</option>
+          <option value="4" {% if trimestre == 4 %}selected{% endif %}>T4</option>
         </select>
       </div>
       
@@ -874,7 +1006,7 @@
           <div class="kpi-badge">100%</div>
         </div>
         <div class="kpi-title">Budget Actuel</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(budget_total / 1000000) }} M</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(budget_actuel_total) }} FCFA</div>
         <div class="kpi-subtitle">Budget en vigueur</div>
       </div>
       
@@ -885,7 +1017,7 @@
           <div class="kpi-badge">100%</div>
         </div>
         <div class="kpi-title">Budget Voté</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(budget_total / 1000000) }} M</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(budget_vote_total) }} FCFA</div>
         <div class="kpi-subtitle">Loi de finances</div>
       </div>
       
@@ -896,7 +1028,7 @@
           <div class="kpi-badge">{{ "{:.1f}".format(taux_engagement) }}%</div>
         </div>
         <div class="kpi-title">Engagements</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(engagements_total / 1000000) }} M</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(engagements_total) }} FCFA</div>
         <div class="kpi-subtitle">Budget engagé</div>
       </div>
       
@@ -907,7 +1039,7 @@
           <div class="kpi-badge">{{ "{:.1f}".format((mandats_vises_total / engagements_total * 100) if engagements_total > 0 else 0) }}%</div>
         </div>
         <div class="kpi-title">Mandats Visés</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_vises_total / 1000000) }} M</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_vises_total) }} FCFA</div>
         <div class="kpi-subtitle">Mandats émis</div>
       </div>
       
@@ -915,10 +1047,10 @@
       <div class="kpi-card mandats-pec">
         <div class="kpi-header">
           <div class="kpi-icon">PEC</div>
-          <div class="kpi-badge">{{ "{:.1f}".format(taux_mandatement) }}%</div>
+          <div class="kpi-badge">{{ "{:.1f}".format(taux_mandatement_pec) }}%</div>
         </div>
         <div class="kpi-title">Mandats Payés</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_pec_total / 1000000) }} M</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_pec_total) }} FCFA</div>
         <div class="kpi-subtitle">Décaissements</div>
       </div>
       
@@ -926,10 +1058,10 @@
       <div class="kpi-card disponible">
         <div class="kpi-header">
           <div class="kpi-icon">DIS</div>
-          <div class="kpi-badge">{{ "{:.1f}".format((disponible_total / budget_total * 100) if budget_total > 0 else 0) }}%</div>
+          <div class="kpi-badge">{{ "{:.1f}".format(taux_execution_global) }}%</div>
         </div>
         <div class="kpi-title">Disponible</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(disponible_total / 1000000) }} M</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(disponible_eng_total) }} FCFA</div>
         <div class="kpi-subtitle">Reste à engager</div>
       </div>
       
@@ -942,21 +1074,29 @@
       <div class="stats-card">
         <div class="card-header">
           <div class="card-icon">📊</div>
-          <div class="card-title">Exécution par Programme</div>
+          <div class="card-title">Exécution par Programme (FCFA)</div>
         </div>
         
         <div class="prog-list">
           {% if exec_par_programme %}
             {% for code, data in exec_par_programme.items() %}
-            <div class="prog-item">
-              <div class="prog-code">{{ code }}</div>
-              <div class="prog-details">
-                <div class="prog-name">{{ data.libelle }}</div>
-                <div class="prog-track-container">
-                  <div class="prog-track-fill" style="width: {{ data.taux }}%;"></div>
+            <div class="prog-card">
+              <div class="prog-card-left">
+                <div class="prog-card-icon">{{ data.libelle|extract_initials(3) }}</div>
+                <div class="prog-card-details">
+                  <div class="prog-card-name">{{ data.libelle }}</div>
+                  <div class="prog-card-budget">Budget : {{ "{:,.0f}".format(data.budget) }} FCFA</div>
+                  <div class="prog-card-bar-container">
+                    <div class="prog-card-bar-fill" style="width: {{ data.taux }}%;">
+                      <span class="prog-card-bar-shimmer"></span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="prog-percent">{{ "{:.1f}".format(data.taux) }}%</div>
+              <div class="prog-card-right">
+                <div class="prog-card-percent {% if data.taux >= 50 %}high{% else %}low{% endif %}">{{ "{:.1f}".format(data.taux) }}%</div>
+                <div class="prog-card-label">Exécution</div>
+              </div>
             </div>
             {% endfor %}
           {% else %}
@@ -972,19 +1112,24 @@
       <div class="stats-card">
         <div class="card-header">
           <div class="card-icon">💳</div>
-          <div class="card-title">Nature de Dépenses</div>
+          <div class="card-title">Nature de Dépenses (FCFA)</div>
         </div>
         
-        <div class="nature-grid">
+        <div class="nature-list">
           {% if exec_par_nature %}
             {% for code, data in exec_par_nature.items() %}
-            <div class="nature-card {{ code.lower() }}">
-              <div class="nature-icon-wrap">{{ code }}</div>
-              <div class="nature-info">
-                <div class="nature-name">{{ data.libelle }}</div>
-                <div class="nature-budget">Budget: {{ "{:,.0f}".format(data.budget / 1000000) }} M FCFA</div>
+            <div class="nature-item {{ (data.libelle|extract_initials).lower() }}">
+              <div class="nature-item-left">
+                <div class="nature-item-icon">{{ data.libelle|extract_initials }}</div>
+                <div class="nature-item-details">
+                  <div class="nature-item-name">{{ data.libelle }}</div>
+                  <div class="nature-item-budget">Budget : {{ "{:,.0f}".format(data.budget) }} FCFA</div>
+                </div>
               </div>
-              <div class="nature-percent">{{ "{:.1f}".format(data.taux) }}%</div>
+              <div class="nature-item-right">
+                <div class="nature-item-percent {% if data.taux >= 50 %}positive{% else %}negative{% endif %}">{{ "{:.1f}".format(data.taux) }}%</div>
+                <div class="nature-item-date">{{ annee }}</div>
+              </div>
             </div>
             {% endfor %}
           {% else %}
@@ -1002,45 +1147,76 @@
     <div class="variation-container">
       <div class="card-header">
         <div class="card-icon">📈</div>
-        <div class="card-title">Variation relative {{ annee }} vs {{ annee - 1 }}</div>
+        <div class="card-title">
+          Variation relative {{ annee }}{% if trimestre %} T{{ trimestre }}{% endif %} vs {{ annee - 1 }}{% if trimestre %} T{{ trimestre }}{% endif %}
+        </div>
       </div>
       
+      {% if variation_engagement is not none %}
       <div class="variation-grid">
         <div class="bars-wrapper">
+          <!-- Taux Engagement -->
           <div class="bar-column">
             <div class="bar-container">
-              <div class="bar-fill negative" style="height: 50%;"></div>
+              {% set bar_height = [variation_engagement|abs, 100]|min %}
+              <div class="bar-fill {% if variation_engagement >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
             </div>
-            <div class="bar-value negative">-50%</div>
+            <div class="bar-value {% if variation_engagement >= 0 %}positive{% else %}negative{% endif %}">
+              {% if variation_engagement >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_engagement) }}%
+            </div>
             <div class="bar-label">Tx Eng.</div>
-            <div class="bar-previous">N-1: 95%</div>
+            <div class="bar-previous">N-1: {{ taux_engagement_n1 }}%</div>
           </div>
           
+          <!-- Taux Mandatement Visé -->
           <div class="bar-column">
             <div class="bar-container">
-              <div class="bar-fill positive" style="height: 70%;"></div>
+              {% set bar_height = [variation_mandatement_vise|abs, 100]|min if variation_mandatement_vise is not none else 0 %}
+              <div class="bar-fill {% if variation_mandatement_vise is not none and variation_mandatement_vise >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
             </div>
-            <div class="bar-value positive">+7%</div>
+            <div class="bar-value {% if variation_mandatement_vise is not none and variation_mandatement_vise >= 0 %}positive{% else %}negative{% endif %}">
+              {% if variation_mandatement_vise is not none %}
+                {% if variation_mandatement_vise >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_mandatement_vise) }}%
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
             <div class="bar-label">Tx MV</div>
-            <div class="bar-previous">N-1: 100%</div>
+            <div class="bar-previous">N-1: {{ taux_mandatement_vise_n1 if taux_mandatement_vise_n1 is not none else 'N/A' }}%</div>
           </div>
           
+          <!-- Taux PEC -->
           <div class="bar-column">
             <div class="bar-container">
-              <div class="bar-fill negative" style="height: 30%;"></div>
+              {% set bar_height = [variation_mandatement_pec|abs, 100]|min if variation_mandatement_pec is not none else 0 %}
+              <div class="bar-fill {% if variation_mandatement_pec is not none and variation_mandatement_pec >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
             </div>
-            <div class="bar-value negative">-7%</div>
+            <div class="bar-value {% if variation_mandatement_pec is not none and variation_mandatement_pec >= 0 %}positive{% else %}negative{% endif %}">
+              {% if variation_mandatement_pec is not none %}
+                {% if variation_mandatement_pec >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_mandatement_pec) }}%
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
             <div class="bar-label">Tx PEC</div>
-            <div class="bar-previous">N-1: 100%</div>
+            <div class="bar-previous">N-1: {{ taux_mandatement_pec_n1 if taux_mandatement_pec_n1 is not none else 'N/A' }}%</div>
           </div>
           
+          <!-- Taux Exécution Global -->
           <div class="bar-column">
             <div class="bar-container">
-              <div class="bar-fill positive" style="height: 90%;"></div>
+              {% set bar_height = [variation_execution_global|abs, 100]|min if variation_execution_global is not none else 0 %}
+              <div class="bar-fill {% if variation_execution_global is not none and variation_execution_global >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
             </div>
-            <div class="bar-value positive">+50%</div>
+            <div class="bar-value {% if variation_execution_global is not none and variation_execution_global >= 0 %}positive{% else %}negative{% endif %}">
+              {% if variation_execution_global is not none %}
+                {% if variation_execution_global >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_execution_global) }}%
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
             <div class="bar-label">Tx Global</div>
-            <div class="bar-previous">N-1: 5%</div>
+            <div class="bar-previous">N-1: {{ taux_execution_global_n1 if taux_execution_global_n1 is not none else 'N/A' }}%</div>
           </div>
         </div>
         
@@ -1060,6 +1236,18 @@
           </div>
         </div>
       </div>
+      {% else %}
+      <!-- Message si pas de données N-1 -->
+      <div style="padding: 3rem; text-align: center; color: #6b7280;">
+        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">📊</div>
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 500;">
+          Pas de données pour {{ annee - 1 }}{% if trimestre %} T{{ trimestre }}{% endif %}
+        </p>
+        <p style="font-size: 0.9rem;">
+          Importez les données SIGOBE de l'année {{ annee - 1 }}{% if trimestre %} (trimestre {{ trimestre }}){% endif %} pour afficher les variations.
+        </p>
+      </div>
+      {% endif %}
     </div>
 
   </div>
@@ -1070,12 +1258,14 @@
 <script>
 function filtrerDashboard() {
   const annee = document.getElementById('filter-annee').value;
+  const trimestre = document.getElementById('filter-trimestre').value;
   const programme = document.getElementById('filter-programme').value;
   const nature = document.getElementById('filter-nature').value;
   
   showGlobalLoading('Filtrage...', 'Actualisation du dashboard');
   
   let url = `/api/v1/budget/?annee=${annee}`;
+  if (trimestre) url += `&trimestre=${trimestre}`;
   if (programme) url += `&programme_id=${programme}`;
   if (nature) url += `&nature=${nature}`;
   

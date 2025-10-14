@@ -531,12 +531,14 @@ async function advance(to_state){
   const data = await res.json();
     
     if (data.ok) {
-      alert(`✅ Transition réussie vers "${to_state}"`);
-      location.reload();
+      showGlobalLoading(`✅ Transition vers "${to_state}"`, 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       alert("❌ Transition refusée");
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     alert("❌ Erreur lors de la transition");
   }

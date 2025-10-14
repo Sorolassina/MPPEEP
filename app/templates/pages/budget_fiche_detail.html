@@ -368,16 +368,15 @@ async function handleLigneSubmit(event) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Ligne ajoutée avec succès');
       closeLigneModal();
-      setTimeout(() => {
-        showGlobalLoading('Actualisation...', 'Rechargement');
-        location.reload();
-      }, 1000);
+      showGlobalLoading('✅ Ligne ajoutée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de l\'ajout');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -399,16 +398,15 @@ async function handleUpload(event) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Document uploadé avec succès');
       closeUploadModal();
-      setTimeout(() => {
-        showGlobalLoading('Actualisation...', 'Rechargement');
-        location.reload();
-      }, 1000);
+      showGlobalLoading('✅ Document uploadé', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de l\'upload');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -427,12 +425,14 @@ async function supprimerLigne(ligneId) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Ligne supprimée');
-      setTimeout(() => location.reload(), 1000);
+      showGlobalLoading('✅ Ligne supprimée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la suppression');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau.');
   }

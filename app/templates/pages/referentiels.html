@@ -710,18 +710,15 @@ async function handleSubmit(event) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess(result.message || 'Enregistrement réussi !');
       closeModal();
-      
-      // Recharger les données
-      setTimeout(() => {
-        showGlobalLoading('Actualisation...', 'Rechargement des données');
-        location.reload();
-      }, 1000);
+      showGlobalLoading('✅ Enregistré', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de l\'enregistrement');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -780,15 +777,14 @@ async function reactivateItem(type, id) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Élément réactivé avec succès');
-      setTimeout(() => {
-        showGlobalLoading('Actualisation...', 'Rechargement...');
-        location.reload();
-      }, 1000);
+      showGlobalLoading('✅ Réactivé', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la réactivation');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -828,15 +824,14 @@ async function deactivateItem(type, id) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Élément désactivé avec succès');
-      setTimeout(() => {
-        showGlobalLoading('Actualisation...', 'Rechargement...');
-        location.reload();
-      }, 1000);
+      showGlobalLoading('✅ Désactivé', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la désactivation');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -876,15 +871,14 @@ async function deleteItem(type, id) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Élément supprimé définitivement');
-      setTimeout(() => {
-        showGlobalLoading('Actualisation...', 'Rechargement...');
-        location.reload();
-      }, 1000);
+      showGlobalLoading('✅ Supprimé', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la suppression');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }

@@ -126,11 +126,89 @@ def upload_url(file_path: str) -> str:
 # ENREGISTREMENT DES FILTRES
 # ==========================================
 
+def extract_initials(text: str, max_length: int = 4) -> str:
+    """
+    Extrait les initiales d'un texte pour créer un code court.
+    Fonction générique utilisable pour n'importe quel texte.
+    
+    Exemples d'utilisation:
+    - "Biens et Services" → "BS"
+    - "Personnel" → "P"
+    - "Investissements" → "I"
+    - "Transferts" → "T"
+    - "Direction Générale" → "DG"
+    - "Ministère de la Santé" → "MS"
+    - "Projet de Développement" → "PD"
+    - "Gestion des Ressources Humaines" → "GRH"
+    
+    Usage: 
+    - {{ "Biens et Services"|extract_initials }}
+    - {{ "Un Très Long Texte"|extract_initials(3) }}  (max 3 caractères)
+    """
+    if not text:
+        return ""
+    
+    # Mappings spécifiques (optionnels, pour des cas courants)
+    # Peut être étendu selon les besoins
+    mappings = {
+        'biens et services': 'BS',
+        'biens & services': 'BS',
+        'personnel': 'P',
+        'investissements': 'I',
+        'investissement': 'I',
+        'transferts': 'T',
+        'transfert': 'T',
+        'direction générale': 'DG',
+        'ressources humaines': 'RH',
+    }
+    
+    text_lower = text.lower().strip()
+    
+    # Vérifier si on a un mapping direct
+    if text_lower in mappings:
+        return mappings[text_lower]
+    
+    # Extraire les initiales des mots significatifs
+    # Stop-words en français (mots à ignorer)
+    stop_words = {
+        'et', 'de', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 
+        'en', 'au', 'aux', 'à', 'd', 'l', 'pour', 'par', 'sur',
+        'dans', 'avec', 'sans', 'sous', 'vers', 'chez'
+    }
+    
+    # Séparer par espaces, tirets, underscores, etc.
+    import re
+    words = re.split(r'[\s\-_/]+', text)
+    initials = []
+    
+    for word in words:
+        # Nettoyer le mot (enlever la ponctuation, garder alphanumérique)
+        clean_word = ''.join(c for c in word if c.isalnum())
+        
+        # Ignorer les stop-words et mots vides
+        if clean_word and clean_word.lower() not in stop_words:
+            initials.append(clean_word[0].upper())
+    
+    result = ''.join(initials)
+    
+    # Limiter la longueur si nécessaire
+    if len(result) > max_length:
+        result = result[:max_length]
+    
+    # Si le résultat est vide, prendre les premières lettres du texte original
+    if not result:
+        clean_text = ''.join(c for c in text if c.isalnum())
+        result = clean_text[:min(3, len(clean_text))].upper()
+    
+    return result
+
+
 templates.env.filters["format_date"] = format_date
 templates.env.filters["format_datetime"] = format_datetime
 templates.env.filters["format_time"] = format_time
 templates.env.filters["format_number_french"] = format_number_french
 templates.env.filters["truncate_smart"] = truncate_smart
+templates.env.filters["extract_initials"] = extract_initials
 
 # ==========================================
 # CONTEXT PROCESSOR

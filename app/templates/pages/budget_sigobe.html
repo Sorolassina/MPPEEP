@@ -1,0 +1,736 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}SIGOBE - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* ============================================
+   STYLES SIGOBE
+   ============================================ */
+
+.sigobe-container {
+  background: #f8f9fa;
+  min-height: 100vh;
+  padding: 2rem 0;
+}
+
+.sigobe-header {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  color: white;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.sigobe-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sigobe-title h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.sigobe-subtitle {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* KPIs Cards */
+.kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-5px);
+}
+
+.kpi-label {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.kpi-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.kpi-percentage {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.kpi-percentage.good {
+  color: #10b981;
+}
+
+.kpi-percentage.warning {
+  color: #f59e0b;
+}
+
+.kpi-percentage.danger {
+  color: #ef4444;
+}
+
+/* Filtres */
+.filters-section {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.filter-group select {
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Chargements Table */
+.chargements-section {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.btn-upload {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.btn-upload:hover {
+  transform: translateY(-2px);
+}
+
+.chargements-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.chargements-table thead {
+  background: #f8f9fa;
+}
+
+.chargements-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.chargements-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.badge-statut {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badge-statut.termine {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-statut.en-cours {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-statut.erreur {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.action-icons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-icon {
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.action-icon:hover {
+  transform: scale(1.2);
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group small {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.btn-modal {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.btn-modal.primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.btn-modal.secondary {
+  background: #e0e0e0;
+  color: #2c3e50;
+}
+
+.btn-modal:hover {
+  transform: translateY(-2px);
+}
+
+.info-box {
+  background: #e0e7ff;
+  border-left: 4px solid #667eea;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.info-box strong {
+  color: #667eea;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6c757d;
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state-text {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sigobe-container container">
+  
+  <!-- En-tête -->
+  <div class="sigobe-header">
+    <div class="sigobe-title">
+      <div>
+        <h1>📊 SIGOBE</h1>
+        <p class="sigobe-subtitle">Système d'Information de Gestion et d'Observation Budgétaire</p>
+      </div>
+      <a href="{{ url_for('budget_home') }}" class="btn-upload" style="background: white; color: #667eea;">
+        ← Retour
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <form method="get" action="{{ url_for('budget_sigobe') }}">
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label>📅 Année</label>
+          <select name="annee" onchange="submitFilterWithLoading()">
+            <option value="">Toutes les années</option>
+            {% for a in annees %}
+            <option value="{{ a }}" {{ 'selected' if annee_selected == a else '' }}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>📆 Trimestre</label>
+          <select name="trimestre" onchange="submitFilterWithLoading()">
+            <option value="">Tous les trimestres</option>
+            <option value="1" {{ 'selected' if trimestre_selected == 1 else '' }}>T1</option>
+            <option value="2" {{ 'selected' if trimestre_selected == 2 else '' }}>T2</option>
+            <option value="3" {{ 'selected' if trimestre_selected == 3 else '' }}>T3</option>
+            <option value="4" {{ 'selected' if trimestre_selected == 4 else '' }}>T4</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Chargements -->
+  <div class="chargements-section">
+    <div class="section-header">
+      <h2 class="section-title">📂 Chargements SIGOBE</h2>
+      <button onclick="openUploadModal()" class="btn-upload">
+        📤 Charger des données
+      </button>
+    </div>
+
+    {% if chargements %}
+    <table class="chargements-table">
+      <thead>
+        <tr>
+          <th>Période</th>
+          <th>Fichier</th>
+          <th>Date</th>
+          <th>Lignes</th>
+          <th>Programmes</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in chargements %}
+        <tr>
+          <td><strong>{{ c.periode_libelle }}</strong></td>
+          <td>{{ c.nom_fichier }}</td>
+          <td>{{ c.date_chargement.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ "{:,}".format(c.nb_lignes_importees) }}</td>
+          <td>{{ c.nb_programmes }}</td>
+          <td>
+            <span class="badge-statut {{ c.statut|lower|replace(' ', '-') }}">
+              {{ c.statut }}
+            </span>
+          </td>
+          <td>
+            <div class="action-icons">
+              <span class="action-icon" onclick="voirKPIs({{ c.id }})" title="Voir les KPIs">📊</span>
+              <span class="action-icon" onclick="supprimerChargement({{ c.id }})" title="Supprimer">🗑️</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📂</div>
+      <div class="empty-state-text">Aucun chargement SIGOBE</div>
+      <p>Commencez par charger un fichier d'exécution budgétaire</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Modal Upload -->
+<div id="modalUpload" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📤 Charger des données SIGOBE</h2>
+      <button class="modal-close" onclick="closeModal('modalUpload')">&times;</button>
+    </div>
+    
+    <div class="info-box">
+      <strong>ℹ️ Format attendu :</strong><br>
+      Fichier Excel "Situation Exécution" avec colonnes : CODE ET LIBELLE, Budget Voté, Budget Actuel, Engagements, Mandats, etc.
+    </div>
+    
+    <form id="formUpload" onsubmit="handleUpload(event)" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="required">📅 Année *</label>
+        <select name="annee" required>
+          <option value="">-- Sélectionner --</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>📆 Trimestre (optionnel)</label>
+        <select name="trimestre">
+          <option value="">Annuel</option>
+          <option value="1">T1</option>
+          <option value="2">T2</option>
+          <option value="3">T3</option>
+          <option value="4">T4</option>
+        </select>
+        <small>Laissez vide pour un chargement annuel</small>
+      </div>
+      
+      <div class="form-group">
+        <label class="required">📎 Fichier Excel *</label>
+        <input type="file" name="fichier" accept=".xlsx,.xls" required>
+        <small>Formats acceptés : .xlsx, .xls (max 50 MB)</small>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalUpload')">Annuler</button>
+        <button type="submit" class="btn-modal primary">📤 Charger et Analyser</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Soumettre le formulaire de filtres avec indicateur de chargement
+function submitFilterWithLoading() {
+  showGlobalLoading('Filtrage...', 'Actualisation des chargements SIGOBE');
+  setTimeout(() => {
+    document.querySelector('form[action="{{ url_for("budget_sigobe") }}"]').submit();
+  }, 300);
+}
+
+function openUploadModal() {
+  document.getElementById('modalUpload').classList.add('show');
+  document.getElementById('formUpload').reset();
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('show');
+}
+
+let previewResult = null;  // Stocker les données de prévisualisation
+
+async function handleUpload(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  
+  showGlobalLoading('Analyse en cours...', 'Analyse du fichier SIGOBE');
+  
+  try {
+    // Étape 1 : Prévisualisation
+    const response = await fetch('/api/v1/budget/api/sigobe/preview', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      hideGlobalLoading();
+      previewResult = result;
+      afficherPrevisualisation(result);
+    } else {
+      hideGlobalLoading();
+      showError(result.detail || 'Erreur lors de l\'analyse');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+function afficherPrevisualisation(result) {
+  const stats = result.stats;
+  const preview = result.preview;
+  const totaux = result.totaux;
+  
+  let html = `
+    <div style="background: #e0f2fe; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #0369a1;">📊 Analyse du fichier</h3>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        <div>
+          <strong>Lignes :</strong> ${stats.nb_lignes.toLocaleString()}
+        </div>
+        <div>
+          <strong>Programmes :</strong> ${stats.nb_programmes}
+        </div>
+        <div>
+          <strong>Actions :</strong> ${stats.nb_actions}
+        </div>
+        <div>
+          <strong>Colonnes :</strong> ${stats.nb_colonnes}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 1rem;">
+        <strong>📋 Colonnes hiérarchiques détectées :</strong><br>
+        <code style="background: white; padding: 0.5rem; border-radius: 5px; display: inline-block; margin-top: 0.5rem;">
+          ${stats.colonnes_hierarchiques.join(' → ')}
+        </code>
+      </div>
+      
+      <div>
+        <strong>💰 Totaux financiers :</strong><br>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
+          ${Object.entries(totaux).map(([key, val]) => 
+            `<div style="background: white; padding: 0.5rem; border-radius: 5px;">
+              <strong>${key.replace('_', ' ')} :</strong> ${val.toLocaleString()} FCFA
+            </div>`
+          ).join('')}
+        </div>
+      </div>
+    </div>
+    
+    <div style="background: #fef3c7; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
+      <strong>⚠️ Aperçu des 20 premières lignes :</strong>
+    </div>
+    
+    <div style="max-height: 400px; overflow: auto; margin-bottom: 1.5rem;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+        <thead style="position: sticky; top: 0; background: #f8f9fa;">
+          <tr>
+            ${stats.colonnes.slice(0, 8).map(col => `<th style="padding: 0.5rem; border: 1px solid #e0e0e0; text-align: left;">${col}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${preview.map(row => `
+            <tr>
+              ${stats.colonnes.slice(0, 8).map(col => 
+                `<td style="padding: 0.5rem; border: 1px solid #e0e0e0;">${row[col] || ''}</td>`
+              ).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    
+    <div style="background: #d1fae5; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center;">
+      <strong style="color: #065f46;">✅ Le fichier est prêt à être importé</strong>
+    </div>
+    
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" class="btn-modal secondary" onclick="fermerPrevisualisation()">Annuler</button>
+      <button type="button" class="btn-modal primary" onclick="confirmerImport()">💾 Confirmer et Importer</button>
+    </div>
+  `;
+  
+  // Afficher la prévisualisation dans le modal
+  document.getElementById('formUpload').style.display = 'none';
+  
+  const previewContainer = document.createElement('div');
+  previewContainer.id = 'previewContainer';
+  previewContainer.innerHTML = html;
+  document.querySelector('#modalUpload .modal-content').appendChild(previewContainer);
+}
+
+function fermerPrevisualisation() {
+  const container = document.getElementById('previewContainer');
+  if (container) {
+    container.remove();
+  }
+  document.getElementById('formUpload').style.display = 'block';
+  previewResult = null;
+}
+
+async function confirmerImport() {
+  if (!previewResult) {
+    showError('Aucune prévisualisation disponible');
+    return;
+  }
+  
+  showGlobalLoading('Import en cours...', 'Sauvegarde des données dans la base');
+  
+  // Récupérer les données du formulaire original
+  const formData = new FormData(document.getElementById('formUpload'));
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/sigobe/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalUpload');
+      fermerPrevisualisation();
+      showGlobalLoading(`✅ ${result.message}`, 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      hideGlobalLoading();
+      showError(result.detail || 'Erreur lors de l\'import');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function supprimerChargement(id) {
+  if (!confirm('⚠️ Supprimer ce chargement SIGOBE ?\n\nToutes les données associées seront supprimées.')) return;
+  
+  showGlobalLoading('Suppression...', 'Suppression du chargement et de ses données');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/sigobe/${id}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showGlobalLoading('✅ Chargement supprimé', 'Actualisation...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      showError('Erreur lors de la suppression');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+function voirKPIs(id) {
+  showSuccess('📊 Visualisation des KPIs (en développement)');
+  // TODO: Implémenter modal de visualisation des KPIs détaillés
+}
+</script>
+{% endblock %}
+

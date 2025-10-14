@@ -62,6 +62,40 @@
 }
 
 /* ============================================
+   OPTION 2: TOOLTIP AU SURVOL DES CELLULES
+   ============================================ */
+
+.column-tooltip {
+  position: fixed;
+  background: rgba(44, 62, 80, 0.95);
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.column-tooltip.visible {
+  opacity: 1;
+}
+
+.column-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: rgba(44, 62, 80, 0.95);
+}
+
+/* ============================================
    TABLEAU HIÉRARCHIQUE
    ============================================ */
 
@@ -298,8 +332,11 @@
         <div class="info-value">{{ fiche.annee_budget }}</div>
       </div>
       <div class="info-item">
-        <div class="info-label">Direction</div>
-        <div class="info-value">{{ fiche.direction.libelle if fiche.direction else '-' }}</div>
+        <div class="info-label">Programme</div>
+        <div class="info-value">
+          {{ programme.libelle if programme else '-' }}<br>
+          <small style="color: #6c757d;">({{ programme.code if programme else '' }})</small>
+        </div>
       </div>
       <div class="info-item">
         <div class="info-label">Budget Total</div>
@@ -314,14 +351,23 @@
 
   <!-- Boutons d'action -->
   <div class="action-buttons">
-    <button onclick="editerFiche({{ fiche.id }})" class="btn-fiche primary">
-      ✏️ Modifier la Fiche
+    <button onclick="ouvrirModalAjouterAction()" class="btn-fiche" style="background: linear-gradient(135deg, #9bc2e6, #6c9bd2);">
+      ➕ Ajouter Action
     </button>
-    <button onclick="ajouterLigne()" class="btn-fiche secondary">
+    <button onclick="ouvrirModalAjouterService()" class="btn-fiche" style="background: linear-gradient(135deg, #ffc000, #d9a000);">
+      ➕ Ajouter Service
+    </button>
+    <button onclick="ouvrirModalAjouterActivite()" class="btn-fiche" style="background: linear-gradient(135deg, #92d050, #70b030);">
+      ➕ Ajouter Activité
+    </button>
+    <button onclick="ouvrirModalAjouterLigne()" class="btn-fiche secondary">
       ➕ Ajouter Ligne
     </button>
-    <button onclick="exporterPDF({{ fiche.id }})" class="btn-fiche warning">
-      📄 Exporter PDF
+    <button onclick="exporterPDF({{ fiche.id }})" class="btn-fiche" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+      📥 Export PDF
+    </button>
+    <button onclick="ouvrirModalChangerStatut()" class="btn-fiche" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+      🔄 Changer Statut
     </button>
     <a href="{{ url_for('budget_fiches_hierarchique') }}" class="btn-fiche back">
       ← Retour aux Fiches
@@ -334,14 +380,14 @@
       <thead>
         <tr>
           <th>CODE ET LIBELLE</th>
-          <th>BUDGET VOTÉ N<br>(A)</th>
-          <th>BUDGET ACTUEL N<br>(B)</th>
-          <th>ENVELOPPE N+1<br>(C)</th>
-          <th>COMPLÉMENT SOLLICITÉ<br>(D)</th>
-          <th>BUDGET SOUHAITÉ<br>(E=C+D)</th>
-          <th>ENGAGEMENT ÉTAT<br>(F)</th>
-          <th>AUTRE COMPLÉMENT<br>(G)</th>
-          <th>PROJET DE BUDGET N+1<br>(H=C+F+G)</th>
+          <th data-col-name="Budget Voté N (A)">BUDGET VOTÉ N<br>(A)</th>
+          <th data-col-name="Budget Actuel N (B)">BUDGET ACTUEL N<br>(B)</th>
+          <th data-col-name="Enveloppe N+1 (C)">ENVELOPPE N+1<br>(C)</th>
+          <th data-col-name="Complément Sollicité (D)">COMPLÉMENT SOLLICITÉ<br>(D)</th>
+          <th data-col-name="Budget Souhaité (E=C+D)">BUDGET SOUHAITÉ<br>(E=C+D)</th>
+          <th data-col-name="Engagement État (F)">ENGAGEMENT ÉTAT<br>(F)</th>
+          <th data-col-name="Autre Complément (G)">AUTRE COMPLÉMENT<br>(G)</th>
+          <th data-col-name="Projet de Budget N+1 (H=C+F+G)">PROJET DE BUDGET N+1<br>(H=C+F+G)</th>
           <th>JUSTIFICATIFS</th>
           <th>ACTIONS</th>
         </tr>
@@ -420,6 +466,7 @@
           <td style="max-width: 200px;">{{ ligne.justificatifs or '' }}</td>
           <td>
             <button onclick="editerLigne({{ ligne.id }})" class="action-icon" title="Modifier">✏️</button>
+            <button onclick="gererDocuments({{ ligne.id }})" class="action-icon" title="Gérer les documents">📎</button>
             <button onclick="supprimerLigne({{ ligne.id }})" class="action-icon" title="Supprimer">🗑️</button>
           </td>
         </tr>
@@ -566,6 +613,398 @@
   </div>
 
 </div>
+
+<!-- Modal Gérer Documents d'une Ligne -->
+<div id="modalDocumentsLigne" class="modal-overlay">
+  <div class="modal-content" style="max-width: 800px;">
+    <div class="modal-header">
+      <h2>📎 Documents de la Ligne Budgétaire</h2>
+      <button class="modal-close" onclick="closeModal('modalDocumentsLigne')">&times;</button>
+    </div>
+    
+    <div id="documentsContainer" style="margin-bottom: 1.5rem;">
+      <h3 style="margin-bottom: 1rem; color: #2c3e50;">Documents existants</h3>
+      <div id="listeDocuments" style="max-height: 300px; overflow-y: auto;">
+        <p style="text-align: center; color: #6c757d; padding: 2rem;">Chargement...</p>
+      </div>
+    </div>
+    
+    <div style="border-top: 2px solid #e0e0e0; padding-top: 1.5rem;">
+      <h3 style="margin-bottom: 1rem; color: #2c3e50;">Ajouter des documents</h3>
+      <form id="formAjouterDocuments" onsubmit="handleAjouterDocuments(event)" enctype="multipart/form-data">
+        <input type="hidden" id="doc_ligne_id" name="ligne_id">
+        <div class="form-group">
+          <label>Sélectionner des fichiers</label>
+          <input type="file" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc" required style="width: 100%; padding: 0.75rem; border: 2px dashed #667eea; border-radius: 10px; background: #f8f9fa;">
+          <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
+            📎 Formats acceptés : PDF, Images, Excel, Word | Renommage automatique : CodeAction_CodeActivité_CodeLigne_NomOriginal.ext
+          </small>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal secondary" onclick="closeModal('modalDocumentsLigne')">Fermer</button>
+          <button type="submit" class="btn-modal primary">📤 Uploader</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ajouter Action -->
+<div id="modalAjouterAction" class="modal-overlay">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h2>➕ Ajouter une Action</h2>
+      <button class="modal-close" onclick="closeModal('modalAjouterAction')">&times;</button>
+    </div>
+    <form id="formAjouterAction" onsubmit="handleAjouterAction(event)">
+      <input type="hidden" name="fiche_id" value="{{ fiche.id }}">
+      <div class="form-group">
+        <label class="required">Nature de Dépense</label>
+        <select name="nature_depense" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">-- Sélectionner une nature --</option>
+          <option value="BIENS ET SERVICES">BIENS ET SERVICES</option>
+          <option value="PERSONNEL">PERSONNEL</option>
+          <option value="INVESTISSEMENT">INVESTISSEMENT</option>
+          <option value="TRANSFERTS">TRANSFERTS</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="required">Code Action</label>
+        <input type="text" name="code" required placeholder="Ex: 2208401" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+      </div>
+      <div class="form-group">
+        <label class="required">Libellé</label>
+        <textarea name="libelle" rows="3" required placeholder="Ex: Pilotage, suivi et évaluation..." style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">⚠️ Une action doit contenir au moins un service bénéficiaire</small>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterAction')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Créer l'Action</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Ajouter Service -->
+<div id="modalAjouterService" class="modal-overlay">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h2>➕ Ajouter un Service Bénéficiaire</h2>
+      <button class="modal-close" onclick="closeModal('modalAjouterService')">&times;</button>
+    </div>
+    <form id="formAjouterService" onsubmit="handleAjouterService(event)">
+      <div class="form-group">
+        <label class="required">Action Parente</label>
+        <select name="action_id" id="select_action_parent" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">-- Sélectionner une action --</option>
+          {% for nature, actions_nat in actions_par_nature.items() %}
+            <optgroup label="{{ nature.upper() }}">
+              {% for action in actions_nat %}
+                <option value="{{ action.id }}">{{ action.code }} - {{ action.libelle[:80] }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="required">Code Service</label>
+        <input type="text" name="code" required placeholder="Ex: DR_BOUAKE" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+      </div>
+      <div class="form-group">
+        <label class="required">Libellé</label>
+        <textarea name="libelle" rows="3" required placeholder="Ex: Direction Régionale de Bouaké" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">⚠️ Un service doit contenir au moins une activité</small>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterService')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Créer le Service</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Ajouter Activité -->
+<div id="modalAjouterActivite" class="modal-overlay">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h2>➕ Ajouter une Activité</h2>
+      <button class="modal-close" onclick="closeModal('modalAjouterActivite')">&times;</button>
+    </div>
+    <form id="formAjouterActivite" onsubmit="handleAjouterActivite(event)">
+      <div class="form-group">
+        <label class="required">Service Bénéficiaire Parent</label>
+        <select name="service_id" id="select_service_parent" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">-- Sélectionner un service --</option>
+          {% for nature, actions_nat in actions_par_nature.items() %}
+            {% for action in actions_nat %}
+              {% for service in action.services %}
+                <option value="{{ service.id }}">{{ action.code }} > {{ service.code }} - {{ service.libelle[:60] }}</option>
+              {% endfor %}
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="required">Code Activité</label>
+        <input type="text" name="code" required placeholder="Ex: 17011200103" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+      </div>
+      <div class="form-group">
+        <label class="required">Libellé</label>
+        <textarea name="libelle" rows="3" required placeholder="Ex: Coordonner les activités de planification..." style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">⚠️ Une activité doit contenir au moins une ligne budgétaire</small>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterActivite')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Créer l'Activité</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Ajouter Ligne Budgétaire -->
+<div id="modalAjouterLigne" class="modal-overlay">
+  <div class="modal-content" style="max-width: 1000px;">
+    <div class="modal-header">
+      <h2>➕ Ajouter une Ligne Budgétaire</h2>
+      <button class="modal-close" onclick="closeModal('modalAjouterLigne')">&times;</button>
+    </div>
+    <form id="formAjouterLigne" onsubmit="handleAjouterLigne(event)" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="required">Activité Parente</label>
+        <select name="activite_id" id="select_activite_parent" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">-- Sélectionner une activité --</option>
+          {% for nature, actions_nat in actions_par_nature.items() %}
+            {% for action in actions_nat %}
+              {% for service in action.services %}
+                {% for activite in service.activites %}
+                  <option value="{{ activite.id }}" data-action-code="{{ action.code }}" data-activite-code="{{ activite.code }}">
+                    {{ action.code }} > {{ service.code }} > {{ activite.code }} - {{ activite.libelle[:50] }}
+                  </option>
+                {% endfor %}
+              {% endfor %}
+            {% endfor %}
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="required">Code Compte</label>
+          <input type="text" name="code" id="ligne_code" required placeholder="Ex: 601100" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label class="required">Libellé</label>
+          <input type="text" name="libelle" required placeholder="Ex: Achats de petits matériels" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+        <div class="form-group">
+          <label>Budget Voté N (A)</label>
+          <input type="number" name="budget_vote_n" step="0.01" value="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Budget Actuel N (B)</label>
+          <input type="number" name="budget_actuel_n" step="0.01" value="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Enveloppe N+1 (C)</label>
+          <input type="number" name="enveloppe_n_plus_1" step="0.01" value="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Complément Sollicité (D)</label>
+          <input type="number" name="complement_solicite" step="0.01" value="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Engagement État (F)</label>
+          <input type="number" name="engagement_etat" step="0.01" value="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Autre Complément (G)</label>
+          <input type="number" name="autre_complement" step="0.01" value="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Justificatifs</label>
+        <textarea name="justificatifs" rows="2" placeholder="Notes et explications..." style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Documents justificatifs (optionnel)</label>
+        <input type="file" name="documents" id="documents_ligne" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc" style="width: 100%; padding: 0.75rem; border: 2px dashed #667eea; border-radius: 10px; background: #f8f9fa;">
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
+          📎 Formats acceptés : PDF, Images, Excel, Word | Les fichiers seront renommés : CodeAction_CodeActivité_CodeLigne_NomOriginal.ext
+        </small>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterLigne')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Créer la Ligne</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Éditer Action -->
+<div id="modalEditerAction" class="modal-overlay">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2>✏️ Modifier l'Action</h2>
+      <button class="modal-close" onclick="closeModal('modalEditerAction')">&times;</button>
+    </div>
+    <form id="formEditerAction" onsubmit="handleEditerAction(event)">
+      <input type="hidden" id="action_id" name="action_id">
+      <div class="form-group">
+        <label class="required">Libellé</label>
+        <textarea id="action_libelle" name="libelle" rows="3" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">Les montants sont calculés automatiquement</small>
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerAction')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Éditer Service -->
+<div id="modalEditerService" class="modal-overlay">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2>✏️ Modifier le Service Bénéficiaire</h2>
+      <button class="modal-close" onclick="closeModal('modalEditerService')">&times;</button>
+    </div>
+    <form id="formEditerService" onsubmit="handleEditerService(event)">
+      <input type="hidden" id="service_id" name="service_id">
+      <div class="form-group">
+        <label class="required">Libellé</label>
+        <textarea id="service_libelle" name="libelle" rows="3" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">Les montants sont calculés automatiquement</small>
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerService')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Éditer Activité -->
+<div id="modalEditerActivite" class="modal-overlay">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2>✏️ Modifier l'Activité</h2>
+      <button class="modal-close" onclick="closeModal('modalEditerActivite')">&times;</button>
+    </div>
+    <form id="formEditerActivite" onsubmit="handleEditerActivite(event)">
+      <input type="hidden" id="activite_id" name="activite_id">
+      <div class="form-group">
+        <label class="required">Libellé</label>
+        <textarea id="activite_libelle" name="libelle" rows="3" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">Les montants sont calculés automatiquement</small>
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerActivite')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Éditer Ligne Budgétaire -->
+<div id="modalEditerLigne" class="modal-overlay">
+  <div class="modal-content" style="max-width: 900px;">
+    <div class="modal-header">
+      <h2>✏️ Modifier la Ligne Budgétaire</h2>
+      <button class="modal-close" onclick="closeModal('modalEditerLigne')">&times;</button>
+    </div>
+    <form id="formEditerLigne" onsubmit="handleEditerLigne(event)">
+      <input type="hidden" id="ligne_id" name="ligne_id">
+      <div class="form-group">
+        <label class="required">Libellé</label>
+        <textarea id="ligne_libelle" name="libelle" rows="2" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+        <div class="form-group">
+          <label>Budget Voté N (A)</label>
+          <input type="number" id="ligne_budget_vote_n" name="budget_vote_n" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Budget Actuel N (B)</label>
+          <input type="number" id="ligne_budget_actuel_n" name="budget_actuel_n" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Enveloppe N+1 (C)</label>
+          <input type="number" id="ligne_enveloppe_n_plus_1" name="enveloppe_n_plus_1" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Complément Sollicité (D)</label>
+          <input type="number" id="ligne_complement_solicite" name="complement_solicite" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Engagement État (F)</label>
+          <input type="number" id="ligne_engagement_etat" name="engagement_etat" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        <div class="form-group">
+          <label>Autre Complément (G)</label>
+          <input type="number" id="ligne_autre_complement" name="autre_complement" step="0.01" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Justificatifs</label>
+        <textarea id="ligne_justificatifs" name="justificatifs" rows="2" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+      </div>
+      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerLigne')">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Changer Statut -->
+<div id="modalChangerStatut" class="modal-overlay">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2>🔄 Changer le Statut de la Fiche</h2>
+      <button class="modal-close" onclick="closeModal('modalChangerStatut')">&times;</button>
+    </div>
+    <form id="formChangerStatut" onsubmit="handleChangerStatut(event)">
+      <div class="form-group">
+        <label>Statut Actuel</label>
+        <div style="padding: 0.75rem; background: #f8f9fa; border-radius: 10px; border: 2px solid #e0e0e0;">
+          <span class="badge badge-{{ 'success' if fiche.statut == 'Validé' or fiche.statut == 'Approuvé' else 'warning' if fiche.statut == 'Soumis' else 'danger' if fiche.statut == 'Rejeté' else 'secondary' }}">
+            {{ fiche.statut }}
+          </span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="required">Nouveau Statut</label>
+        <select name="nouveau_statut" id="nouveau_statut" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">-- Sélectionner un statut --</option>
+          <option value="Brouillon" {% if fiche.statut == 'Brouillon' %}disabled{% endif %}>📝 Brouillon</option>
+          <option value="Soumis" {% if fiche.statut == 'Soumis' %}disabled{% endif %}>📤 Soumis</option>
+          <option value="Validé" {% if fiche.statut == 'Validé' %}disabled{% endif %}>✅ Validé</option>
+          <option value="Approuvé" {% if fiche.statut == 'Approuvé' %}disabled{% endif %}>👍 Approuvé</option>
+          <option value="Rejeté" {% if fiche.statut == 'Rejeté' %}disabled{% endif %}>❌ Rejeté</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Commentaire (optionnel)</label>
+        <textarea name="commentaire" rows="3" placeholder="Ajouter un commentaire sur ce changement de statut..." style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn-modal secondary" onclick="closeModal('modalChangerStatut')">Annuler</button>
+        <button type="submit" class="btn-modal primary">🔄 Changer le Statut</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -577,51 +1016,559 @@ function editerFiche(ficheId) {
   }, 300);
 }
 
-function ajouterLigne() {
-  showGlobalLoading('Chargement...', 'Ouverture du formulaire');
-  setTimeout(() => {
-    window.location.href = `/api/v1/budget/fiches/{{ fiche.id }}/lignes/nouveau`;
-  }, 300);
+function exporterPDF(ficheId) {
+  showGlobalLoading('Génération de la fiche en cours...', 'Création du document PDF');
+  
+  // Télécharger directement le fichier PDF
+  fetch(`/api/v1/budget/api/fiches/${ficheId}/export/pdf`)
+    .then(response => {
+      if (!response.ok) throw new Error('Erreur lors de la génération');
+      
+      // Récupérer le nom du fichier depuis le header Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `Fiche_Technique_${ficheId}.pdf`; // Nom par défaut
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=(.+)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, ''); // Enlever les guillemets
+        }
+      }
+      
+      return response.blob().then(blob => ({ blob, filename }));
+    })
+    .then(({ blob, filename }) => {
+      // Créer un lien de téléchargement
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename; // Utiliser le nom du serveur
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      
+      hideGlobalLoading();
+      showSuccess('PDF téléchargé avec succès !');
+    })
+    .catch(error => {
+      hideGlobalLoading();
+      console.error('Erreur:', error);
+      showError('Erreur lors de la génération du PDF');
+    });
 }
 
-function exporterPDF(ficheId) {
-  showGlobalLoading('Génération PDF...', 'Veuillez patienter');
-  setTimeout(() => {
-    window.open(`/api/v1/budget/api/fiches/${ficheId}/export/pdf`, '_blank');
-    hideGlobalLoading();
-  }, 500);
+// ============================================
+// GESTION DES DOCUMENTS DES LIGNES
+// ============================================
+
+async function gererDocuments(ligneId) {
+  // Stocker l'ID de la ligne
+  document.getElementById('doc_ligne_id').value = ligneId;
+  
+  // Afficher le modal
+  document.getElementById('modalDocumentsLigne').classList.add('show');
+  
+  // Charger les documents
+  await chargerDocumentsLigne(ligneId);
 }
+
+async function chargerDocumentsLigne(ligneId) {
+  const container = document.getElementById('listeDocuments');
+  container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 2rem;">Chargement...</p>';
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}/documents`);
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      if (result.documents.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 2rem;">Aucun document pour cette ligne</p>';
+      } else {
+        container.innerHTML = result.documents.map(doc => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 10px; margin-bottom: 0.5rem;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #2c3e50;">📄 ${doc.nom_stocke}</div>
+              <div style="font-size: 0.85rem; color: #6c757d; margin-top: 0.25rem;">
+                ${(doc.taille / 1024).toFixed(2)} KB | ${new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <a href="${doc.url}" target="_blank" class="action-icon" title="Télécharger" style="background: #667eea; color: white; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none;">⬇️</a>
+              <button onclick="supprimerDocument(${ligneId}, ${doc.id})" class="action-icon" title="Supprimer" style="background: #dc3545; color: white; padding: 0.5rem 1rem; border-radius: 8px;">🗑️</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    } else {
+      container.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 2rem;">Erreur lors du chargement</p>';
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    container.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 2rem;">Erreur réseau</p>';
+  }
+}
+
+async function handleAjouterDocuments(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const ligneId = formData.get('ligne_id');
+  
+  showGlobalLoading('Upload...', 'Envoi des documents');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}/documents`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      hideGlobalLoading();
+      showSuccess(`${result.documents_count} document(s) uploadé(s)`);
+      // Recharger la liste des documents
+      document.getElementById('formAjouterDocuments').reset();
+      await chargerDocumentsLigne(ligneId);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de l\'upload');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function supprimerDocument(ligneId, documentId) {
+  if (!confirm('⚠️ Supprimer ce document ?')) return;
+  
+  showGlobalLoading('Suppression...', 'Suppression du document');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}/documents/${documentId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      hideGlobalLoading();
+      showSuccess('Document supprimé');
+      // Recharger la liste des documents
+      await chargerDocumentsLigne(ligneId);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// ============================================
+// OUVERTURE DES MODALS D'AJOUT
+// ============================================
+
+function ouvrirModalAjouterAction() {
+  document.getElementById('modalAjouterAction').classList.add('show');
+  document.getElementById('formAjouterAction').reset();
+}
+
+function ouvrirModalAjouterService() {
+  document.getElementById('modalAjouterService').classList.add('show');
+  document.getElementById('formAjouterService').reset();
+}
+
+function ouvrirModalAjouterActivite() {
+  document.getElementById('modalAjouterActivite').classList.add('show');
+  document.getElementById('formAjouterActivite').reset();
+}
+
+function ouvrirModalAjouterLigne() {
+  document.getElementById('modalAjouterLigne').classList.add('show');
+  document.getElementById('formAjouterLigne').reset();
+}
+
+function ouvrirModalChangerStatut() {
+  document.getElementById('modalChangerStatut').classList.add('show');
+  document.getElementById('formChangerStatut').reset();
+}
+
+// ============================================
+// SOUMISSION DES FORMULAIRES D'AJOUT
+// ============================================
+
+async function handleAjouterAction(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  
+  showGlobalLoading('Création...', 'Création de l\'action');
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/actions', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalAjouterAction');
+      showGlobalLoading('✅ Action créée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors de la création');
+      }
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleAjouterService(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  
+  showGlobalLoading('Création...', 'Création du service');
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/services', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalAjouterService');
+      showGlobalLoading('✅ Service créé', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors de la création');
+      }
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleAjouterActivite(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  
+  showGlobalLoading('Création...', 'Création de l\'activité');
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/activites', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalAjouterActivite');
+      showGlobalLoading('✅ Activité créée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors de la création');
+      }
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleAjouterLigne(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  
+  showGlobalLoading('Création...', 'Création de la ligne budgétaire et upload des documents');
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/lignes', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalAjouterLigne');
+      let message = '✅ Ligne créée';
+      if (result.documents_count > 0) {
+        message += ` + ${result.documents_count} document(s) uploadé(s)`;
+      }
+      showGlobalLoading(message, 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors de la création');
+      }
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleChangerStatut(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const nouveauStatut = formData.get('nouveau_statut');
+  
+  showGlobalLoading('Changement de statut...', 'Mise à jour de la fiche technique');
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/fiches/{{ fiche.id }}/statut', {
+      method: 'PUT',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalChangerStatut');
+      showGlobalLoading(`✅ ${result.message}`, 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors du changement de statut');
+      }
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// ============================================
+// ÉDITION ACTIONS, SERVICES, ACTIVITÉS, LIGNES
+// ============================================
 
 function editerAction(actionId) {
-  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
-  setTimeout(() => {
-    window.location.href = `/api/v1/budget/actions/${actionId}/edit`;
-  }, 300);
+  // Récupérer les données de l'action depuis le tableau
+  const row = document.querySelector(`tr[data-action-id="${actionId}"]`);
+  const libelle = row.querySelector('td:first-child strong').textContent.trim();
+  
+  // Remplir le formulaire
+  document.getElementById('action_id').value = actionId;
+  document.getElementById('action_libelle').value = libelle;
+  
+  // Afficher le modal
+  document.getElementById('modalEditerAction').classList.add('show');
 }
 
 function editerService(serviceId) {
-  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
-  setTimeout(() => {
-    window.location.href = `/api/v1/budget/services/${serviceId}/edit`;
-  }, 300);
+  // Récupérer les données du service depuis le tableau
+  const row = document.querySelector(`tr[data-service-id="${serviceId}"]`);
+  const libelle = row.querySelector('td strong').textContent.trim();
+  
+  // Remplir le formulaire
+  document.getElementById('service_id').value = serviceId;
+  document.getElementById('service_libelle').value = libelle;
+  
+  // Afficher le modal
+  document.getElementById('modalEditerService').classList.add('show');
 }
 
 function editerActivite(activiteId) {
-  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
-  setTimeout(() => {
-    window.location.href = `/api/v1/budget/activites/${activiteId}/edit`;
-  }, 300);
+  // Récupérer les données de l'activité depuis le tableau
+  const row = document.querySelector(`tr[data-activite-id="${activiteId}"]`);
+  const libelle = row.querySelector('td:first-child strong').textContent.trim();
+  
+  // Remplir le formulaire
+  document.getElementById('activite_id').value = activiteId;
+  document.getElementById('activite_libelle').value = libelle;
+  
+  // Afficher le modal
+  document.getElementById('modalEditerActivite').classList.add('show');
 }
 
 function editerLigne(ligneId) {
-  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
-  setTimeout(() => {
-    window.location.href = `/api/v1/budget/lignes/${ligneId}/edit`;
-  }, 300);
+  // Récupérer les données de la ligne depuis le tableau
+  const row = document.querySelector(`tr[data-ligne-id="${ligneId}"]`);
+  const cells = row.querySelectorAll('td');
+  
+  // Remplir le formulaire
+  document.getElementById('ligne_id').value = ligneId;
+  document.getElementById('ligne_libelle').value = cells[0].textContent.trim();
+  document.getElementById('ligne_budget_vote_n').value = parseFloat(cells[1].textContent.replace(/,/g, '')) || 0;
+  document.getElementById('ligne_budget_actuel_n').value = parseFloat(cells[2].textContent.replace(/,/g, '')) || 0;
+  document.getElementById('ligne_enveloppe_n_plus_1').value = parseFloat(cells[3].textContent.replace(/,/g, '')) || 0;
+  document.getElementById('ligne_complement_solicite').value = parseFloat(cells[4].textContent.replace(/,/g, '')) || 0;
+  document.getElementById('ligne_engagement_etat').value = parseFloat(cells[6].textContent.replace(/,/g, '')) || 0;
+  document.getElementById('ligne_autre_complement').value = parseFloat(cells[7].textContent.replace(/,/g, '')) || 0;
+  document.getElementById('ligne_justificatifs').value = cells[9].textContent.trim();
+  
+  // Afficher le modal
+  document.getElementById('modalEditerLigne').classList.add('show');
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('show');
+}
+
+// ============================================
+// SOUMISSION DES FORMULAIRES D'ÉDITION
+// ============================================
+
+async function handleEditerAction(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const actionId = formData.get('action_id');
+  
+  showGlobalLoading('Enregistrement...', 'Mise à jour de l\'action');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/actions/${actionId}`, {
+      method: 'PUT',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalEditerAction');
+      showGlobalLoading('✅ Action modifiée', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de la modification');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleEditerService(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const serviceId = formData.get('service_id');
+  
+  showGlobalLoading('Enregistrement...', 'Mise à jour du service');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/services/${serviceId}`, {
+      method: 'PUT',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalEditerService');
+      showGlobalLoading('✅ Service modifié', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de la modification');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleEditerActivite(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const activiteId = formData.get('activite_id');
+  
+  showGlobalLoading('Enregistrement...', 'Mise à jour de l\'activité');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/activites/${activiteId}`, {
+      method: 'PUT',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalEditerActivite');
+      showGlobalLoading('✅ Activité modifiée', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de la modification');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleEditerLigne(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const ligneId = formData.get('ligne_id');
+  
+  showGlobalLoading('Enregistrement...', 'Mise à jour de la ligne budgétaire');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}`, {
+      method: 'PUT',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalEditerLigne');
+      showGlobalLoading('✅ Ligne modifiée', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      await handleFetchError(response, 'Erreur lors de la modification');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
 }
 
 async function supprimerAction(actionId) {
-  if (!confirm('⚠️ Supprimer cette action ?\n\nTous les services, activités et lignes associés seront également supprimés.')) return;
+  if (!confirm('⚠️ Supprimer cette action ?\n\nATTENTION : Vous devez d\'abord supprimer tous les services, activités et lignes contenus dans cette action.')) return;
   
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
@@ -633,19 +1580,27 @@ async function supprimerAction(actionId) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Action supprimée avec succès');
-      setTimeout(() => location.reload(), 1000);
+      showGlobalLoading('✅ Action supprimée', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
     } else {
-      await handleFetchError(response, 'Erreur lors de la suppression');
+      hideGlobalLoading();
+      // Afficher le message d'erreur du serveur
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors de la suppression');
+      }
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
 }
 
 async function supprimerService(serviceId) {
-  if (!confirm('⚠️ Supprimer ce service ?\n\nToutes les activités et lignes associées seront également supprimées.')) return;
+  if (!confirm('⚠️ Supprimer ce service ?\n\nATTENTION : Vous devez d\'abord supprimer toutes les activités et lignes contenues dans ce service.')) return;
   
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
@@ -657,19 +1612,27 @@ async function supprimerService(serviceId) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Service supprimé avec succès');
-      setTimeout(() => location.reload(), 1000);
+      showGlobalLoading('✅ Service supprimé', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
     } else {
-      await handleFetchError(response, 'Erreur lors de la suppression');
+      hideGlobalLoading();
+      // Afficher le message d'erreur du serveur
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors de la suppression');
+      }
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
 }
 
 async function supprimerActivite(activiteId) {
-  if (!confirm('⚠️ Supprimer cette activité ?\n\nToutes les lignes associées seront également supprimées.')) return;
+  if (!confirm('⚠️ Supprimer cette activité ?\n\nATTENTION : Vous devez d\'abord supprimer toutes les lignes budgétaires contenues dans cette activité.')) return;
   
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
@@ -681,12 +1644,20 @@ async function supprimerActivite(activiteId) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Activité supprimée avec succès');
-      setTimeout(() => location.reload(), 1000);
+      showGlobalLoading('✅ Activité supprimée', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
     } else {
-      await handleFetchError(response, 'Erreur lors de la suppression');
+      hideGlobalLoading();
+      // Afficher le message d'erreur du serveur
+      if (response.status === 400 && result.detail) {
+        showError(result.detail);
+      } else {
+        await handleFetchError(response, 'Erreur lors de la suppression');
+      }
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -705,12 +1676,15 @@ async function supprimerLigne(ligneId) {
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Ligne supprimée avec succès');
-      setTimeout(() => location.reload(), 1000);
+      showGlobalLoading('✅ Ligne supprimée', 'Actualisation de la page...');
+      // Laisser l'overlay actif pendant le rechargement
+      setTimeout(() => location.reload(), 500);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la suppression');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
@@ -734,5 +1708,202 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('✅ Page structure fiche technique chargée');
+
+// ============================================
+// OPTION 2: TOOLTIP AU SURVOL DES CELLULES
+// ============================================
+
+// Créer le tooltip une seule fois
+const tooltip = document.createElement('div');
+tooltip.className = 'column-tooltip';
+document.body.appendChild(tooltip);
+
+// Ajouter les événements sur toutes les cellules de montants
+document.addEventListener('DOMContentLoaded', function() {
+  const table = document.querySelector('.fiche-table');
+  if (!table) return;
+  
+  // Récupérer les noms des colonnes depuis les headers
+  const headers = Array.from(table.querySelectorAll('thead th'));
+  const columnNames = headers.map(th => th.getAttribute('data-col-name') || null);
+  
+  // Fonction pour afficher le tooltip
+  function showTooltip(event, colIndex) {
+    const colName = columnNames[colIndex];
+    if (!colName) return;
+    
+    tooltip.textContent = colName;
+    tooltip.style.left = event.clientX + 'px';
+    tooltip.style.top = (event.clientY - 60) + 'px';
+    tooltip.classList.add('visible');
+  }
+  
+  // Fonction pour masquer le tooltip
+  function hideTooltip() {
+    tooltip.classList.remove('visible');
+  }
+  
+  // Attacher les événements aux cellules de données (pas les en-têtes)
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    cells.forEach((cell, index) => {
+      // Seulement pour les cellules de montants (colonnes 1 à 8)
+      if (index >= 1 && index <= 8 && cell.classList.contains('montant')) {
+        cell.addEventListener('mouseenter', (e) => showTooltip(e, index));
+        cell.addEventListener('mousemove', (e) => {
+          tooltip.style.left = e.clientX + 'px';
+          tooltip.style.top = (e.clientY - 60) + 'px';
+        });
+        cell.addEventListener('mouseleave', hideTooltip);
+        
+        // Ajouter un curseur pointer pour indiquer l'interaction
+        cell.style.cursor = 'help';
+      }
+    });
+  });
+});
+
+// Styles pour les modals
+const styleModals = document.createElement('style');
+styleModals.textContent = `
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .modal-overlay.show {
+    display: flex;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(30px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.5rem;
+  }
+  
+  .modal-close {
+    font-size: 2rem;
+    color: #6c757d;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+    transition: all 0.3s;
+  }
+  
+  .modal-close:hover {
+    color: #dc3545;
+    transform: rotate(90deg);
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+  }
+  
+  .form-group label.required::after {
+    content: ' *';
+    color: #dc3545;
+  }
+  
+  .form-group input[type="number"],
+  .form-group textarea {
+    font-family: inherit;
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid #e0e0e0;
+  }
+  
+  .btn-modal {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 1rem;
+  }
+  
+  .btn-modal.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+  
+  .btn-modal.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+  }
+  
+  .btn-modal.secondary {
+    background: #e9ecef;
+    color: #495057;
+  }
+  
+  .btn-modal.secondary:hover {
+    background: #dee2e6;
+  }
+`;
+document.head.appendChild(styleModals);
 </script>
 {% endblock %}
