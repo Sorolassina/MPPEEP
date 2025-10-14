@@ -15,6 +15,7 @@ from app.models.besoins import BesoinAgent, SuiviBesoin, ConsolidationBesoin
 from app.models.personnel import Programme, Direction, Service, GradeComplet
 from app.templates import templates, get_template_context
 from app.core.logging_config import get_logger
+from app.services.activity_service import ActivityService
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -254,6 +255,18 @@ def api_create_besoin(
     session.commit()
     
     logger.info(f"✅ Besoin créé : {poste_libelle} ({nombre_demande}) par {current_user.email}")
+    
+    # Log activité
+    ActivityService.log_user_activity(
+        session=session,
+        user=current_user,
+        action_type="create",
+        target_type="besoin_agent",
+        description=f"Création d'un besoin - {poste_libelle} ({nombre_demande} poste{'s' if nombre_demande > 1 else ''})",
+        target_id=besoin.id,
+        icon="📊"
+    )
+    
     return {"ok": True, "id": besoin.id, "message": "Besoin créé avec succès"}
 
 

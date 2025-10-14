@@ -10,6 +10,7 @@ from pathlib import Path
 
 # Imports locaux
 from app.db.session import get_session
+from app.models.user import User
 from app.models.rh import (
     Agent, Grade, ServiceDept,
     HRRequest, HRRequestBase, WorkflowStep, WorkflowHistory
@@ -19,6 +20,7 @@ from app.services.rh import RHService
 from app.api.v1.endpoints.auth import get_current_user
 from app.templates import templates, get_template_context
 from app.core.logging_config import get_logger
+from app.services.activity_service import ActivityService
 
 logger = get_logger(__name__)
 
@@ -96,6 +98,7 @@ def rh_demande_detail(request: Request, request_id: int, session: Session = Depe
 async def rh_create_demande(
     request: Request,
     session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
     agent_id: int = Form(...),
     type: str = Form(...),
     objet: str = Form(...),
@@ -177,6 +180,17 @@ async def rh_create_demande(
         session.refresh(req)
         
         logger.info(f"✅ Demande créée : ID {req.id}, Type: {req.type}, Agent: {agent_id}")
+        
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="create",
+            target_type="demande_rh",
+            description=f"Création d'une demande RH - {req.type.value} : {objet}",
+            target_id=req.id,
+            icon="📝"
+        )
         
         # Récupérer les prochaines étapes
         next_steps = RHService.next_states_for(session, req.type, req.current_state)
@@ -338,6 +352,18 @@ def rh_demande_advance(
             acted_by_role=current_user.type_user,  # ✅ Utiliser type_user
             comment=comment
         )
+        
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="update",
+            target_type="demande_rh",
+            description=f"Transition de la demande #{request_id} vers {to_state.value}",
+            target_id=request_id,
+            icon="✅"
+        )
+        
         return {"ok": True, "state": updated.current_state}
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -447,9 +473,22 @@ def api_delete_demande(
         session.delete(entry)
     
     # Supprimer la demande
+    type_demande = req.type.value
+    objet_demande = req.objet
     session.delete(req)
     session.commit()
     
     logger.info(f"✅ Demande supprimée : ID {request_id}")
+    
+    # Log activité
+    ActivityService.log_user_activity(
+        session=session,
+        user=current_user,
+        action_type="delete",
+        target_type="demande_rh",
+        description=f"Suppression d'une demande RH - {type_demande} : {objet_demande}",
+        target_id=request_id,
+        icon="🗑️"
+    )
     
     return {"ok": True, "message": "Demande supprimée avec succès"}

@@ -21,7 +21,7 @@ from app.api.v1.endpoints.auth import get_current_user
 from app.models.user import User
 from app.models.budget import (
     NatureDepense, Activite, FicheTechnique, LigneBudgetaire,
-    DocumentBudget, HistoriqueBudget, ExecutionBudgetaire, ConferenceBudgetaire,
+    DocumentBudget, HistoriqueBudget, ExecutionBudgetaire,
     ActionBudgetaire, ServiceBeneficiaire, ActiviteBudgetaire, LigneBudgetaireDetail,
     DocumentLigneBudgetaire,
     SigobeChargement, SigobeExecution, SigobeKpi
@@ -29,6 +29,7 @@ from app.models.budget import (
 from app.models.personnel import Programme, Direction
 from app.templates import templates, get_template_context
 from app.core.logging_config import get_logger
+from app.services.activity_service import ActivityService
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -513,6 +514,18 @@ async def api_create_fiche(
     session.commit()
     
     logger.info(f"✅ Fiche technique créée : {numero_fiche} par {current_user.email}")
+    
+    # Log activité
+    ActivityService.log_user_activity(
+        session=session,
+        user=current_user,
+        action_type="create",
+        target_type="fiche_technique",
+        description=f"Création de la fiche technique {numero_fiche} - Budget {annee_budget}",
+        target_id=fiche.id,
+        icon="📋"
+    )
+    
     return {"ok": True, "id": fiche.id, "numero": numero_fiche}
 
 
@@ -550,10 +563,23 @@ def api_delete_fiche(
         )
         
         # 5. Supprimer la fiche
+        numero_fiche = fiche.numero_fiche
         session.delete(fiche)
         session.commit()
         
-        logger.info(f"✅ Fiche {fiche.numero_fiche} supprimée par {current_user.email}")
+        logger.info(f"✅ Fiche {numero_fiche} supprimée par {current_user.email}")
+        
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="delete",
+            target_type="fiche_technique",
+            description=f"Suppression de la fiche technique {numero_fiche}",
+            target_id=fiche_id,
+            icon="🗑️"
+        )
+        
         return {"ok": True, "message": "Fiche supprimée avec succès"}
         
     except Exception as e:
@@ -1442,73 +1468,6 @@ def api_export_fiche_pdf(
             "Content-Disposition": f"attachment; filename=Fiche_{programme_nom_clean}_{fiche.annee_budget}_{fiche.numero_fiche}.pdf"
         }
     )
-
-
-# ============================================
-# CONFÉRENCES BUDGÉTAIRES
-# ============================================
-
-@router.get("/conferences", response_class=HTMLResponse, name="budget_conferences")
-def budget_conferences(
-    request: Request,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
-):
-    """Liste des conférences budgétaires"""
-    conferences = session.exec(
-        select(ConferenceBudgetaire)
-        .order_by(ConferenceBudgetaire.date_conference.desc())
-    ).all()
-    
-    programmes = {p.id: p for p in session.exec(select(Programme)).all()}
-    
-    return templates.TemplateResponse(
-        "pages/budget_conferences.html",
-        get_template_context(
-            request,
-            conferences=conferences,
-            programmes=programmes,
-            current_user=current_user
-        )
-    )
-
-
-@router.post("/api/conferences")
-def api_create_conference(
-    type_conference: str = Form(...),
-    annee_budget: int = Form(...),
-    programme_id: Optional[int] = Form(None),
-    date_conference: str = Form(...),
-    ordre_du_jour: Optional[str] = Form(None),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
-):
-    """Créer une conférence budgétaire"""
-    # Générer numéro
-    count = session.exec(
-        select(func.count(ConferenceBudgetaire.id))
-        .where(ConferenceBudgetaire.annee_budget == annee_budget)
-        .where(ConferenceBudgetaire.type_conference == type_conference)
-    ).one()
-    
-    type_code = "INT" if type_conference == "Interne" else "MIN"
-    numero = f"CB-{annee_budget}-{type_code}-{count + 1:03d}"
-    
-    conference = ConferenceBudgetaire(
-        numero_conference=numero,
-        type_conference=type_conference,
-        annee_budget=annee_budget,
-        programme_id=programme_id,
-        date_conference=datetime.strptime(date_conference, '%Y-%m-%d').date(),
-        ordre_du_jour=ordre_du_jour,
-        organisateur_user_id=current_user.id
-    )
-    
-    session.add(conference)
-    session.commit()
-    
-    logger.info(f"✅ Conférence créée : {numero}")
-    return {"ok": True, "id": conference.id, "numero": numero}
 
 
 # ============================================
@@ -3478,6 +3437,17 @@ async def api_sigobe_upload(
         except Exception as e:
             logger.error(f"❌ Erreur calcul KPIs : {e}")
         
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="upload",
+            target_type="sigobe",
+            description=f"Import SIGOBE {periode_libelle} - {nb_lignes} lignes, {len(programmes_set)} programmes",
+            target_id=chargement.id,
+            icon="📊"
+        )
+        
         return {
             "ok": True,
             "chargement_id": chargement.id,
@@ -3656,10 +3626,23 @@ def api_delete_sigobe(
         )
         
         # Supprimer le chargement
+        periode_libelle = chargement.periode_libelle
         session.delete(chargement)
         session.commit()
         
         logger.info(f"✅ Chargement SIGOBE {chargement_id} supprimé par {current_user.email}")
+        
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="delete",
+            target_type="sigobe",
+            description=f"Suppression du chargement SIGOBE {periode_libelle}",
+            target_id=chargement_id,
+            icon="🗑️"
+        )
+        
         return {"ok": True, "message": "Chargement supprimé avec succès"}
     
     except Exception as e:

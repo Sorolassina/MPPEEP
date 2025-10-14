@@ -1,6 +1,6 @@
 # app/models/budget.py
 """
-Modèles pour la gestion budgétaire et les conférences budgétaires
+Modèles pour la gestion budgétaire
 """
 from typing import Optional
 from sqlmodel import SQLModel, Field, Relationship
@@ -44,7 +44,7 @@ class Activite(SQLModel, table=True):
 
 class FicheTechnique(SQLModel, table=True):
     """
-    Fiche technique pour conférence budgétaire
+    Fiche technique budgétaire
     Document central de demande budgétaire par programme
     """
     __tablename__ = "fiche_technique"
@@ -77,7 +77,7 @@ class FicheTechnique(SQLModel, table=True):
     
     # Statut
     statut: str = "Brouillon"  # Brouillon, Soumis, Validé, Rejeté, Approuvé
-    phase: str = "Conférence interne"  # Conférence interne, Conférence ministérielle
+    phase: str = "Préparation"  # Préparation, Révision, Validation
     
     # Dates
     date_creation: date = Field(default_factory=date.today)
@@ -113,7 +113,7 @@ class LigneBudgetaire(SQLModel, table=True):
     # Montants (en FCFA)
     budget_n_moins_1: Decimal = Field(default=0, decimal_places=2)  # Année précédente
     budget_demande: Decimal = Field(default=0, decimal_places=2)  # Demandé pour N
-    budget_valide: Decimal = Field(default=0, decimal_places=2)  # Validé après conférence
+    budget_valide: Decimal = Field(default=0, decimal_places=2)  # Validé après révision
     
     # Justification
     justification: Optional[str] = None
@@ -206,44 +206,6 @@ class ExecutionBudgetaire(SQLModel, table=True):
     # Metadata
     date_maj: datetime = Field(default_factory=datetime.utcnow)
     updated_by_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-
-class ConferenceBudgetaire(SQLModel, table=True):
-    """
-    Session de conférence budgétaire (interne ou ministérielle)
-    """
-    __tablename__ = "conference_budgetaire"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    
-    # Identification
-    numero_conference: str = Field(index=True)  # CB-2025-INT-001
-    type_conference: str  # "Interne" ou "Ministérielle"
-    annee_budget: int  # 2025, 2026
-    
-    # Programme concerné
-    programme_id: Optional[int] = Field(default=None, foreign_key="programme.id")
-    
-    # Dates
-    date_conference: date
-    heure_debut: Optional[str] = None
-    heure_fin: Optional[str] = None
-    
-    # Participants
-    organisateur_user_id: int = Field(foreign_key="user.id")
-    participants: Optional[str] = None  # JSON ou texte avec liste participants
-    
-    # Résultats
-    ordre_du_jour: Optional[str] = None
-    compte_rendu: Optional[str] = None
-    decisions: Optional[str] = None
-    
-    # Statut
-    statut: str = "Planifiée"  # Planifiée, En cours, Terminée, Annulée
-    
-    # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

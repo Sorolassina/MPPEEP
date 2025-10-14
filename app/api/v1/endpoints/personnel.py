@@ -23,6 +23,7 @@ from app.core.enums import (
 )
 from app.templates import templates, get_template_context
 from app.core.logging_config import get_logger
+from app.services.activity_service import ActivityService
 from fastapi import Request
 
 logger = get_logger(__name__)
@@ -396,6 +397,17 @@ async def api_create_agent(
         
         logger.info(f"Agent créé: {agent.matricule} - {agent.nom} {agent.prenom}" + (" avec photo" if photo_path else ""))
         
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="create",
+            target_type="agent",
+            description=f"Création de l'agent {agent.matricule} - {agent.nom} {agent.prenom}",
+            target_id=agent.id,
+            icon="👤"
+        )
+        
         return {"ok": True, "agent_id": agent.id}
         
     except Exception as e:
@@ -538,6 +550,17 @@ async def api_update_agent(
         
         logger.info(f"Agent mis à jour: {agent.matricule}")
         
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="update",
+            target_type="agent",
+            description=f"Modification de l'agent {agent.matricule} - {agent.nom} {agent.prenom}",
+            target_id=agent.id,
+            icon="✏️"
+        )
+        
         return {"ok": True, "agent_id": agent.id}
         
     except Exception as e:
@@ -557,13 +580,26 @@ def api_delete_agent(
     if not agent:
         raise HTTPException(404, "Agent non trouvé")
     
+    matricule = agent.matricule
+    nom_complet = f"{agent.nom} {agent.prenom}"
     agent.actif = False
     agent.updated_by = current_user.id
     
     session.add(agent)
     session.commit()
     
-    logger.info(f"Agent désactivé: {agent.matricule}")
+    logger.info(f"Agent désactivé: {matricule}")
+    
+    # Log activité
+    ActivityService.log_user_activity(
+        session=session,
+        user=current_user,
+        action_type="delete",
+        target_type="agent",
+        description=f"Désactivation de l'agent {matricule} - {nom_complet}",
+        target_id=agent_id,
+        icon="🗑️"
+    )
     
     return {"ok": True}
 

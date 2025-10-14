@@ -28,6 +28,60 @@ class ActivityService:
     }
     
     @staticmethod
+    def log_user_activity(
+        session: Session,
+        user: 'User',
+        action_type: str,
+        target_type: str,
+        description: str,
+        target_id: Optional[int] = None,
+        icon: Optional[str] = None
+    ) -> Optional['Activity']:
+        """
+        Enregistre une activité utilisateur (interface simplifiée)
+        
+        Args:
+            session: Session de base de données
+            user: Objet User (from get_current_user)
+            action_type: Type d'action (create, update, delete, etc.)
+            target_type: Type de cible (fiche_technique, demande_rh, agent, etc.)
+            description: Description de l'action
+            target_id: ID de la cible (optionnel)
+            icon: Icône emoji (optionnel, auto-détecté si None)
+        
+        Returns:
+            L'activité créée ou None en cas d'erreur
+        """
+        try:
+            # Auto-détection de l'icône si non fournie
+            if icon is None:
+                icon = ActivityService.ACTION_ICONS.get(action_type, "📝")
+            
+            activity = Activity(
+                user_id=user.id,
+                user_email=user.email,
+                action_type=action_type,
+                target_type=target_type,
+                target_id=target_id,
+                description=description,
+                icon=icon
+            )
+            
+            session.add(activity)
+            session.commit()
+            session.refresh(activity)
+            
+            logger.debug(f"📊 Activité loguée: {action_type} on {target_type} by {user.email}")
+            
+            return activity
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du log d'activité: {e}")
+            session.rollback()
+            # Ne pas lever l'exception pour ne pas impacter l'opération principale
+            return None
+    
+    @staticmethod
     def log_activity(
         db_session: Session,
         user_id: Optional[int],
@@ -37,7 +91,7 @@ class ActivityService:
         description: str,
         target_id: Optional[int] = None,
         icon: Optional[str] = None
-    ) -> Activity:
+    ) -> Optional['Activity']:
         """
         Enregistre une nouvelle activité
         
@@ -80,7 +134,8 @@ class ActivityService:
         except Exception as e:
             logger.error(f"❌ Erreur lors du log d'activité: {e}")
             db_session.rollback()
-            raise
+            # Ne pas lever l'exception pour ne pas impacter l'opération principale
+            return None
     
     @staticmethod
     def get_recent_activities(
