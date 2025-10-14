@@ -1,0 +1,1112 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Suivi Budgétaire - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* ============================================
+   VARIABLES & BASE
+   ============================================ */
+:root {
+  --budget-primary: #667eea;
+  --budget-secondary: #764ba2;
+  --budget-success: #10b981;
+  --budget-warning: #f59e0b;
+  --budget-danger: #ef4444;
+  --budget-info: #3b82f6;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+/* Container principal */
+.budget-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e3e8f0 100%);
+  padding: 2rem;
+}
+
+.budget-layout {
+  max-width: 1800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ============================================
+   HEADER ROW (Profil + Titre en ligne)
+   ============================================ */
+.header-row {
+  background: white;
+  border-radius: 24px;
+  padding: 1.5rem 2rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+/* User Profile (à gauche) */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.user-avatar::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.user-role {
+  font-size: 0.85rem;
+  color: #8b5cf6;
+  font-weight: 600;
+}
+
+/* Titre (au centre, flex-1) */
+.header-title {
+  flex: 1;
+}
+
+.header-title h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+}
+
+.header-subtitle {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+/* Actions (à droite) */
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.action-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  color: white;
+  transition: all 0.3s;
+  box-shadow: var(--shadow-sm);
+  border: none;
+  cursor: pointer;
+}
+
+.action-btn-sm:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.action-btn-sm.primary {
+  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
+}
+
+.action-btn-sm.secondary {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+
+.action-btn-sm.print {
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+}
+
+.action-btn-sm.back {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+/* ============================================
+   FILTERS & ACTIONS ROW (tout en ligne)
+   ============================================ */
+.filters-row {
+  background: white;
+  border-radius: 20px;
+  padding: 1.25rem 2rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filter-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.filter-select {
+  min-width: 180px;
+  padding: 0.625rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.filter-select:hover {
+  border-color: var(--budget-primary);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--budget-primary);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+
+/* ============================================
+   KPIs ROW (6 cards en ligne)
+   ============================================ */
+.kpis-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1.25rem;
+}
+
+.kpi-card {
+  background: white;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--kpi-color-1), var(--kpi-color-2));
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+  transform-origin: left;
+}
+
+.kpi-card:hover::before {
+  transform: scaleX(1);
+}
+
+.kpi-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-xl);
+}
+
+.kpi-card.budget-actuel {
+  --kpi-color-1: #06b6d4;
+  --kpi-color-2: #0891b2;
+}
+
+.kpi-card.budget-vote {
+  --kpi-color-1: #667eea;
+  --kpi-color-2: #764ba2;
+}
+
+.kpi-card.engagements {
+  --kpi-color-1: #f59e0b;
+  --kpi-color-2: #dc2626;
+}
+
+.kpi-card.mandats-vises {
+  --kpi-color-1: #3b82f6;
+  --kpi-color-2: #1d4ed8;
+}
+
+.kpi-card.mandats-pec {
+  --kpi-color-1: #10b981;
+  --kpi-color-2: #059669;
+}
+
+.kpi-card.disponible {
+  --kpi-color-1: #8b5cf6;
+  --kpi-color-2: #7c3aed;
+}
+
+.kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--kpi-color-1), var(--kpi-color-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
+.kpi-badge {
+  padding: 0.3rem 0.65rem;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--kpi-color-1), var(--kpi-color-2));
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.kpi-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.kpi-amount {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--kpi-color-1), var(--kpi-color-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+.kpi-subtitle {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+/* ============================================
+   STATS SECTION (2 colonnes)
+   ============================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.stats-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Programme bars */
+.prog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.prog-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.prog-code {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #4b5563;
+  flex-shrink: 0;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05), inset -2px -2px 5px rgba(255,255,255,0.8);
+}
+
+.prog-details {
+  flex: 1;
+}
+
+.prog-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.prog-track-container {
+  position: relative;
+  height: 12px;
+  background: #f3f4f6;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.prog-track-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 10px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.prog-track-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: shimmer-prog 2s infinite;
+}
+
+@keyframes shimmer-prog {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.prog-percent {
+  min-width: 70px;
+  text-align: right;
+  font-weight: 800;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Nature cards */
+.nature-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.nature-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+  border-radius: 16px;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.03);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.nature-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background: var(--nature-color);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.nature-card:hover {
+  background: white;
+  box-shadow: var(--shadow-md);
+  transform: translateX(5px);
+}
+
+.nature-card:hover::before {
+  transform: scaleY(1);
+}
+
+.nature-card.bs {
+  --nature-color: linear-gradient(180deg, #3b82f6, #1d4ed8);
+}
+
+.nature-card.p {
+  --nature-color: linear-gradient(180deg, #10b981, #059669);
+}
+
+.nature-card.i {
+  --nature-color: linear-gradient(180deg, #f59e0b, #d97706);
+}
+
+.nature-card.t {
+  --nature-color: linear-gradient(180deg, #8b5cf6, #7c3aed);
+}
+
+.nature-icon-wrap {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: var(--nature-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+.nature-info {
+  flex: 1;
+}
+
+.nature-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.nature-budget {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.nature-percent {
+  font-weight: 800;
+  font-size: 1.25rem;
+  background: var(--nature-color);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   VARIATION SECTION
+   ============================================ */
+.variation-container {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+  grid-column: 1 / -1;
+}
+
+.variation-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.bars-wrapper {
+  display: flex;
+  gap: 2.5rem;
+  align-items: flex-end;
+}
+
+.bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bar-container {
+  width: 28px;
+  height: 130px;
+  background: #f3f4f6;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.08);
+}
+
+.bar-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  border-radius: 14px;
+  transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar-fill.positive {
+  background: linear-gradient(180deg, #10b981, #059669);
+}
+
+.bar-fill.negative {
+  background: linear-gradient(180deg, #ef4444, #dc2626);
+}
+
+.bar-value {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.bar-value.positive { color: #10b981; }
+.bar-value.negative { color: #ef4444; }
+
+.bar-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.bar-previous {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.legend-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-radius: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.legend-text {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.legend-text strong {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1600px) {
+  .kpis-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .kpis-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .header-row {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .user-profile {
+    flex-direction: column;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .quick-actions {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .filters-divider {
+    display: none;
+  }
+  
+  .kpis-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .variation-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .header-actions,
+  .quick-actions,
+  .action-btn-sm {
+    display: none !important;
+  }
+  
+  .budget-container {
+    background: white;
+    padding: 0;
+  }
+  
+  .kpi-card,
+  .stats-card,
+  .variation-container {
+    page-break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header-row { animation: fadeInUp 0.4s ease-out; }
+.filters-row { animation: fadeInUp 0.5s ease-out; }
+.kpi-card { animation: fadeInUp 0.6s ease-out backwards; }
+.stats-card { animation: fadeInUp 0.7s ease-out backwards; }
+.variation-container { animation: fadeInUp 0.8s ease-out backwards; }
+
+.kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.kpi-card:nth-child(2) { animation-delay: 0.1s; }
+.kpi-card:nth-child(3) { animation-delay: 0.15s; }
+.kpi-card:nth-child(4) { animation-delay: 0.2s; }
+.kpi-card:nth-child(5) { animation-delay: 0.25s; }
+.kpi-card:nth-child(6) { animation-delay: 0.3s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="budget-container">
+  <div class="budget-layout">
+    
+    <!-- ========== ROW 1 : PROFIL + TITRE + ACTIONS ========== -->
+    <div class="header-row">
+      <!-- Profil utilisateur (gauche) -->
+      <div class="user-profile">
+        <div class="user-avatar">
+          {{ current_user.full_name[0] if current_user.full_name else 'U' }}
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ current_user.full_name or current_user.email }}</div>
+          <div class="user-role">DAAF - MPPEEP</div>
+        </div>
+      </div>
+      
+      <!-- Titre (centre) -->
+      <div class="header-title">
+        <h1>💰 Suivi Budgétaire {{ annee }}</h1>
+        <p class="header-subtitle">Tableau de bord de l'exécution budgétaire en temps réel</p>
+      </div>
+      
+      <!-- Actions (droite) -->
+      <div class="header-actions">
+        <a href="{{ url_for('budget_fiches_hierarchique') }}" class="action-btn-sm primary">
+          📋 Fiches Techniques
+        </a>
+        <a href="{{ url_for('budget_conferences') }}" class="action-btn-sm secondary">
+          🤝 Conférences
+        </a>
+        <a href="{{ url_for('budget_home') }}" class="action-btn-sm back">
+          ← Retour
+        </a>
+      </div>
+    </div>
+
+    <!-- ========== ROW 2 : FILTRES (Période, Programme, Nature) ========== -->
+    <div class="filters-row">
+      <!-- Filtre Période -->
+      <div class="filter-group">
+        <label class="filter-label">📅 Période</label>
+        <select id="filter-annee" class="filter-select" onchange="filtrerDashboard()">
+          <option value="{{ annee }}" selected>{{ annee }}</option>
+          <option value="{{ annee - 1 }}">{{ annee - 1 }}</option>
+          <option value="{{ annee - 2 }}">{{ annee - 2 }}</option>
+        </select>
+      </div>
+      
+      <!-- Filtre Programme -->
+      <div class="filter-group">
+        <label class="filter-label">🏢 Programme</label>
+        <select id="filter-programme" class="filter-select" onchange="filtrerDashboard()">
+          <option value="">Tous les programmes</option>
+          {% for prog in programmes %}
+          <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <!-- Filtre Nature de dépense -->
+      <div class="filter-group">
+        <label class="filter-label">💳 Nature de Dépense</label>
+        <select id="filter-nature" class="filter-select" onchange="filtrerDashboard()">
+          <option value="">Toutes les natures</option>
+          <option value="BS">BS - Biens & Services</option>
+          <option value="P">P - Personnel</option>
+          <option value="I">I - Investissement</option>
+          <option value="T">T - Transferts</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ========== ROW 3 : 6 KPIs EN LIGNE ========== -->
+    <div class="kpis-row">
+      
+      <!-- Budget Actuel -->
+      <div class="kpi-card budget-actuel">
+        <div class="kpi-header">
+          <div class="kpi-icon">BA</div>
+          <div class="kpi-badge">100%</div>
+        </div>
+        <div class="kpi-title">Budget Actuel</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(budget_total / 1000000) }} M</div>
+        <div class="kpi-subtitle">Budget en vigueur</div>
+      </div>
+      
+      <!-- Budget Voté -->
+      <div class="kpi-card budget-vote">
+        <div class="kpi-header">
+          <div class="kpi-icon">BV</div>
+          <div class="kpi-badge">100%</div>
+        </div>
+        <div class="kpi-title">Budget Voté</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(budget_total / 1000000) }} M</div>
+        <div class="kpi-subtitle">Loi de finances</div>
+      </div>
+      
+      <!-- Engagements -->
+      <div class="kpi-card engagements">
+        <div class="kpi-header">
+          <div class="kpi-icon">ENG</div>
+          <div class="kpi-badge">{{ "{:.1f}".format(taux_engagement) }}%</div>
+        </div>
+        <div class="kpi-title">Engagements</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(engagements_total / 1000000) }} M</div>
+        <div class="kpi-subtitle">Budget engagé</div>
+      </div>
+      
+      <!-- Mandats Visés -->
+      <div class="kpi-card mandats-vises">
+        <div class="kpi-header">
+          <div class="kpi-icon">MV</div>
+          <div class="kpi-badge">{{ "{:.1f}".format((mandats_vises_total / engagements_total * 100) if engagements_total > 0 else 0) }}%</div>
+        </div>
+        <div class="kpi-title">Mandats Visés</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_vises_total / 1000000) }} M</div>
+        <div class="kpi-subtitle">Mandats émis</div>
+      </div>
+      
+      <!-- Mandats PEC -->
+      <div class="kpi-card mandats-pec">
+        <div class="kpi-header">
+          <div class="kpi-icon">PEC</div>
+          <div class="kpi-badge">{{ "{:.1f}".format(taux_mandatement) }}%</div>
+        </div>
+        <div class="kpi-title">Mandats Payés</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_pec_total / 1000000) }} M</div>
+        <div class="kpi-subtitle">Décaissements</div>
+      </div>
+      
+      <!-- Disponible -->
+      <div class="kpi-card disponible">
+        <div class="kpi-header">
+          <div class="kpi-icon">DIS</div>
+          <div class="kpi-badge">{{ "{:.1f}".format((disponible_total / budget_total * 100) if budget_total > 0 else 0) }}%</div>
+        </div>
+        <div class="kpi-title">Disponible</div>
+        <div class="kpi-amount">{{ "{:,.0f}".format(disponible_total / 1000000) }} M</div>
+        <div class="kpi-subtitle">Reste à engager</div>
+      </div>
+      
+    </div>
+
+    <!-- ========== ROW 4 : STATS (2 colonnes) ========== -->
+    <div class="stats-grid">
+      
+      <!-- Exécution par Programme -->
+      <div class="stats-card">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Exécution par Programme</div>
+        </div>
+        
+        <div class="prog-list">
+          {% if exec_par_programme %}
+            {% for code, data in exec_par_programme.items() %}
+            <div class="prog-item">
+              <div class="prog-code">{{ code }}</div>
+              <div class="prog-details">
+                <div class="prog-name">{{ data.libelle }}</div>
+                <div class="prog-track-container">
+                  <div class="prog-track-fill" style="width: {{ data.taux }}%;"></div>
+                </div>
+              </div>
+              <div class="prog-percent">{{ "{:.1f}".format(data.taux) }}%</div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-state-icon">📊</div>
+              <p>Aucune donnée d'exécution</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Nature de Dépenses -->
+      <div class="stats-card">
+        <div class="card-header">
+          <div class="card-icon">💳</div>
+          <div class="card-title">Nature de Dépenses</div>
+        </div>
+        
+        <div class="nature-grid">
+          {% if exec_par_nature %}
+            {% for code, data in exec_par_nature.items() %}
+            <div class="nature-card {{ code.lower() }}">
+              <div class="nature-icon-wrap">{{ code }}</div>
+              <div class="nature-info">
+                <div class="nature-name">{{ data.libelle }}</div>
+                <div class="nature-budget">Budget: {{ "{:,.0f}".format(data.budget / 1000000) }} M FCFA</div>
+              </div>
+              <div class="nature-percent">{{ "{:.1f}".format(data.taux) }}%</div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-state-icon">💳</div>
+              <p>Aucune donnée disponible</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- ========== ROW 5 : VARIATION (pleine largeur) ========== -->
+    <div class="variation-container">
+      <div class="card-header">
+        <div class="card-icon">📈</div>
+        <div class="card-title">Variation relative {{ annee }} vs {{ annee - 1 }}</div>
+      </div>
+      
+      <div class="variation-grid">
+        <div class="bars-wrapper">
+          <div class="bar-column">
+            <div class="bar-container">
+              <div class="bar-fill negative" style="height: 50%;"></div>
+            </div>
+            <div class="bar-value negative">-50%</div>
+            <div class="bar-label">Tx Eng.</div>
+            <div class="bar-previous">N-1: 95%</div>
+          </div>
+          
+          <div class="bar-column">
+            <div class="bar-container">
+              <div class="bar-fill positive" style="height: 70%;"></div>
+            </div>
+            <div class="bar-value positive">+7%</div>
+            <div class="bar-label">Tx MV</div>
+            <div class="bar-previous">N-1: 100%</div>
+          </div>
+          
+          <div class="bar-column">
+            <div class="bar-container">
+              <div class="bar-fill negative" style="height: 30%;"></div>
+            </div>
+            <div class="bar-value negative">-7%</div>
+            <div class="bar-label">Tx PEC</div>
+            <div class="bar-previous">N-1: 100%</div>
+          </div>
+          
+          <div class="bar-column">
+            <div class="bar-container">
+              <div class="bar-fill positive" style="height: 90%;"></div>
+            </div>
+            <div class="bar-value positive">+50%</div>
+            <div class="bar-label">Tx Global</div>
+            <div class="bar-previous">N-1: 5%</div>
+          </div>
+        </div>
+        
+        <div class="legend-box">
+          <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #10b981, #059669);"></div>
+            <div class="legend-text"><strong>Variation Positive (+)</strong> : Amélioration des performances budgétaires</div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #ef4444, #dc2626);"></div>
+            <div class="legend-text"><strong>Variation Négative (-)</strong> : Baisse par rapport à l'année N-1</div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-text" style="font-size: 0.85rem; color: #6b7280;">
+              <strong>Eng.</strong> Engagement • <strong>MV</strong> Mandats Visés • <strong>PEC</strong> Pris En Charge • <strong>Tx Global</strong> Taux d'Exécution Globale
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filtrerDashboard() {
+  const annee = document.getElementById('filter-annee').value;
+  const programme = document.getElementById('filter-programme').value;
+  const nature = document.getElementById('filter-nature').value;
+  
+  showGlobalLoading('Filtrage...', 'Actualisation du dashboard');
+  
+  let url = `/api/v1/budget/?annee=${annee}`;
+  if (programme) url += `&programme_id=${programme}`;
+  if (nature) url += `&nature=${nature}`;
+  
+  setTimeout(() => {
+    window.location.href = url;
+  }, 300);
+}
+
+// Animation des montants avec compteur
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.kpi-amount').forEach((el, index) => {
+    const text = el.textContent.trim();
+    const match = text.match(/[\d,]+/);
+    if (match) {
+      const targetValue = parseFloat(match[0].replace(/,/g, ''));
+      const suffix = text.replace(match[0], '').trim();
+      
+      let currentValue = 0;
+      const increment = targetValue / 30;
+      const timer = setInterval(() => {
+        currentValue += increment;
+        if (currentValue >= targetValue) {
+          currentValue = targetValue;
+          clearInterval(timer);
+        }
+        el.textContent = currentValue.toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' ' + suffix;
+      }, 30);
+    }
+  });
+  
+  console.log('✅ Dashboard budgétaire professionnel chargé');
+});
+</script>
+{% endblock %}

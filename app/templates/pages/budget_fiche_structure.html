@@ -1,0 +1,738 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Structure Fiche Technique - {{ fiche.numero_fiche }} - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* ============================================
+   STYLES POUR FICHE TECHNIQUE HIÉRARCHIQUE
+   ============================================ */
+
+.fiche-container {
+  background: #f8f9fa;
+  min-height: 100vh;
+  padding: 2rem 0;
+}
+
+.fiche-header {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.fiche-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.fiche-title h1 {
+  color: #2c3e50;
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.fiche-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.info-item {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border-left: 4px solid #667eea;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.info-value {
+  color: #2c3e50;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+/* ============================================
+   TABLEAU HIÉRARCHIQUE
+   ============================================ */
+
+.table-container {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.fiche-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.fiche-table th {
+  background: #ef8d4b;
+  color: black;
+  padding: 1rem 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid black;
+}
+
+.fiche-table th:first-child {
+  text-align: left;
+  min-width: 300px;
+}
+
+.fiche-table td {
+  padding: 0.75rem;
+  border: 1px solid black;
+  text-align: center;
+}
+
+.fiche-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+/* ============================================
+   STYLES HIÉRARCHIQUES
+   ============================================ */
+
+.row-action {
+  background: #9bc2e6 !important;
+  color: black !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+}
+
+.row-service {
+  background: #ffc000 !important;
+  color: black!important;
+  font-weight: 600 !important;
+}
+
+.row-activite {
+  background: #92d050 !important;
+  color: black !important;
+  font-weight: 600 !important;
+}
+
+.row-ligne {
+  background: white !important;
+  color: black !important;
+}
+
+/* Indentation pour la hiérarchie */
+.row-service td:first-child { padding-left: 2rem; }
+.row-activite td:first-child { padding-left: 3rem; }
+.row-ligne td:first-child { padding-left: 4rem; }
+
+/* ============================================
+   MONTANTS ET FORMATAGE
+   ============================================ */
+
+.montant {
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.montant.negatif {
+  color: #dc3545;
+}
+
+.montant.positif {
+  color: #28a745;
+}
+
+.montant.zero {
+  color: #6c757d;
+}
+
+/* ============================================
+   BOUTONS D'ACTION
+   ============================================ */
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+
+.btn-fiche {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-fiche.primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.btn-fiche.secondary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.btn-fiche.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.btn-fiche.back {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+}
+
+.btn-fiche:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 1200px) {
+  .fiche-table {
+    font-size: 0.8rem;
+  }
+  
+  .fiche-table th,
+  .fiche-table td {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .fiche-container {
+    padding: 1rem 0;
+  }
+  
+  .fiche-header,
+  .table-container {
+    padding: 1rem;
+    border-radius: 15px;
+  }
+  
+  .fiche-info {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .btn-fiche {
+    justify-content: center;
+  }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fiche-header { animation: fadeInUp 0.5s ease-out; }
+.table-container { animation: fadeInUp 0.7s ease-out; }
+
+.fiche-table tbody tr {
+  animation: fadeInUp 0.6s ease-out backwards;
+}
+
+.fiche-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
+.fiche-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
+.fiche-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
+.fiche-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
+.action-icon { padding: 0.5rem 1rem;  color: #2c3e50; border-radius: 10px;background:none; border: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fiche-container">
+  
+  <!-- En-tête de la fiche -->
+  <div class="fiche-header">
+    <div class="fiche-title">
+      <h1>📋 {{ fiche.numero_fiche }} - {{ fiche.programme.libelle if fiche.programme else 'Programme' }}</h1>
+      <div style="display: flex; gap: 1rem;">
+        <span class="badge badge-{{ 'success' if fiche.statut == 'Validé' else 'warning' if fiche.statut == 'Soumis' else 'secondary' }}">
+          {{ fiche.statut }}
+        </span>
+        <span class="badge badge-info">{{ fiche.phase }}</span>
+      </div>
+    </div>
+    
+    <div class="fiche-info">
+      <div class="info-item">
+        <div class="info-label">Année Budget</div>
+        <div class="info-value">{{ fiche.annee_budget }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Direction</div>
+        <div class="info-value">{{ fiche.direction.libelle if fiche.direction else '-' }}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Budget Total</div>
+        <div class="info-value montant">{{ "{:,.0f}".format(fiche.budget_total_demande) }} FCFA</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Date Création</div>
+        <div class="info-value">{{ fiche.date_creation.strftime('%d/%m/%Y') }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Boutons d'action -->
+  <div class="action-buttons">
+    <button onclick="editerFiche({{ fiche.id }})" class="btn-fiche primary">
+      ✏️ Modifier la Fiche
+    </button>
+    <button onclick="ajouterLigne()" class="btn-fiche secondary">
+      ➕ Ajouter Ligne
+    </button>
+    <button onclick="exporterPDF({{ fiche.id }})" class="btn-fiche warning">
+      📄 Exporter PDF
+    </button>
+    <a href="{{ url_for('budget_fiches_hierarchique') }}" class="btn-fiche back">
+      ← Retour aux Fiches
+    </a>
+  </div>
+
+  <!-- Tableau hiérarchique -->
+  <div class="table-container">
+    <table class="fiche-table">
+      <thead>
+        <tr>
+          <th>CODE ET LIBELLE</th>
+          <th>BUDGET VOTÉ N<br>(A)</th>
+          <th>BUDGET ACTUEL N<br>(B)</th>
+          <th>ENVELOPPE N+1<br>(C)</th>
+          <th>COMPLÉMENT SOLLICITÉ<br>(D)</th>
+          <th>BUDGET SOUHAITÉ<br>(E=C+D)</th>
+          <th>ENGAGEMENT ÉTAT<br>(F)</th>
+          <th>AUTRE COMPLÉMENT<br>(G)</th>
+          <th>PROJET DE BUDGET N+1<br>(H=C+F+G)</th>
+          <th>JUSTIFICATIFS</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for nature, actions_nature in actions_par_nature.items() %}
+        <!-- Header Nature de Dépense -->
+        <tr style="background: #ffd700;">
+          <th colspan="11" style="text-align: center; font-weight: 700; color: #2c3e50; font-size: 1.1rem; padding: 0.75rem;">
+            {{ nature.upper() }}
+          </th>
+        </tr>
+        
+        {% for action in actions_nature %}
+        <!-- Action -->
+        <tr class="row-action" data-action-id="{{ action.id }}">
+          <td><strong>{{ action.libelle.replace('- ', '').strip() }}</strong></td>
+          <td class="montant">{{ "{:,.0f}".format(action.budget_vote_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.budget_actuel_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.enveloppe_n_plus_1) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.complement_solicite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.budget_souhaite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.engagement_etat) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.autre_complement) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.projet_budget_n_plus_1) }}</td>
+          <td style="max-width: 200px;">{{ action.justificatifs or '' }}</td>
+          <td>
+            <button onclick="editerAction({{ action.id }})" class="action-icon" title="Modifier">✏️</button>
+            <button onclick="supprimerAction({{ action.id }})" class="action-icon" title="Supprimer">🗑️</button>
+          </td>
+        </tr>
+        
+        {% for service in action.services %}
+        <!-- Service Bénéficiaire -->
+        <tr class="row-service" data-service-id="{{ service.id }}"">
+          <td colspan="10" style="background: #ffc000; padding: 0.10rem 0.75rem; line-height: 1.2;">
+            <strong>{{ service.libelle.replace('- ', '').strip() }}</strong>
+          </td>
+          <td style="background: #ffc000; padding: 0.10rem;">
+            <button onclick="editerService({{ service.id }})" class="action-icon" title="Modifier">✏️</button>
+            <button onclick="supprimerService({{ service.id }})" class="action-icon" title="Supprimer">🗑️</button>
+          </td>
+        </tr>
+        
+        {% for activite in service.activites %}
+        <!-- Activité -->
+        <tr class="row-activite" data-activite-id="{{ activite.id }}">
+          <td><strong>{{ activite.libelle.replace('- ', '').strip() }}</strong></td>
+          <td class="montant">{{ "{:,.0f}".format(activite.budget_vote_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.budget_actuel_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.enveloppe_n_plus_1) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.complement_solicite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.budget_souhaite) }}</td>
+          <td class="montant" style="background: #90EE90;">{{ "{:,.0f}".format(activite.engagement_etat) }}</td>
+          <td class="montant" style="background: #90EE90;">{{ "{:,.0f}".format(activite.autre_complement) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.projet_budget_n_plus_1) }}</td>
+          <td style="max-width: 200px;">{{ activite.justificatifs or '' }}</td>
+          <td>
+            <button onclick="editerActivite({{ activite.id }})" class="action-icon" title="Modifier">✏️</button>
+            <button onclick="supprimerActivite({{ activite.id }})" class="action-icon" title="Supprimer">🗑️</button>
+          </td>
+        </tr>
+        
+        {% for ligne in activite.lignes %}
+        <!-- Ligne Budgétaire -->
+        <tr class="row-ligne" data-ligne-id="{{ ligne.id }}">
+          <td>{% if ligne.libelle.startswith(ligne.code) %}{{ ligne.libelle }}{% else %}{{ ligne.code }} - {{ ligne.libelle }}{% endif %}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.budget_vote_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.budget_actuel_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.enveloppe_n_plus_1) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.complement_solicite) }}</td>
+          <td class="montant" style="background: #ffff99;">{{ "{:,.0f}".format(ligne.budget_souhaite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.engagement_etat) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.autre_complement) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.projet_budget_n_plus_1) }}</td>
+          <td style="max-width: 200px;">{{ ligne.justificatifs or '' }}</td>
+          <td>
+            <button onclick="editerLigne({{ ligne.id }})" class="action-icon" title="Modifier">✏️</button>
+            <button onclick="supprimerLigne({{ ligne.id }})" class="action-icon" title="Supprimer">🗑️</button>
+          </td>
+        </tr>
+        {% endfor %}
+        
+        <!-- Sous-total Activité -->
+        <tr style="background: #d4edda; font-weight: 600; border-top: 2px solid #28a745;">
+          <td style="text-align: right; padding-right: 1rem;">SOUS-TOTAL ACTIVITÉ</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.budget_vote_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.budget_actuel_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.enveloppe_n_plus_1) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.complement_solicite) }}</td>
+          <td class="montant" style="background: #c3e6cb;">{{ "{:,.0f}".format(activite.budget_souhaite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.engagement_etat) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.autre_complement) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.projet_budget_n_plus_1) }}</td>
+          <td colspan="2"></td>
+        </tr>
+        {% endfor %}
+        
+        <!-- Sous-total Service -->
+        {% set service_total_vote = namespace(value=0) %}
+        {% set service_total_actuel = namespace(value=0) %}
+        {% set service_total_enveloppe = namespace(value=0) %}
+        {% set service_total_complement = namespace(value=0) %}
+        {% set service_total_souhaite = namespace(value=0) %}
+        {% set service_total_engagement = namespace(value=0) %}
+        {% set service_total_autre = namespace(value=0) %}
+        {% set service_total_projet = namespace(value=0) %}
+        
+        {% for act in service.activites %}
+          {% set service_total_vote.value = service_total_vote.value + act.budget_vote_n %}
+          {% set service_total_actuel.value = service_total_actuel.value + act.budget_actuel_n %}
+          {% set service_total_enveloppe.value = service_total_enveloppe.value + act.enveloppe_n_plus_1 %}
+          {% set service_total_complement.value = service_total_complement.value + act.complement_solicite %}
+          {% set service_total_souhaite.value = service_total_souhaite.value + act.budget_souhaite %}
+          {% set service_total_engagement.value = service_total_engagement.value + act.engagement_etat %}
+          {% set service_total_autre.value = service_total_autre.value + act.autre_complement %}
+          {% set service_total_projet.value = service_total_projet.value + act.projet_budget_n_plus_1 %}
+        {% endfor %}
+        
+        <tr style="background: #fff3cd; font-weight: 700; border-top: 2px solid #ffc107;">
+          <td style="text-align: right; padding-right: 1rem;">SOUS-TOTAL SERVICE</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_vote.value) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_actuel.value) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_enveloppe.value) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_complement.value) }}</td>
+          <td class="montant" style="background: #ffe69c;">{{ "{:,.0f}".format(service_total_souhaite.value) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_engagement.value) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_autre.value) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_projet.value) }}</td>
+          <td colspan="2"></td>
+        </tr>
+        {% endfor %}
+        
+        <!-- Sous-total Action -->
+        <tr style="background: #cce5ff; font-weight: 700; font-size: 1.05rem; border-top: 2px solid #007bff;">
+          <td style="text-align: right; padding-right: 1rem;">SOUS-TOTAL ACTION</td>
+          <td class="montant">{{ "{:,.0f}".format(action.budget_vote_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.budget_actuel_n) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.enveloppe_n_plus_1) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.complement_solicite) }}</td>
+          <td class="montant" style="background: #b3d9ff;">{{ "{:,.0f}".format(action.budget_souhaite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.engagement_etat) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.autre_complement) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.projet_budget_n_plus_1) }}</td>
+          <td colspan="2"></td>
+        </tr>
+        {% endfor %}
+        
+        <!-- TOTAL NATURE DE DÉPENSE -->
+        {% set nature_total_vote = namespace(value=0) %}
+        {% set nature_total_actuel = namespace(value=0) %}
+        {% set nature_total_enveloppe = namespace(value=0) %}
+        {% set nature_total_complement = namespace(value=0) %}
+        {% set nature_total_souhaite = namespace(value=0) %}
+        {% set nature_total_engagement = namespace(value=0) %}
+        {% set nature_total_autre = namespace(value=0) %}
+        {% set nature_total_projet = namespace(value=0) %}
+        
+        {% for act in actions_nature %}
+          {% set nature_total_vote.value = nature_total_vote.value + act.budget_vote_n %}
+          {% set nature_total_actuel.value = nature_total_actuel.value + act.budget_actuel_n %}
+          {% set nature_total_enveloppe.value = nature_total_enveloppe.value + act.enveloppe_n_plus_1 %}
+          {% set nature_total_complement.value = nature_total_complement.value + act.complement_solicite %}
+          {% set nature_total_souhaite.value = nature_total_souhaite.value + act.budget_souhaite %}
+          {% set nature_total_engagement.value = nature_total_engagement.value + act.engagement_etat %}
+          {% set nature_total_autre.value = nature_total_autre.value + act.autre_complement %}
+          {% set nature_total_projet.value = nature_total_projet.value + act.projet_budget_n_plus_1 %}
+        {% endfor %}
+        
+        <tr style="background: #ffd700; font-weight: 800; font-size: 1.1rem; border: 3px solid #ff8c00; border-top: 4px solid #ff8c00;">
+          <td style="text-align: right; padding-right: 1rem; color: #2c3e50;">TOTAL {{ nature.upper() }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_vote.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_actuel.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_enveloppe.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_complement.value) }}</td>
+          <td class="montant" style="background: #ffc107; color: #2c3e50;">{{ "{:,.0f}".format(nature_total_souhaite.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_engagement.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_autre.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_projet.value) }}</td>
+          <td colspan="2"></td>
+        </tr>
+        
+        {% endfor %}
+        
+        <!-- TOTAL GÉNÉRAL DE LA FICHE -->
+        {% set total_general_vote = namespace(value=0) %}
+        {% set total_general_actuel = namespace(value=0) %}
+        {% set total_general_enveloppe = namespace(value=0) %}
+        {% set total_general_complement = namespace(value=0) %}
+        {% set total_general_souhaite = namespace(value=0) %}
+        {% set total_general_engagement = namespace(value=0) %}
+        {% set total_general_autre = namespace(value=0) %}
+        {% set total_general_projet = namespace(value=0) %}
+        
+        {% for nature, actions_nat in actions_par_nature.items() %}
+          {% for act in actions_nat %}
+            {% set total_general_vote.value = total_general_vote.value + act.budget_vote_n %}
+            {% set total_general_actuel.value = total_general_actuel.value + act.budget_actuel_n %}
+            {% set total_general_enveloppe.value = total_general_enveloppe.value + act.enveloppe_n_plus_1 %}
+            {% set total_general_complement.value = total_general_complement.value + act.complement_solicite %}
+            {% set total_general_souhaite.value = total_general_souhaite.value + act.budget_souhaite %}
+            {% set total_general_engagement.value = total_general_engagement.value + act.engagement_etat %}
+            {% set total_general_autre.value = total_general_autre.value + act.autre_complement %}
+            {% set total_general_projet.value = total_general_projet.value + act.projet_budget_n_plus_1 %}
+          {% endfor %}
+        {% endfor %}
+        
+        <tr style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f); color: white; font-weight: 900; font-size: 1.2rem; border: 4px solid #c92a2a;">
+          <td style="text-align: right; padding: 1rem; text-transform: uppercase;">TOTAL GÉNÉRAL</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_vote.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_actuel.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_enveloppe.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_complement.value) }}</td>
+          <td class="montant" style="background: #c92a2a; color: white;">{{ "{:,.0f}".format(total_general_souhaite.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_engagement.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_autre.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_projet.value) }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function editerFiche(ficheId) {
+  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
+  setTimeout(() => {
+    window.location.href = `/api/v1/budget/fiches/${ficheId}/edit`;
+  }, 300);
+}
+
+function ajouterLigne() {
+  showGlobalLoading('Chargement...', 'Ouverture du formulaire');
+  setTimeout(() => {
+    window.location.href = `/api/v1/budget/fiches/{{ fiche.id }}/lignes/nouveau`;
+  }, 300);
+}
+
+function exporterPDF(ficheId) {
+  showGlobalLoading('Génération PDF...', 'Veuillez patienter');
+  setTimeout(() => {
+    window.open(`/api/v1/budget/api/fiches/${ficheId}/export/pdf`, '_blank');
+    hideGlobalLoading();
+  }, 500);
+}
+
+function editerAction(actionId) {
+  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
+  setTimeout(() => {
+    window.location.href = `/api/v1/budget/actions/${actionId}/edit`;
+  }, 300);
+}
+
+function editerService(serviceId) {
+  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
+  setTimeout(() => {
+    window.location.href = `/api/v1/budget/services/${serviceId}/edit`;
+  }, 300);
+}
+
+function editerActivite(activiteId) {
+  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
+  setTimeout(() => {
+    window.location.href = `/api/v1/budget/activites/${activiteId}/edit`;
+  }, 300);
+}
+
+function editerLigne(ligneId) {
+  showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
+  setTimeout(() => {
+    window.location.href = `/api/v1/budget/lignes/${ligneId}/edit`;
+  }, 300);
+}
+
+async function supprimerAction(actionId) {
+  if (!confirm('⚠️ Supprimer cette action ?\n\nTous les services, activités et lignes associés seront également supprimés.')) return;
+  
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/actions/${actionId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Action supprimée avec succès');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function supprimerService(serviceId) {
+  if (!confirm('⚠️ Supprimer ce service ?\n\nToutes les activités et lignes associées seront également supprimées.')) return;
+  
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/services/${serviceId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Service supprimé avec succès');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function supprimerActivite(activiteId) {
+  if (!confirm('⚠️ Supprimer cette activité ?\n\nToutes les lignes associées seront également supprimées.')) return;
+  
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/activites/${activiteId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Activité supprimée avec succès');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function supprimerLigne(ligneId) {
+  if (!confirm('⚠️ Supprimer cette ligne budgétaire ?')) return;
+  
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Ligne supprimée avec succès');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Animation des montants au chargement
+document.addEventListener('DOMContentLoaded', function() {
+  const montants = document.querySelectorAll('.montant');
+  montants.forEach((montant, index) => {
+    setTimeout(() => {
+      montant.style.opacity = '0';
+      montant.style.transform = 'translateY(10px)';
+      montant.style.transition = 'all 0.3s ease-out';
+      
+      setTimeout(() => {
+        montant.style.opacity = '1';
+        montant.style.transform = 'translateY(0)';
+      }, 100);
+    }, index * 50);
+  });
+});
+
+console.log('✅ Page structure fiche technique chargée');
+</script>
+{% endblock %}

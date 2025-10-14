@@ -1,0 +1,394 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ agent.prenom }} {{ agent.nom }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-grid">
+  
+  <!-- En-tête avec photo et infos principales -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+      <div style="display: flex; gap: 2rem; align-items: center;">
+        <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; font-weight: bold;">
+          {% if agent.photo_path %}
+            <img src="{{ agent.photo_path }}" alt="{{ agent.prenom }} {{ agent.nom }}" style="width: 100%; height: 100%; object-fit: cover;">
+          {% else %}
+            {{ agent.prenom[0] }}{{ agent.nom[0] }}
+          {% endif %}
+        </div>
+        
+        <div>
+          <h1 style="margin: 0;">{{ agent.prenom }} {{ agent.nom }}</h1>
+          <p style="color: #6c757d; margin: 0.5rem 0; font-size: 1.1rem;">
+            <strong>{{ agent.matricule }}</strong>
+            {% if grade %}
+              • {{ grade.libelle }} ({{ grade.code }})
+            {% endif %}
+          </p>
+          <p style="color: #6c757d; margin: 0;">
+            {% if service %}
+              📍 {{ service.libelle }}
+            {% endif %}
+            {% if agent.fonction %}
+              • {{ agent.fonction }}
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      
+      <a href="/api/v1/personnel/" class="btn-back" title="Retour au Personnel">
+        <span style="font-size: 1.2rem;">←</span> Retour
+      </a>
+    </div>
+    
+    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+      <span class="badge badge-{{ 'success' if agent.actif else 'danger' }}">
+        {{ '✅ Actif' if agent.actif else '❌ Inactif' }}
+      </span>
+      <span class="badge badge-info">{{ agent.position_administrative or 'En service' }}</span>
+    </div>
+  </div>
+
+  <!-- Informations personnelles -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">👤 Informations Personnelles</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date de naissance</div>
+        <div>{{ agent.date_naissance or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Lieu de naissance</div>
+        <div>{{ agent.lieu_naissance or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Nationalité</div>
+        <div>{{ agent.nationalite or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Sexe</div>
+        <div>{{ agent.sexe or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Situation familiale</div>
+        <div>{{ agent.situation_familiale or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Nombre d'enfants</div>
+        <div>{{ agent.nombre_enfants or '0' }}</div>
+      </div>
+    </div>
+    
+    <hr style="margin: 2rem 0; border: none; border-top: 2px solid #e0e0e0;">
+    
+    <h3 style="margin-bottom: 1rem;">📞 Contact</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Email professionnel</div>
+        <div>{{ agent.email_professionnel or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Email personnel</div>
+        <div>{{ agent.email_personnel or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Téléphone 1</div>
+        <div>{{ agent.telephone_1 or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Téléphone 2</div>
+        <div>{{ agent.telephone_2 or '-' }}</div>
+      </div>
+      
+      <div style="grid-column: 1 / -1;">
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Adresse</div>
+        <div>{{ agent.adresse or '-' }}</div>
+        {% if agent.ville or agent.code_postal %}
+        <div style="color: #6c757d;">{{ agent.ville or '' }} {{ agent.code_postal or '' }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Informations professionnelles -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">💼 Informations Professionnelles</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date de recrutement</div>
+        <div>{{ agent.date_recrutement or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date de prise de service</div>
+        <div>{{ agent.date_prise_service or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Grade</div>
+        <div>{{ grade.libelle if grade else '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Échelon</div>
+        <div>{{ agent.echelon or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Indice</div>
+        <div>{{ agent.indice or '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date départ retraite prévue</div>
+        <div>{{ agent.date_depart_retraite_prevue or '-' }}</div>
+      </div>
+    </div>
+    
+    <hr style="margin: 2rem 0; border: none; border-top: 2px solid #e0e0e0;">
+    
+    <h3 style="margin-bottom: 1rem;">🏢 Affectation</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Programme</div>
+        <div>{{ programme.libelle if programme else '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Direction</div>
+        <div>{{ direction.libelle if direction else '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Service</div>
+        <div>{{ service.libelle if service else '-' }}</div>
+      </div>
+      
+      <div>
+        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Fonction</div>
+        <div>{{ agent.fonction or '-' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Congés -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">🏖️ Gestion des Congés</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+      <div style="text-align: center; padding: 1.5rem; background: #e3f2fd; border-radius: 15px;">
+        <div style="font-size: 2.5rem; font-weight: 700; color: #1976d2;">{{ agent.solde_conges_annuel or 0 }}</div>
+        <div style="font-weight: 600; color: #1976d2;">Solde annuel</div>
+      </div>
+      
+      <div style="text-align: center; padding: 1.5rem; background: #fff3e0; border-radius: 15px;">
+        <div style="font-size: 2.5rem; font-weight: 700; color: #f57c00;">{{ agent.conges_annee_en_cours or 0 }}</div>
+        <div style="font-weight: 600; color: #f57c00;">Pris cette année</div>
+      </div>
+      
+      <div style="text-align: center; padding: 1.5rem; background: #e8f5e9; border-radius: 15px;">
+        <div style="font-size: 2.5rem; font-weight: 700; color: #388e3c;">{{ (agent.solde_conges_annuel or 0) - (agent.conges_annee_en_cours or 0) }}</div>
+        <div style="font-weight: 600; color: #388e3c;">Restant</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documents, Historique, Évaluations -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
+    
+    <!-- Documents -->
+    <div class="card">
+      <h2 style="margin-bottom: 1.5rem;">📄 Documents</h2>
+      {% if documents %}
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for doc in documents %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+          <div>
+            <div style="font-weight: 600;">{{ doc.type_document }}</div>
+            <div style="font-size: 0.9rem; color: #6c757d;">{{ doc.uploaded_at.strftime('%d/%m/%Y') }}</div>
+          </div>
+          <a href="{{ doc.file_path }}" target="_blank" class="btn-primary" style="padding: 0.5rem 1rem;">📥</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <p>Aucun document</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Historique -->
+    <div class="card">
+      <h2 style="margin-bottom: 1.5rem;">📜 Historique de Carrière</h2>
+      {% if historique %}
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for h in historique[:5] %}
+        <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #667eea;">
+          <div style="font-weight: 600; color: #667eea;">{{ h.type_evenement }}</div>
+          <div style="font-size: 0.9rem; color: #6c757d; margin-top: 0.25rem;">
+            {{ h.date_evenement.strftime('%d/%m/%Y') }}
+            {% if h.description %}
+            • {{ h.description }}
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <p>Aucun historique</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Évaluations -->
+    <div class="card">
+      <h2 style="margin-bottom: 1.5rem;">⭐ Évaluations</h2>
+      {% if evaluations %}
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for eval in evaluations[:5] %}
+        <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 600;">Année {{ eval.annee }}</div>
+            <div style="display: flex; gap: 0.25rem;">
+              {% for i in range(5) %}
+                <span style="color: {{ '#ffc107' if i < (eval.note or 0) else '#e0e0e0' }};">★</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% if eval.commentaire %}
+          <div style="font-size: 0.9rem; color: #6c757d; margin-top: 0.5rem;">{{ eval.commentaire[:100] }}...</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <p>Aucune évaluation</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Notes -->
+  {% if agent.notes %}
+  <div class="card">
+    <h2 style="margin-bottom: 1rem;">📝 Notes</h2>
+    <div style="padding: 1rem; background: #fff9c4; border-radius: 10px; border-left: 4px solid #fbc02d;">
+      {{ agent.notes }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Actions -->
+  <div class="card">
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <a href="/api/v1/personnel/{{ agent.id }}/edit" class="btn-primary">
+        ✏️ Modifier
+      </a>
+      <button onclick="confirmerDesactivation()" class="btn-primary" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        {{ '🔓 Réactiver' if not agent.actif else '🔒 Désactiver' }}
+      </button>
+      <button onclick="imprimerFiche()" class="btn-primary" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        🖨️ Imprimer la fiche
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Bouton retour avec overlay
+document.addEventListener('DOMContentLoaded', function() {
+  const btnBack = document.querySelector('.btn-back');
+  if (btnBack) {
+    btnBack.addEventListener('click', function(e) {
+      e.preventDefault();
+      showGlobalLoading('Retour au Personnel...', 'Veuillez patienter');
+      setTimeout(() => {
+        window.location.href = this.href;
+      }, 300);
+    });
+  }
+});
+
+function confirmerDesactivation() {
+  const isActif = {{ 'true' if agent.actif else 'false' }};
+  const action = isActif ? 'désactiver' : 'réactiver';
+  
+  if (confirm(`Voulez-vous vraiment ${action} cet agent ?`)) {
+    showGlobalLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}...`, 'Veuillez patienter');
+    
+    fetch(`/api/v1/personnel/api/agents/{{ agent.id }}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        actif: !isActif
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.ok) {
+        showSuccess(`Agent ${action} avec succès`);
+        setTimeout(() => {
+          showGlobalLoading('Actualisation...', 'Rechargement de la page');
+          location.reload();
+        }, 1000);
+      } else {
+        hideGlobalLoading();
+        showError(`Erreur lors de la ${action}`);
+      }
+    })
+    .catch(error => {
+      console.error('Erreur:', error);
+      hideGlobalLoading();
+      showError('Erreur réseau. Vérifiez votre connexion.');
+    });
+  }
+}
+
+function imprimerFiche() {
+  window.print();
+}
+
+console.log('✅ Page détail agent chargée');
+</script>
+
+<style>
+@media print {
+  .btn-back, .card:last-child {
+    display: none !important;
+  }
+  
+  .page-grid {
+    padding: 0;
+    background: white;
+  }
+  
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+}
+</style>
+{% endblock %}
+

@@ -299,7 +299,7 @@ body {
       ℹ️ Les champs marqués d'un astérisque (*) sont obligatoires
     </div>
 
-    <form method="POST" action="/api/v1/personnel/api/agents" enctype="multipart/form-data">
+    <form method="POST" action="{{ '/api/v1/personnel/api/agents/' + (agent.id|string) if mode == 'edit' else '/api/v1/personnel/api/agents' }}" enctype="multipart/form-data" id="agentForm" data-mode="{{ mode }}" {% if mode == 'edit' %}data-agent-id="{{ agent.id }}"{% endif %}>
       
       <!-- IDENTIFICATION -->
       <div class="form-section">
@@ -310,20 +310,20 @@ body {
           <div class="form-group">
             <label for="matricule" class="required">Matricule</label>
             <input type="text" id="matricule" name="matricule" required 
-                   placeholder="Ex: AG2024001">
+                   placeholder="Ex: AG2024001" value="{{ agent.matricule if mode == 'edit' else '' }}">
             <small>Identifiant unique de l'agent</small>
           </div>
           
           <div class="form-group">
             <label for="numero_cni">Numéro CNI</label>
             <input type="text" id="numero_cni" name="numero_cni" 
-                   placeholder="Ex: 1234567890123">
+                   placeholder="Ex: 1234567890123" value="{{ agent.numero_cni if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="numero_passeport">Numéro Passeport</label>
             <input type="text" id="numero_passeport" name="numero_passeport" 
-                   placeholder="Ex: A1234567">
+                   placeholder="Ex: A1234567" value="{{ agent.numero_passeport if mode == 'edit' else '' }}">
           </div>
         </div>
       </div>
@@ -337,44 +337,44 @@ body {
           <div class="form-group">
             <label for="nom" class="required">Nom</label>
             <input type="text" id="nom" name="nom" required 
-                   placeholder="Ex: DIOP">
+                   placeholder="Ex: DIOP" value="{{ agent.nom if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="prenom" class="required">Prénom</label>
             <input type="text" id="prenom" name="prenom" required 
-                   placeholder="Ex: Amadou">
+                   placeholder="Ex: Amadou" value="{{ agent.prenom if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="nom_jeune_fille">Nom de jeune fille</label>
             <input type="text" id="nom_jeune_fille" name="nom_jeune_fille" 
-                   placeholder="Si applicable">
+                   placeholder="Si applicable" value="{{ agent.nom_jeune_fille if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="date_naissance">Date de naissance</label>
-            <input type="date" id="date_naissance" name="date_naissance">
+            <input type="date" id="date_naissance" name="date_naissance" value="{{ agent.date_naissance if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="lieu_naissance">Lieu de naissance</label>
             <input type="text" id="lieu_naissance" name="lieu_naissance" 
-                   placeholder="Ex: Dakar">
+                   placeholder="Ex: Dakar" value="{{ agent.lieu_naissance if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="nationalite">Nationalité</label>
             <input type="text" id="nationalite" name="nationalite" 
-                   value="Sénégalaise" placeholder="Ex: Sénégalaise">
+                   value="{{ agent.nationalite if mode == 'edit' else 'Sénégalaise' }}" placeholder="Ex: Sénégalaise">
           </div>
           
           <div class="form-group">
             <label for="sexe">Sexe</label>
             <select id="sexe" name="sexe">
               <option value="">-- Sélectionner --</option>
-              <option value="M">Masculin</option>
-              <option value="F">Féminin</option>
+              <option value="M" {{ 'selected' if mode == 'edit' and agent.sexe == 'M' else '' }}>Masculin</option>
+              <option value="F" {{ 'selected' if mode == 'edit' and agent.sexe == 'F' else '' }}>Féminin</option>
             </select>
           </div>
           
@@ -383,7 +383,7 @@ body {
             <select id="situation_familiale" name="situation_familiale">
               <option value="">-- Sélectionner --</option>
               {% for sf in SituationFamiliale %}
-              <option value="{{ sf.value }}">{{ sf.value }}</option>
+              <option value="{{ sf.value }}" {{ 'selected' if mode == 'edit' and agent.situation_familiale == sf.value else '' }}>{{ sf.value }}</option>
               {% endfor %}
             </select>
           </div>
@@ -391,7 +391,35 @@ body {
           <div class="form-group">
             <label for="nombre_enfants">Nombre d'enfants</label>
             <input type="number" id="nombre_enfants" name="nombre_enfants" 
-                   min="0" value="0">
+                   min="0" value="{{ agent.nombre_enfants if mode == 'edit' else '0' }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- PHOTO -->
+      <div class="form-section">
+        <div class="form-section-title">
+          📸 Photo de l'agent
+        </div>
+        <div style="display: flex; align-items: center; gap: 2rem;">
+          <div class="photo-preview" id="photoPreview">
+            <div class="photo-placeholder" id="photoPlaceholder">👤</div>
+            <img id="photoImage" style="display: none;" alt="Photo de l'agent">
+          </div>
+          
+          <div>
+            <div class="file-input-wrapper">
+              <input type="file" id="photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
+              <label for="photo" class="file-input-label">
+                📷 Choisir une photo
+              </label>
+            </div>
+            <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
+              Formats acceptés : JPG, PNG, GIF (max 5 MB)
+            </small>
+            <button type="button" onclick="clearPhoto()" class="btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; display: none;" id="clearPhotoBtn">
+              🗑️ Supprimer
+            </button>
           </div>
         </div>
       </div>
@@ -405,43 +433,43 @@ body {
           <div class="form-group">
             <label for="email_professionnel">Email professionnel</label>
             <input type="email" id="email_professionnel" name="email_professionnel" 
-                   placeholder="prenom.nom@ministere.sn">
+                   placeholder="prenom.nom@ministere.sn" value="{{ agent.email_professionnel if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="email_personnel">Email personnel</label>
             <input type="email" id="email_personnel" name="email_personnel" 
-                   placeholder="exemple@email.com">
+                   placeholder="exemple@email.com" value="{{ agent.email_personnel if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="telephone_1">Téléphone 1</label>
             <input type="tel" id="telephone_1" name="telephone_1" 
-                   placeholder="77 123 45 67">
+                   placeholder="77 123 45 67" value="{{ agent.telephone_1 if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="telephone_2">Téléphone 2</label>
             <input type="tel" id="telephone_2" name="telephone_2" 
-                   placeholder="33 123 45 67">
+                   placeholder="33 123 45 67" value="{{ agent.telephone_2 if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group" style="grid-column: 1 / -1;">
             <label for="adresse">Adresse</label>
             <input type="text" id="adresse" name="adresse" 
-                   placeholder="Adresse complète">
+                   placeholder="Adresse complète" value="{{ agent.adresse if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="ville">Ville</label>
             <input type="text" id="ville" name="ville" 
-                   placeholder="Ex: Dakar">
+                   placeholder="Ex: Dakar" value="{{ agent.ville if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="code_postal">Code postal</label>
             <input type="text" id="code_postal" name="code_postal" 
-                   placeholder="Ex: 12500">
+                   placeholder="Ex: 12500" value="{{ agent.code_postal if mode == 'edit' else '' }}">
           </div>
         </div>
       </div>
@@ -454,24 +482,24 @@ body {
         <div class="form-grid">
           <div class="form-group">
             <label for="date_recrutement">Date de recrutement</label>
-            <input type="date" id="date_recrutement" name="date_recrutement">
+            <input type="date" id="date_recrutement" name="date_recrutement" value="{{ agent.date_recrutement if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="date_prise_service">Date de prise de service</label>
-            <input type="date" id="date_prise_service" name="date_prise_service">
+            <input type="date" id="date_prise_service" name="date_prise_service" value="{{ agent.date_prise_service if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="date_depart_retraite_prevue">Départ retraite prévu</label>
-            <input type="date" id="date_depart_retraite_prevue" name="date_depart_retraite_prevue">
+            <input type="date" id="date_depart_retraite_prevue" name="date_depart_retraite_prevue" value="{{ agent.date_depart_retraite_prevue if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="position_administrative">Position administrative</label>
             <select id="position_administrative" name="position_administrative">
               {% for pa in PositionAdministrative %}
-              <option value="{{ pa.value }}" {{ 'selected' if pa.value == 'En activité' else '' }}>
+              <option value="{{ pa.value }}" {{ 'selected' if (mode == 'edit' and agent.position_administrative == pa.value) or (mode == 'create' and pa.value == 'En activité') else '' }}>
                 {{ pa.value }}
               </option>
               {% endfor %}
@@ -491,7 +519,7 @@ body {
             <select id="grade_id" name="grade_id">
               <option value="">-- Sélectionner --</option>
               {% for grade in grades %}
-              <option value="{{ grade.id }}">{{ grade.code }} - {{ grade.libelle }}</option>
+              <option value="{{ grade.id }}" {{ 'selected' if mode == 'edit' and agent.grade_id == grade.id else '' }}>{{ grade.code }} - {{ grade.libelle }}</option>
               {% endfor %}
             </select>
           </div>
@@ -499,13 +527,13 @@ body {
           <div class="form-group">
             <label for="echelon">Échelon</label>
             <input type="number" id="echelon" name="echelon" 
-                   min="1" max="10" value="1">
+                   min="1" max="10" value="{{ agent.echelon if mode == 'edit' else '1' }}">
           </div>
           
           <div class="form-group">
             <label for="indice">Indice</label>
             <input type="number" id="indice" name="indice" 
-                   placeholder="Ex: 600">
+                   placeholder="Ex: 600" value="{{ agent.indice if mode == 'edit' else '' }}">
             <small>Indice de rémunération</small>
           </div>
           
@@ -514,7 +542,7 @@ body {
             <select id="programme_id" name="programme_id">
               <option value="">-- Sélectionner --</option>
               {% for prog in programmes %}
-              <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
+              <option value="{{ prog.id }}" {{ 'selected' if mode == 'edit' and agent.programme_id == prog.id else '' }}>{{ prog.code }} - {{ prog.libelle }}</option>
               {% endfor %}
             </select>
           </div>
@@ -524,7 +552,7 @@ body {
             <select id="direction_id" name="direction_id">
               <option value="">-- Sélectionner --</option>
               {% for dir in directions %}
-              <option value="{{ dir.id }}" data-programme="{{ dir.programme_id }}">
+              <option value="{{ dir.id }}" data-programme="{{ dir.programme_id }}" {{ 'selected' if mode == 'edit' and agent.direction_id == dir.id else '' }}>
                 {{ dir.code }} - {{ dir.libelle }}
               </option>
               {% endfor %}
@@ -536,7 +564,7 @@ body {
             <select id="service_id" name="service_id">
               <option value="">-- Sélectionner --</option>
               {% for serv in services %}
-              <option value="{{ serv.id }}" data-direction="{{ serv.direction_id }}">
+              <option value="{{ serv.id }}" data-direction="{{ serv.direction_id }}" {{ 'selected' if mode == 'edit' and agent.service_id == serv.id else '' }}>
                 {{ serv.code }} - {{ serv.libelle }}
               </option>
               {% endfor %}
@@ -546,7 +574,7 @@ body {
           <div class="form-group" style="grid-column: 1 / -1;">
             <label for="fonction">Fonction</label>
             <input type="text" id="fonction" name="fonction" 
-                   placeholder="Ex: Chef de division comptabilité">
+                   placeholder="Ex: Chef de division comptabilité" value="{{ agent.fonction if mode == 'edit' else '' }}">
           </div>
         </div>
       </div>
@@ -560,14 +588,14 @@ body {
           <div class="form-group">
             <label for="solde_conges_annuel">Solde de congés restant</label>
             <input type="number" id="solde_conges_annuel" name="solde_conges_annuel" 
-                   min="0" step="0.5" value="30" placeholder="30">
+                   min="0" step="0.5" value="{{ agent.solde_conges_annuel if mode == 'edit' else '30' }}" placeholder="30">
             <small>Jours de congé disponibles</small>
           </div>
           
           <div class="form-group">
             <label for="conges_annee_en_cours">Congés alloués cette année</label>
             <input type="number" id="conges_annee_en_cours" name="conges_annee_en_cours" 
-                   min="0" value="30" placeholder="30">
+                   min="0" value="{{ agent.conges_annee_en_cours if mode == 'edit' else '30' }}" placeholder="30">
             <small>Nombre de jours de congé par an</small>
           </div>
         </div>
@@ -581,7 +609,7 @@ body {
         <div class="form-group">
           <label for="notes">Notes</label>
           <textarea id="notes" name="notes" 
-                    placeholder="Informations complémentaires..."></textarea>
+                    placeholder="Informations complémentaires...">{{ agent.notes if mode == 'edit' else '' }}</textarea>
         </div>
       </div>
 
@@ -651,54 +679,140 @@ directionSelect.addEventListener('change', function() {
   });
 });
 
+// Prévisualisation de la photo
+function previewPhoto(event) {
+  const file = event.target.files[0];
+  if (file) {
+    // Vérifier la taille (5 MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      showError('La photo ne doit pas dépasser 5 MB');
+      event.target.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const photoImage = document.getElementById('photoImage');
+      const photoPlaceholder = document.getElementById('photoPlaceholder');
+      const clearPhotoBtn = document.getElementById('clearPhotoBtn');
+      
+      photoImage.src = e.target.result;
+      photoImage.style.display = 'block';
+      photoPlaceholder.style.display = 'none';
+      clearPhotoBtn.style.display = 'inline-block';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// Supprimer la photo
+function clearPhoto() {
+  const photoInput = document.getElementById('photo');
+  const photoImage = document.getElementById('photoImage');
+  const photoPlaceholder = document.getElementById('photoPlaceholder');
+  const clearPhotoBtn = document.getElementById('clearPhotoBtn');
+  
+  photoInput.value = '';
+  photoImage.src = '';
+  photoImage.style.display = 'none';
+  photoPlaceholder.style.display = 'block';
+  clearPhotoBtn.style.display = 'none';
+}
+
 // Soumission du formulaire
 document.querySelector('form').addEventListener('submit', async function(e) {
   e.preventDefault();
   
+  const form = e.target;
+  const mode = form.dataset.mode;
+  const agentId = form.dataset.agentId;
+  
   showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
   
-  // Collecter les données
+  // Utiliser FormData directement pour gérer les fichiers
   const formData = new FormData(this);
-  const data = {};
-  
-  formData.forEach((value, key) => {
-    if (value !== '') {
-      // Convertir les nombres
-      if (['echelon', 'indice', 'nombre_enfants', 'solde_conges_annuel', 'conges_annee_en_cours', 'grade_id', 'service_id', 'direction_id', 'programme_id'].includes(key)) {
-        data[key] = value ? parseFloat(value) : null;
-      } else {
-        data[key] = value;
-      }
-    }
-  });
   
   try {
-    const response = await fetch('/api/v1/personnel/api/agents', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
+    const url = mode === 'edit' 
+      ? `/api/v1/personnel/api/agents/${agentId}` 
+      : '/api/v1/personnel/api/agents';
+    
+    const method = mode === 'edit' ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method: method,
+      // Ne pas définir Content-Type pour multipart/form-data, le navigateur le fait automatiquement
+      body: formData
     });
     
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showSuccess('Agent créé avec succès !');
+      showSuccess(mode === 'edit' ? 'Agent modifié avec succès !' : 'Agent créé avec succès !');
       
       // Rediriger vers la fiche de l'agent
+      const targetAgentId = mode === 'edit' ? agentId : result.agent_id;
       setTimeout(() => {
         showGlobalLoading('Redirection...', 'Ouverture de la fiche agent');
-        window.location.href = `/api/v1/personnel/${result.agent_id}`;
+        window.location.href = `/api/v1/personnel/${targetAgentId}`;
       }, 1000);
     } else {
-      await handleFetchError(response, 'Impossible de créer l\'agent');
+      await handleFetchError(response, mode === 'edit' ? 'Impossible de modifier l\'agent' : 'Impossible de créer l\'agent');
     }
   } catch (error) {
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
 });
+
+// Pré-remplir les selects en mode édition
+{% if mode == 'edit' and agent %}
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔄 Mode édition - Pré-remplissage des champs...');
+  console.log('Agent ID:', '{{ agent.id }}');
+  console.log('Programme ID:', '{{ agent.programme_id }}');
+  console.log('Direction ID:', '{{ agent.direction_id }}');
+  console.log('Service ID:', '{{ agent.service_id }}');
+  console.log('Grade ID:', '{{ agent.grade_id }}');
+  
+  // Les selects sont déjà pré-sélectionnés via HTML (attribut selected)
+  // On n'a plus besoin de le faire via JavaScript
+  // Mais on affiche quand même les valeurs pour debug
+  
+  setTimeout(() => {
+    const prog = document.getElementById('programme_id').value;
+    const dir = document.getElementById('direction_id').value;
+    const serv = document.getElementById('service_id').value;
+    const grade = document.getElementById('grade_id').value;
+    const pos = document.getElementById('position_administrative').value;
+    
+    console.log('📊 Valeurs sélectionnées:');
+    console.log('  Programme:', prog || 'Aucun');
+    console.log('  Direction:', dir || 'Aucune');
+    console.log('  Service:', serv || 'Aucun');
+    console.log('  Grade:', grade || 'Aucun');
+    console.log('  Position:', pos || 'Aucune');
+  }, 500);
+  
+  // Photo existante
+  {% if agent.photo_path %}
+  const photoImage = document.getElementById('photoImage');
+  const photoPlaceholder = document.getElementById('photoPlaceholder');
+  const clearPhotoBtn = document.getElementById('clearPhotoBtn');
+  if (photoImage && photoPlaceholder) {
+    photoImage.src = '{{ agent.photo_path }}';
+    photoImage.style.display = 'block';
+    photoPlaceholder.style.display = 'none';
+    if (clearPhotoBtn) {
+      clearPhotoBtn.style.display = 'inline-block';
+    }
+    console.log('✅ Photo existante affichée');
+  }
+  {% endif %}
+  
+  console.log('✅ Pré-remplissage terminé');
+});
+{% endif %}
 
 console.log('✅ Formulaire agent chargé');
 </script>

@@ -1,0 +1,272 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% if mode == 'edit' %}Modifier Fiche Technique{% else %}Nouvelle Fiche Technique{% endif %} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-grid" style="max-width: 1400px;">
+  
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <h1 style="margin: 0;">📋 {% if mode == 'edit' %}Modifier Fiche Technique{% else %}Nouvelle Fiche Technique{% endif %}</h1>
+      <a href="{{ url_for('budget_fiches_hierarchique') }}" class="btn-back" title="Retour aux fiches">
+        <span style="font-size: 1.2rem;">←</span> Retour
+      </a>
+    </div>
+    <p style="color: #6c757d; margin: 0;">
+      {% if mode == 'edit' %}
+      Modifiez les informations de la fiche technique budgétaire.
+      {% else %}
+      Créez une fiche technique pour la conférence budgétaire. Cette fiche regroupe vos demandes budgétaires pour l'année à venir.
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="card" style="padding: 2.5rem;">
+    <form id="ficheForm" onsubmit="handleSubmit(event)" action="{% if mode == 'edit' %}/api/v1/budget/api/fiches/{{ fiche.id }}{% else %}/api/v1/budget/api/fiches{% endif %}" method="POST">
+      
+      <!-- IDENTIFICATION -->
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px; border-left: 5px solid #667eea;">
+        <h3 style="margin-bottom: 1.5rem; color: #667eea;">🎯 Identification</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+          <div class="form-group">
+            <label class="required">Année Budget</label>
+            <select name="annee_budget" required>
+              {% set next_year = 2026 %}
+              <option value="{{ next_year }}" {{ 'selected' if mode == 'edit' and fiche.annee_budget == next_year else 'selected' if mode != 'edit' else '' }}>{{ next_year }}</option>
+              <option value="{{ next_year + 1 }}" {{ 'selected' if mode == 'edit' and fiche.annee_budget == next_year + 1 else '' }}>{{ next_year + 1 }}</option>
+              <option value="{{ next_year + 2 }}" {{ 'selected' if mode == 'edit' and fiche.annee_budget == next_year + 2 else '' }}>{{ next_year + 2 }}</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label class="required">Programme</label>
+            <select name="programme_id" required>
+              <option value="">-- Sélectionner --</option>
+              {% for prog in programmes %}
+              <option value="{{ prog.id }}" {{ 'selected' if mode == 'edit' and fiche.programme_id == prog.id else '' }}>{{ prog.code }} - {{ prog.libelle }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Direction</label>
+            <select name="direction_id">
+              <option value="">-- Sélectionner --</option>
+              {% for dir in directions %}
+              <option value="{{ dir.id }}" {{ 'selected' if mode == 'edit' and fiche.direction_id == dir.id else '' }}>{{ dir.code }} - {{ dir.libelle }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUDGET ANNÉE PRÉCÉDENTE -->
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #e3f2fd; border-radius: 15px; border-left: 5px solid #2196f3;">
+        <h3 style="margin-bottom: 1.5rem; color: #1976d2;">📊 Budget Année Précédente</h3>
+        <div class="form-group">
+          <label>Montant (FCFA)</label>
+          <input type="number" name="budget_anterieur" step="0.01" min="0" value="0" placeholder="Budget de l'année précédente">
+          <small style="color: #666;">Pour référence et comparaison</small>
+        </div>
+      </div>
+
+      <!-- DEMANDE BUDGÉTAIRE -->
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #fff3e0; border-radius: 15px; border-left: 5px solid #ff9800;">
+        <h3 style="margin-bottom: 1.5rem; color: #f57c00;">💰 Demande Budgétaire</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+          <div class="form-group">
+            <label class="required">Enveloppe Demandée (FCFA)</label>
+            <input type="number" name="enveloppe_demandee" step="0.01" min="0" required placeholder="Budget de base demandé">
+            <small style="color: #666;">Budget principal demandé</small>
+          </div>
+          
+          <div class="form-group">
+            <label>Compléments Demandés (FCFA)</label>
+            <input type="number" name="complement_demande" step="0.01" min="0" value="0" placeholder="Demandes supplémentaires">
+            <small style="color: #666;">Besoins additionnels</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENGAGEMENTS ET FINANCEMENTS -->
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #e8f5e9; border-radius: 15px; border-left: 5px solid #4caf50;">
+        <h3 style="margin-bottom: 1.5rem; color: #388e3c;">🤝 Engagements et Financements Externes</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+          <div class="form-group">
+            <label>Engagements de l'État (FCFA)</label>
+            <input type="number" name="engagement_etat" step="0.01" min="0" value="0" placeholder="Projets engagés par l'État">
+            <small style="color: #666;">Projets/programmes garantis</small>
+          </div>
+          
+          <div class="form-group">
+            <label>Financement Bailleurs de Fonds (FCFA)</label>
+            <input type="number" name="financement_bailleurs" step="0.01" min="0" value="0" placeholder="Financements externes">
+            <small style="color: #666;">Partenaires internationaux</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTE JUSTIFICATIVE -->
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px; border-left: 5px solid #667eea;">
+        <h3 style="margin-bottom: 1.5rem; color: #667eea;">📝 Note Justificative</h3>
+        <div class="form-group">
+          <label>Justification de la demande</label>
+          <textarea name="note_justificative" rows="6" placeholder="Expliquez les raisons de cette demande budgétaire, les objectifs visés, les priorités..."></textarea>
+          <small style="color: #666;">Document essentiel pour la conférence budgétaire</small>
+        </div>
+      </div>
+
+      <!-- RÉCAPITULATIF AUTO -->
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; color: white;">
+        <h3 style="margin-bottom: 1.5rem;">📊 Récapitulatif Automatique</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+          <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.2); border-radius: 10px;">
+            <div style="font-size: 0.9rem; opacity: 0.9;">Enveloppe</div>
+            <div id="recap-enveloppe" style="font-size: 1.5rem; font-weight: 700;">0</div>
+          </div>
+          <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.2); border-radius: 10px;">
+            <div style="font-size: 0.9rem; opacity: 0.9;">Compléments</div>
+            <div id="recap-complement" style="font-size: 1.5rem; font-weight: 700;">0</div>
+          </div>
+          <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.2); border-radius: 10px;">
+            <div style="font-size: 0.9rem; opacity: 0.9;">Engagements État</div>
+            <div id="recap-engagement" style="font-size: 1.5rem; font-weight: 700;">0</div>
+          </div>
+          <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.2); border-radius: 10px;">
+            <div style="font-size: 0.9rem; opacity: 0.9;">Bailleurs</div>
+            <div id="recap-bailleurs" style="font-size: 1.5rem; font-weight: 700;">0</div>
+          </div>
+          <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.3); border-radius: 10px; grid-column: 1 / -1;">
+            <div style="font-size: 1.1rem; opacity: 0.9;">💎 BUDGET TOTAL DEMANDÉ</div>
+            <div id="recap-total" style="font-size: 2.5rem; font-weight: 700;">0 FCFA</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+        <a href="/api/v1/budget/fiches" class="btn" style="padding: 1rem 2rem; border: 2px solid #dee2e6; border-radius: 50px; text-decoration: none; color: #6c757d; font-weight: 600;">
+          Annuler
+        </a>
+        <button type="submit" class="btn-primary">
+          💾 Enregistrer la Fiche
+        </button>
+      </div>
+      
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Calcul automatique du total
+function calculerTotal() {
+  const enveloppe = parseFloat(document.querySelector('[name="enveloppe_demandee"]').value) || 0;
+  const complement = parseFloat(document.querySelector('[name="complement_demande"]').value) || 0;
+  const engagement = parseFloat(document.querySelector('[name="engagement_etat"]').value) || 0;
+  const bailleurs = parseFloat(document.querySelector('[name="financement_bailleurs"]').value) || 0;
+  
+  const total = enveloppe + complement + engagement + bailleurs;
+  
+  document.getElementById('recap-enveloppe').textContent = enveloppe.toLocaleString('fr-FR') + ' FCFA';
+  document.getElementById('recap-complement').textContent = complement.toLocaleString('fr-FR') + ' FCFA';
+  document.getElementById('recap-engagement').textContent = engagement.toLocaleString('fr-FR') + ' FCFA';
+  document.getElementById('recap-bailleurs').textContent = bailleurs.toLocaleString('fr-FR') + ' FCFA';
+  document.getElementById('recap-total').textContent = total.toLocaleString('fr-FR') + ' FCFA';
+}
+
+// Écouter les changements
+['enveloppe_demandee', 'complement_demande', 'engagement_etat', 'financement_bailleurs'].forEach(name => {
+  const input = document.querySelector(`[name="${name}"]`);
+  if (input) {
+    input.addEventListener('input', calculerTotal);
+  }
+});
+
+// Soumission
+async function handleSubmit(event) {
+  event.preventDefault();
+  
+  showGlobalLoading('Création de la fiche...', 'Veuillez patienter');
+  
+  const formData = new FormData(event.target);
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/fiches', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess(`Fiche technique créée : ${result.numero}`);
+      setTimeout(() => {
+        showGlobalLoading('Redirection...', 'Ouverture de la fiche');
+        window.location.href = `/api/v1/budget/fiches/${result.id}`;
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la création');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Styles
+const style = document.createElement('style');
+style.textContent = `
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+  }
+
+  .form-group label.required::after {
+    content: " *";
+    color: #dc3545;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .form-group small {
+    margin-top: 0.25rem;
+    color: #6c757d;
+    font-size: 0.85rem;
+  }
+`;
+document.head.appendChild(style);
+
+// Calculer au chargement
+setTimeout(calculerTotal, 100);
+
+console.log('✅ Formulaire fiche technique chargé');
+</script>
+{% endblock %}
+

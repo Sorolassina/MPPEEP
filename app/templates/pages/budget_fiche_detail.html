@@ -1,0 +1,589 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ fiche.numero_fiche }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-grid" style="max-width: 1600px;">
+  
+  <!-- En-tête -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+      <div>
+        <h1 style="margin: 0;">📋 {{ fiche.numero_fiche }}</h1>
+        <p style="color: #6c757d; margin: 0.5rem 0;">
+          Budget {{ fiche.annee_budget }} • {{ programme.libelle }}
+          {% if direction %} • {{ direction.libelle }}{% endif %}
+        </p>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+          <span class="badge badge-info">{{ fiche.phase }}</span>
+          <span class="badge badge-{{ 'success' if fiche.statut == 'Approuvé' else 'warning' if fiche.statut == 'Soumis' else 'secondary' }}">
+            {{ fiche.statut }}
+          </span>
+        </div>
+      </div>
+      
+      <a href="/api/v1/budget/fiches" class="btn-back" title="Retour aux fiches">
+        <span style="font-size: 1.2rem;">←</span> Retour
+      </a>
+    </div>
+  </div>
+
+  <!-- Récapitulatif Budget -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">💰 Récapitulatif Budgétaire</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+      <div style="padding: 1.5rem; background: #e3f2fd; border-radius: 15px; text-align: center;">
+        <div style="font-size: 0.9rem; color: #1976d2; font-weight: 600;">Budget Année Précédente</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #1565c0; margin-top: 0.5rem;">
+          {{ "{:,.0f}".format(fiche.budget_anterieur) }} FCFA
+        </div>
+        <div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">{{ fiche.annee_budget - 1 }}</div>
+      </div>
+      
+      <div style="padding: 1.5rem; background: #fff3e0; border-radius: 15px; text-align: center;">
+        <div style="font-size: 0.9rem; color: #f57c00; font-weight: 600;">Enveloppe Demandée</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #e65100; margin-top: 0.5rem;">
+          {{ "{:,.0f}".format(fiche.enveloppe_demandee) }} FCFA
+        </div>
+      </div>
+      
+      <div style="padding: 1.5rem; background: #fff9c4; border-radius: 15px; text-align: center;">
+        <div style="font-size: 0.9rem; color: #f57f17; font-weight: 600;">Compléments</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #f57f17; margin-top: 0.5rem;">
+          {{ "{:,.0f}".format(fiche.complement_demande) }} FCFA
+        </div>
+      </div>
+      
+      <div style="padding: 1.5rem; background: #e8f5e9; border-radius: 15px; text-align: center;">
+        <div style="font-size: 0.9rem; color: #388e3c; font-weight: 600;">Engagements État</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #2e7d32; margin-top: 0.5rem;">
+          {{ "{:,.0f}".format(fiche.engagement_etat) }} FCFA
+        </div>
+      </div>
+      
+      <div style="padding: 1.5rem; background: #f3e5f5; border-radius: 15px; text-align: center;">
+        <div style="font-size: 0.9rem; color: #7b1fa2; font-weight: 600;">Bailleurs de Fonds</div>
+        <div style="font-size: 1.8rem; font-weight: 700; color: #6a1b9a; margin-top: 0.5rem;">
+          {{ "{:,.0f}".format(fiche.financement_bailleurs) }} FCFA
+        </div>
+      </div>
+      
+      <div style="padding: 1.5rem; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 15px; text-align: center; color: white; grid-column: 1 / -1;">
+        <div style="font-size: 1.2rem; font-weight: 600;">💎 BUDGET TOTAL DEMANDÉ</div>
+        <div style="font-size: 2.5rem; font-weight: 700; margin-top: 0.5rem;">
+          {{ "{:,.0f}".format(fiche.budget_total_demande) }} FCFA
+        </div>
+        <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 0.5rem;">
+          Année {{ fiche.annee_budget }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lignes Budgétaires -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h2 style="margin: 0;">📊 Détail des Dépenses</h2>
+      <button onclick="ajouterLigne()" class="btn-primary">
+        ➕ Ajouter une Ligne
+      </button>
+    </div>
+    
+    {% if lignes %}
+    <div class="data-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Nature</th>
+            <th>Activité</th>
+            <th>Libellé</th>
+            <th style="text-align: right;">Budget N-1</th>
+            <th style="text-align: right;">Demandé</th>
+            <th style="text-align: right;">Validé</th>
+            <th>Priorité</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ligne in lignes %}
+          <tr>
+            <td>
+              <span class="badge badge-info">
+                {{ natures[ligne.nature_depense_id].code if ligne.nature_depense_id in natures else '-' }}
+              </span>
+            </td>
+            <td>
+              {{ activites[ligne.activite_id].code if ligne.activite_id and ligne.activite_id in activites else '-' }}
+            </td>
+            <td><strong>{{ ligne.libelle }}</strong></td>
+            <td style="text-align: right;">{{ "{:,.0f}".format(ligne.budget_n_moins_1) }}</td>
+            <td style="text-align: right;"><strong style="color: #f57c00;">{{ "{:,.0f}".format(ligne.budget_demande) }}</strong></td>
+            <td style="text-align: right;"><strong style="color: #27ae60;">{{ "{:,.0f}".format(ligne.budget_valide) }}</strong></td>
+            <td>
+              {% if ligne.priorite == 'Critique' %}
+                <span class="badge badge-danger">{{ ligne.priorite }}</span>
+              {% elif ligne.priorite == 'Élevée' %}
+                <span class="badge badge-warning">{{ ligne.priorite }}</span>
+              {% else %}
+                <span class="badge badge-secondary">{{ ligne.priorite }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="action-icons">
+                <span class="action-icon" onclick="modifierLigne({{ ligne.id }})" title="Modifier">📝</span>
+                <span class="action-icon" onclick="supprimerLigne({{ ligne.id }})" title="Supprimer">🗑️</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr style="background: #f8f9fa; font-weight: bold;">
+            <td colspan="4" style="text-align: right;">TOTAL:</td>
+            <td style="text-align: right; color: #f57c00;">{{ "{:,.0f}".format(lignes|sum(attribute='budget_demande')) }} FCFA</td>
+            <td style="text-align: right; color: #27ae60;">{{ "{:,.0f}".format(lignes|sum(attribute='budget_valide')) }} FCFA</td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📊</div>
+      <p><strong>Aucune ligne budgétaire</strong></p>
+      <p>Commencez par ajouter une ligne de dépense</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Documents et Note -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 1.5rem;">
+    
+    <!-- Documents -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0;">📎 Documents</h2>
+        <button onclick="document.getElementById('uploadModal').classList.add('show')" class="btn-primary">
+          📤 Upload
+        </button>
+      </div>
+      
+      {% if documents %}
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for doc in documents %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 10px;">
+          <div>
+            <div style="font-weight: 600;">{{ doc.type_document }}</div>
+            <div style="font-size: 0.85rem; color: #6c757d;">
+              {{ doc.nom_fichier }} • {{ (doc.taille_octets / 1024)|round(1) }} KB
+            </div>
+            <div style="font-size: 0.75rem; color: #adb5bd;">
+              {{ doc.uploaded_at.strftime('%d/%m/%Y %H:%M') }}
+            </div>
+          </div>
+          <a href="{{ doc.file_path }}" target="_blank" class="btn-primary" style="padding: 0.5rem 1rem;">📥</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <p>Aucun document</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Note Justificative -->
+    <div class="card">
+      <h2 style="margin-bottom: 1.5rem;">📝 Note Justificative</h2>
+      {% if fiche.note_justificative %}
+      <div style="padding: 1.5rem; background: #fff9c4; border-radius: 10px; border-left: 4px solid #fbc02d; white-space: pre-wrap;">
+        {{ fiche.note_justificative }}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📝</div>
+        <p>Aucune note justificative</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card">
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <a href="/api/v1/budget/api/fiches/{{ fiche.id }}/export/pdf" target="_blank" class="btn-primary">
+        📄 Exporter en PDF
+      </a>
+      <button onclick="changerStatut()" class="btn-primary" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+        🔄 Changer Statut
+      </button>
+      <button onclick="window.print()" class="btn-primary" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+        🖨️ Imprimer
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Ajout Ligne -->
+<div id="ligneModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h2>➕ Ajouter une Ligne Budgétaire</h2>
+      <button class="modal-close" onclick="closeLigneModal()">&times;</button>
+    </div>
+    
+    <form id="ligneForm" onsubmit="handleLigneSubmit(event)">
+      <div style="display: grid; gap: 1rem;">
+        <div class="form-group">
+          <label class="required">Nature de Dépense</label>
+          <select name="nature_depense_id" required>
+            <option value="">-- Sélectionner --</option>
+            {% for nature in natures.values() %}
+            <option value="{{ nature.id }}">{{ nature.code }} - {{ nature.libelle }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Activité</label>
+          <select name="activite_id">
+            <option value="">-- Sélectionner --</option>
+            {% for act in activites.values() %}
+            <option value="{{ act.id }}">{{ act.code }} - {{ act.libelle }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">Libellé</label>
+          <input type="text" name="libelle" required placeholder="Description de la dépense">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+          <div class="form-group">
+            <label>Budget N-1 (FCFA)</label>
+            <input type="number" name="budget_n_moins_1" step="0.01" min="0" value="0">
+          </div>
+          
+          <div class="form-group">
+            <label class="required">Budget Demandé (FCFA)</label>
+            <input type="number" name="budget_demande" step="0.01" min="0" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Priorité</label>
+          <select name="priorite">
+            <option value="Normale" selected>Normale</option>
+            <option value="Élevée">Élevée</option>
+            <option value="Critique">Critique</option>
+            <option value="Faible">Faible</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Justification</label>
+          <textarea name="justification" rows="3" placeholder="Justifiez cette dépense..."></textarea>
+        </div>
+      </div>
+      
+      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
+        <button type="button" class="btn-modal secondary" onclick="closeLigneModal()">Annuler</button>
+        <button type="submit" class="btn-modal primary">💾 Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Upload Document -->
+<div id="uploadModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📤 Upload Document</h2>
+      <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+    </div>
+    
+    <form id="uploadForm" onsubmit="handleUpload(event)" enctype="multipart/form-data">
+      <div style="display: grid; gap: 1rem;">
+        <div class="form-group">
+          <label class="required">Type de Document</label>
+          <select name="type_document" required>
+            <option value="">-- Sélectionner --</option>
+            <option value="Devis">Devis</option>
+            <option value="Facture">Facture</option>
+            <option value="Note justificative">Note justificative</option>
+            <option value="Plan d'action">Plan d'action</option>
+            <option value="Rapport">Rapport</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">Fichier</label>
+          <input type="file" name="fichier" required>
+          <small style="color: #666;">PDF, Word, Excel, Image (max 10 MB)</small>
+        </div>
+      </div>
+      
+      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
+        <button type="button" class="btn-modal secondary" onclick="closeUploadModal()">Annuler</button>
+        <button type="submit" class="btn-modal primary">📤 Upload</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function ajouterLigne() {
+  document.getElementById('ligneModal').classList.add('show');
+}
+
+function closeLigneModal() {
+  document.getElementById('ligneModal').classList.remove('show');
+  document.getElementById('ligneForm').reset();
+}
+
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('show');
+  document.getElementById('uploadForm').reset();
+}
+
+async function handleLigneSubmit(event) {
+  event.preventDefault();
+  
+  showGlobalLoading('Ajout de la ligne...', 'Veuillez patienter');
+  
+  const formData = new FormData(event.target);
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/fiches/{{ fiche.id }}/lignes', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Ligne ajoutée avec succès');
+      closeLigneModal();
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de l\'ajout');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function handleUpload(event) {
+  event.preventDefault();
+  
+  showGlobalLoading('Upload en cours...', 'Envoi du fichier');
+  
+  const formData = new FormData(event.target);
+  
+  try {
+    const response = await fetch('/api/v1/budget/api/fiches/{{ fiche.id }}/documents', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Document uploadé avec succès');
+      closeUploadModal();
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        location.reload();
+      }, 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de l\'upload');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+async function supprimerLigne(ligneId) {
+  if (!confirm('Supprimer cette ligne budgétaire ?')) return;
+  
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/fiches/{{ fiche.id }}/lignes/${ligneId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showSuccess('Ligne supprimée');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      await handleFetchError(response, 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur réseau.');
+  }
+}
+
+function modifierLigne(ligneId) {
+  // TODO: Implémenter la modification
+  showSuccess('Modification à venir');
+}
+
+function changerStatut() {
+  // TODO: Implémenter le changement de statut
+  showSuccess('Changement de statut à venir');
+}
+
+// Styles
+const style = document.createElement('style');
+style.textContent = `
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .modal-overlay.show {
+    display: flex;
+  }
+  
+  .modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    color: #333;
+  }
+  
+  .modal-close {
+    font-size: 2rem;
+    color: #6c757d;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+  }
+  
+  .modal-close:hover {
+    color: #dc3545;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+  }
+  
+  .form-group label.required::after {
+    content: " *";
+    color: #dc3545;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+  
+  .btn-modal {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .btn-modal.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+  
+  .btn-modal.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+  }
+  
+  .btn-modal.secondary {
+    background: #e9ecef;
+    color: #495057;
+  }
+  
+  .btn-modal.secondary:hover {
+    background: #dee2e6;
+  }
+  
+  @media print {
+    .modal-overlay, button, .action-icons, .btn-back {
+      display: none !important;
+    }
+  }
+`;
+document.head.appendChild(style);
+
+console.log('✅ Page détail fiche technique chargée');
+</script>
+{% endblock %}
+

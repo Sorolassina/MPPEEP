@@ -3,6 +3,7 @@
 Endpoints pour la gestion complète du personnel
 """
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select, func, or_
@@ -120,6 +121,52 @@ def personnel_nouveau(
     )
 
 
+@router.get("/{agent_id}/edit", response_class=HTMLResponse, name="personnel_edit")
+def personnel_edit(
+    agent_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Page d'édition d'un agent"""
+    agent = session.get(AgentComplet, agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent non trouvé")
+    
+    # Référentiels
+    grades = session.exec(
+        select(GradeComplet).where(GradeComplet.actif == True).order_by(GradeComplet.code)
+    ).all()
+    
+    services = session.exec(
+        select(Service).where(Service.actif == True).order_by(Service.libelle)
+    ).all()
+    
+    directions = session.exec(
+        select(Direction).where(Direction.actif == True).order_by(Direction.libelle)
+    ).all()
+    
+    programmes = session.exec(
+        select(Programme).where(Programme.actif == True).order_by(Programme.libelle)
+    ).all()
+    
+    return templates.TemplateResponse(
+        "pages/personnel_form.html",
+        get_template_context(
+            request,
+            mode="edit",
+            agent=agent,
+            grades=grades,
+            services=services,
+            directions=directions,
+            programmes=programmes,
+            PositionAdministrative=PositionAdministrative,
+            SituationFamiliale=SituationFamiliale,
+            current_user=current_user
+        )
+    )
+
+
 @router.get("/{agent_id}", response_class=HTMLResponse, name="personnel_detail")
 def personnel_detail(
     agent_id: int,
@@ -225,21 +272,121 @@ def api_list_agents(
 
 
 @router.post("/api/agents")
-def api_create_agent(
-    agent_data: dict,
+async def api_create_agent(
+    matricule: str = Form(...),
+    nom: str = Form(...),
+    prenom: str = Form(...),
+    numero_cni: Optional[str] = Form(None),
+    numero_passeport: Optional[str] = Form(None),
+    nom_jeune_fille: Optional[str] = Form(None),
+    date_naissance: Optional[str] = Form(None),
+    lieu_naissance: Optional[str] = Form(None),
+    nationalite: Optional[str] = Form(None),
+    sexe: Optional[str] = Form(None),
+    situation_familiale: Optional[str] = Form(None),
+    nombre_enfants: Optional[int] = Form(None),
+    email_professionnel: Optional[str] = Form(None),
+    email_personnel: Optional[str] = Form(None),
+    telephone_1: Optional[str] = Form(None),
+    telephone_2: Optional[str] = Form(None),
+    adresse: Optional[str] = Form(None),
+    ville: Optional[str] = Form(None),
+    code_postal: Optional[str] = Form(None),
+    date_recrutement: Optional[str] = Form(None),
+    date_prise_service: Optional[str] = Form(None),
+    date_depart_retraite_prevue: Optional[str] = Form(None),
+    position_administrative: Optional[str] = Form(None),
+    grade_id: Optional[int] = Form(None),
+    echelon: Optional[int] = Form(None),
+    indice: Optional[int] = Form(None),
+    service_id: Optional[int] = Form(None),
+    direction_id: Optional[int] = Form(None),
+    programme_id: Optional[int] = Form(None),
+    fonction: Optional[str] = Form(None),
+    solde_conges_annuel: Optional[int] = Form(None),
+    conges_annee_en_cours: Optional[int] = Form(None),
+    notes: Optional[str] = Form(None),
+    photo: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Créer un nouvel agent"""
+    """Créer un nouvel agent avec photo optionnelle"""
     try:
         # Vérifier que le matricule est unique
         existing = session.exec(
-            select(AgentComplet).where(AgentComplet.matricule == agent_data.get("matricule"))
+            select(AgentComplet).where(AgentComplet.matricule == matricule)
         ).first()
         
         if existing:
             raise HTTPException(400, "Ce matricule existe déjà")
         
+        # Préparer les données de l'agent
+        agent_data = {
+            "matricule": matricule,
+            "nom": nom,
+            "prenom": prenom,
+            "numero_cni": numero_cni,
+            "numero_passeport": numero_passeport,
+            "nom_jeune_fille": nom_jeune_fille,
+            "lieu_naissance": lieu_naissance,
+            "nationalite": nationalite,
+            "sexe": sexe,
+            "situation_familiale": situation_familiale,
+            "nombre_enfants": nombre_enfants,
+            "email_professionnel": email_professionnel,
+            "email_personnel": email_personnel,
+            "telephone_1": telephone_1,
+            "telephone_2": telephone_2,
+            "adresse": adresse,
+            "ville": ville,
+            "code_postal": code_postal,
+            "position_administrative": position_administrative,
+            "grade_id": grade_id,
+            "echelon": echelon,
+            "indice": indice,
+            "service_id": service_id,
+            "direction_id": direction_id,
+            "programme_id": programme_id,
+            "fonction": fonction,
+            "solde_conges_annuel": solde_conges_annuel,
+            "conges_annee_en_cours": conges_annee_en_cours,
+            "notes": notes
+        }
+        
+        # Convertir les dates de string en date objects
+        date_fields = ['date_naissance', 'date_recrutement', 'date_prise_service', 'date_depart_retraite_prevue']
+        for field in date_fields:
+            date_str = locals().get(field)
+            if date_str:
+                try:
+                    agent_data[field] = datetime.strptime(date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    agent_data[field] = None
+            else:
+                agent_data[field] = None
+        
+        # Gérer l'upload de photo
+        photo_path = None
+        if photo and photo.filename:
+            # Créer le dossier pour les photos si nécessaire
+            photos_dir = Path("app/static/uploads/photos/agents")
+            photos_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Générer un nom de fichier unique
+            file_extension = photo.filename.split('.')[-1]
+            unique_filename = f"{matricule}_{secrets.token_hex(8)}.{file_extension}"
+            file_path = photos_dir / unique_filename
+            
+            # Sauvegarder le fichier
+            content = await photo.read()
+            with open(file_path, 'wb') as f:
+                f.write(content)
+            
+            # Enregistrer le chemin relatif pour la base de données
+            photo_path = f"/static/uploads/photos/agents/{unique_filename}"
+            agent_data["photo_path"] = photo_path
+        
+        # Créer l'agent
         agent = AgentComplet(**agent_data)
         agent.created_by = current_user.id
         
@@ -247,7 +394,7 @@ def api_create_agent(
         session.commit()
         session.refresh(agent)
         
-        logger.info(f"Agent créé: {agent.matricule} - {agent.nom} {agent.prenom}")
+        logger.info(f"Agent créé: {agent.matricule} - {agent.nom} {agent.prenom}" + (" avec photo" if photo_path else ""))
         
         return {"ok": True, "agent_id": agent.id}
         
@@ -271,22 +418,117 @@ def api_get_agent(
 
 
 @router.put("/api/agents/{agent_id}")
-def api_update_agent(
+async def api_update_agent(
     agent_id: int,
-    agent_data: dict,
+    matricule: Optional[str] = Form(None),
+    nom: Optional[str] = Form(None),
+    prenom: Optional[str] = Form(None),
+    numero_cni: Optional[str] = Form(None),
+    numero_passeport: Optional[str] = Form(None),
+    nom_jeune_fille: Optional[str] = Form(None),
+    date_naissance: Optional[str] = Form(None),
+    lieu_naissance: Optional[str] = Form(None),
+    nationalite: Optional[str] = Form(None),
+    sexe: Optional[str] = Form(None),
+    situation_familiale: Optional[str] = Form(None),
+    nombre_enfants: Optional[int] = Form(None),
+    email_professionnel: Optional[str] = Form(None),
+    email_personnel: Optional[str] = Form(None),
+    telephone_1: Optional[str] = Form(None),
+    telephone_2: Optional[str] = Form(None),
+    adresse: Optional[str] = Form(None),
+    ville: Optional[str] = Form(None),
+    code_postal: Optional[str] = Form(None),
+    date_recrutement: Optional[str] = Form(None),
+    date_prise_service: Optional[str] = Form(None),
+    date_depart_retraite_prevue: Optional[str] = Form(None),
+    position_administrative: Optional[str] = Form(None),
+    grade_id: Optional[int] = Form(None),
+    echelon: Optional[int] = Form(None),
+    indice: Optional[int] = Form(None),
+    service_id: Optional[int] = Form(None),
+    direction_id: Optional[int] = Form(None),
+    programme_id: Optional[int] = Form(None),
+    fonction: Optional[str] = Form(None),
+    solde_conges_annuel: Optional[int] = Form(None),
+    conges_annee_en_cours: Optional[int] = Form(None),
+    notes: Optional[str] = Form(None),
+    photo: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Mettre à jour un agent"""
+    """Mettre à jour un agent avec photo optionnelle"""
     agent = session.get(AgentComplet, agent_id)
     if not agent:
         raise HTTPException(404, "Agent non trouvé")
     
     try:
-        # Mettre à jour les champs
-        for key, value in agent_data.items():
-            if hasattr(agent, key) and key not in ["id", "created_at", "created_by"]:
-                setattr(agent, key, value)
+        # Mettre à jour les champs fournis
+        if matricule is not None: agent.matricule = matricule
+        if nom is not None: agent.nom = nom
+        if prenom is not None: agent.prenom = prenom
+        if numero_cni is not None: agent.numero_cni = numero_cni
+        if numero_passeport is not None: agent.numero_passeport = numero_passeport
+        if nom_jeune_fille is not None: agent.nom_jeune_fille = nom_jeune_fille
+        if lieu_naissance is not None: agent.lieu_naissance = lieu_naissance
+        if nationalite is not None: agent.nationalite = nationalite
+        if sexe is not None: agent.sexe = sexe
+        if situation_familiale is not None: agent.situation_familiale = situation_familiale
+        if nombre_enfants is not None: agent.nombre_enfants = nombre_enfants
+        if email_professionnel is not None: agent.email_professionnel = email_professionnel
+        if email_personnel is not None: agent.email_personnel = email_personnel
+        if telephone_1 is not None: agent.telephone_1 = telephone_1
+        if telephone_2 is not None: agent.telephone_2 = telephone_2
+        if adresse is not None: agent.adresse = adresse
+        if ville is not None: agent.ville = ville
+        if code_postal is not None: agent.code_postal = code_postal
+        if position_administrative is not None: agent.position_administrative = position_administrative
+        if grade_id is not None: agent.grade_id = grade_id
+        if echelon is not None: agent.echelon = echelon
+        if indice is not None: agent.indice = indice
+        if service_id is not None: agent.service_id = service_id
+        if direction_id is not None: agent.direction_id = direction_id
+        if programme_id is not None: agent.programme_id = programme_id
+        if fonction is not None: agent.fonction = fonction
+        if solde_conges_annuel is not None: agent.solde_conges_annuel = solde_conges_annuel
+        if conges_annee_en_cours is not None: agent.conges_annee_en_cours = conges_annee_en_cours
+        if notes is not None: agent.notes = notes
+        
+        # Convertir les dates
+        date_fields = {
+            'date_naissance': date_naissance,
+            'date_recrutement': date_recrutement,
+            'date_prise_service': date_prise_service,
+            'date_depart_retraite_prevue': date_depart_retraite_prevue
+        }
+        for field_name, date_str in date_fields.items():
+            if date_str:
+                try:
+                    setattr(agent, field_name, datetime.strptime(date_str, '%Y-%m-%d').date())
+                except ValueError:
+                    pass
+        
+        # Gérer la nouvelle photo
+        if photo and photo.filename:
+            # Supprimer l'ancienne photo si elle existe
+            if agent.photo_path:
+                old_file = Path(f"app{agent.photo_path}")
+                if old_file.exists():
+                    old_file.unlink()
+            
+            # Sauvegarder la nouvelle photo
+            photos_dir = Path("app/static/uploads/photos/agents")
+            photos_dir.mkdir(parents=True, exist_ok=True)
+            
+            file_extension = photo.filename.split('.')[-1]
+            unique_filename = f"{agent.matricule}_{secrets.token_hex(8)}.{file_extension}"
+            file_path = photos_dir / unique_filename
+            
+            content = await photo.read()
+            with open(file_path, 'wb') as f:
+                f.write(content)
+            
+            agent.photo_path = f"/static/uploads/photos/agents/{unique_filename}"
         
         agent.updated_by = current_user.id
         

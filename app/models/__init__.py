@@ -12,6 +12,11 @@ from app.models.personnel import (
     AgentComplet, DocumentAgent, HistoriqueCarriere, EvaluationAgent
 )
 from app.models.besoins import BesoinAgent, SuiviBesoin, ConsolidationBesoin
+from app.models.budget import (
+    NatureDepense, Activite, FicheTechnique, LigneBudgetaire,
+    DocumentBudget, HistoriqueBudget, ExecutionBudgetaire, ConferenceBudgetaire,
+    ActionBudgetaire, ServiceBeneficiaire, ActiviteBudgetaire, LigneBudgetaireDetail
+)
 
 __all__ = [
     "User", 
@@ -35,6 +40,18 @@ __all__ = [
     "EvaluationAgent",
     "BesoinAgent",
     "SuiviBesoin",
-    "ConsolidationBesoin"
+    "ConsolidationBesoin",
+    "NatureDepense",
+    "Activite",
+    "FicheTechnique",
+    "LigneBudgetaire",
+    "DocumentBudget",
+    "HistoriqueBudget",
+    "ExecutionBudgetaire",
+    "ConferenceBudgetaire",
+    "ActionBudgetaire",
+    "ServiceBeneficiaire",
+    "ActiviteBudgetaire",
+    "LigneBudgetaireDetail"
     ]
 

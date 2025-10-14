@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Dashboard – Exécution Budgétaire</title>
+  <style>
+    :root{
+      --bg:#ffffff; --card:#ffffff; --text:#273043; --muted:#6b778c; --border:#e5e9f2;
+      --accent1:#ff512f; --accent2:#dd2476; --green:#27ae60; --red:#c0392b; --shadow:0 8px 24px rgba(0,0,0,.06);
+      --r:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:var(--bg); color:var(--text); font:13px/1.45 'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif}
+
+    /* === LAYOUT: Sidebar + content( main + right rail ) === */
+    .app{display:grid; grid-template-columns:260px 1fr; gap:16px; padding:14px; min-height:100vh}
+    .content{display:grid; grid-template-columns:1fr 360px; gap:16px}
+    .stack{display:flex; flex-direction:column; gap:16px}
+
+    /* === SIDEBAR === */
+    .sidebar{background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px; display:flex; flex-direction:column}
+    .profile{display:flex; flex-direction:column; align-items:center; gap:6px; padding-bottom:10px; border-bottom:1px dashed var(--border)}
+    .avatar{width:60px;height:60px;border-radius:50%; background:#fff url('https://media.licdn.com/dms/image/v2/C5603AQHcSAK3bBd3ng/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1528452501612?e=2147483647&v=beta&t=QOiTCRjBU5W_tr6L0CpqRYPfETI2arW3jV6Mfj9S9bo') center/cover no-repeat; box-shadow:5px 5px 10px #d1d9e6,-5px -5px 10px #ffffff}
+    .username{font-weight:700}
+    .user-function{font-size:11px; color:#a052c4}
+
+    .filters{margin-top:12px; display:flex; flex-direction:column; gap:12px}
+    .seg h4{margin:0 0 6px; font-size:11px; letter-spacing:.2px; color:#576074; text-transform:uppercase}
+    .select{position:relative}
+    .select select{appearance:none; width:100%; padding:8px 34px 8px 10px; border-radius:10px; border:1px solid var(--border); background:#fff}
+    .select:after{content:'▾'; position:absolute; right:10px; top:50%; translate:0 -50%; color:#96a0b4}
+
+    .sidebar-footer{margin-top:auto; padding-top:10px; border-top:1px dashed var(--border); font-size:10px; color:#8a94a7; text-align:center}
+
+    /* === CARDS & TITLES === */
+    .card{background:var(--card); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow)}
+    .pad{padding:12px}
+    .title{display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; margin-bottom:10px}
+    .dot{width:16px;height:16px;border-radius:6px;background:linear-gradient(to top,var(--accent1),var(--accent2))}
+
+    /* === KPI Strip === */
+    .kpi-list{display:flex; flex-wrap:wrap; gap:8px}
+    .kpi-item{display:flex; flex-direction:column; gap:6px; padding:8px; width:150px; border-radius:10px; background:#fff; box-shadow:inset 2px 2px 4px #ffffff, inset -2px -2px 4px #d1d9e6}
+    .kpi-top{display:flex; align-items:center; gap:6px}
+    .kpi-ico{width:22px;height:22px;border-radius:50%;background:#eeeeee;display:grid;place-items:center;font-size:12px}
+    .kpi-name{font-weight:600; font-size:12px}
+    .kpi-sub{font-size:11px; color:#777}
+    .kpi-amt{font-weight:700; font-size:12px; color:var(--green)}
+    .kpi-amt.neg{color:var(--red)}
+    .kpi-date{font-size:10px; color:#aaa}
+
+    /* === Variation relative === */
+    .var-wrap{display:flex; gap:18px; align-items:flex-end}
+    .bars{display:flex; gap:16px}
+    .bar-wrap{display:flex; flex-direction:column; align-items:center}
+    .bar{position:relative; width:14px; height:86px; border-radius:10px; background:#f0f0f0; overflow:hidden; box-shadow:inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff}
+    .fill{position:absolute; bottom:0; width:100%}
+    .pos{background:linear-gradient(to top,#27ae60,#6fcf97)}
+    .neg{background:linear-gradient(to top,#c0392b,#e74c3c)}
+    .label{margin-top:4px; font-size:11px}
+    .perc{margin-top:2px; font-size:11px; font-weight:800}
+    .perc.pos{color:#27ae60} .perc.neg{color:#c0392b}
+    .ctx{font-size:10px; color:#777; margin-top:1px}
+    .legend{display:flex; flex-direction:column; gap:6px; font-size:11px}
+    .legend i{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px}
+
+    /* === Exécution par programme === */
+    .prog .row{display:flex; align-items:center; gap:8px; margin:10px 0}
+    .prog label{width:46px; color:#5b667a; font-size:11px}
+    .track{flex:1; height:14px; background:#eef2f6; border-radius:10px; position:relative}
+    .fillbar{position:absolute; inset:0 auto 0 0; width:0%; background:linear-gradient(0deg,#2ecc71,#27ae60); border-radius:10px}
+    .pct{width:64px; text-align:right; font-weight:700; color:#2c5b35; font-size:11px}
+
+    /* === Évolution du taux (simple SVG) === */
+    .chart-wrap{padding:6px 10px 12px}
+    .chart-legend{display:flex; align-items:center; gap:6px; font-size:11px; color:#556074; padding:0 10px 8px}
+    .chip{width:10px;height:10px;border-radius:50%;background:#4f7cf7;display:inline-block}
+
+    /* === Nature de dépenses (right rail) === */
+    .nature-list{display:flex; flex-direction:column; gap:10px}
+    .nature-item{display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:12px; background:#f9f9f9; box-shadow:inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6}
+    .nature-left{display:flex; align-items:center; gap:10px}
+    .nature-ico{width:30px;height:30px;border-radius:50%;background:#eee;display:grid;place-items:center;font-weight:700}
+    .nature-name{font-weight:600; font-size:12px}
+    .nature-sub{font-size:11px; color:#777}
+    .nature-val{font-weight:800; font-size:12px; color:var(--green)}
+
+    /* Responsive */
+    @media (max-width:1100px){
+      .app{grid-template-columns:1fr}
+      .content{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class='app'>
+    <!-- SIDEBAR -->
+    <aside class='sidebar'>
+      <div class='profile'>
+        <div class='avatar'></div>
+        <div class='username'>DIARRA Hamidou</div>
+        <div class='user-function'>DAAF MPPEEP</div>
+      </div>
+
+      <!-- Segments de filtres -->
+      <div class='filters'>
+        <div class='seg'>
+          <h4>Période</h4>
+          <div class='select'><select><option>Tout</option><option>2025</option><option>2024</option></select></div>
+        </div>
+        <div class='seg'>
+          <h4>Programmes</h4>
+          <div class='select'><select><option>Tout</option><option>AG</option><option>GEPN</option><option>PE</option></select></div>
+        </div>
+        <div class='seg'>
+          <h4>Actions</h4>
+          <div class='select'><select><option>Tout</option></select></div>
+        </div>
+        <div class='seg'>
+          <h4>Dépenses</h4>
+          <div class='select'><select><option>Tout</option><option>BS</option><option>P</option><option>I</option><option>T</option></select></div>
+        </div>
+      </div>
+
+      <div class='sidebar-footer'>© 2025</div>
+    </aside>
+
+    <!-- CONTENT: left stack + right nature -->
+    <div class='content'>
+      <div class='stack'>
+        <!-- KPI STRIP -->
+        <section class='card pad'>
+          <div class='title'><span class='dot'></span>Exécution Budgétaire (En Millions de F CFA)</div>
+          <div class='kpi-list'>
+            <div class='kpi-item'>
+              <div class='kpi-top'><div class='kpi-ico'>BV</div><div><div class='kpi-name'>Budg. Actuel</div><div class='kpi-sub'>100%</div></div></div>
+              <div class='kpi-amt'>FCFA 123 849</div>
+              <div class='kpi-date'>30/06/2025</div>
+            </div>
+            <div class='kpi-item'>
+              <div class='kpi-top'><div class='kpi-ico'>Eng</div><div><div class='kpi-name'>Engagements</div><div class='kpi-sub'>44,48%</div></div></div>
+              <div class='kpi-amt neg'>FCFA 55 094</div>
+              <div class='kpi-date'>30/06/2025</div>
+            </div>
+            <div class='kpi-item'>
+              <div class='kpi-top'><div class='kpi-ico'>MV</div><div><div class='kpi-name'>Mand. Visés</div><div class='kpi-sub'>107,31%</div></div></div>
+              <div class='kpi-amt'>FCFA 54 232</div>
+              <div class='kpi-date'>30/06/2025</div>
+            </div>
+            <div class='kpi-item'>
+              <div class='kpi-top'><div class='kpi-ico'>MP</div><div><div class='kpi-name'>Mand. PEC</div><div class='kpi-sub'>92,41%</div></div></div>
+              <div class='kpi-amt'>FCFA 50 538</div>
+              <div class='kpi-date'>30/06/2025</div>
+            </div>
+            <div class='kpi-item'>
+              <div class='kpi-top'><div class='kpi-ico'>Dis</div><div><div class='kpi-name'>Disponible</div><div class='kpi-sub'>55,52%</div></div></div>
+              <div class='kpi-amt'>FCFA 68 756</div>
+              <div class='kpi-date'>30/06/2025</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VARIATION RELATIVE -->
+        <section class='card pad'>
+          <div class='title'><span class='dot'></span>Variation relative N vs N-1</div>
+          <div class='var-wrap'>
+            <div class='bars'>
+              <div class='bar-wrap'>
+                <div class='bar'><div class='fill neg' style='height:50%'></div></div>
+                <div class='perc neg'>-50%</div>
+                <div class='label'>Tx Eng.</div>
+                <div class='ctx'>N-1 95%</div>
+              </div>
+              <div class='bar-wrap'>
+                <div class='bar'><div class='fill pos' style='height:70%'></div></div>
+                <div class='perc pos'>+7%</div>
+                <div class='label'>Tx. MV</div>
+                <div class='ctx'>N-1 100%</div>
+              </div>
+              <div class='bar-wrap'>
+                <div class='bar'><div class='fill neg' style='height:30%'></div></div>
+                <div class='perc neg'>-7%</div>
+                <div class='label'>Tx M.PEC</div>
+                <div class='ctx'>N-1 100%</div>
+              </div>
+              <div class='bar-wrap'>
+                <div class='bar'><div class='fill pos' style='height:90%'></div></div>
+                <div class='perc pos'>+50%</div>
+                <div class='label'>Tx E.G</div>
+                <div class='ctx'>N-1 5%</div>
+              </div>
+            </div>
+            <div class='legend'>
+              <div><i style='background:#27ae60'></i>Variation (+)</div>
+              <div><i style='background:#c0392b'></i>Variation (-)</div>
+              <div>Eng. : Engagement</div>
+              <div>MV : Mandats Visés</div>
+              <div>MPEC : Mandat PEC</div>
+              <div>E.G : Exécution Globale</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- EXÉCUTION PAR PROGRAMME -->
+        <section class='card pad prog'>
+          <div class='title'><span class='dot'></span>Exécution par programme</div>
+          <div class='row'>
+            <label>AG</label>
+            <div class='track'><div class='fillbar' style='width:57.39%'></div></div>
+            <div class='pct'>57,39 %</div>
+          </div>
+          <div class='row'>
+            <label>GEPN</label>
+            <div class='track'><div class='fillbar' style='width:55.77%'></div></div>
+            <div class='pct'>55,77 %</div>
+          </div>
+          <div class='row'>
+            <label>PE</label>
+            <div class='track'><div class='fillbar' style='width:48.05%'></div></div>
+            <div class='pct'>48,05 %</div>
+          </div>
+        </section>
+
+        <!-- ÉVOLUTION DU TAUX -->
+        <section class='card'>
+          <div class='pad'><div class='title'><span class='dot'></span>Évolution du taux d'exécution (N vs N-1)</div></div>
+          <div class='chart-wrap'>
+            <svg viewBox='0 0 1000 220' width='100%' height='220' preserveAspectRatio='none'>
+              <g opacity='.35' stroke='#e9edf4' stroke-width='1'>
+                <line x1='0' y1='40' x2='1000' y2='40'/>
+                <line x1='0' y1='110' x2='1000' y2='110'/>
+                <line x1='0' y1='180' x2='1000' y2='180'/>
+              </g>
+              <defs>
+                <linearGradient id='a' x1='0' y1='0' x2='0' y2='1'>
+                  <stop offset='0%' stop-color='#f5b089' stop-opacity='.7'/>
+                  <stop offset='100%' stop-color='#f5b089' stop-opacity='.15'/>
+                </linearGradient>
+              </defs>
+              <path d='M0,200 C160,200 220,182 280,170 C380,150 470,98 540,90 C650,74 730,74 820,100 C900,120 950,140 1000,150 L1000,220 L0,220 Z' fill='url(#a)'/>
+              <path d='M0,200 C160,200 220,182 280,170 C380,150 470,98 540,90 C650,74 730,74 820,100 C900,120 950,140 1000,150' fill='none' stroke='#4f7cf7' stroke-width='3'/>
+              <circle cx='540' cy='90' r='4' fill='#e04f5f'/>
+              <circle cx='940' cy='150' r='4' fill='#e04f5f'/>
+            </svg>
+            <div class='chart-legend'><span class='chip'></span> Taux d'exécution</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT RAIL: Nature de dépenses -->
+      <aside class='card pad'>
+        <div class='title'><span class='dot'></span>Nature de dépenses (Millions F CFA)</div>
+        <div class='nature-list'>
+          <div class='nature-item'>
+            <div class='nature-left'>
+              <div class='nature-ico'>BS</div>
+              <div>
+                <div class='nature-name'>Biens & serv.</div>
+                <div class='nature-sub'>Budget : 26 223</div>
+              </div>
+            </div>
+            <div class='nature-val'>64,32%</div>
+          </div>
+          <div class='nature-item'>
+            <div class='nature-left'>
+              <div class='nature-ico'>P</div>
+              <div>
+                <div class='nature-name'>Personnel</div>
+                <div class='nature-sub'>Budget : 15 471</div>
+              </div>
+            </div>
+            <div class='nature-val'>76,19%</div>
+          </div>
+          <div class='nature-item'>
+            <div class='nature-left'>
+              <div class='nature-ico'>I</div>
+              <div>
+                <div class='nature-name'>Investissement</div>
+                <div class='nature-sub'>Budget : 25 794</div>
+              </div>
+            </div>
+            <div class='nature-val'>35,23%</div>
+          </div>
+          <div class='nature-item'>
+            <div class='nature-left'>
+              <div class='nature-ico'>T</div>
+              <div>
+                <div class='nature-name'>Transferts</div>
+                <div class='nature-sub'>Budget : 56 361</div>
+              </div>
+            </div>
+            <div class='nature-val'>55,03%</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>
