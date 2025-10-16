@@ -42,18 +42,15 @@ jobs:
     - name: 📦 Installation
       run: |
         pip install uv
-        cd mppeep
         uv sync
     
     - name: 🧪 Tous les tests
       run: |
-        cd mppeep
         uv run pytest -v --tb=short
     
     - name: 🔒 Scan sécurité
       run: |
         pip install bandit safety
-        cd mppeep
         bandit -r app/
         safety check
 

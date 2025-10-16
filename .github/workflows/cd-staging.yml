@@ -32,7 +32,6 @@ jobs:
     
     - name: 🧪 Tests
       run: |
-        cd mppeep
         uv sync
         uv run pytest -v
     
