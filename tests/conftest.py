@@ -28,6 +28,22 @@ def session_fixture():
         yield session
 
 
+@pytest.fixture(name="test_session")
+def test_session_fixture():
+    """
+    Alias pour session - pour compatibilité avec les anciens tests
+    """
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    
+    with Session(engine) as session:
+        yield session
+
+
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
     """

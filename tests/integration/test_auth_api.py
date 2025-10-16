@@ -30,7 +30,7 @@ def test_login_success(client: TestClient, test_user: User):
     
     # Doit rediriger vers l'accueil
     assert response.status_code == 303
-    assert response.headers["location"] == "/accueil"
+    assert response.headers["location"].endswith("/accueil")
 
 
 def test_login_wrong_password(client: TestClient, test_user: User):

@@ -225,11 +225,14 @@ def safe_int(value: Any, default: int = 0) -> int:
         
     Example:
         safe_int("123") → 123
+        safe_int("12.5") → 12
         safe_int("abc") → 0
         safe_int("abc", -1) → -1
     """
     try:
-        return int(value)
+        # Essayer de convertir d'abord en float puis en int
+        # Cela permet de gérer les strings comme "12.5"
+        return int(float(value))
     except (ValueError, TypeError):
         return default
 

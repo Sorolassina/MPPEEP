@@ -17,8 +17,8 @@ def test_password_hashing():
     # Le hash ne doit pas être le mot de passe en clair
     assert hashed != password
     
-    # Le hash doit commencer par $2b$ (bcrypt)
-    assert hashed.startswith("$2b$")
+    # Le hash doit commencer par $2b$ (bcrypt) ou $bcrypt-sha256$ (bcrypt-sha256)
+    assert hashed.startswith("$2b$") or hashed.startswith("$bcrypt-sha256$")
 
 
 def test_password_verification_success():

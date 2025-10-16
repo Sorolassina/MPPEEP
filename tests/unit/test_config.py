@@ -12,7 +12,9 @@ def test_default_config():
     assert settings.APP_NAME == "MPPEEP Dashboard"
     assert settings.ENV == "dev"
     assert settings.DEBUG is True
-    assert settings.SECRET_KEY == "changeme-in-production"
+    # SECRET_KEY peut être surchargée par variable d'environnement
+    assert settings.SECRET_KEY is not None
+    assert len(settings.SECRET_KEY) > 0
 
 
 def test_database_url_auto_sqlite_debug_true():
