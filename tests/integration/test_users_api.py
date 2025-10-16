@@ -39,8 +39,24 @@ def test_get_users(client: TestClient, admin_user: User, test_user: User):
     assert "admin@example.com" in emails
 
 
-def test_get_user_by_id(client: TestClient, test_user: User):
+def test_get_user_by_id(client: TestClient, admin_user: User, test_user: User):
     """Test la récupération d'un utilisateur par ID"""
+    
+    # Étape 1 : Se connecter en tant qu'admin
+    login_response = client.post(
+        "/api/v1/login",
+        data={
+            "username": "admin@example.com",
+            "password": "admin123",
+            "remember-me": "false"
+        },
+        follow_redirects=False
+    )
+    
+    # Vérifier que la connexion a réussi
+    assert login_response.status_code == 303
+    
+    # Étape 2 : Récupérer l'utilisateur par ID
     response = client.get(f"/api/v1/users/{test_user.id}")
     
     assert response.status_code == 200
@@ -57,8 +73,24 @@ def test_get_user_not_found(client: TestClient):
     assert response.status_code == 404
 
 
-def test_create_user(client: TestClient):
+def test_create_user(client: TestClient, admin_user: User):
     """Test la création d'un nouvel utilisateur"""
+    
+    # Étape 1 : Se connecter en tant qu'admin
+    login_response = client.post(
+        "/api/v1/login",
+        data={
+            "username": "admin@example.com",
+            "password": "admin123",
+            "remember-me": "false"
+        },
+        follow_redirects=False
+    )
+    
+    # Vérifier que la connexion a réussi
+    assert login_response.status_code == 303
+    
+    # Étape 2 : Créer un nouvel utilisateur
     response = client.post(
         "/api/v1/users/",
         json={
@@ -74,8 +106,24 @@ def test_create_user(client: TestClient):
     assert "id" in data
 
 
-def test_create_user_duplicate_email(client: TestClient, test_user: User):
+def test_create_user_duplicate_email(client: TestClient, admin_user: User, test_user: User):
     """Test la création d'un utilisateur avec email existant"""
+    
+    # Étape 1 : Se connecter en tant qu'admin
+    login_response = client.post(
+        "/api/v1/login",
+        data={
+            "username": "admin@example.com",
+            "password": "admin123",
+            "remember-me": "false"
+        },
+        follow_redirects=False
+    )
+    
+    # Vérifier que la connexion a réussi
+    assert login_response.status_code == 303
+    
+    # Étape 2 : Essayer de créer un utilisateur avec email existant
     response = client.post(
         "/api/v1/users/",
         json={
