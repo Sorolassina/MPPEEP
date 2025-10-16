@@ -32,7 +32,7 @@ jobs:
     
     - name: 🧪 Tests
       run: |
-        uv sync
+        uv sync --extra dev
         uv run pytest -v
     
     - name: 🚀 Déploiement vers Staging (SSH)

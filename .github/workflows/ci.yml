@@ -33,7 +33,7 @@ jobs:
     
     - name: 📚 Installation des dépendances
       run: |
-        uv sync
+        uv sync --extra dev
     
     - name: 🧪 Tests unitaires
       run: |

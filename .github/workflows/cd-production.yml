@@ -42,7 +42,7 @@ jobs:
     - name: 📦 Installation
       run: |
         pip install uv
-        uv sync
+        uv sync --extra dev
     
     - name: 🧪 Tous les tests
       run: |
