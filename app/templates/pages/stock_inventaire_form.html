@@ -1,0 +1,128 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}{{ 'Modifier' if inventaire else 'Nouvel' }} Inventaire - Gestion des Stocks</body>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='Modifier l\'Inventaire' if inventaire else 'Nouvel Inventaire',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Inventaires', 'url': url_for('stock_inventaires')},
+        {'name': inventaire.numero if inventaire else 'Nouveau'}
+    ],
+    actions=[
+        {'label': '← Retour Inventaires', 'url': url_for('stock_inventaires'), 'primary': False}
+    ]
+) }}
+
+<div class="content-wrapper">
+    <div class="card">
+        <div class="card-body">
+            <form id="inventaireForm" onsubmit="submitForm(event)">
+                <input type="hidden" id="inventaire_id" name="inventaire_id" value="{{ inventaire.id if inventaire else '' }}">
+                
+                <div class="form-section-premium">
+                    <h3>📋 Informations Générales</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group-premium">
+                            <label for="numero">Numéro *</label>
+                            <input type="text" id="numero" name="numero" class="form-control" 
+                                   value="{{ inventaire.numero if inventaire else '' }}" 
+                                   placeholder="Ex: INV-2025-001" required>
+                        </div>
+                        
+                        <div class="form-group-premium">
+                            <label for="libelle">Libellé *</label>
+                            <input type="text" id="libelle" name="libelle" class="form-control" 
+                                   value="{{ inventaire.libelle if inventaire else '' }}" 
+                                   placeholder="Ex: Inventaire annuel 2025" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group-premium">
+                            <label for="date_debut">Date de Début *</label>
+                            <input type="date" id="date_debut" name="date_debut" class="form-control" 
+                                   value="{{ inventaire.date_debut.strftime('%Y-%m-%d') if inventaire else '' }}" required>
+                        </div>
+                        
+                        <div class="form-group-premium">
+                            <label for="date_fin">Date de Fin</label>
+                            <input type="date" id="date_fin" name="date_fin" class="form-control" 
+                                   value="{{ inventaire.date_fin.strftime('%Y-%m-%d') if inventaire and inventaire.date_fin else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-premium">
+                        <label for="observations">Observations</label>
+                        <textarea id="observations" name="observations" class="form-control" rows="3" 
+                                  placeholder="Notes et observations sur cet inventaire">{{ inventaire.observations if inventaire else '' }}</textarea>
+                    </div>
+                </div>
+                
+                <div class="form-actions-premium">
+                    <a href="{{ url_for('stock_inventaires') }}" class="btn btn-premium btn-secondary">Annuler</a>
+                    <button type="submit" class="btn btn-premium btn-primary">
+                        <span id="btnText">{{ '💾 Enregistrer' if inventaire else '✅ Créer l\'Inventaire' }}</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+async function submitForm(event) {
+    event.preventDefault();
+    
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.classList.add('show');
+    
+    const formData = new FormData(event.target);
+    const inventaireId = formData.get('inventaire_id');
+    
+    const url = inventaireId 
+        ? `/api/v1/stock/api/inventaires/${inventaireId}` 
+        : '/api/v1/stock/api/inventaires';
+    const method = inventaireId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            // L'overlay reste affiché pendant la redirection
+            setTimeout(() => {
+                if (inventaireId) {
+                    window.location.href = `/api/v1/stock/inventaires/${inventaireId}`;
+                } else {
+                    window.location.href = `/api/v1/stock/inventaires/${result.data.id}`;
+                }
+            }, 800);
+        } else {
+            // Masquer l'overlay SEULEMENT en cas d'erreur
+            if (overlay) overlay.classList.remove('show');
+            showError(result.error);
+        }
+    } catch (error) {
+        // Masquer l'overlay SEULEMENT en cas d'erreur
+        if (overlay) overlay.classList.remove('show');
+        console.error('Erreur:', error);
+        showError('Erreur lors de l\'enregistrement');
+    }
+}
+</script>
+</body>
+{% endblock %}
+

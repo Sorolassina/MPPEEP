@@ -1,0 +1,429 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Inventaire {{ inventaire.numero }} - Gestion des Stocks</body>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='Inventaire ' + inventaire.numero,
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Inventaires', 'url': url_for('stock_inventaires')},
+        {'name': inventaire.numero}
+    ],
+    actions=[
+        {'label': 'Clôturer l\'Inventaire', 'onclick': 'cloturerInventaire()', 'primary': True}
+    ] if inventaire.statut == 'EN_COURS' else []
+) }}
+
+<div class="content-wrapper">
+    <!-- Informations de l'inventaire -->
+    <div class="card">
+        <div class="card-header">
+            <h3>📋 Informations</h3>
+            <div class="status-badge {{ 'status-en-cours' if inventaire.statut == 'EN_COURS' else 'status-cloture' }}">
+                {{ '⏳ En cours' if inventaire.statut == 'EN_COURS' else '✅ Clôturé' }}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Libellé :</span>
+                    <span class="info-value">{{ inventaire.libelle }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Date début :</span>
+                    <span class="info-value">{{ inventaire.date_debut.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Date fin :</span>
+                    <span class="info-value">{{ inventaire.date_fin.strftime('%d/%m/%Y') if inventaire.date_fin else '-' }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Responsable :</span>
+                    <span class="info-value">{{ responsable.nom if responsable else 'N/A' }}</span>
+                </div>
+            </div>
+            {% if inventaire.observations %}
+            <div class="observations">
+                <strong>Observations :</strong> {{ inventaire.observations }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+                <div class="stat-value" id="nb-lignes">{{ lignes|length }}</div>
+                <div class="stat-label">Articles inventoriés</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+                <div class="stat-value" id="nb-comptes">
+                    {% set nb_comptes = namespace(value=0) %}
+                    {% for ligne in lignes %}
+                        {% if ligne['quantite_physique'] is not none %}
+                            {% set nb_comptes.value = nb_comptes.value + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ nb_comptes.value }}
+                </div>
+                <div class="stat-label">Comptages effectués</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-info">
+                <div class="stat-value" id="nb-ecarts">
+                    {% set nb_ecarts = namespace(value=0) %}
+                    {% for ligne in lignes %}
+                        {% if ligne['ecart'] is not none and ligne['ecart'] != 0 %}
+                            {% set nb_ecarts.value = nb_ecarts.value + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ nb_ecarts.value }}
+                </div>
+                <div class="stat-label">Écarts détectés</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des articles -->
+    <div class="card">
+        <div class="card-header">
+            <h3>📝 Articles à Inventorier</h3>
+            {% if inventaire.statut == 'EN_COURS' %}
+            <button class="btn btn-premium btn-primary" onclick="ajouterArticles()">+ Ajouter des Articles</button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="data-table" id="lignesTable">
+                    <thead>
+                        <tr>
+                            <th>Article</th>
+                            <th>Stock Théorique</th>
+                            <th>Stock Physique</th>
+                            <th>Écart</th>
+                            <th>Compteur</th>
+                            <th>Date Comptage</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if lignes %}
+                            {% for ligne in lignes %}
+                            <tr data-id="{{ ligne['id'] }}">
+                                <td>
+                                    <strong>{{ ligne['article'].code if ligne['article'] else 'N/A' }}</strong><br>
+                                    <small>{{ ligne['article'].designation if ligne['article'] else '' }}</small>
+                                </td>
+                                <td>{{ ligne['quantite_theorique'] }}</td>
+                                <td>
+                                    {% if ligne['quantite_physique'] is not none %}
+                                        <strong>{{ ligne['quantite_physique'] }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if ligne['ecart'] is not none %}
+                                        <span class="ecart {{ 'ecart-positif' if ligne['ecart'] > 0 else ('ecart-negatif' if ligne['ecart'] < 0 else '') }}">
+                                            {{ '+' if ligne['ecart'] > 0 else '' }}{{ ligne['ecart'] }}
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ ligne['compteur'].nom if ligne['compteur'] else '-' }}</td>
+                                <td>{{ ligne['date_comptage'].strftime('%d/%m/%Y') if ligne['date_comptage'] else '-' }}</td>
+                                <td>
+                                    {% if inventaire.statut == 'EN_COURS' %}
+                                        <button class="btn-action" onclick="compter({{ ligne['id'] }})" title="Compter">📊</button>
+                                        <button class="btn-action btn-premium btn-danger" onclick="supprimerLigne({{ ligne['id'] }})" title="Supprimer">🗑️</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2rem;">
+                                    Aucun article ajouté à cet inventaire
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Comptage -->
+<div id="modalComptage" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📊 Comptage Article</h2>
+            <span class="close" onclick="fermerModal()">&times;</span>
+        </div>
+        <form id="comptageForm" onsubmit="submitComptage(event)">
+            <input type="hidden" id="ligne_id" name="ligne_id">
+            
+            <div class="modal-body">
+                <div id="article-info" class="info-box"></div>
+                
+                <div class="form-group-premium">
+                    <label for="quantite_physique">Quantité Physique Comptée *</label>
+                    <input type="number" id="quantite_physique" name="quantite_physique" 
+                           class="form-control" required min="0" step="0.01">
+                </div>
+                
+                <div class="form-group-premium">
+                    <label for="observations_comptage">Observations</label>
+                    <textarea id="observations_comptage" name="observations" 
+                              class="form-control" rows="3" 
+                              placeholder="Notes sur le comptage (différences constatées, etc.)"></textarea>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">✅ Enregistrer le Comptage</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Ajouter Articles -->
+<div id="modalAjouterArticles" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>+ Ajouter des Articles</h2>
+            <span class="close" onclick="fermerModalAjout()">&times;</span>
+        </div>
+        <form id="ajouterArticlesForm" onsubmit="submitAjouterArticles(event)">
+            <div class="modal-body">
+                <div class="form-group-premium">
+                    <label>Sélectionner les articles à inventorier</label>
+                    <div class="articles-list" id="articlesList">
+                        {% for article in articles_disponibles %}
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="articles" value="{{ article.id }}">
+                            <span><strong>{{ article.code }}</strong> - {{ article.designation }} (Stock: {{ article.quantite_stock }})</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="fermerModalAjout()">Annuler</button>
+                <button type="submit" class="btn btn-primary">✅ Ajouter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+background: #fff3cd;
+color: #856404;
+background: #d4edda;
+color: #155724;
+background: #d4edda;
+color: #155724;
+background: #f8d7da;
+color: #721c24;
+
+</style>
+
+<script>
+const inventaireId = {{ inventaire.id }};
+
+function ajouterArticles() {
+    document.getElementById('modalAjouterArticles').classList.add('show');
+}
+
+function fermerModalAjout() {
+    document.getElementById('modalAjouterArticles').classList.remove('show');
+}
+
+async function submitAjouterArticles(event) {
+    event.preventDefault();
+    
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.classList.add('show');
+    
+    const formData = new FormData(event.target);
+    const articles = formData.getAll('articles');
+    
+    if (articles.length === 0) {
+        // Masquer l'overlay car on ne fait pas de redirection
+        if (overlay) overlay.classList.remove('show');
+        showWarning('Veuillez sélectionner au moins un article');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/stock/api/inventaires/${inventaireId}/lignes`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ articles: articles.map(Number) })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            // L'overlay reste affiché pendant la redirection
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            // Masquer l'overlay SEULEMENT en cas d'erreur
+            if (overlay) overlay.classList.remove('show');
+            showError(result.error);
+        }
+    } catch (error) {
+        // Masquer l'overlay SEULEMENT en cas d'erreur
+        if (overlay) overlay.classList.remove('show');
+        showError('Erreur lors de l\'ajout des articles');
+    }
+}
+
+function compter(ligneId) {
+    // Récupérer les infos de la ligne
+    fetch(`/api/v1/stock/api/inventaires/lignes/${ligneId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const ligne = data.data;
+                document.getElementById('ligne_id').value = ligneId;
+                document.getElementById('quantite_physique').value = ligne.quantite_physique || '';
+                document.getElementById('observations_comptage').value = ligne.observations || '';
+                
+                document.getElementById('article-info').innerHTML = `
+                    <strong>${ligne.article_code}</strong> - ${ligne.article_designation}<br>
+                    <small>Stock théorique : ${ligne.quantite_theorique}</small>
+                `;
+                
+                document.getElementById('modalComptage').classList.add('show');
+            }
+        });
+}
+
+function fermerModal() {
+    document.getElementById('modalComptage').classList.remove('show');
+}
+
+async function submitComptage(event) {
+    event.preventDefault();
+    
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.classList.add('show');
+    
+    const formData = new FormData(event.target);
+    const ligneId = formData.get('ligne_id');
+    
+    try {
+        const response = await fetch(`/api/v1/stock/api/inventaires/lignes/${ligneId}/compter`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            fermerModal();
+            // L'overlay reste affiché pendant la redirection
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            // Masquer l'overlay SEULEMENT en cas d'erreur
+            if (overlay) overlay.classList.remove('show');
+            showError(result.error);
+        }
+    } catch (error) {
+        // Masquer l'overlay SEULEMENT en cas d'erreur
+        if (overlay) overlay.classList.remove('show');
+        showError('Erreur lors de l\'enregistrement du comptage');
+    }
+}
+
+async function supprimerLigne(ligneId) {
+    if (!confirm('Êtes-vous sûr de vouloir retirer cet article de l\'inventaire ?')) {
+        return;
+    }
+    
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.classList.add('show');
+    
+    try {
+        const response = await fetch(`/api/v1/stock/api/inventaires/lignes/${ligneId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            // L'overlay reste affiché pendant la redirection
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            // Masquer l'overlay SEULEMENT en cas d'erreur
+            if (overlay) overlay.classList.remove('show');
+            showError(result.error);
+        }
+    } catch (error) {
+        // Masquer l'overlay SEULEMENT en cas d'erreur
+        if (overlay) overlay.classList.remove('show');
+        showError('Erreur lors de la suppression');
+    }
+}
+
+async function cloturerInventaire() {
+    if (!confirm('Êtes-vous sûr de vouloir clôturer cet inventaire ? Cette action est irréversible.')) {
+        return;
+    }
+    
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.classList.add('show');
+    
+    try {
+        const response = await fetch(`/api/v1/stock/api/inventaires/${inventaireId}/cloturer`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            // L'overlay reste affiché pendant la redirection
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        } else {
+            // Masquer l'overlay SEULEMENT en cas d'erreur
+            if (overlay) overlay.classList.remove('show');
+            showError(result.error);
+        }
+    } catch (error) {
+        // Masquer l'overlay SEULEMENT en cas d'erreur
+        if (overlay) overlay.classList.remove('show');
+        showError('Erreur lors de la clôture');
+    }
+}
+</script>
+</body>
+{% endblock %}
+

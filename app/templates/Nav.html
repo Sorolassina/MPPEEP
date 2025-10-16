@@ -18,11 +18,7 @@
           
           {% if current_user %}
               <span class="nav-user">
-                  {% if current_user.profile_picture %}
-                      <img src="/uploads/{{ current_user.profile_picture }}?v={{ current_user.id }}_{{ now().timestamp() }}" alt="Photo profil" class="nav-user-photo">
-                  {% else %}
-                      👤
-                  {% endif %}
+                  <img src="{{ profile_picture_url(current_user) }}" alt="Photo profil" class="nav-user-photo">
                   {{ current_user.full_name or current_user.email }}
               </span>
               <a href="{{ url_for('logout') }}" class="nav-link">Déconnexion</a>

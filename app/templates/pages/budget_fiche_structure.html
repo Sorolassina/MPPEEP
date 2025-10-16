@@ -1,327 +1,31 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
 {% block title %}Structure Fiche Technique - {{ fiche.numero_fiche }} - {{ app_name }}{% endblock %}
 
-{% block styles %}
-<style>
-/* ============================================
-   STYLES POUR FICHE TECHNIQUE HIÉRARCHIQUE
-   ============================================ */
-
-.fiche-container {
-  background: #f8f9fa;
-  min-height: 100vh;
-  padding: 2rem 0;
-}
-
-.fiche-header {
-  background: white;
-  border-radius: 20px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.fiche-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.fiche-title h1 {
-  color: #2c3e50;
-  margin: 0;
-  font-size: 1.8rem;
-}
-
-.fiche-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.info-item {
-  background: #f8f9fa;
-  padding: 0.75rem;
-  border-radius: 10px;
-  border-left: 4px solid #667eea;
-}
-
-.info-label {
-  font-weight: 600;
-  color: #6c757d;
-  font-size: 0.9rem;
-}
-
-.info-value {
-  color: #2c3e50;
-  font-weight: 500;
-  margin-top: 0.25rem;
-}
-
-/* ============================================
-   OPTION 2: TOOLTIP AU SURVOL DES CELLULES
-   ============================================ */
-
-.column-tooltip {
-  position: fixed;
-  background: rgba(44, 62, 80, 0.95);
-  color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 10000;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s;
-  white-space: nowrap;
-}
-
-.column-tooltip.visible {
-  opacity: 1;
-}
-
-.column-tooltip::before {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 8px solid transparent;
-  border-top-color: rgba(44, 62, 80, 0.95);
-}
-
-/* ============================================
-   TABLEAU HIÉRARCHIQUE
-   ============================================ */
-
-.table-container {
-  background: white;
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  overflow-x: auto;
-}
-
-.fiche-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.fiche-table th {
-  background: #ef8d4b;
-  color: black;
-  padding: 1rem 0.75rem;
-  text-align: center;
-  font-weight: 600;
-  border: 1px solid black;
-}
-
-.fiche-table th:first-child {
-  text-align: left;
-  min-width: 300px;
-}
-
-.fiche-table td {
-  padding: 0.75rem;
-  border: 1px solid black;
-  text-align: center;
-}
-
-.fiche-table td:first-child {
-  text-align: left;
-  font-weight: 500;
-}
-
-/* ============================================
-   STYLES HIÉRARCHIQUES
-   ============================================ */
-
-.row-action {
-  background: #9bc2e6 !important;
-  color: black !important;
-  font-weight: 600 !important;
-  font-size: 1rem !important;
-}
-
-.row-service {
-  background: #ffc000 !important;
-  color: black!important;
-  font-weight: 600 !important;
-}
-
-.row-activite {
-  background: #92d050 !important;
-  color: black !important;
-  font-weight: 600 !important;
-}
-
-.row-ligne {
-  background: white !important;
-  color: black !important;
-}
-
-/* Indentation pour la hiérarchie */
-.row-service td:first-child { padding-left: 2rem; }
-.row-activite td:first-child { padding-left: 3rem; }
-.row-ligne td:first-child { padding-left: 4rem; }
-
-/* ============================================
-   MONTANTS ET FORMATAGE
-   ============================================ */
-
-.montant {
-  font-weight: 600;
-  font-family: 'Courier New', monospace;
-}
-
-.montant.negatif {
-  color: #dc3545;
-}
-
-.montant.positif {
-  color: #28a745;
-}
-
-.montant.zero {
-  color: #6c757d;
-}
-
-/* ============================================
-   BOUTONS D'ACTION
-   ============================================ */
-
-.action-buttons {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-
-.btn-fiche {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.btn-fiche.primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-}
-
-.btn-fiche.secondary {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-}
-
-.btn-fiche.warning {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
-}
-
-.btn-fiche.back {
-  background: linear-gradient(135deg, #6b7280, #4b5563);
-  color: white;
-}
-
-.btn-fiche:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-
-@media (max-width: 1200px) {
-  .fiche-table {
-    font-size: 0.8rem;
-  }
-  
-  .fiche-table th,
-  .fiche-table td {
-    padding: 0.5rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .fiche-container {
-    padding: 1rem 0;
-  }
-  
-  .fiche-header,
-  .table-container {
-    padding: 1rem;
-    border-radius: 15px;
-  }
-  
-  .fiche-info {
-    grid-template-columns: 1fr;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-  
-  .btn-fiche {
-    justify-content: center;
-  }
-}
-
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fiche-header { animation: fadeInUp 0.5s ease-out; }
-.table-container { animation: fadeInUp 0.7s ease-out; }
-
-.fiche-table tbody tr {
-  animation: fadeInUp 0.6s ease-out backwards;
-}
-
-.fiche-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
-.fiche-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
-.fiche-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
-.fiche-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
-.action-icon { padding: 0.5rem 1rem;  color: #2c3e50; border-radius: 10px;background:none; border: none; }
-</style>
-{% endblock %}
-
 {% block content %}
+{{ page_header(
+    title='📋 Structure - ' + fiche.numero_fiche,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Fiches', 'url': url_for('budget_fiches_hierarchique')},
+        {'name': fiche.numero_fiche}
+    ],
+    actions=[
+        {'label': '← Retour aux Fiches', 'url': url_for('budget_fiches_hierarchique'), 'primary': False}
+    ]
+) }}
+
 <div class="fiche-container">
   
-  <!-- En-tête de la fiche -->
-  <div class="fiche-header">
-    <div class="fiche-title">
-      <h1>📋 {{ fiche.numero_fiche }} - {{ fiche.programme.libelle if fiche.programme else 'Programme' }}</h1>
-      <div style="display: flex; gap: 1rem;">
-        <span class="badge badge-{{ 'success' if fiche.statut == 'Validé' else 'warning' if fiche.statut == 'Soumis' else 'secondary' }}">
-          {{ fiche.statut }}
-        </span>
+  <!-- Badges de statut -->
+  <div class="card" style="padding: 1rem; margin-bottom: 1rem;">
+    <div style="display: flex; gap: 1rem;">
+      <span class="badge badge-{{ 'success' if fiche.statut == 'Validé' else 'warning' if fiche.statut == 'Soumis' else 'secondary' }}">
+        {{ fiche.statut }}
+      </span>
+      <span class="badge badge-secondary">{{ fiche.programme.libelle if fiche.programme else 'Programme' }}</span>
         <span class="badge badge-info">{{ fiche.phase }}</span>
       </div>
     </div>
@@ -351,27 +55,24 @@
 
   <!-- Boutons d'action -->
   <div class="action-buttons">
-    <button onclick="ouvrirModalAjouterAction()" class="btn-fiche" style="background: linear-gradient(135deg, #9bc2e6, #6c9bd2);">
+    <button onclick="ouvrirModalAjouterAction()" class="btn btn-action" style="background: linear-gradient(135deg, #9bc2e6, #6c9bd2);">
       ➕ Ajouter Action
     </button>
-    <button onclick="ouvrirModalAjouterService()" class="btn-fiche" style="background: linear-gradient(135deg, #ffc000, #d9a000);">
+    <button onclick="ouvrirModalAjouterService()" class="btn btn-action" style="background: linear-gradient(135deg, #ffc000, #d9a000);">
       ➕ Ajouter Service
     </button>
-    <button onclick="ouvrirModalAjouterActivite()" class="btn-fiche" style="background: linear-gradient(135deg, #92d050, #70b030);">
+    <button onclick="ouvrirModalAjouterActivite()" class="btn btn-action" style="background: linear-gradient(135deg, #92d050, #70b030);">
       ➕ Ajouter Activité
     </button>
-    <button onclick="ouvrirModalAjouterLigne()" class="btn-fiche secondary">
+    <button onclick="ouvrirModalAjouterLigne()" class="btn btn-action" style="background: linear-gradient(135deg, #6b7280, #4b5563);">
       ➕ Ajouter Ligne
     </button>
-    <button onclick="exporterPDF({{ fiche.id }})" class="btn-fiche" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+    <button onclick="exporterPDF({{ fiche.id }})" class="btn btn-action" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
       📥 Export PDF
     </button>
-    <button onclick="ouvrirModalChangerStatut()" class="btn-fiche" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+    <button onclick="ouvrirModalChangerStatut()" class="btn btn-action" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
       🔄 Changer Statut
     </button>
-    <a href="{{ url_for('budget_fiches_hierarchique') }}" class="btn-fiche back">
-      ← Retour aux Fiches
-    </a>
   </div>
 
   <!-- Tableau hiérarchique -->
@@ -395,8 +96,8 @@
       <tbody>
         {% for nature, actions_nature in actions_par_nature.items() %}
         <!-- Header Nature de Dépense -->
-        <tr style="background: #ffd700;">
-          <th colspan="11" style="text-align: center; font-weight: 700; color: #2c3e50; font-size: 1.1rem; padding: 0.75rem;">
+        <tr style="background: #ffff00;">
+          <th colspan="11" style="text-align: center; font-weight: 700; color: #2c3e50; font-size: 0.9rem; padding: 0.5rem;">
             {{ nature.upper() }}
           </th>
         </tr>
@@ -473,8 +174,8 @@
         {% endfor %}
         
         <!-- Sous-total Activité -->
-        <tr style="background: #d4edda; font-weight: 600; border-top: 2px solid #28a745;">
-          <td style="text-align: right; padding-right: 1rem;">SOUS-TOTAL ACTIVITÉ</td>
+        <tr style="background: #b8e6b8; font-weight: 700; border-top: 2px solid #92d050; font-size: 0.75rem;">
+          <td style="text-align: right; padding: 0.5rem 0.25rem;">SOUS-TOTAL ACTIVITÉ</td>
           <td class="montant">{{ "{:,.0f}".format(activite.budget_vote_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.budget_actuel_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.enveloppe_n_plus_1) }}</td>
@@ -508,8 +209,8 @@
           {% set service_total_projet.value = service_total_projet.value + act.projet_budget_n_plus_1 %}
         {% endfor %}
         
-        <tr style="background: #fff3cd; font-weight: 700; border-top: 2px solid #ffc107;">
-          <td style="text-align: right; padding-right: 1rem;">SOUS-TOTAL SERVICE</td>
+        <tr style="background: #ffe680; font-weight: 700; border-top: 2px solid #ffc000; font-size: 0.75rem;">
+          <td style="text-align: right; padding: 0.5rem 0.25rem;">SOUS-TOTAL SERVICE</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_vote.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_actuel.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_enveloppe.value) }}</td>
@@ -523,8 +224,8 @@
         {% endfor %}
         
         <!-- Sous-total Action -->
-        <tr style="background: #cce5ff; font-weight: 700; font-size: 1.05rem; border-top: 2px solid #007bff;">
-          <td style="text-align: right; padding-right: 1rem;">SOUS-TOTAL ACTION</td>
+        <tr style="background: #d9e9f7; font-weight: 700; font-size: 0.75rem; border-top: 2px solid #9bc2e6;">
+          <td style="text-align: right; padding: 0.5rem 0.25rem;">SOUS-TOTAL ACTION</td>
           <td class="montant">{{ "{:,.0f}".format(action.budget_vote_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.budget_actuel_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.enveloppe_n_plus_1) }}</td>
@@ -558,16 +259,16 @@
           {% set nature_total_projet.value = nature_total_projet.value + act.projet_budget_n_plus_1 %}
         {% endfor %}
         
-        <tr style="background: #ffd700; font-weight: 800; font-size: 1.1rem; border: 3px solid #ff8c00; border-top: 4px solid #ff8c00;">
-          <td style="text-align: right; padding-right: 1rem; color: #2c3e50;">TOTAL {{ nature.upper() }}</td>
-          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_vote.value) }}</td>
-          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_actuel.value) }}</td>
-          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_enveloppe.value) }}</td>
-          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_complement.value) }}</td>
-          <td class="montant" style="background: #ffc107; color: #2c3e50;">{{ "{:,.0f}".format(nature_total_souhaite.value) }}</td>
-          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_engagement.value) }}</td>
-          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_autre.value) }}</td>
-          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_projet.value) }}</td>
+        <tr style="background: #ffff99; font-weight: 800; font-size: 0.8rem; border-top: 3px solid #ffff00;">
+          <td style="text-align: right; padding: 0.5rem 0.25rem; color: #2c3e50;">TOTAL {{ nature.upper() }}</td>
+          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_vote.value) }}</td>
+          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_actuel.value) }}</td>
+          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_enveloppe.value) }}</td>
+          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_complement.value) }}</td>
+          <td class="montant" style="background: #ffff00; color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_souhaite.value) }}</td>
+          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_engagement.value) }}</td>
+          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_autre.value) }}</td>
+          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_projet.value) }}</td>
           <td colspan="2"></td>
         </tr>
         
@@ -596,16 +297,16 @@
           {% endfor %}
         {% endfor %}
         
-        <tr style="background: linear-gradient(135deg, #ff6b6b, #ee5a6f); color: white; font-weight: 900; font-size: 1.2rem; border: 4px solid #c92a2a;">
-          <td style="text-align: right; padding: 1rem; text-transform: uppercase;">TOTAL GÉNÉRAL</td>
-          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_vote.value) }}</td>
-          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_actuel.value) }}</td>
-          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_enveloppe.value) }}</td>
-          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_complement.value) }}</td>
-          <td class="montant" style="background: #c92a2a; color: white;">{{ "{:,.0f}".format(total_general_souhaite.value) }}</td>
-          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_engagement.value) }}</td>
-          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_autre.value) }}</td>
-          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_projet.value) }}</td>
+        <tr style="background: #ff0000; color: white; font-weight: 900; font-size: 0.8rem; border-top: 3px solid #cc0000;">
+          <td style="text-align: right; padding: 0.75rem 0.5rem; text-transform: uppercase;">TOTAL GÉNÉRAL</td>
+          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_vote.value) }}</td>
+          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_actuel.value) }}</td>
+          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_enveloppe.value) }}</td>
+          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_complement.value) }}</td>
+          <td class="montant" style="background: #cc0000; color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_souhaite.value) }}</td>
+          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_engagement.value) }}</td>
+          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_autre.value) }}</td>
+          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_projet.value) }}</td>
           <td colspan="2"></td>
         </tr>
       </tbody>
@@ -615,7 +316,7 @@
 </div>
 
 <!-- Modal Gérer Documents d'une Ligne -->
-<div id="modalDocumentsLigne" class="modal-overlay">
+<div id="modalDocumentsLigne" class="modal">
   <div class="modal-content" style="max-width: 800px;">
     <div class="modal-header">
       <h2>📎 Documents de la Ligne Budgétaire</h2>
@@ -635,14 +336,14 @@
         <input type="hidden" id="doc_ligne_id" name="ligne_id">
         <div class="form-group">
           <label>Sélectionner des fichiers</label>
-          <input type="file" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc" required style="width: 100%; padding: 0.75rem; border: 2px dashed #667eea; border-radius: 10px; background: #f8f9fa;">
+          <input type="file" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc" required style="width: 100%; padding: 0.75rem; border: 2px dashed var(--secondary-color); border-radius: 10px; background: #f8f9fa;">
           <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
             📎 Formats acceptés : PDF, Images, Excel, Word | Renommage automatique : CodeAction_CodeActivité_CodeLigne_NomOriginal.ext
           </small>
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn-modal secondary" onclick="closeModal('modalDocumentsLigne')">Fermer</button>
-          <button type="submit" class="btn-modal primary">📤 Uploader</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalDocumentsLigne')">Fermer</button>
+          <button type="submit" class="btn btn-primary">📤 Uploader</button>
         </div>
       </form>
     </div>
@@ -650,7 +351,7 @@
 </div>
 
 <!-- Modal Ajouter Action -->
-<div id="modalAjouterAction" class="modal-overlay">
+<div id="modalAjouterAction" class="modal">
   <div class="modal-content" style="max-width: 700px;">
     <div class="modal-header">
       <h2>➕ Ajouter une Action</h2>
@@ -678,15 +379,15 @@
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">⚠️ Une action doit contenir au moins un service bénéficiaire</small>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterAction')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Créer l'Action</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAjouterAction')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Créer l'Action</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Ajouter Service -->
-<div id="modalAjouterService" class="modal-overlay">
+<div id="modalAjouterService" class="modal">
   <div class="modal-content" style="max-width: 700px;">
     <div class="modal-header">
       <h2>➕ Ajouter un Service Bénéficiaire</h2>
@@ -716,15 +417,15 @@
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">⚠️ Un service doit contenir au moins une activité</small>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterService')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Créer le Service</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAjouterService')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Créer le Service</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Ajouter Activité -->
-<div id="modalAjouterActivite" class="modal-overlay">
+<div id="modalAjouterActivite" class="modal">
   <div class="modal-content" style="max-width: 700px;">
     <div class="modal-header">
       <h2>➕ Ajouter une Activité</h2>
@@ -754,15 +455,15 @@
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">⚠️ Une activité doit contenir au moins une ligne budgétaire</small>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterActivite')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Créer l'Activité</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAjouterActivite')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Créer l'Activité</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Ajouter Ligne Budgétaire -->
-<div id="modalAjouterLigne" class="modal-overlay">
+<div id="modalAjouterLigne" class="modal">
   <div class="modal-content" style="max-width: 1000px;">
     <div class="modal-header">
       <h2>➕ Ajouter une Ligne Budgétaire</h2>
@@ -832,22 +533,22 @@
       
       <div class="form-group">
         <label>Documents justificatifs (optionnel)</label>
-        <input type="file" name="documents" id="documents_ligne" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc" style="width: 100%; padding: 0.75rem; border: 2px dashed #667eea; border-radius: 10px; background: #f8f9fa;">
+        <input type="file" name="documents" id="documents_ligne" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.docx,.doc" style="width: 100%; padding: 0.75rem; border: 2px dashed var(--secondary-color); border-radius: 10px; background: #f8f9fa;">
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
           📎 Formats acceptés : PDF, Images, Excel, Word | Les fichiers seront renommés : CodeAction_CodeActivité_CodeLigne_NomOriginal.ext
         </small>
       </div>
       
       <div class="modal-actions">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalAjouterLigne')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Créer la Ligne</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalAjouterLigne')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Créer la Ligne</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Éditer Action -->
-<div id="modalEditerAction" class="modal-overlay">
+<div id="modalEditerAction" class="modal">
   <div class="modal-content" style="max-width: 600px;">
     <div class="modal-header">
       <h2>✏️ Modifier l'Action</h2>
@@ -861,15 +562,15 @@
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">Les montants sont calculés automatiquement</small>
       </div>
       <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerAction')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalEditerAction')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Éditer Service -->
-<div id="modalEditerService" class="modal-overlay">
+<div id="modalEditerService" class="modal">
   <div class="modal-content" style="max-width: 600px;">
     <div class="modal-header">
       <h2>✏️ Modifier le Service Bénéficiaire</h2>
@@ -883,15 +584,15 @@
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">Les montants sont calculés automatiquement</small>
       </div>
       <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerService')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalEditerService')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Éditer Activité -->
-<div id="modalEditerActivite" class="modal-overlay">
+<div id="modalEditerActivite" class="modal">
   <div class="modal-content" style="max-width: 600px;">
     <div class="modal-header">
       <h2>✏️ Modifier l'Activité</h2>
@@ -905,15 +606,15 @@
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">Les montants sont calculés automatiquement</small>
       </div>
       <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerActivite')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalEditerActivite')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Éditer Ligne Budgétaire -->
-<div id="modalEditerLigne" class="modal-overlay">
+<div id="modalEditerLigne" class="modal">
   <div class="modal-content" style="max-width: 900px;">
     <div class="modal-header">
       <h2>✏️ Modifier la Ligne Budgétaire</h2>
@@ -956,15 +657,15 @@
         <textarea id="ligne_justificatifs" name="justificatifs" rows="2" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;"></textarea>
       </div>
       <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0; display: flex; gap: 1rem; justify-content: flex-end;">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalEditerLigne')">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Enregistrer</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalEditerLigne')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Changer Statut -->
-<div id="modalChangerStatut" class="modal-overlay">
+<div id="modalChangerStatut" class="modal">
   <div class="modal-content" style="max-width: 600px;">
     <div class="modal-header">
       <h2>🔄 Changer le Statut de la Fiche</h2>
@@ -998,13 +699,278 @@
       </div>
       
       <div class="modal-actions">
-        <button type="button" class="btn-modal secondary" onclick="closeModal('modalChangerStatut')">Annuler</button>
-        <button type="submit" class="btn-modal primary">🔄 Changer le Statut</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalChangerStatut')">Annuler</button>
+        <button type="submit" class="btn btn-primary">🔄 Changer le Statut</button>
       </div>
     </form>
   </div>
 </div>
 
+
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles spécifiques pour la page Structure de Fiche */
+.fiche-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Info card avec badges */
+.fiche-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-weight: 700;
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+}
+
+.info-value.montant {
+    font-size: 1.1rem !important; /* Même taille que les autres info-value */
+    font-weight: 700 !important; /* En gras comme les autres info-value */
+    color: var(--success-color);
+}
+
+/* Boutons d'action colorés */
+.action-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.btn-action {
+    color: var(--white-color);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.btn-action:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+}
+
+/* Table container - Sans scroll horizontal */
+.table-container {
+    background: var(--white-color);
+    border-radius: 15px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    overflow-x: visible;
+}
+
+/* Fiche Table - Optimisée pour tenir sans scroll */
+.fiche-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    table-layout: fixed;
+}
+
+.fiche-table thead {
+    background: #ef8d4b;
+    color: #2c3e50;
+}
+
+.fiche-table thead th {
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.7rem;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    line-height: 1.3;
+}
+
+.fiche-table thead th:first-child {
+    width: 18%;
+}
+
+.fiche-table thead th:nth-child(n+2):nth-child(-n+9) {
+    width: 9%;
+}
+
+.fiche-table thead th:nth-child(10) {
+    width: 6%;
+}
+
+.fiche-table thead th:last-child {
+    width: 8%;
+    border-right: none;
+}
+
+.fiche-table tbody tr {
+    border-bottom: 1px solid var(--gray-200);
+    transition: all 0.2s;
+}
+
+.fiche-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.fiche-table tbody td {
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fiche-table tbody td:first-child {
+    text-align: left;
+    font-weight: 600;
+    white-space: normal;
+    overflow: visible;
+}
+
+/* Montants - Compacts en noir */
+.montant {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #000000;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+/* Lignes hiérarchiques avec couleurs spécifiques */
+.row-action {
+    background: #9bc2e6 !important;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.row-service {
+    background: #ffc000 !important;
+    color: #2c3e50;
+}
+
+.row-activite {
+    background: #92d050 !important;
+    color: #2c3e50;
+}
+
+.row-ligne {
+    background: white !important;
+    color: #2c3e50;
+}
+
+/* Action icons dans le tableau */
+.action-icon {
+    padding: 0.5rem 1rem;
+    color: #2c3e50;
+    border-radius: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-icon:hover {
+    background: rgba(0,0,0,0.05);
+    transform: scale(1.1);
+}
+
+/* Tooltip pour les colonnes */
+.column-tooltip {
+    position: fixed;
+    background: linear-gradient(135deg, #2c3e50 0%, #3d4e6b 100%);
+    color: var(--white-color);
+    padding: 0.75rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 9999;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    white-space: nowrap;
+}
+
+.column-tooltip.visible {
+    opacity: 1;
+}
+
+.column-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #2c3e50;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.table-container {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.fiche-table tbody tr {
+    animation: fadeInUp 0.4s ease-out backwards;
+}
+
+.fiche-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.fiche-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.fiche-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.fiche-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .table-container {
+        overflow-x: scroll;
+    }
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons .btn {
+        width: 100%;
+    }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -1094,7 +1060,7 @@ async function chargerDocumentsLigne(ligneId) {
               </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">
-              <a href="${doc.url}" target="_blank" class="action-icon" title="Télécharger" style="background: #667eea; color: white; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none;">⬇️</a>
+              <a href="${doc.url}" target="_blank" class="action-icon" title="Télécharger" style="background: var(--secondary-color); color: white; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none;">⬇️</a>
               <button onclick="supprimerDocument(${ligneId}, ${doc.id})" class="action-icon" title="Supprimer" style="background: #dc3545; color: white; padding: 0.5rem 1rem; border-radius: 8px;">🗑️</button>
             </div>
           </div>
@@ -1764,146 +1730,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// Styles pour les modals
-const styleModals = document.createElement('style');
-styleModals.textContent = `
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
-    justify-content: center;
-    align-items: center;
-    animation: fadeIn 0.3s ease-out;
-  }
-  
-  .modal-overlay.show {
-    display: flex;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  
-  .modal-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    max-width: 600px;
-    width: 90%;
-    max-height: 85vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s ease-out;
-  }
-  
-  @keyframes slideUp {
-    from {
-      transform: translateY(30px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-  
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #e0e0e0;
-  }
-  
-  .modal-header h2 {
-    margin: 0;
-    color: #2c3e50;
-    font-size: 1.5rem;
-  }
-  
-  .modal-close {
-    font-size: 2rem;
-    color: #6c757d;
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 0;
-    line-height: 1;
-    transition: all 0.3s;
-  }
-  
-  .modal-close:hover {
-    color: #dc3545;
-    transform: rotate(90deg);
-  }
-  
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1.5rem;
-  }
-  
-  .form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #2c3e50;
-  }
-  
-  .form-group label.required::after {
-    content: ' *';
-    color: #dc3545;
-  }
-  
-  .form-group input[type="number"],
-  .form-group textarea {
-    font-family: inherit;
-  }
-  
-  .modal-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 2px solid #e0e0e0;
-  }
-  
-  .btn-modal {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-size: 1rem;
-  }
-  
-  .btn-modal.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-  }
-  
-  .btn-modal.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-  }
-  
-  .btn-modal.secondary {
-    background: #e9ecef;
-    color: #495057;
-  }
-  
-  .btn-modal.secondary:hover {
-    background: #dee2e6;
-  }
-`;
-document.head.appendChild(styleModals);
+console.log('✅ Page Structure Fiche chargée');
 </script>
 {% endblock %}

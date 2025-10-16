@@ -1,0 +1,370 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Demandes - Gestion des Stocks - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Réduction de la police du tableau */
+.data-table {
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+}
+
+.data-table th {
+    font-size: 0.8rem;
+}
+
+/* Badges statut */
+.badge-attente {
+    background: linear-gradient(135deg, #fff3cd, #ffe69c);
+    color: #856404;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-validee {
+    background: linear-gradient(135deg, #d1f4e0, #b3e5d1);
+    color: #0f5132;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-rejetee {
+    background: linear-gradient(135deg, #fde2e4, #fbc7ca);
+    color: #842029;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-servie {
+    background: linear-gradient(135deg, #cfe2ff, #b6d4fe);
+    color: #084298;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📋 Demandes de Stock',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Demandes'}
+    ],
+    actions=[
+        {'label': '← Retour Stock', 'url': url_for('stock_home'), 'primary': False},
+        {'label': '➕ Nouvelle Demande', 'url': url_for('stock_demande_new'), 'primary': True}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Tableau des demandes -->
+  <div class="card">
+    <div style="margin-bottom: 1rem;">
+      <h2 style="margin: 0;">Demandes ({{ demandes|length }})</h2>
+    </div>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>N° Demande</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Article</th>
+          <th>Quantité</th>
+          <th>Motif</th>
+          <th>Demandeur</th>
+          <th>Statut</th>
+          <th style="text-align: center;">Doc</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if demandes %}
+          {% for demande in demandes %}
+          <tr>
+            <td><strong>{{ demande.numero }}</strong></td>
+            <td>{{ demande.type_demande }}</td>
+            <td>{{ demande.date_demande.strftime('%d/%m/%Y') }}</td>
+            <td>Article #{{ demande.article_id }}</td>
+            <td><strong>{{ demande.quantite_demandee }}</strong></td>
+            <td>{{ demande.motif }}</td>
+            <td>{{ demande.service_demandeur or 'User #' ~ demande.demandeur_id }}</td>
+            <td>
+              {% if demande.statut == 'EN_ATTENTE' %}
+                <span class="badge badge-attente">⏳ En attente</span>
+              {% elif demande.statut == 'VALIDEE' %}
+                <span class="badge badge-validee">✅ Validée</span>
+              {% elif demande.statut == 'REJETEE' %}
+                <span class="badge badge-rejetee">❌ Rejetée</span>
+              {% elif demande.statut == 'SERVIE' %}
+                <span class="badge badge-servie">📦 Servie</span>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              {% if demande.document_path %}
+                <a href="/uploads/{{ demande.document_path }}" target="_blank" 
+                   title="{{ demande.document_filename }}"
+                   style="color: var(--success-color); font-size: 1.2rem; text-decoration: none;">
+                  📎
+                </a>
+              {% else %}
+                <span style="color: var(--gray-400); font-size: 1.2rem;">—</span>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                {% if demande.statut == 'EN_ATTENTE' %}
+                  <button onclick="validerDemande({{ demande.id }})" 
+                          class="btn-action" 
+                          title="Valider"
+                          style="color: var(--success-color);">
+                    ✅
+                  </button>
+                  <button onclick="rejeterDemande({{ demande.id }})" 
+                          class="btn-action" 
+                          title="Rejeter"
+                          style="color: var(--danger-color);">
+                    ❌
+                  </button>
+                {% elif demande.statut == 'VALIDEE' %}
+                  <button onclick="servirDemande({{ demande.id }})" 
+                          class="btn-action" 
+                          title="Servir la demande"
+                          style="color: var(--info-color);">
+                    📦
+                  </button>
+                {% endif %}
+                <button onclick="supprimerDemande({{ demande.id }})" 
+                        class="btn-action" 
+                        title="Supprimer"
+                        style="color: var(--gray-600);">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+              Aucune demande enregistrée
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variable pour confirmation
+let confirmActionId = null;
+let confirmActionType = null;
+let confirmTimeout = null;
+
+// Valider une demande
+async function validerDemande(demandeId) {
+  if (confirmActionId === demandeId && confirmActionType === 'valider') {
+    clearTimeout(confirmTimeout);
+    confirmActionId = null;
+    confirmActionType = null;
+    procederValidation(demandeId);
+  } else {
+    confirmActionId = demandeId;
+    confirmActionType = 'valider';
+    showInfo('Cliquez à nouveau sur ✅ pour confirmer la validation.', 'Confirmation requise', 3000);
+    confirmTimeout = setTimeout(() => {
+      confirmActionId = null;
+      confirmActionType = null;
+    }, 3000);
+  }
+}
+
+async function procederValidation(demandeId) {
+  showGlobalLoading('Validation...', 'Traitement en cours');
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}/valider`, {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message || 'Demande validée avec succès');
+      if (result.alerte) {
+        setTimeout(() => showWarning(result.alerte, 'Alerte Stock', 5000), 1000);
+      }
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        window.location.reload();
+      }, result.alerte ? 2000 : 1500);
+    } else {
+      hideGlobalLoading();
+      showError(result.error || 'Erreur lors de la validation');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Rejeter une demande
+async function rejeterDemande(demandeId) {
+  if (confirmActionId === demandeId && confirmActionType === 'rejeter') {
+    clearTimeout(confirmTimeout);
+    confirmActionId = null;
+    confirmActionType = null;
+    procederRejet(demandeId);
+  } else {
+    confirmActionId = demandeId;
+    confirmActionType = 'rejeter';
+    showWarning('Cliquez à nouveau sur ❌ pour confirmer le rejet.', 'Confirmation requise', 3000);
+    confirmTimeout = setTimeout(() => {
+      confirmActionId = null;
+      confirmActionType = null;
+    }, 3000);
+  }
+}
+
+async function procederRejet(demandeId) {
+  showGlobalLoading('Rejet...', 'Traitement en cours');
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}/rejeter`, {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message || 'Demande rejetée');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        window.location.reload();
+      }, 1500);
+    } else {
+      hideGlobalLoading();
+      showError(result.error || 'Erreur lors du rejet');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Servir une demande (créer le mouvement de sortie)
+async function servirDemande(demandeId) {
+  if (confirmActionId === demandeId && confirmActionType === 'servir') {
+    clearTimeout(confirmTimeout);
+    confirmActionId = null;
+    confirmActionType = null;
+    procederService(demandeId);
+  } else {
+    confirmActionId = demandeId;
+    confirmActionType = 'servir';
+    showInfo('Cliquez à nouveau sur 📦 pour confirmer la mise à disposition.', 'Confirmation requise', 3000);
+    confirmTimeout = setTimeout(() => {
+      confirmActionId = null;
+      confirmActionType = null;
+    }, 3000);
+  }
+}
+
+async function procederService(demandeId) {
+  showGlobalLoading('Service...', 'Création du mouvement de sortie');
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}/servir`, {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message || 'Demande servie avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        window.location.reload();
+      }, 1500);
+    } else {
+      hideGlobalLoading();
+      showError(result.error || 'Erreur lors du service');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Supprimer une demande
+async function supprimerDemande(demandeId) {
+  if (confirmActionId === demandeId && confirmActionType === 'supprimer') {
+    clearTimeout(confirmTimeout);
+    confirmActionId = null;
+    confirmActionType = null;
+    procederSuppression(demandeId);
+  } else {
+    confirmActionId = demandeId;
+    confirmActionType = 'supprimer';
+    showWarning('Cliquez à nouveau sur 🗑️ pour confirmer la suppression.', 'Confirmation requise', 3000);
+    confirmTimeout = setTimeout(() => {
+      confirmActionId = null;
+      confirmActionType = null;
+    }, 3000);
+  }
+}
+
+async function procederSuppression(demandeId) {
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message || 'Demande supprimée avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        window.location.reload();
+      }, 1500);
+    } else {
+      hideGlobalLoading();
+      showError(result.error || 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+console.log('✅ Page demandes de stock chargée');
+</script>
+{% endblock %}
+

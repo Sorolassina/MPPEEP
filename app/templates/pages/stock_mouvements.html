@@ -1,0 +1,247 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Mouvements - Gestion des Stocks - {{ app_name }}</body>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Réduction de la police du tableau */
+.data-table {
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+}
+
+.data-table th {
+    font-size: 0.8rem;
+}
+
+/* Badges */
+.badge-entree {
+    background: linear-gradient(135deg, #d1f4e0, #b3e5d1);
+    color: #0f5132;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.5rem;
+    font-weight: 600;
+}
+
+.badge-sortie {
+    background: linear-gradient(135deg, #fde2e4, #fbc7ca);
+    color: #842029;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.5rem;
+    font-weight: 600;
+}
+
+.badge-ajustement {
+    background: linear-gradient(135deg, #cfe2ff, #b6d4fe);
+    color: #084298;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.5rem;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='🔄 Mouvements de Stock',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Mouvements'}
+    ],
+    actions=[
+        {'label': '← Retour Stock', 'url': url_for('stock_home'), 'primary': False},
+        {'label': '➕ Nouveau Mouvement', 'url': url_for('stock_mouvement_new'), 'primary': True}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Tableau des mouvements -->
+  <div class="card">
+    <div style="margin-bottom: 1rem;">
+      <h2 style="margin: 0;">Derniers Mouvements ({{ mouvements|length }})</h2>
+    </div>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Article</th>
+          <th>Quantité</th>
+          <th>Stock Avant</th>
+          <th>Stock Après</th>
+          <th>Motif</th>
+          <th>Utilisateur</th>
+          <th>Document</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if mouvements %}
+          {% for mvt in mouvements %}
+          <tr>
+            <td>{{ mvt.date_mouvement.strftime('%d/%m/%Y') }}</td>
+            <td>
+              {% if mvt.type_mouvement == 'ENTREE' %}
+                <span class="badge badge-entree">⬆️ Entrée</span>
+              {% elif mvt.type_mouvement == 'SORTIE' %}
+                <span class="badge badge-sortie">⬇️ Sortie</span>
+              {% else %}
+                <span class="badge badge-ajustement">⚙️ Ajustement</span>
+              {% endif %}
+            </td>
+            <td>
+              {% for a in articles %}
+                {% if a.id == mvt.article_id %}
+                  {{ a.designation }}
+                {% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              <strong>
+                {% if mvt.type_mouvement == 'SORTIE' %}-{% endif %}{{ mvt.quantite }}
+              </strong>
+            </td>
+            <td>{{ mvt.quantite_avant }}</td>
+            <td>{{ mvt.quantite_apres }}</td>
+            <td>{{ mvt.motif or '-' }}</td>
+            <td>{{ mvt.user_id }}</td>
+            <td style="text-align: center;">
+              {% if mvt.document_path %}
+                <a href="/uploads/{{ mvt.document_path }}" target="_blank" 
+                   title="{{ mvt.document_filename }}"
+                   style="color: var(--success-color); font-size: 1.2rem; text-decoration: none;">
+                  📎
+                </a>
+              {% else %}
+                <span style="color: var(--gray-400); font-size: 1.2rem;">—</span>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              <button onclick="inverserMouvement({{ mvt.id }})" 
+                      class="btn-action" 
+                      title="Inverser ce mouvement"
+                      style="color: var(--warning-color);">
+                🔄
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+              Aucun mouvement enregistré
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variable pour stocker l'ID en attente de confirmation
+let confirmInversionId = null;
+let confirmInversionTimeout = null;
+
+// Inverser un mouvement avec double-clic de confirmation
+async function inverserMouvement(mouvementId) {
+  // Si c'est le même mouvement et dans les 3 secondes : confirmer
+  if (confirmInversionId === mouvementId) {
+    clearTimeout(confirmInversionTimeout);
+    confirmInversionId = null;
+    procederInversion(mouvementId);
+  } else {
+    // Première demande : demander confirmation
+    confirmInversionId = mouvementId;
+    showWarning('Cliquez à nouveau sur 🔄 pour confirmer l\'inversion.', 'Confirmation requise', 3000);
+    
+    // Réinitialiser après 3 secondes
+    confirmInversionTimeout = setTimeout(() => {
+      confirmInversionId = null;
+    }, 3000);
+  }
+}
+
+async function procederInversion(mouvementId) {
+  showGlobalLoading('Inversion...', 'Récupération des données');
+  
+  try {
+    // Récupérer les détails du mouvement à inverser
+    const response = await fetch(`/api/v1/stock/api/mouvements/${mouvementId}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const mvt = result.data;
+      
+      // Créer le mouvement inverse
+      const formData = new FormData();
+      formData.append('article_id', mvt.article_id);
+      
+      // Inverser le type
+      if (mvt.type_mouvement === 'ENTREE') {
+        formData.append('type_mouvement', 'SORTIE');
+      } else if (mvt.type_mouvement === 'SORTIE') {
+        formData.append('type_mouvement', 'ENTREE');
+      } else {
+        formData.append('type_mouvement', 'AJUSTEMENT');
+      }
+      
+      formData.append('quantite', mvt.quantite);
+      formData.append('motif', `Inversion du mouvement #${mouvementId} - ${mvt.motif || 'Correction'}`);
+      
+      if (mvt.prix_unitaire_reel) {
+        formData.append('prix_unitaire_reel', mvt.prix_unitaire_reel);
+      }
+      
+      formData.append('observations', `🔄 Mouvement d'inversion du mouvement #${mouvementId}`);
+      
+      // Enregistrer le mouvement inverse
+      const createResponse = await fetch('/api/v1/stock/api/mouvements', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const createResult = await createResponse.json();
+      
+      if (createResult.success) {
+        hideGlobalLoading();
+        showSuccess('✅ Mouvement inversé avec succès !');
+        setTimeout(() => {
+          showGlobalLoading('Actualisation...', 'Rechargement de la page');
+          window.location.reload();
+        }, 1500);
+      } else {
+        hideGlobalLoading();
+        showError(createResult.error || 'Erreur lors de l\'inversion');
+      }
+    } else {
+      hideGlobalLoading();
+      showError('Impossible de récupérer les détails du mouvement');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+console.log('✅ Page mouvements de stock chargée');
+</script>
+{% endblock %}
+

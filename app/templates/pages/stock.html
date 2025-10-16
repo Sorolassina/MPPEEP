@@ -1,0 +1,464 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Gestion des Stocks - {{ app_name }}</body>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ========== STOCK PAGE STYLES ========== */
+
+/* KPIs */
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.kpi {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s;
+}
+
+.kpi:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.kpi.rupture {
+    border-left-color: var(--danger-color);
+    background: linear-gradient(135deg, #fee 0%, #fdd 100%);
+}
+
+.kpi.rupture:hover {
+    animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-danger {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+    50% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
+}
+
+.kpi .label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.kpi .val {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+/* Actions Grid - Une seule ligne */
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+    .actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Les action-card utilisent les styles .action-button de buttons.css */
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='📦 Gestion des Stocks',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Stocks'}
+    ],
+    actions=[
+        {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
+    ]
+) }}
+
+<div class="page-grid">
+
+  <!-- KPIs et Statistiques -->
+  <div class="card">
+    <h2 style="margin: 0 0 1.5rem 0; color: #222; font-size: 1.3rem;">📊 Statistiques et Indicateurs</h2>
+    
+    <!-- KPIs Articles -->
+    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">📦 Articles</h3>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Total Articles</div>
+        <div class="val" id="kpi-total-articles">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Articles Actifs</div>
+        <div class="val" id="kpi-actifs">—</div>
+      </div>
+      <div class="kpi rupture">
+        <div class="label">En Rupture</div>
+        <div class="val" id="kpi-rupture">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Valeur Stock</div>
+        <div class="val" id="kpi-valeur">—</div>
+      </div>
+    </div>
+    
+    <!-- KPIs Demandes -->
+    <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem 0; color: #666;">📋 Demandes</h3>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Total Demandes</div>
+        <div class="val" id="kpi-total-demandes">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">En Attente</div>
+        <div class="val" id="kpi-demandes-attente">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Validées</div>
+        <div class="val" id="kpi-demandes-validees">—</div>
+      </div>
+    </div>
+    
+    <!-- KPIs Mouvements -->
+    <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem 0; color: #666;">🔄 Mouvements du Mois</h3>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Entrées</div>
+        <div class="val" id="kpi-entrees">—</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Sorties</div>
+        <div class="val" id="kpi-sorties">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alertes Stock -->
+  <div class="card" id="alertes-section" style="display: none;">
+    <h2 style="margin: 0 0 1.5rem 0; color: #222; font-size: 1.3rem;">🚨 Alertes Stock</h2>
+    
+    <!-- Ruptures de stock -->
+    <div id="alertes-rupture" style="display: none; margin-bottom: 1rem;">
+      <h3 style="font-size: 1rem; color: var(--danger-color); margin-bottom: 0.5rem;">⛔ Ruptures de Stock</h3>
+      <div id="liste-ruptures" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+    </div>
+    
+    <!-- Stock faible -->
+    <div id="alertes-faible" style="display: none; margin-bottom: 1rem;">
+      <h3 style="font-size: 1rem; color: var(--warning-color); margin-bottom: 0.5rem;">⚠️ Stock Faible</h3>
+      <div id="liste-faible" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+    </div>
+  </div>
+
+  <!-- Graphiques -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+    
+    <!-- Graphique Mouvements -->
+    <div class="card">
+      <h3 style="margin: 0 0 1rem 0; color: var(--secondary-color);">📊 Mouvements (12 derniers mois)</h3>
+      <canvas id="chartMouvements" style="max-height: 300px;"></canvas>
+    </div>
+    
+    <!-- Graphique Articles par Catégorie -->
+    <div class="card">
+      <h3 style="margin: 0 0 1rem 0; color: var(--secondary-color);">🏷️ Articles par Catégorie</h3>
+      <canvas id="chartCategories" style="max-height: 300px;"></canvas>
+    </div>
+    
+  </div>
+
+  <!-- Actions Rapides -->
+  <div class="card">
+    <h2 style="margin: 0 0 1.5rem 0; color: #222; font-size: 1.3rem;">⚡ Actions Rapides</h2>
+    
+    <div class="actions-grid">
+      <a href="{{ url_for('stock_articles') }}" class="action-button">
+        <span class="action-icon">📦</span>
+        <span class="action-text">Gérer les Articles</span>
+      </a>
+      
+      <a href="{{ url_for('stock_mouvements') }}" class="action-button">
+        <span class="action-icon">🔄</span>
+        <span class="action-text">Enregistrer un Mouvement</span>
+      </a>
+      
+      <a href="{{ url_for('stock_demandes') }}" class="action-button">
+        <span class="action-icon">📋</span>
+        <span class="action-text">Demandes de Stock</span>
+      </a>
+      
+      <a href="{{ url_for('stock_inventaires') }}" class="action-button">
+        <span class="action-icon">📊</span>
+        <span class="action-text">Inventaires</span>
+      </a>
+      
+      <a href="{{ url_for('stock_fournisseurs') }}" class="action-button">
+        <span class="action-icon">🏢</span>
+        <span class="action-text">Fournisseurs</span>
+      </a>
+      
+      <a href="{{ url_for('stock_rapports') }}" class="action-button">
+        <span class="action-icon">📈</span>
+        <span class="action-text">Rapports</span>
+      </a>
+    </div>
+  </div>
+  
+</div>
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Variables globales pour les graphiques
+let chartMouvements = null;
+let chartCategories = null;
+
+// Charger les KPIs et alertes au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  loadKPIs();
+  loadAlertes();
+  loadChartMouvements();
+  loadChartCategories();
+});
+
+async function loadKPIs() {
+  try {
+    const response = await fetch('/api/v1/stock/api/kpis');
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      
+      // Articles
+      document.getElementById('kpi-total-articles').textContent = data.total_articles;
+      document.getElementById('kpi-actifs').textContent = data.articles_actifs;
+      document.getElementById('kpi-rupture').textContent = data.articles_rupture;
+      
+      // Valeur du stock (formater en FCFA)
+      const valeur = new Intl.NumberFormat('fr-FR').format(data.valeur_stock);
+      document.getElementById('kpi-valeur').textContent = valeur + ' F';
+      
+      // Demandes
+      document.getElementById('kpi-total-demandes').textContent = data.total_demandes;
+      document.getElementById('kpi-demandes-attente').textContent = data.demandes_en_attente;
+      document.getElementById('kpi-demandes-validees').textContent = data.demandes_validees;
+      
+      // Mouvements
+      document.getElementById('kpi-entrees').textContent = data.mouvements_entree;
+      document.getElementById('kpi-sorties').textContent = data.mouvements_sortie;
+    }
+  } catch (error) {
+    console.error('Erreur chargement KPIs:', error);
+  }
+}
+
+async function loadAlertes() {
+  try {
+    const response = await fetch('/api/v1/stock/api/alertes');
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      const alertesSection = document.getElementById('alertes-section');
+      
+      // Afficher les ruptures de stock
+      if (data.ruptures && data.ruptures.length > 0) {
+        const divRupture = document.getElementById('alertes-rupture');
+        const listeRuptures = document.getElementById('liste-ruptures');
+        
+        listeRuptures.innerHTML = data.ruptures.map(a => `
+          <div style="padding: 0.75rem; background: var(--danger-light); border-left: 4px solid var(--danger-color); border-radius: 8px;">
+            <strong>${a.code}</strong> - ${a.designation}
+            <span style="color: var(--danger-dark); margin-left: 1rem;">
+              Stock: ${a.stock} ${a.unite} / Min: ${a.stock_min} ${a.unite}
+            </span>
+          </div>
+        `).join('');
+        
+        divRupture.style.display = 'block';
+        alertesSection.style.display = 'block';
+      }
+      
+      // Afficher les stocks faibles
+      if (data.stock_faible && data.stock_faible.length > 0) {
+        const divFaible = document.getElementById('alertes-faible');
+        const listeFaible = document.getElementById('liste-faible');
+        
+        listeFaible.innerHTML = data.stock_faible.map(a => `
+          <div style="padding: 0.75rem; background: var(--warning-light); border-left: 4px solid var(--warning-color); border-radius: 8px;">
+            <strong>${a.code}</strong> - ${a.designation}
+            <span style="color: var(--warning-dark); margin-left: 1rem;">
+              Stock: ${a.stock} ${a.unite} / Min: ${a.stock_min} ${a.unite}
+              <span style="font-weight: 600;">(${a.pourcentage.toFixed(0)}%)</span>
+            </span>
+          </div>
+        `).join('');
+        
+        divFaible.style.display = 'block';
+        alertesSection.style.display = 'block';
+      }
+    }
+  } catch (error) {
+    console.error('Erreur chargement alertes:', error);
+  }
+}
+
+// Graphique des mouvements
+async function loadChartMouvements() {
+  try {
+    const response = await fetch('/api/v1/stock/api/stats/mouvements-mois');
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      
+      // Préparer les labels (mois/année)
+      const moisNoms = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+      const labels = [];
+      const entrees = [];
+      const sorties = [];
+      
+      // Créer un map pour les 12 derniers mois
+      const now = new Date();
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mois = d.getMonth() + 1;
+        const annee = d.getFullYear();
+        labels.push(`${moisNoms[d.getMonth()]} ${annee}`);
+        
+        // Trouver les données correspondantes
+        const entree = data.entrees.find(e => e.mois === mois && e.annee === annee);
+        const sortie = data.sorties.find(s => s.mois === mois && s.annee === annee);
+        
+        entrees.push(entree ? entree.count : 0);
+        sorties.push(sortie ? sortie.count : 0);
+      }
+      
+      const ctx = document.getElementById('chartMouvements');
+      if (chartMouvements) chartMouvements.destroy();
+      
+      chartMouvements = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Entrées',
+              data: entrees,
+              borderColor: 'rgb(40, 167, 69)',
+              backgroundColor: 'rgba(40, 167, 69, 0.1)',
+              tension: 0.4
+            },
+            {
+              label: 'Sorties',
+              data: sorties,
+              borderColor: 'rgb(220, 53, 69)',
+              backgroundColor: 'rgba(220, 53, 69, 0.1)',
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erreur chargement graphique mouvements:', error);
+  }
+}
+
+// Graphique des articles par catégorie
+async function loadChartCategories() {
+  try {
+    const response = await fetch('/api/v1/stock/api/stats/articles-categorie');
+    const result = await response.json();
+    
+    if (result.success && result.data.length > 0) {
+      const data = result.data;
+      
+      const labels = data.map(d => d.categorie);
+      const counts = data.map(d => d.count);
+      
+      // Générer des couleurs dynamiques
+      const colors = [
+        'rgba(102, 126, 234, 0.8)',
+        'rgba(118, 75, 162, 0.8)',
+        'rgba(40, 167, 69, 0.8)',
+        'rgba(255, 193, 7, 0.8)',
+        'rgba(220, 53, 69, 0.8)',
+        'rgba(23, 162, 184, 0.8)',
+      ];
+      
+      const ctx = document.getElementById('chartCategories');
+      if (chartCategories) chartCategories.destroy();
+      
+      chartCategories = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: counts,
+            backgroundColor: colors.slice(0, labels.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erreur chargement graphique catégories:', error);
+  }
+}
+</script>
+</body>
+{% endblock %}
+

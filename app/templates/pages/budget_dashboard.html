@@ -1,948 +1,24 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
 {% block title %}Suivi Budgétaire - {{ app_name }}{% endblock %}
 
-{% block styles %}
-<style>
-/* ============================================
-   VARIABLES & BASE
-   ============================================ */
-:root {
-  --budget-primary: #667eea;
-  --budget-secondary: #764ba2;
-  --budget-success: #10b981;
-  --budget-warning: #f59e0b;
-  --budget-danger: #ef4444;
-  --budget-info: #3b82f6;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
-  --shadow-xl: 0 20px 60px rgba(0,0,0,0.15);
-}
-
-/* Container principal */
-.budget-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e3e8f0 100%);
-  padding: 2rem;
-}
-
-.budget-layout {
-  max-width: 1800px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* ============================================
-   HEADER ROW (Profil + Titre en ligne)
-   ============================================ */
-.header-row {
-  background: white;
-  border-radius: 24px;
-  padding: 1.5rem 2rem;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
-
-/* User Profile (à gauche) */
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-.user-avatar {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.75rem;
-  font-weight: 700;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.user-avatar::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
-  transform: rotate(45deg);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%) rotate(45deg); }
-  100% { transform: translateX(100%) rotate(45deg); }
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-weight: 700;
-  font-size: 1.05rem;
-  color: #1f2937;
-  margin-bottom: 0.25rem;
-}
-
-.user-role {
-  font-size: 0.85rem;
-  color: #8b5cf6;
-  font-weight: 600;
-}
-
-/* Titre (au centre, flex-1) */
-.header-title {
-  flex: 1;
-}
-
-.header-title h1 {
-  margin: 0 0 0.25rem;
-  font-size: 1.75rem;
-  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 800;
-}
-
-.header-subtitle {
-  color: #6b7280;
-  font-size: 0.95rem;
-}
-
-/* Actions (à droite) */
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.action-btn-sm {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-decoration: none;
-  color: white;
-  transition: all 0.3s;
-  box-shadow: var(--shadow-sm);
-  border: none;
-  cursor: pointer;
-}
-
-.action-btn-sm:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.action-btn-sm.primary {
-  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
-}
-
-.action-btn-sm.secondary {
-  background: linear-gradient(135deg, #f093fb, #f5576c);
-}
-
-.action-btn-sm.print {
-  background: linear-gradient(135deg, #06b6d4, #0284c7);
-}
-
-.action-btn-sm.back {
-  background: linear-gradient(135deg, #6b7280, #4b5563);
-}
-
-/* ============================================
-   FILTERS & ACTIONS ROW (tout en ligne)
-   ============================================ */
-.filters-row {
-  background: white;
-  border-radius: 20px;
-  padding: 1.25rem 1.5rem;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-}
-
-/* Scrollbar personnalisée pour les filtres */
-.filters-row::-webkit-scrollbar {
-  height: 6px;
-}
-
-.filters-row::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-.filters-row::-webkit-scrollbar-thumb {
-  background: var(--budget-primary);
-  border-radius: 10px;
-}
-
-.filters-row::-webkit-scrollbar-thumb:hover {
-  background: #5a6fcc;
-}
-
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.filter-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #4b5563;
-  white-space: nowrap;
-}
-
-.filter-select {
-  min-width: 130px;
-  padding: 0.5rem 0.75rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  background: white;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.filter-select:hover {
-  border-color: var(--budget-primary);
-}
-
-.filter-select:focus {
-  outline: none;
-  border-color: var(--budget-primary);
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-
-/* ============================================
-   KPIs ROW (6 cards en ligne)
-   ============================================ */
-.kpis-row {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 1.25rem;
-}
-
-.kpi-card {
-  background: white;
-  border-radius: 18px;
-  padding: 1.5rem;
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, var(--kpi-color-1), var(--kpi-color-2));
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-  transform-origin: left;
-}
-
-.kpi-card:hover::before {
-  transform: scaleX(1);
-}
-
-.kpi-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-xl);
-}
-
-.kpi-card.budget-actuel {
-  --kpi-color-1: #06b6d4;
-  --kpi-color-2: #0891b2;
-}
-
-.kpi-card.budget-vote {
-  --kpi-color-1: #667eea;
-  --kpi-color-2: #764ba2;
-}
-
-.kpi-card.engagements {
-  --kpi-color-1: #f59e0b;
-  --kpi-color-2: #dc2626;
-}
-
-.kpi-card.mandats-vises {
-  --kpi-color-1: #3b82f6;
-  --kpi-color-2: #1d4ed8;
-}
-
-.kpi-card.mandats-pec {
-  --kpi-color-1: #10b981;
-  --kpi-color-2: #059669;
-}
-
-.kpi-card.disponible {
-  --kpi-color-1: #8b5cf6;
-  --kpi-color-2: #7c3aed;
-}
-
-.kpi-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-.kpi-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--kpi-color-1), var(--kpi-color-2));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-  font-size: 0.8rem;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
-}
-
-.kpi-badge {
-  padding: 0.4rem 0.75rem;
-  border-radius: 16px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--kpi-color-1), var(--kpi-color-2));
-  color: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.kpi-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.kpi-amount {
-  font-size: 1.75rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--kpi-color-1), var(--kpi-color-2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1.2;
-  margin-bottom: 0.25rem;
-}
-
-.kpi-subtitle {
-  font-size: 0.9rem;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-/* ============================================
-   STATS SECTION (2 colonnes)
-   ============================================ */
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
-.stats-card {
-  background: white;
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: var(--shadow-md);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f3f4f6;
-}
-
-.card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--budget-primary), var(--budget-secondary));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.25rem;
-}
-
-.card-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-/* Programme bars */
-.prog-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-/* Programme Cards - Style Neumorphique Moderne */
-.prog-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.prog-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-radius: 14px;
-  background: #f9f9f9;
-  box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
-  transition: all 0.3s ease;
-}
-
-.prog-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 3px 3px 10px #d1d9e6, -3px -3px 10px #ffffff;
-}
-
-.prog-card-left {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  flex: 1;
-}
-
-.prog-card-icon {
-  min-width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: white;
-  box-shadow: 4px 4px 8px #d1d9e6, -2px -2px 6px #ffffff;
-  flex-shrink: 0;
-}
-
-.prog-card-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.prog-card-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333;
-  line-height: 1.3;
-}
-
-.prog-card-budget {
-  font-size: 11px;
-  color: #888;
-  margin-bottom: 4px;
-}
-
-.prog-card-bar-container {
-  position: relative;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.1);
-}
-
-.prog-card-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #34d399);
-  border-radius: 6px;
-  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.prog-card-bar-shimmer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-  animation: shimmer-prog 2.5s infinite;
-  display: block;
-}
-
-@keyframes shimmer-prog {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.prog-card-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  min-width: 70px;
-}
-
-.prog-card-percent {
-  font-weight: 700;
-  font-size: 18px;
-  line-height: 1;
-}
-
-.prog-card-percent.high {
-  color: #10b981;
-}
-
-.prog-card-percent.low {
-  color: #f59e0b;
-}
-
-.prog-card-label {
-  font-size: 10px;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Nature cards */
-.nature-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-/* Nature de Dépenses - Style Neumorphique */
-.nature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.nature-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px;
-  border-radius: 12px;
-  background: #f9f9f9;
-  box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
-  transition: all 0.3s ease;
-}
-
-.nature-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 2px 2px 8px #d1d9e6, -2px -2px 8px #ffffff;
-}
-
-.nature-item-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.nature-item-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #eeeeee;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: #555;
-  box-shadow: 3px 3px 6px #d1d9e6, -3px -3px 6px #ffffff;
-}
-
-.nature-item-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nature-item-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333;
-}
-
-.nature-item-budget {
-  font-size: 12px;
-  color: #777;
-}
-
-.nature-item-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.nature-item-percent {
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.nature-item-percent.positive {
-  color: #27ae60;
-}
-
-.nature-item-percent.negative {
-  color: #c0392b;
-}
-
-.nature-item-date {
-  font-size: 10px;
-  color: #aaa;
-}
-
-.nature-icon-wrap {
-  width: 54px;
-  height: 54px;
-  border-radius: 14px;
-  background: var(--nature-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 800;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
-  flex-shrink: 0;
-}
-
-.nature-info {
-  flex: 1;
-}
-
-.nature-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #1f2937;
-  margin-bottom: 0.25rem;
-}
-
-.nature-budget {
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.nature-percent {
-  font-weight: 800;
-  font-size: 1.25rem;
-  background: var(--nature-color);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================
-   VARIATION SECTION
-   ============================================ */
-.variation-container {
-  background: white;
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: var(--shadow-md);
-  grid-column: 1 / -1;
-}
-
-.variation-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 3rem;
-  align-items: center;
-}
-
-.bars-wrapper {
-  display: flex;
-  gap: 2.5rem;
-  align-items: flex-end;
-}
-
-.bar-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.bar-container {
-  width: 28px;
-  height: 130px;
-  background: #f3f4f6;
-  border-radius: 14px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.08);
-}
-
-.bar-fill {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  border-radius: 14px;
-  transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.bar-fill.positive {
-  background: linear-gradient(180deg, #10b981, #059669);
-}
-
-.bar-fill.negative {
-  background: linear-gradient(180deg, #ef4444, #dc2626);
-}
-
-.bar-value {
-  font-weight: 800;
-  font-size: 1.1rem;
-}
-
-.bar-value.positive { color: #10b981; }
-.bar-value.negative { color: #ef4444; }
-
-.bar-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #4b5563;
-}
-
-.bar-previous {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
-
-.legend-box {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: #f9fafb;
-  border-radius: 16px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 5px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-.legend-text {
-  font-size: 0.9rem;
-  color: #4b5563;
-}
-
-.legend-text strong {
-  color: #1f2937;
-  font-weight: 700;
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-
-/* Desktop : forcer les filtres en ligne */
-@media (min-width: 901px) {
-  .filters-row {
-    flex-wrap: nowrap !important;
-  }
-}
-
-@media (max-width: 1600px) {
-  .kpis-row {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 1200px) {
-  .kpis-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 900px) {
-  .header-row {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .user-profile {
-    flex-direction: column;
-  }
-  
-  .header-actions {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .filters-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .filter-group {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .quick-actions {
-    margin-left: 0;
-    width: 100%;
-    flex-direction: column;
-  }
-  
-  .filters-divider {
-    display: none;
-  }
-  
-  .kpis-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .variation-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media print {
-  .header-actions,
-  .quick-actions,
-  .action-btn-sm {
-    display: none !important;
-  }
-  
-  .budget-container {
-    background: white;
-    padding: 0;
-  }
-  
-  .kpi-card,
-  .stats-card,
-  .variation-container {
-    page-break-inside: avoid;
-    box-shadow: none;
-    border: 1px solid #e5e7eb;
-  }
-}
-
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.header-row { animation: fadeInUp 0.4s ease-out; }
-.filters-row { animation: fadeInUp 0.5s ease-out; }
-.kpi-card { animation: fadeInUp 0.6s ease-out backwards; }
-.stats-card { animation: fadeInUp 0.7s ease-out backwards; }
-.variation-container { animation: fadeInUp 0.8s ease-out backwards; }
-
-.kpi-card:nth-child(1) { animation-delay: 0.05s; }
-.kpi-card:nth-child(2) { animation-delay: 0.1s; }
-.kpi-card:nth-child(3) { animation-delay: 0.15s; }
-.kpi-card:nth-child(4) { animation-delay: 0.2s; }
-.kpi-card:nth-child(5) { animation-delay: 0.25s; }
-.kpi-card:nth-child(6) { animation-delay: 0.3s; }
-</style>
-{% endblock %}
-
 {% block content %}
+{{ page_header(
+    title='💰 Suivi Budgétaire ' + annee|string + (' - Trimestre ' + trimestre|string if trimestre else ''),
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget'}
+    ],
+    actions=[
+        {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False},
+        {'label': '📋 Fiches Techniques', 'url': url_for('budget_fiches_hierarchique'), 'primary': False},
+        {'label': '📊 SIGOBE', 'url': url_for('budget_sigobe'), 'primary': True}
+    ]
+) }}
+
 <div class="budget-container">
   <div class="budget-layout">
-    
-    <!-- ========== ROW 1 : PROFIL + TITRE + ACTIONS ========== -->
-    <div class="header-row">
-      <!-- Profil utilisateur (gauche) -->
-      <div class="user-profile">
-        <div class="user-avatar">
-          {{ current_user.full_name[0] if current_user.full_name else 'U' }}
-        </div>
-        <div class="user-info">
-          <div class="user-name">{{ current_user.full_name or current_user.email }}</div>
-          <div class="user-role">DAAF - MPPEEP</div>
-        </div>
-      </div>
-      
-      <!-- Titre (centre) -->
-      <div class="header-title">
-        <h1>💰 Suivi Budgétaire {{ annee }}{% if trimestre %} - Trimestre {{ trimestre }}{% endif %}</h1>
-        <p class="header-subtitle">Tableau de bord de l'exécution budgétaire en temps réel</p>
-      </div>
-      
-      <!-- Actions (droite) -->
-      <div class="header-actions">
-        <a href="{{ url_for('budget_fiches_hierarchique') }}" class="action-btn-sm primary">
-          📋 Fiches Techniques
-        </a>
-        <a href="{{ url_for('budget_sigobe') }}" class="action-btn-sm secondary" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-          📊 SIGOBE
-        </a>
-        <a href="{{ url_for('accueil') }}" class="action-btn-sm back">
-          ← Retour
-        </a>
-      </div>
-    </div>
 
     <!-- ========== ROW 2 : FILTRES (Période, Programme, Nature) ========== -->
     <div class="filters-row">
@@ -996,75 +72,78 @@
       </div>
     </div>
 
-    <!-- ========== ROW 3 : 6 KPIs EN LIGNE ========== -->
-    <div class="kpis-row">
-      
-      <!-- Budget Actuel -->
-      <div class="kpi-card budget-actuel">
-        <div class="kpi-header">
-          <div class="kpi-icon">BA</div>
-          <div class="kpi-badge">100%</div>
-        </div>
-        <div class="kpi-title">Budget Actuel</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(budget_actuel_total) }} FCFA</div>
-        <div class="kpi-subtitle">Budget en vigueur</div>
+    <!-- ========== ROW 3 : KPIs EXECUTION BUDGETAIRE ========== -->
+    <div class="kpis-container">
+      <div class="kpis-header">
+        <div class="header-icon"></div>
+        <div class="header-title">Exécution Budgétaire (FCFA)</div>
       </div>
-      
-      <!-- Budget Voté -->
-      <div class="kpi-card budget-vote">
-        <div class="kpi-header">
-          <div class="kpi-icon">BV</div>
-          <div class="kpi-badge">100%</div>
+      <div class="kpis-list">
+        <!-- Budget Actuel -->
+        <div class="kpi-item">
+          <div class="kpi-item-top">
+            <div class="kpi-item-icon">BV</div>
+            <div class="kpi-item-details">
+              <div class="kpi-item-name">Budg. Actuel</div>
+              <div class="kpi-item-percent">100%</div>
+            </div>
+          </div>
+          <div class="kpi-item-amount">{{ "{:,.0f}".format(budget_actuel_total) }}</div>
+          <div class="kpi-item-date">{{ annee }}</div>
         </div>
-        <div class="kpi-title">Budget Voté</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(budget_vote_total) }} FCFA</div>
-        <div class="kpi-subtitle">Loi de finances</div>
-      </div>
-      
-      <!-- Engagements -->
-      <div class="kpi-card engagements">
-        <div class="kpi-header">
-          <div class="kpi-icon">ENG</div>
-          <div class="kpi-badge">{{ "{:.1f}".format(taux_engagement) }}%</div>
+        
+        <!-- Engagements -->
+        <div class="kpi-item">
+          <div class="kpi-item-top">
+            <div class="kpi-item-icon">Eng</div>
+            <div class="kpi-item-details">
+              <div class="kpi-item-name">Engagements</div>
+              <div class="kpi-item-percent">{{ "{:.2f}".format(taux_engagement) }}%</div>
+            </div>
+          </div>
+          <div class="kpi-item-amount">{{ "{:,.0f}".format(engagements_total) }}</div>
+          <div class="kpi-item-date">{{ annee }}</div>
         </div>
-        <div class="kpi-title">Engagements</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(engagements_total) }} FCFA</div>
-        <div class="kpi-subtitle">Budget engagé</div>
-      </div>
-      
-      <!-- Mandats Visés -->
-      <div class="kpi-card mandats-vises">
-        <div class="kpi-header">
-          <div class="kpi-icon">MV</div>
-          <div class="kpi-badge">{{ "{:.1f}".format((mandats_vises_total / engagements_total * 100) if engagements_total > 0 else 0) }}%</div>
+        
+        <!-- Mandats Visés -->
+        <div class="kpi-item">
+          <div class="kpi-item-top">
+            <div class="kpi-item-icon">MV</div>
+            <div class="kpi-item-details">
+              <div class="kpi-item-name">Mand. Visés</div>
+              <div class="kpi-item-percent">{{ "{:.2f}".format((mandats_vises_total / engagements_total * 100) if engagements_total > 0 else 0) }}%</div>
+            </div>
+          </div>
+          <div class="kpi-item-amount">{{ "{:,.0f}".format(mandats_vises_total) }}</div>
+          <div class="kpi-item-date">{{ annee }}</div>
         </div>
-        <div class="kpi-title">Mandats Visés</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_vises_total) }} FCFA</div>
-        <div class="kpi-subtitle">Mandats émis</div>
-      </div>
-      
-      <!-- Mandats PEC -->
-      <div class="kpi-card mandats-pec">
-        <div class="kpi-header">
-          <div class="kpi-icon">PEC</div>
-          <div class="kpi-badge">{{ "{:.1f}".format(taux_mandatement_pec) }}%</div>
+        
+        <!-- Mandats PEC -->
+        <div class="kpi-item">
+          <div class="kpi-item-top">
+            <div class="kpi-item-icon">MP</div>
+            <div class="kpi-item-details">
+              <div class="kpi-item-name">Mand. PEC</div>
+              <div class="kpi-item-percent">{{ "{:.2f}".format(taux_mandatement_pec) }}%</div>
+            </div>
+          </div>
+          <div class="kpi-item-amount">{{ "{:,.0f}".format(mandats_pec_total) }}</div>
+          <div class="kpi-item-date">{{ annee }}</div>
         </div>
-        <div class="kpi-title">Mandats Payés</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(mandats_pec_total) }} FCFA</div>
-        <div class="kpi-subtitle">Décaissements</div>
-      </div>
-      
-      <!-- Disponible -->
-      <div class="kpi-card disponible">
-        <div class="kpi-header">
-          <div class="kpi-icon">DIS</div>
-          <div class="kpi-badge">{{ "{:.1f}".format(taux_execution_global) }}%</div>
+        
+        <!-- Disponible -->
+        <div class="kpi-item">
+          <div class="kpi-item-top">
+            <div class="kpi-item-icon">Dis</div>
+            <div class="kpi-item-details">
+              <div class="kpi-item-name">Disponible</div>
+              <div class="kpi-item-percent">{{ "{:.2f}".format(taux_execution_global) }}%</div>
+            </div>
+          </div>
+          <div class="kpi-item-amount">{{ "{:,.0f}".format(disponible_eng_total) }}</div>
+          <div class="kpi-item-date">{{ annee }}</div>
         </div>
-        <div class="kpi-title">Disponible</div>
-        <div class="kpi-amount">{{ "{:,.0f}".format(disponible_eng_total) }} FCFA</div>
-        <div class="kpi-subtitle">Reste à engager</div>
       </div>
-      
     </div>
 
     <!-- ========== ROW 4 : STATS (2 colonnes) ========== -->
@@ -1154,84 +233,93 @@
       
       {% if variation_engagement is not none %}
       <div class="variation-grid">
-        <div class="bars-wrapper">
-          <!-- Taux Engagement -->
-          <div class="bar-column">
-            <div class="bar-container">
-              {% set bar_height = [variation_engagement|abs, 100]|min %}
-              <div class="bar-fill {% if variation_engagement >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
+        <div class="bars-and-legend">
+          <div class="bars-wrapper">
+            <!-- Taux Engagement -->
+            <div class="bar-column">
+              <div class="bar-container">
+                {% set bar_height = [variation_engagement|abs, 100]|min %}
+                <div class="bar-fill {% if variation_engagement >= 0 %}positive{% else %}negative{% endif %}" style="--bar-height: {{ bar_height }}%;"></div>
+              </div>
+              <div class="bar-value {% if variation_engagement >= 0 %}positive{% else %}negative{% endif %}">
+                {% if variation_engagement >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_engagement) }}%
+              </div>
+              <div class="bar-label">Tx Eng.</div>
+              <div class="bar-previous">N-1: {{ "{:.1f}".format(taux_engagement_n1) if taux_engagement_n1 is not none else 'N/A' }}%</div>
             </div>
-            <div class="bar-value {% if variation_engagement >= 0 %}positive{% else %}negative{% endif %}">
-              {% if variation_engagement >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_engagement) }}%
+            
+            <!-- Taux Mandatement Visé -->
+            <div class="bar-column">
+              <div class="bar-container">
+                {% set bar_height = [variation_mandatement_vise|abs, 100]|min if variation_mandatement_vise is not none else 0 %}
+                <div class="bar-fill {% if variation_mandatement_vise is not none and variation_mandatement_vise >= 0 %}positive{% else %}negative{% endif %}" style="--bar-height: {{ bar_height }}%;"></div>
+              </div>
+              <div class="bar-value {% if variation_mandatement_vise is not none and variation_mandatement_vise >= 0 %}positive{% else %}negative{% endif %}">
+                {% if variation_mandatement_vise is not none %}
+                  {% if variation_mandatement_vise >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_mandatement_vise) }}%
+                {% else %}
+                  N/A
+                {% endif %}
+              </div>
+              <div class="bar-label">Tx. MV</div>
+              <div class="bar-previous">N-1: {{ "{:.1f}".format(taux_mandatement_vise_n1) if taux_mandatement_vise_n1 is not none else 'N/A' }}%</div>
             </div>
-            <div class="bar-label">Tx Eng.</div>
-            <div class="bar-previous">N-1: {{ taux_engagement_n1 }}%</div>
+            
+            <!-- Taux PEC -->
+            <div class="bar-column">
+              <div class="bar-container">
+                {% set bar_height = [variation_mandatement_pec|abs, 100]|min if variation_mandatement_pec is not none else 0 %}
+                <div class="bar-fill {% if variation_mandatement_pec is not none and variation_mandatement_pec >= 0 %}positive{% else %}negative{% endif %}" style="--bar-height: {{ bar_height }}%;"></div>
+              </div>
+              <div class="bar-value {% if variation_mandatement_pec is not none and variation_mandatement_pec >= 0 %}positive{% else %}negative{% endif %}">
+                {% if variation_mandatement_pec is not none %}
+                  {% if variation_mandatement_pec >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_mandatement_pec) }}%
+                {% else %}
+                  N/A
+                {% endif %}
+              </div>
+              <div class="bar-label">Tx M.PEC</div>
+              <div class="bar-previous">N-1: {{ "{:.1f}".format(taux_mandatement_pec_n1) if taux_mandatement_pec_n1 is not none else 'N/A' }}%</div>
+            </div>
+            
+            <!-- Taux Exécution Global -->
+            <div class="bar-column">
+              <div class="bar-container">
+                {% set bar_height = [variation_execution_global|abs, 100]|min if variation_execution_global is not none else 0 %}
+                <div class="bar-fill {% if variation_execution_global is not none and variation_execution_global >= 0 %}positive{% else %}negative{% endif %}" style="--bar-height: {{ bar_height }}%;"></div>
+              </div>
+              <div class="bar-value {% if variation_execution_global is not none and variation_execution_global >= 0 %}positive{% else %}negative{% endif %}">
+                {% if variation_execution_global is not none %}
+                  {% if variation_execution_global >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_execution_global) }}%
+                {% else %}
+                  N/A
+                {% endif %}
+              </div>
+              <div class="bar-label">Tx E.G</div>
+              <div class="bar-previous">N-1: {{ "{:.1f}".format(taux_execution_global_n1) if taux_execution_global_n1 is not none else 'N/A' }}%</div>
+            </div>
           </div>
           
-          <!-- Taux Mandatement Visé -->
-          <div class="bar-column">
-            <div class="bar-container">
-              {% set bar_height = [variation_mandatement_vise|abs, 100]|min if variation_mandatement_vise is not none else 0 %}
-              <div class="bar-fill {% if variation_mandatement_vise is not none and variation_mandatement_vise >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
+          <div class="legend-box">
+            <div class="legend-item">
+              <div class="legend-color positive"></div>
+              <div class="legend-text">Variation (+)</div>
             </div>
-            <div class="bar-value {% if variation_mandatement_vise is not none and variation_mandatement_vise >= 0 %}positive{% else %}negative{% endif %}">
-              {% if variation_mandatement_vise is not none %}
-                {% if variation_mandatement_vise >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_mandatement_vise) }}%
-              {% else %}
-                N/A
-              {% endif %}
+            <div class="legend-item">
+              <div class="legend-color negative"></div>
+              <div class="legend-text">Variation (-)</div>
             </div>
-            <div class="bar-label">Tx MV</div>
-            <div class="bar-previous">N-1: {{ taux_mandatement_vise_n1 if taux_mandatement_vise_n1 is not none else 'N/A' }}%</div>
-          </div>
-          
-          <!-- Taux PEC -->
-          <div class="bar-column">
-            <div class="bar-container">
-              {% set bar_height = [variation_mandatement_pec|abs, 100]|min if variation_mandatement_pec is not none else 0 %}
-              <div class="bar-fill {% if variation_mandatement_pec is not none and variation_mandatement_pec >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
+            <div class="legend-item">
+              <div class="legend-text">Eng. : Engagement</div>
             </div>
-            <div class="bar-value {% if variation_mandatement_pec is not none and variation_mandatement_pec >= 0 %}positive{% else %}negative{% endif %}">
-              {% if variation_mandatement_pec is not none %}
-                {% if variation_mandatement_pec >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_mandatement_pec) }}%
-              {% else %}
-                N/A
-              {% endif %}
+            <div class="legend-item">
+              <div class="legend-text">MV : Mandats Visés</div>
             </div>
-            <div class="bar-label">Tx PEC</div>
-            <div class="bar-previous">N-1: {{ taux_mandatement_pec_n1 if taux_mandatement_pec_n1 is not none else 'N/A' }}%</div>
-          </div>
-          
-          <!-- Taux Exécution Global -->
-          <div class="bar-column">
-            <div class="bar-container">
-              {% set bar_height = [variation_execution_global|abs, 100]|min if variation_execution_global is not none else 0 %}
-              <div class="bar-fill {% if variation_execution_global is not none and variation_execution_global >= 0 %}positive{% else %}negative{% endif %}" style="height: {{ bar_height }}%;"></div>
+            <div class="legend-item">
+              <div class="legend-text">MPEC : Mandat PEC</div>
             </div>
-            <div class="bar-value {% if variation_execution_global is not none and variation_execution_global >= 0 %}positive{% else %}negative{% endif %}">
-              {% if variation_execution_global is not none %}
-                {% if variation_execution_global >= 0 %}+{% endif %}{{ "{:.1f}".format(variation_execution_global) }}%
-              {% else %}
-                N/A
-              {% endif %}
-            </div>
-            <div class="bar-label">Tx Global</div>
-            <div class="bar-previous">N-1: {{ taux_execution_global_n1 if taux_execution_global_n1 is not none else 'N/A' }}%</div>
-          </div>
-        </div>
-        
-        <div class="legend-box">
-          <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #10b981, #059669);"></div>
-            <div class="legend-text"><strong>Variation Positive (+)</strong> : Amélioration des performances budgétaires</div>
-          </div>
-          <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #ef4444, #dc2626);"></div>
-            <div class="legend-text"><strong>Variation Négative (-)</strong> : Baisse par rapport à l'année N-1</div>
-          </div>
-          <div class="legend-item">
-            <div class="legend-text" style="font-size: 0.85rem; color: #6b7280;">
-              <strong>Eng.</strong> Engagement • <strong>MV</strong> Mandats Visés • <strong>PEC</strong> Pris En Charge • <strong>Tx Global</strong> Taux d'Exécution Globale
+            <div class="legend-item">
+              <div class="legend-text">E.G : Exécution Globale</div>
             </div>
           </div>
         </div>
@@ -1250,8 +338,963 @@
       {% endif %}
     </div>
 
+    <!-- ========== ROW 6 : EVOLUTION TAUX D'EXECUTION N vs N-1 ========== -->
+    <div class="execution-evolution-container">
+      <div class="card-header">
+        <div class="card-icon">📊</div>
+        <div class="card-title">Évolution du Taux d'Exécution Globale</div>
+      </div>
+      
+      <!-- Définition des gradients SVG -->
+      <svg style="width: 0; height: 0; position: absolute;">
+        <defs>
+          <linearGradient id="gradient-n1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#fa709a;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#fee140;stop-opacity:1" />
+          </linearGradient>
+          <linearGradient id="gradient-current" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#43e97b;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#38f9d7;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+      </svg>
+      
+      <div class="execution-comparison">
+        <!-- Année N-1 -->
+        <div class="execution-year">
+          <div class="execution-year-label">Année {{ annee - 1 }}</div>
+          <div class="execution-circle-container">
+            <svg class="execution-circle" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="80" class="circle-bg"></circle>
+              <circle cx="100" cy="100" r="80" class="circle-progress n-1" 
+                      style="--progress: {{ (taux_execution_global_n1 if taux_execution_global_n1 is not none else 0) }}"></circle>
+            </svg>
+            <div class="execution-value">
+              <div class="execution-percent">{{ "{:.1f}".format(taux_execution_global_n1) if taux_execution_global_n1 is not none else 'N/A' }}%</div>
+              <div class="execution-label">Exécution N-1</div>
+            </div>
+          </div>
+          <div class="execution-details">
+            <div class="execution-detail-item">
+              <span class="detail-label">Budget :</span>
+              <span class="detail-value">{{ "{:,.0f}".format(budget_actuel_total) }} FCFA</span>
+            </div>
+            <div class="execution-detail-item">
+              <span class="detail-label">Engagé :</span>
+              <span class="detail-value">{{ "{:,.0f}".format(engagements_total) }} FCFA</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Flèche de comparaison -->
+        <div class="execution-arrow">
+          {% if variation_execution_global is not none %}
+            <div class="arrow-value {% if variation_execution_global >= 0 %}positive{% else %}negative{% endif %}">
+              {% if variation_execution_global >= 0 %}
+                ▲<br>+{{ "{:.1f}".format(variation_execution_global) }}%
+              {% else %}
+                ▼<br>{{ "{:.1f}".format(variation_execution_global) }}%
+              {% endif %}
+            </div>
+            <div class="arrow-label">Variation</div>
+          {% else %}
+            <div class="arrow-value neutral">—</div>
+            <div class="arrow-label">N/A</div>
+          {% endif %}
+        </div>
+        
+        <!-- Année N -->
+        <div class="execution-year">
+          <div class="execution-year-label">Année {{ annee }}</div>
+          <div class="execution-circle-container">
+            <svg class="execution-circle" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="80" class="circle-bg"></circle>
+              <circle cx="100" cy="100" r="80" class="circle-progress current" 
+                      style="--progress: {{ taux_execution_global }}"></circle>
+            </svg>
+            <div class="execution-value">
+              <div class="execution-percent">{{ "{:.1f}".format(taux_execution_global) }}%</div>
+              <div class="execution-label">Exécution N</div>
+            </div>
+          </div>
+          <div class="execution-details">
+            <div class="execution-detail-item">
+              <span class="detail-label">Budget :</span>
+              <span class="detail-value">{{ "{:,.0f}".format(budget_actuel_total) }} FCFA</span>
+            </div>
+            <div class="execution-detail-item">
+              <span class="detail-label">Engagé :</span>
+              <span class="detail-value">{{ "{:,.0f}".format(engagements_total) }} FCFA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Message informatif -->
+      <div class="execution-info">
+        💡 <strong>Taux d'Exécution Globale</strong> : Ratio entre les engagements et le budget actuel. 
+        Un taux élevé indique une bonne utilisation du budget alloué.
+      </div>
+    </div>
+
   </div>
 </div>
+
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles spécifiques pour le Budget Dashboard */
+.budget-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Filtres - Répartition équitable */
+.filters-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: var(--white-color);
+    font-size: 0.9rem;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.filter-select:hover {
+    border-color: var(--white-color);
+    background: var(--white-color);
+    transform: translateY(-2px);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--white-color);
+    background: var(--white-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* KPIs - Style Power BI horizontal agrandi */
+.kpis-container {
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-top: 3px solid #43e97b;
+}
+
+.kpis-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(67, 233, 123, 0.1) 0%, rgba(56, 249, 215, 0.1) 100%);
+    border-radius: 10px;
+    border-left: 4px solid #43e97b;
+}
+
+.header-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    border-radius: 8px;
+}
+
+.header-title {
+    font-weight: 600;
+    font-size: 20px;
+    color: #333;
+}
+
+.kpis-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.kpi-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 16px;
+    border-radius: 12px;
+    background: #f9f9f9;
+    box-shadow: inset 3px 3px 6px #ffffff, inset -3px -3px 6px #d1d9e6;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.kpi-item:hover {
+    box-shadow: 3px 3px 8px #d1d9e6, -3px -3px 8px #ffffff;
+    transform: translateY(-2px);
+}
+
+/* Bordures colorées pour chaque KPI */
+.kpi-item:nth-child(1) {
+    border-left-color: #667eea;
+}
+
+.kpi-item:nth-child(2) {
+    border-left-color: #f093fb;
+}
+
+.kpi-item:nth-child(3) {
+    border-left-color: #4facfe;
+}
+
+.kpi-item:nth-child(4) {
+    border-left-color: #43e97b;
+}
+
+.kpi-item:nth-child(5) {
+    border-left-color: #fa709a;
+}
+
+.kpi-item-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.kpi-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #eeeeee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white-color);
+    box-shadow: 4px 4px 8px #d1d9e6, -2px -2px 6px #ffffff;
+}
+
+/* Couleurs spécifiques pour chaque KPI */
+.kpi-item:nth-child(1) .kpi-item-icon {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.kpi-item:nth-child(2) .kpi-item-icon {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+
+.kpi-item:nth-child(3) .kpi-item-icon {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+}
+
+.kpi-item:nth-child(4) .kpi-item-icon {
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+}
+
+.kpi-item:nth-child(5) .kpi-item-icon {
+    background: linear-gradient(135deg, #fa709a, #fee140);
+}
+
+.kpi-item-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.kpi-item-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+}
+
+.kpi-item-percent {
+    font-size: 13px;
+    color: #777;
+}
+
+.kpi-item-amount {
+    font-weight: 700;
+    font-size: 18px;
+    color: #27ae60;
+    margin-top: 8px;
+    line-height: 1.2;
+    word-break: break-all;
+}
+
+.kpi-item-date {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-top: 3px solid transparent;
+}
+
+.stats-card:nth-child(1) {
+    border-top-color: #667eea;
+}
+
+.stats-card:nth-child(2) {
+    border-top-color: #f093fb;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 10px;
+    border-left: 4px solid transparent;
+}
+
+.stats-card:nth-child(1) .card-header {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-left-color: #667eea;
+}
+
+.stats-card:nth-child(2) .card-header {
+    background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%);
+    border-left-color: #f093fb;
+}
+
+.variation-container .card-header {
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
+    border-left-color: #4facfe;
+}
+
+.card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.stats-card:nth-child(1) .card-icon {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.stats-card:nth-child(2) .card-icon {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+
+.card-title {
+    font-weight: 600;
+    font-size: 18px;
+    color: #333;
+}
+
+/* Programme Cards - Style Power BI */
+.prog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.prog-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-radius: 12px;
+    background: #f9f9f9;
+    box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
+    transition: all 0.3s ease;
+}
+
+.prog-card:hover {
+    box-shadow: 2px 2px 8px #d1d9e6, -2px -2px 8px #ffffff;
+}
+
+.prog-card-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.prog-card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #eeeeee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: #555;
+    box-shadow: 3px 3px 6px #d1d9e6, -3px -3px 6px #ffffff;
+}
+
+.prog-card-details {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.prog-card-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.prog-card-budget {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 5px;
+}
+
+.prog-card-bar-container {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.prog-card-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 3px;
+    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.prog-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.prog-card-percent {
+    font-weight: 600;
+    font-size: 14px;
+    color: #10b981;
+}
+
+.prog-card-percent.low {
+    color: #f59e0b;
+}
+
+.prog-card-label {
+    font-size: 10px;
+    color: #999;
+    margin-top: 2px;
+}
+
+/* Nature Items - Style Power BI */
+.nature-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nature-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-radius: 12px;
+    background: #f9f9f9;
+    box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
+    transition: all 0.3s ease;
+}
+
+.nature-item:hover {
+    box-shadow: 2px 2px 8px #d1d9e6, -2px -2px 8px #ffffff;
+}
+
+.nature-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nature-item-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #eeeeee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    box-shadow: 3px 3px 6px #d1d9e6, -3px -3px 6px #ffffff;
+}
+
+.nature-item-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.nature-item-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: #333;
+}
+
+.nature-item-budget {
+    font-size: 12px;
+    color: #777;
+}
+
+.nature-item-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.nature-item-percent {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.nature-item-percent.positive {
+    color: #27ae60;
+}
+
+.nature-item-percent.negative {
+    color: #c0392b;
+}
+
+.nature-item-date {
+    font-size: 10px;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+/* Variation Container - Agrandi avec légende à droite */
+.variation-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    border-top: 3px solid #4facfe;
+}
+
+.variation-container .card-icon {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    width: 28px;
+    height: 28px;
+}
+
+.variation-grid {
+    margin-top: 2rem;
+}
+
+.bars-and-legend {
+    display: flex;
+    gap: 60px;
+    align-items: center;
+    justify-content: center;
+}
+
+.bars-wrapper {
+    display: flex;
+    gap: 60px;
+    align-items: flex-end;
+    padding: 2rem 0;
+}
+
+.bar-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bar-container {
+    position: relative;
+    width: 25px;
+    height: 150px;
+    border-radius: 12px;
+    background: #f0f0f0;
+    overflow: hidden;
+    box-shadow: inset 6px 6px 12px #a3b1c6, inset -6px -6px 12px #ffffff;
+    margin-bottom: 0.75rem;
+}
+
+.bar-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 0%;
+    animation: fillUp 1.5s forwards;
+}
+
+.bar-fill.positive {
+    background: linear-gradient(to top, #27ae60, #6fcf97);
+}
+
+.bar-fill.negative {
+    background: linear-gradient(to top, #c0392b, #e74c3c);
+}
+
+@keyframes fillUp {
+    to {
+        height: var(--bar-height);
+    }
+}
+
+.bar-value {
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+.bar-value.positive {
+    color: #27ae60;
+}
+
+.bar-value.negative {
+    color: #c0392b;
+}
+
+.bar-label {
+    margin-top: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.bar-previous {
+    font-size: 12px;
+    color: #777;
+    margin-top: 4px;
+}
+
+/* Legend - À droite des barres */
+.legend-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 1.5rem;
+    background: var(--gray-50);
+    border-radius: 10px;
+    min-width: 200px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.legend-color.positive {
+    background: #27ae60;
+}
+
+.legend-color.negative {
+    background: #c0392b;
+}
+
+.legend-text {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Évolution Taux d'Exécution N vs N-1 */
+.execution-evolution-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    border-top: 3px solid #667eea;
+}
+
+.execution-evolution-container .card-icon {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.execution-comparison {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 3rem;
+    margin-top: 2rem;
+}
+
+.execution-year {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.execution-year-label {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin-bottom: 1.5rem;
+}
+
+.execution-circle-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin-bottom: 1.5rem;
+}
+
+.execution-circle {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.circle-bg {
+    fill: none;
+    stroke: #e5e7eb;
+    stroke-width: 12;
+}
+
+.circle-progress {
+    fill: none;
+    stroke-width: 12;
+    stroke-linecap: round;
+    stroke-dasharray: 502.4;
+    stroke-dashoffset: calc(502.4 - (502.4 * var(--progress) / 100));
+    transition: stroke-dashoffset 2s ease-out;
+}
+
+.circle-progress.n-1 {
+    stroke: url(#gradient-n1);
+}
+
+.circle-progress.current {
+    stroke: url(#gradient-current);
+}
+
+.execution-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.execution-percent {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin-bottom: 0.25rem;
+}
+
+.execution-label {
+    font-size: 14px;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+.execution-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 300px;
+}
+
+.execution-detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: inset 2px 2px 4px #ffffff, inset -2px -2px 4px #d1d9e6;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 14px;
+}
+
+.detail-value {
+    font-weight: 700;
+    color: var(--secondary-color);
+    font-size: 14px;
+}
+
+.execution-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.arrow-value {
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.arrow-value.positive {
+    color: #27ae60;
+}
+
+.arrow-value.negative {
+    color: #c0392b;
+}
+
+.arrow-value.neutral {
+    color: var(--gray-400);
+}
+
+.arrow-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.execution-info {
+    margin-top: 2rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--gray-700);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-500);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    opacity: 0.3;
+    margin-bottom: 1rem;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filters-row { animation: fadeInUp 0.3s ease-out; }
+.kpis-container { animation: fadeInUp 0.4s ease-out; }
+.kpi-item { animation: fadeInUp 0.4s ease-out backwards; }
+.kpi-item:nth-child(1) { animation-delay: 0.05s; }
+.kpi-item:nth-child(2) { animation-delay: 0.1s; }
+.kpi-item:nth-child(3) { animation-delay: 0.15s; }
+.kpi-item:nth-child(4) { animation-delay: 0.2s; }
+.kpi-item:nth-child(5) { animation-delay: 0.25s; }
+.stats-card { animation: fadeInUp 0.5s ease-out backwards; }
+.variation-container { animation: fadeInUp 0.6s ease-out backwards; }
+.execution-evolution-container { animation: fadeInUp 0.7s ease-out backwards; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .kpis-list {
+        flex-direction: column;
+    }
+    
+    .kpi-item {
+        width: 100%;
+    }
+    
+    .filters-row {
+        flex-direction: column;
+    }
+    
+    .bars-and-legend {
+        flex-direction: column;
+        gap: 30px;
+    }
+    
+    .bars-wrapper {
+        gap: 30px;
+    }
+    
+    .legend-box {
+        width: 100%;
+    }
+    
+    .execution-comparison {
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .execution-circle-container {
+        width: 180px;
+        height: 180px;
+    }
+    
+    .execution-percent {
+        font-size: 28px;
+    }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -1276,12 +1319,11 @@ function filtrerDashboard() {
 
 // Animation des montants avec compteur
 document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.kpi-amount').forEach((el, index) => {
+  document.querySelectorAll('.kpi-item-amount').forEach((el, index) => {
     const text = el.textContent.trim();
     const match = text.match(/[\d,]+/);
     if (match) {
       const targetValue = parseFloat(match[0].replace(/,/g, ''));
-      const suffix = text.replace(match[0], '').trim();
       
       let currentValue = 0;
       const increment = targetValue / 30;
@@ -1291,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', function() {
           currentValue = targetValue;
           clearInterval(timer);
         }
-        el.textContent = currentValue.toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' ' + suffix;
+        el.textContent = currentValue.toLocaleString('fr-FR', {maximumFractionDigits: 0});
       }, 30);
     }
   });

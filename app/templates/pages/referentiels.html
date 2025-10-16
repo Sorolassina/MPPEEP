@@ -1,242 +1,21 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
 {% block title %}Gestion des Référentiels - {{ app_name }}{% endblock %}
 
-{% block styles %}
-<style>
-/* Tabs */
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.tab {
-  padding: 1rem 1.5rem;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-weight: 600;
-  color: #6c757d;
-  transition: all 0.3s;
-  font-size: 1rem;
-}
-
-.tab:hover {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
-}
-
-.tab.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.tab-content {
-  display: none;
-}
-
-.tab-content.active {
-  display: block;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Modal */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-overlay.show {
-  display: flex;
-}
-
-.modal-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.modal-header h2 {
-  margin: 0;
-  color: #333;
-}
-
-.modal-close {
-  font-size: 2rem;
-  color: #6c757d;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  line-height: 1;
-}
-
-.modal-close:hover {
-  color: #dc3545;
-}
-
-.form-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group label {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  font-size: 1rem;
-  transition: all 0.3s;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 2px solid #e0e0e0;
-}
-
-.btn-modal {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-modal.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.btn-modal.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-modal.secondary {
-  background: #e9ecef;
-  color: #495057;
-}
-
-.btn-modal.secondary:hover {
-  background: #dee2e6;
-}
-
-/* Table actions */
-.table-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.table-header h3 {
-  margin: 0;
-}
-
-/* Action icons avec couleurs spécifiques */
-.action-icon.edit {
-  color: #667eea;
-}
-
-.action-icon.deactivate {
-  color: #ffc107;
-}
-
-.action-icon.deactivate:hover {
-  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important;
-}
-
-.action-icon.reactivate {
-  color: #28a745;
-}
-
-.action-icon.reactivate:hover {
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
-  color: white;
-}
-
-.action-icon.delete {
-  color: #dc3545;
-}
-
-.action-icon.delete:hover {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
-}
-</style>
-{% endblock %}
-
 {% block content %}
+{{ page_header(
+    title='⚙️ Gestion des Référentiels',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Référentiels'}
+    ]
+) }}
+
 <div class="page-grid">
-  
-  <!-- En-tête -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-      <h1 style="margin: 0;">⚙️ Gestion des Référentiels</h1>
-      <a href="/accueil" class="btn-back" title="Retour à l'accueil">
-        <span style="font-size: 1.2rem;">←</span> Retour
-      </a>
-    </div>
-    <p style="color: #6c757d; margin: 0;">Gérez les programmes, directions, services et grades de l'organisation</p>
-  </div>
 
   <!-- Statistiques -->
-  <div class="stats-cards">
+  <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-label">Programmes</div>
       <div class="stat-number">{{ nb_programmes }}</div>
@@ -271,11 +50,11 @@
     <div id="tab-programmes" class="tab-content active">
       <div class="table-header">
         <h3>📁 Programmes Budgétaires</h3>
-        <button class="btn-primary" onclick="openModal('programme')">➕ Nouveau Programme</button>
+        <button class="btn btn-primary" onclick="openModal('programme')">➕ Nouveau Programme</button>
       </div>
       
-      <div class="data-table">
-        <table>
+      <div class="table-responsive">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Code</th>
@@ -296,11 +75,11 @@
     <div id="tab-directions" class="tab-content">
       <div class="table-header">
         <h3>🏢 Directions</h3>
-        <button class="btn-primary" onclick="openModal('direction')">➕ Nouvelle Direction</button>
+        <button class="btn btn-primary" onclick="openModal('direction')">➕ Nouvelle Direction</button>
       </div>
       
-      <div class="data-table">
-        <table>
+      <div class="table-responsive">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Code</th>
@@ -321,11 +100,11 @@
     <div id="tab-services" class="tab-content">
       <div class="table-header">
         <h3>📋 Services</h3>
-        <button class="btn-primary" onclick="openModal('service')">➕ Nouveau Service</button>
+        <button class="btn btn-primary" onclick="openModal('service')">➕ Nouveau Service</button>
       </div>
       
-      <div class="data-table">
-        <table>
+      <div class="table-responsive">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Code</th>
@@ -346,11 +125,11 @@
     <div id="tab-grades" class="tab-content">
       <div class="table-header">
         <h3>🎓 Grades</h3>
-        <button class="btn-primary" onclick="openModal('grade')">➕ Nouveau Grade</button>
+        <button class="btn btn-primary" onclick="openModal('grade')">➕ Nouveau Grade</button>
       </div>
       
-      <div class="data-table">
-        <table>
+      <div class="table-responsive">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Code</th>
@@ -372,7 +151,7 @@
 </div>
 
 <!-- Modal CRUD -->
-<div id="crudModal" class="modal-overlay">
+<div id="crudModal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
       <h2 id="modal-title">Titre</h2>
@@ -385,13 +164,149 @@
       </div>
       
       <div class="modal-actions">
-        <button type="button" class="btn-modal secondary" onclick="closeModal()">Annuler</button>
-        <button type="submit" class="btn-modal primary">Enregistrer</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
       </div>
     </form>
   </div>
 </div>
 
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles spécifiques pour la page Référentiels */
+.page-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--gray-200);
+    margin-bottom: 2rem;
+}
+
+.tab {
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--gray-600);
+    transition: all 0.3s;
+}
+
+.tab:hover {
+    color: var(--primary-color);
+}
+
+.tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Tab content */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Table header */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.table-header h3 {
+    margin: 0;
+    color: var(--secondary-color);
+    font-size: 1.3rem;
+}
+
+/* Action icons dans les tables */
+.action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0 0.25rem;
+    border: none;
+    background: var(--gray-200);
+}
+
+.action-icon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.action-icon.edit {
+    background: var(--primary-color);
+    color: var(--white-color);
+}
+
+.action-icon.deactivate {
+    background: var(--warning-color);
+    color: var(--white-color);
+}
+
+.action-icon.reactivate {
+    background: var(--success-color);
+    color: var(--white-color);
+}
+
+.action-icon.delete {
+    background: var(--danger-color);
+    color: var(--white-color);
+}
+
+/* Form grid pour modals */
+.modal .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .tabs {
+        flex-wrap: wrap;
+    }
+    
+    .table-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .table-header .btn {
+        width: 100%;
+    }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -884,5 +799,6 @@ async function deleteItem(type, id) {
   }
 }
 </script>
+</body>
 {% endblock %}
 

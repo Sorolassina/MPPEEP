@@ -1,28 +1,231 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}Consolidation des Besoins - {{ app_name }}{% endblock %}
+{% block title %}Consolidation des Besoins - {{ app_name }}
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ========== CONSOLIDATION PAGE STYLES ========== */
+.consolidation-container {
+    padding: 2rem 0;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+.generator-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #000000;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.form-group select {
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    background: white;
+    color: #000000;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.consolidations-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.consolidations-section .data-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.consolidations-section .data-table th,
+.consolidations-section .data-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+.consolidations-section .data-table th:nth-child(1),
+.consolidations-section .data-table td:nth-child(1) {
+    width: 10%; /* Année */
+}
+
+.consolidations-section .data-table th:nth-child(2),
+.consolidations-section .data-table td:nth-child(2) {
+    width: 15%; /* Niveau */
+}
+
+.consolidations-section .data-table th:nth-child(3),
+.consolidations-section .data-table td:nth-child(3) {
+    width: 25%; /* Entité */
+}
+
+.consolidations-section .data-table th:nth-child(4),
+.consolidations-section .data-table td:nth-child(4) {
+    width: 12%; /* Demandé */
+    text-align: center;
+}
+
+.consolidations-section .data-table th:nth-child(5),
+.consolidations-section .data-table td:nth-child(5) {
+    width: 12%; /* Obtenu */
+    text-align: center;
+}
+
+.consolidations-section .data-table th:nth-child(6),
+.consolidations-section .data-table td:nth-child(6) {
+    width: 14%; /* Taux */
+}
+
+.consolidations-section .data-table th:nth-child(7),
+.consolidations-section .data-table td:nth-child(7) {
+    width: 10%; /* Statut */
+    text-align: center;
+}
+
+.consolidations-section .data-table th:nth-child(8),
+.consolidations-section .data-table td:nth-child(8) {
+    width: 12%; /* Actions */
+    text-align: center;
+}
+
+.badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.badge.info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.progress-bar-small {
+    width: 100%;
+    height: 18px;
+    background: #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill-small {
+    height: 100%;
+    transition: width 0.5s ease;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    padding: 0 0.25rem;
+}
+
+.progress-fill-small.low {
+    background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+}
+
+.progress-fill-small.medium {
+    background: linear-gradient(90deg, #ffc107 0%, #e0a800 100%);
+}
+
+.progress-fill-small.high {
+    background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.action-icons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.action-icon {
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: transform 0.2s;
+}
+
+.action-icon:hover {
+    transform: scale(1.15);
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="page-grid">
-  
-  <!-- En-tête -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-      <h1 style="margin: 0;">📋 Consolidation des Besoins</h1>
-      <a href="/api/v1/besoins/" class="btn-back" title="Retour aux besoins">
-        <span style="font-size: 1.2rem;">←</span> Retour
-      </a>
-    </div>
-    <p style="color: #6c757d; margin: 0;">
-      Vue d'ensemble des besoins consolidés par Direction et Programme pour transmission au Ministère
-    </p>
-  </div>
+{{ page_header(
+    title='📋 Consolidation des Besoins',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'RH', 'url': '/api/v1/rh/'},
+        {'name': 'Besoins', 'url': '/api/v1/besoins/'},
+        {'name': 'Consolidation'}
+    ],
+    actions=[
+        {'label': '← Retour Besoins', 'url': '/api/v1/besoins/', 'primary': False}
+    ]
+) }}
+
+<div class="consolidation-container container">
 
   <!-- Générateur de consolidation -->
-  <div class="card">
-    <h3 style="margin-bottom: 1.5rem;">🔧 Générer une Consolidation</h3>
+  <div class="generator-section">
+    <h3 class="section-title">🔧 Générer une Consolidation</h3>
     
-    <form id="consolidationForm" onsubmit="genererConsolidation(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+    <form id="consolidationForm" onsubmit="genererConsolidation(event)" class="form-grid">
       <div class="form-group">
         <label>Année</label>
         <select name="annee" required>
@@ -59,19 +262,19 @@
         </select>
       </div>
       
-      <button type="submit" class="btn-primary">
+      <button type="submit" class="btn btn-primary">
         📊 Générer
       </button>
     </form>
   </div>
 
   <!-- Liste des consolidations -->
-  <div class="card">
-    <h3 style="margin-bottom: 1.5rem;">📊 Consolidations Existantes</h3>
+  <div class="consolidations-section">
+    <h3 class="section-title">📊 Consolidations Existantes</h3>
     
     {% if consolidations %}
-    <div class="data-table">
-      <table>
+    <div class="table-responsive">
+      <table class="data-table">
         <thead>
           <tr>
             <th>Année</th>
@@ -101,16 +304,20 @@
             <td><strong style="color: #ffc107;">{{ c.total_demande }}</strong></td>
             <td><strong style="color: #28a745;">{{ c.total_obtenu }}</strong></td>
             <td>
-              <div class="progress-container" style="width: 100px;">
-                {% set taux = c.taux_satisfaction|float if c.taux_satisfaction else 0 %}
-                <div class="progress-bar {% if taux < 50 %}low{% elif taux < 100 %}medium{% else %}high{% endif %}" 
+              {% set taux = c.taux_satisfaction|float if c.taux_satisfaction else 0 %}
+              <div class="progress-bar-small">
+                <div class="progress-fill-small {% if taux < 50 %}low{% elif taux < 100 %}medium{% else %}high{% endif %}" 
                      style="width: {{ taux }}%;">
                   {{ taux|round(0)|int }}%
                 </div>
               </div>
             </td>
             <td>
-              <span class="badge-statut {{ c.statut|lower|replace(' ', '-') }}">{{ c.statut }}</span>
+              {% if c.statut %}
+                <span class="badge info">{{ c.statut }}</span>
+              {% else %}
+                <span class="badge info">Généré</span>
+              {% endif %}
             </td>
             <td>
               <div class="action-icons">
@@ -243,7 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Styles nécessaires
 const style = document.createElement('style');
 style.textContent = `
-  .form-group {
+  .form-group-premium {
     display: flex;
     flex-direction: column;
   }
@@ -263,7 +470,7 @@ style.textContent = `
 
   .form-group select:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--secondary-color);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 
@@ -282,7 +489,7 @@ style.textContent = `
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--white-color);
     font-weight: 600;
     font-size: 0.8rem;
   }
@@ -309,17 +516,17 @@ style.textContent = `
 
   .badge-statut.en-cours {
     background: #0dcaf0;
-    color: white;
+    color: var(--white-color);
   }
 
   .badge-statut.transmis {
     background: #ffc107;
-    color: white;
+    color: var(--white-color);
   }
 
   .badge-statut.cloture {
     background: #198754;
-    color: white;
+    color: var(--white-color);
   }
 `;
 document.head.appendChild(style);

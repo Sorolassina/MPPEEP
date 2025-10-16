@@ -1,8 +1,10 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}Accueil{% endblock %}
+{% block title %}Accueil</body>
+{% endblock %}
 
 {% block content %}
+<body class="form-page-premium">
 <section class="hero">
     <div class="hero-content">
         <h2>Bienvenue sur {{ app_name }} 👋</h2>
@@ -11,8 +13,8 @@
         </p>
         
         <div class="hero-actions">
-            <a href="{{ url_for('login_page') }}" class="btn btn-primary btn-lg">Se connecter</a>
-            <a href="/api/v1/ping" class="btn btn-secondary btn-lg">Test API</a>
+            <a href="{{ url_for('login_page') }}" class="btn btn-premium btn-primary btn-lg">Se connecter</a>
+            <a href="/api/v1/ping" class="btn btn-premium btn-secondary btn-lg">Test API</a>
         </div>
     </div>
 </section>
@@ -61,5 +63,6 @@ uvicorn app.main:app --reload
 pytest</code></pre>
     </div>
 </section>
+</body>
 {% endblock %}
 

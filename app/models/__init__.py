@@ -19,6 +19,10 @@ from app.models.budget import (
     DocumentLigneBudgetaire,
     SigobeChargement, SigobeExecution, SigobeKpi
 )
+from app.models.stock import (
+    CategorieArticle, Fournisseur, Article, MouvementStock,
+    DemandeStock, Inventaire, LigneInventaire
+)
 
 __all__ = [
     "User", 
@@ -57,6 +61,13 @@ __all__ = [
     "DocumentLigneBudgetaire",
     "SigobeChargement",
     "SigobeExecution",
-    "SigobeKpi"
+    "SigobeKpi",
+    "CategorieArticle",
+    "Fournisseur",
+    "Article",
+    "MouvementStock",
+    "DemandeStock",
+    "Inventaire",
+    "LigneInventaire"
 ]
 

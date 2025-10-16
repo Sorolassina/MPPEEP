@@ -712,8 +712,8 @@ def api_get_documents_fiche(
                 "filename": doc.nom_fichier,
                 "description": doc.type_document,
                 "taille_octets": doc.taille_octets,
-                "created_at": doc.date_upload.isoformat() if doc.date_upload else None,
-                "date_upload": doc.date_upload.isoformat() if doc.date_upload else None
+                "created_at": doc.uploaded_at.isoformat() if doc.uploaded_at else None,
+                "date_upload": doc.uploaded_at.isoformat() if doc.uploaded_at else None
             }
             for doc in documents
         ]

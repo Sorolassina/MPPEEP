@@ -1,60 +1,23 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard</body>
+{% endblock %}
 
 {% block styles %}
 <style>
-  .main-content{height:100%;padding-top:3px; }
-  .pbi-container {
-    width: 100%;
-    height:100%
-  }
-
-  .pbi-card {
-    position: relative;
-    background: #fff;
-    box-shadow: 0 8px 20px rgba(0,0,0,.06);
-    overflow: hidden;
-  }
-  .pbi-frame-wrap {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-  }
-  .pbi-frame-wrap::before {
-    content: "";
-    display: block;
-    padding-top: calc(100% * 9 / 16);
-  }
-  .pbi-frame, .pbi-loader {
-    position: absolute; inset: 0; width: 100%; height: 100%;
-  }
-  .pbi-frame { border: 0; display: block; }
-  .pbi-loader {
-    display: grid; place-items: center;
-    background: linear-gradient(120deg, rgba(0,0,0,.02), rgba(0,0,0,0) 40%), var(--primary-light, #f7f9fc);
-  }
-  .pbi-spinner {
-    width: 42px; height: 42px; border-radius: 50%;
-    border: 3px solid rgba(0,0,0,.15);
-    border-top-color: var(--primary-color, #4f46e5);
-    animation: pbi-spin 1s linear infinite;
-    margin: 0 auto;
-  }
-  .pbi-hint { margin-top: .75rem; font-size: .9rem; color: #555; text-align:center; }
-  @keyframes pbi-spin { to { transform: rotate(360deg); } }
-
-  .pbi-actions { display: flex; gap: .5rem; }
-  .btn {
-    appearance: none; border: 0; border-radius: 999px;
-    padding: .55rem .9rem; font-size: .9rem;
-    background: var(--primary-color, #4f46e5); color: #fff;
-    box-shadow: 0 6px 14px rgba(79,70,229,.25); cursor: pointer;
-  }
+background: #fff;
+.pbi-frame-wrap::before {
+background: linear-gradient(120deg, rgba(0,0,0,.02), rgba(0,0,0,0) 40%), var(--primary-light, #f7f9fc);
+border-top-color: var(--primary-color, #4f46e5);
+animation: pbi-spin 1s linear infinite;
+.pbi-hint { margin-top: .75rem; font-size: .9rem; color: #555; text-align:center; }
+@keyframes pbi-spin { to { transform: rotate(360deg); } }
 </style>
+</body>
 {% endblock %}
 
 {% block content %}
+<body class="form-page-premium">
 <div class="pbi-container">
 
   <div class="pbi-card">
@@ -79,6 +42,7 @@
     </div>
   </div>
 </div>
+</body>
 {% endblock %}
 
 {% block scripts %}
@@ -101,4 +65,5 @@
     setTimeout(() => { if (loader && loader.style.display !== 'none') loader.style.display = 'none'; }, 15000);
   })();
 </script>
+</body>
 {% endblock %}

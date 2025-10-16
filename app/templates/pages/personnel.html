@@ -1,27 +1,126 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}Gestion du Personnel - {{ app_name }}{% endblock %}
+{% block title %}Gestion du Personnel - {{ app_name }}
+{% endblock %}
 
 {% block styles %}
-<!-- Styles déjà chargés via base.html -->
+<style>
+/* ========== PERSONNEL PAGE STYLES ========== */
+.personnel-container {
+    padding: 2rem 0;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+/* Statistiques */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.success {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #065f46;
+}
+
+.stat-card.secondary {
+    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    color: #374151;
+}
+
+.stat-card.warning {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* Section de recherche */
+.search-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.search-box {
+    width: 100%;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 1.25rem 2rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 30px;
+    background: #ffffff;
+    color: #000000;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.search-box input::placeholder {
+    color: #6c757d;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="page-grid">
-  
-  <!-- En-tête -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-      <h1 style="margin: 0;">👥 Gestion du Personnel</h1>
-      <a href="/api/v1/rh/" class="btn-back" title="Retour à RH">
-        <span style="font-size: 1.2rem;">←</span> Retour à RH
-      </a>
-    </div>
-    <p style="color: #6c757d; margin: 0;">Gérez les agents, leurs informations et documents</p>
-  </div>
+{{ page_header(
+    title='👥 Gestion du Personnel',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'RH', 'url': '/api/v1/rh/'},
+        {'name': 'Personnel'}
+    ],
+    actions=[
+        {'label': '← Retour RH', 'url': '/api/v1/rh/', 'primary': False},
+        {'label': '➕ Nouvel Agent', 'url': '/api/v1/personnel/nouveau', 'primary': True}
+    ]
+) }}
+
+<div class="personnel-container container">
 
   <!-- Statistiques -->
-  <div class="stats-cards">
+  <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-label">Total Agents</div>
       <div class="stat-number">{{ total_agents }}</div>
@@ -43,8 +142,8 @@
     </div>
   </div>
 
-  <!-- Barre d'actions -->
-  <div class="actions-bar">
+  <!-- Barre de recherche -->
+  <div class="search-section">
     <div class="search-box">
       <input 
         type="text" 
@@ -52,10 +151,6 @@
         placeholder="🔍 Rechercher un agent (matricule, nom, prénom)..."
       >
     </div>
-    
-    <a href="/api/v1/personnel/nouveau" class="btn-primary">
-      ➕ Nouvel Agent
-    </a>
   </div>
 
   <!-- Tableau des agents -->
@@ -223,5 +318,6 @@ async function supprimerAgent(agentId) {
   }
 }
 </script>
+</body>
 {% endblock %}
 

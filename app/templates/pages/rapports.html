@@ -1,15 +1,18 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}Rapports{% endblock %}
-
-{% block page_title %}Rapports{% endblock %}
+{% block title %}Rapports - {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="admin-page">
-    <div class="page-header">
-        <h2>📊 Rapports</h2>
-    </div>
+{{ page_header(
+    title='📊 Rapports',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Rapports'}
+    ]
+) }}
 
+<div class="admin-page">
     <div class="coming-soon">
         <div class="coming-soon-icon">📈</div>
         <h3>Fonctionnalité en développement</h3>
@@ -26,48 +29,41 @@
 
 {% block styles %}
 <style>
+/* Styles spécifiques pour la page Rapports */
 .admin-page {
     max-width: 1200px;
     margin: 0 auto;
-    padding: var(--spacing-lg);
-}
-
-.page-header {
-    margin-bottom: var(--spacing-xl);
-}
-
-.page-header h2 {
-    margin: 0;
-    color: var(--secondary-color);
+    padding: 1rem;
 }
 
 .coming-soon {
-    background: var(--white-color);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-xl);
     text-align: center;
-    box-shadow: var(--shadow-sm);
-    margin-bottom: var(--spacing-lg);
+    padding: 4rem 2rem;
+    background: var(--white-color);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin: 2rem 0;
 }
 
 .coming-soon-icon {
-    font-size: 4rem;
-    margin-bottom: var(--spacing-md);
+    font-size: 5rem;
+    margin-bottom: 1rem;
 }
 
 .coming-soon h3 {
     color: var(--secondary-color);
-    margin-bottom: var(--spacing-sm);
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
 }
 
 .coming-soon p {
     color: var(--gray-600);
+    font-size: 1.1rem;
 }
 
 .actions-footer {
-    display: flex;
-    gap: var(--spacing-md);
+    text-align: center;
+    margin-top: 2rem;
 }
 </style>
 {% endblock %}
-

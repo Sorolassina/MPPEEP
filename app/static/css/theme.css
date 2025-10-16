@@ -113,99 +113,6 @@ a:hover {
   text-decoration: underline;
 }
 
-/* ========================================
-   3. BOUTONS
-   ======================================== */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border: var(--border-width) solid transparent;
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  font-weight: 500;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  line-height: 1.5;
-}
-
-.btn-primary {
-  background-color: var(--white-color);
-  color: var(--secondary-color);
-  border-color: var(--white-color);
-}
-
-.btn-primary:hover {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: var(--white-color);
-  text-decoration: none;
-}
-
-.btn-secondary {
-  background-color: var(--secondary-color);
-  color: var(--white-color);
-  border-color: var(--secondary-color);
-}
-
-.btn-secondary:hover {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: var(--white-color);
-  text-decoration: none;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: var(--white-color);
-  border-color: var(--white-color);
-}
-
-.btn-outline:hover {
-  background-color: var(--accent-color);
-  border-color: var(--accent-color);
-  color: var(--white-color);
-  text-decoration: none;
-}
-
-/* ========================================
-   4. FORMULAIRES
-   ======================================== */
-
-.form-group {
-  margin-bottom: var(--spacing-lg);
-}
-
-.form-label {
-  display: block;
-  margin-bottom: var(--spacing-sm);
-  font-weight: 500;
-  color: var(--secondary-color);
-}
-
-.form-control {
-  display: block;
-  width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--secondary-color);
-  background-color: var(--white-color);
-  border: var(--border-width) solid var(--gray-medium);
-  border-radius: var(--border-radius);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: var(--white-color);
-  box-shadow: 0 0 0 0.2rem rgba(255, 211, 0, 0.25);
-}
 
 /* ========================================
    5. CARTES
@@ -755,36 +662,7 @@ a:hover {
   gap: var(--spacing-md);
 }
 
-.action-button {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-  background-color: var(--secondary-color);
-  color: var(--white-color);
-  border-radius: var(--border-radius);
-  text-decoration: none;
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-sm);
-}
 
-.action-button:hover {
-  background-color: var(--accent-color);
-  color: var(--white-color);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  text-decoration: none;
-}
-
-.action-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-.action-text {
-  font-weight: 500;
-  flex: 1;
-}
 
 /* ========================================
    13. RESPONSIVE

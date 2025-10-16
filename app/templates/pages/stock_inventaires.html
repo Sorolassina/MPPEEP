@@ -1,0 +1,232 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Inventaires - Gestion des Stocks - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Réduction de la police du tableau */
+.data-table {
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+}
+
+.data-table th {
+    font-size: 0.8rem;
+}
+
+/* Badges statut */
+.badge-en-cours {
+    background: linear-gradient(135deg, #fff3cd, #ffe69c);
+    color: #856404;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-cloture {
+    background: linear-gradient(135deg, #d1f4e0, #b3e5d1);
+    color: #0f5132;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📊 Inventaires Physiques',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Inventaires'}
+    ],
+    actions=[
+        {'label': '← Retour Stock', 'url': url_for('stock_home'), 'primary': False},
+        {'label': '➕ Nouvel Inventaire', 'url': url_for('stock_inventaire_new'), 'primary': True}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Tableau des inventaires -->
+  <div class="card">
+    <div style="margin-bottom: 1rem;">
+      <h2 style="margin: 0;">Inventaires ({{ inventaires|length }})</h2>
+    </div>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>N° Inventaire</th>
+          <th>Libellé</th>
+          <th>Date Début</th>
+          <th>Date Fin</th>
+          <th>Responsable</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if inventaires %}
+          {% for inv in inventaires %}
+          <tr>
+            <td><strong>{{ inv.numero }}</strong></td>
+            <td>{{ inv.libelle }}</td>
+            <td>{{ inv.date_debut.strftime('%d/%m/%Y') }}</td>
+            <td>{{ inv.date_fin.strftime('%d/%m/%Y') if inv.date_fin else '-' }}</td>
+            <td>User #{{ inv.responsable_id }}</td>
+            <td>
+              {% if inv.statut == 'EN_COURS' %}
+                <span class="badge-en-cours">⏳ En cours</span>
+              {% else %}
+                <span class="badge-cloture">✅ Clôturé</span>
+              {% endif %}
+            </td>
+            <td style="text-align: center;">
+              <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                <a href="{{ url_for('stock_inventaire_detail', inventaire_id=inv.id) }}" 
+                   class="btn-action" 
+                   title="Voir détails"
+                   style="color: var(--info-color); text-decoration: none;">
+                  👁️
+                </a>
+                {% if inv.statut == 'EN_COURS' %}
+                  <button onclick="cloturerInventaire({{ inv.id }})" 
+                          class="btn-action" 
+                          title="Clôturer"
+                          style="color: var(--success-color);">
+                    ✅
+                  </button>
+                {% endif %}
+                <button onclick="supprimerInventaire({{ inv.id }})" 
+                        class="btn-action" 
+                        title="Supprimer"
+                        style="color: var(--danger-color);">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+              Aucun inventaire enregistré
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variable pour confirmation
+let confirmActionId = null;
+let confirmActionType = null;
+let confirmTimeout = null;
+
+// Clôturer un inventaire
+async function cloturerInventaire(inventaireId) {
+  if (confirmActionId === inventaireId && confirmActionType === 'cloturer') {
+    clearTimeout(confirmTimeout);
+    confirmActionId = null;
+    confirmActionType = null;
+    procederCloture(inventaireId);
+  } else {
+    confirmActionId = inventaireId;
+    confirmActionType = 'cloturer';
+    showWarning('Cliquez à nouveau sur ✅ pour confirmer la clôture de l\'inventaire.', 'Confirmation requise', 3000);
+    confirmTimeout = setTimeout(() => {
+      confirmActionId = null;
+      confirmActionType = null;
+    }, 3000);
+  }
+}
+
+async function procederCloture(inventaireId) {
+  showGlobalLoading('Clôture...', 'Finalisation de l\'inventaire');
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/inventaires/${inventaireId}/cloturer`, {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message || 'Inventaire clôturé avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        window.location.reload();
+      }, 1500);
+    } else {
+      hideGlobalLoading();
+      showError(result.error || 'Erreur lors de la clôture');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+// Supprimer un inventaire
+async function supprimerInventaire(inventaireId) {
+  if (confirmActionId === inventaireId && confirmActionType === 'supprimer') {
+    clearTimeout(confirmTimeout);
+    confirmActionId = null;
+    confirmActionType = null;
+    procederSuppression(inventaireId);
+  } else {
+    confirmActionId = inventaireId;
+    confirmActionType = 'supprimer';
+    showWarning('Cliquez à nouveau sur 🗑️ pour confirmer la suppression.', 'Confirmation requise', 3000);
+    confirmTimeout = setTimeout(() => {
+      confirmActionId = null;
+      confirmActionType = null;
+    }, 3000);
+  }
+}
+
+async function procederSuppression(inventaireId) {
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/inventaires/${inventaireId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message || 'Inventaire supprimé avec succès');
+      setTimeout(() => {
+        showGlobalLoading('Actualisation...', 'Rechargement');
+        window.location.reload();
+      }, 1500);
+    } else {
+      hideGlobalLoading();
+      showError(result.error || 'Erreur lors de la suppression');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
+
+console.log('✅ Page inventaires chargée');
+</script>
+{% endblock %}
+

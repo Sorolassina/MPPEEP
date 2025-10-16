@@ -1,0 +1,215 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}{{ 'Modifier' if article else 'Nouvel' }} Article - Stocks - {{ app_name }}</body>
+{% endblock %}
+
+{% block styles %}
+<!-- Styles centralisés dans cards.css, forms.css -->
+</body>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='📝 Modifier l\'Article' if article else '➕ Nouvel Article',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Articles', 'url': url_for('stock_articles')},
+        {'name': article.code if article else 'Nouveau'}
+    ],
+    actions=[
+        {'label': '← Retour Articles', 'url': url_for('stock_articles'), 'primary': False}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Formulaire -->
+  <div class="card">
+    <form id="articleForm" onsubmit="submitForm(event)">
+      {% if article %}
+      <input type="hidden" name="article_id" value="{{ article.id }}">
+      {% endif %}
+      
+      <!-- Identification -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">🏷️ Identification</h3>
+      <div class="form-grid" style="margin-bottom: 2rem;">
+        <div class="form-group">
+          <label class="form-label">Catégorie *</label>
+          <select name="categorie_id" id="categorie_id" class="form-select" required onchange="genererCode()">
+            <option value="">-- Sélectionner une catégorie --</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" data-code="{{ cat.code }}" {{ 'selected' if article and article.categorie_id == cat.id else '' }}>
+              {{ cat.libelle }}
+            </option>
+            {% endfor %}
+          </select>
+          <small style="color: var(--gray-600);">
+            {% if article %}
+              ⚠️ Changer la catégorie régénérera automatiquement le code
+            {% else %}
+              Le code sera généré automatiquement
+            {% endif %}
+          </small>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Code Article *</label>
+          <input type="text" name="code" id="code" class="form-input" required readonly
+                 value="{{ article.code if article else '' }}"
+                 placeholder="Sélectionnez une catégorie..."
+                 style="background: var(--gray-100); cursor: not-allowed;">
+          <small style="color: var(--gray-600);">Généré automatiquement</small>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Désignation *</label>
+          <input type="text" name="designation" class="form-input" required
+                 value="{{ article.designation if article else '' }}"
+                 placeholder="Ex: Ramette papier A4">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Unité *</label>
+          <select name="unite" class="form-select" required>
+            <option value="Unité" {{ 'selected' if not article or article.unite == 'Unité' else '' }}>Unité</option>
+            <option value="Pièce" {{ 'selected' if article and article.unite == 'Pièce' else '' }}>Pièce</option>
+            <option value="Carton" {{ 'selected' if article and article.unite == 'Carton' else '' }}>Carton</option>
+            <option value="Lot" {{ 'selected' if article and article.unite == 'Lot' else '' }}>Lot</option>
+            <option value="Kg" {{ 'selected' if article and article.unite == 'Kg' else '' }}>Kg</option>
+            <option value="Litre" {{ 'selected' if article and article.unite == 'Litre' else '' }}>Litre</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Stock & Prix -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📊 Stock & Prix</h3>
+      <div class="form-grid" style="margin-bottom: 2rem;">
+        <div class="form-group">
+          <label class="form-label">Stock Minimum *</label>
+          <input type="number" name="quantite_min" class="form-input" required min="0" step="0.01"
+                 value="{{ article.quantite_min if article else '0' }}">
+          <small style="color: var(--gray-600);">Seuil d'alerte de réapprovisionnement</small>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Stock Maximum</label>
+          <input type="number" name="quantite_max" class="form-input" min="0" step="0.01"
+                 value="{{ article.quantite_max if article else '' }}">
+          <small style="color: var(--gray-600);">Stock maximum recommandé</small>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Prix Unitaire (FCFA)</label>
+          <input type="number" name="prix_unitaire" class="form-input" min="0" step="1"
+                 value="{{ article.prix_unitaire if article else '' }}"
+                 placeholder="0">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Emplacement</label>
+          <input type="text" name="emplacement" class="form-input"
+                 value="{{ article.emplacement if article else '' }}"
+                 placeholder="Ex: Magasin A - Rayon 3">
+        </div>
+      </div>
+      
+      <!-- Description -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📝 Description</h3>
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <label class="form-label">Description détaillée</label>
+        <textarea name="description" class="form-textarea" rows="4" 
+                  placeholder="Détails supplémentaires sur l'article...">{{ article.description if article else '' }}</textarea>
+      </div>
+      
+      <!-- Actions -->
+      <div class="form-actions">
+        <a href="{{ url_for('stock_articles') }}" class="btn btn-secondary">Annuler</a>
+        <button type="submit" class="btn btn-primary">
+          {{ '💾 Enregistrer' if article else '➕ Créer l\'Article' }}
+        </button>
+      </div>
+      
+    </form>
+  </div>
+  
+</div>
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Générer automatiquement le code article
+async function genererCode() {
+  const select = document.getElementById('categorie_id');
+  const codeInput = document.getElementById('code');
+  
+  if (!select.value) {
+    codeInput.value = '';
+    codeInput.placeholder = 'Sélectionnez une catégorie...';
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/generer-code/${select.value}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      codeInput.value = result.data.code;
+      showInfo(`Code généré : ${result.data.code}`, 'Code Auto-généré', 2000);
+    } else {
+      showError('Erreur lors de la génération du code');
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
+    showError('Erreur lors de la génération du code');
+  }
+}
+
+async function submitForm(event) {
+  event.preventDefault();
+  
+  // Afficher l'overlay
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) overlay.classList.add('show');
+  
+  const formData = new FormData(event.target);
+  const articleId = formData.get('article_id');
+  
+  // Déterminer l'URL et la méthode selon création ou modification
+  const url = articleId 
+    ? `/api/v1/stock/api/articles/${articleId}` 
+    : '/api/v1/stock/api/articles';
+  const method = articleId ? 'PUT' : 'POST';
+  
+  try {
+    const response = await fetch(url, {
+      method: method,
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message);
+      // L'overlay reste affiché pendant la redirection
+      setTimeout(() => {
+        window.location.href = '{{ url_for("stock_articles") }}';
+      }, 800);
+    } else {
+      // Masquer l'overlay SEULEMENT en cas d'erreur
+      if (overlay) overlay.classList.remove('show');
+      showError(result.error);
+    }
+  } catch (error) {
+    // Masquer l'overlay SEULEMENT en cas d'erreur
+    if (overlay) overlay.classList.remove('show');
+    console.error('Erreur:', error);
+    showError('Erreur lors de l\'enregistrement');
+  }
+}
+</script>
+</body>
+{% endblock %}
+

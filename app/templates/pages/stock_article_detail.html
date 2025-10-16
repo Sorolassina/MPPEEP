@@ -1,0 +1,207 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}{{ article.designation }} - Stocks - {{ app_name }}</body>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Réduction de la police du tableau */
+.data-table {
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+}
+
+.data-table th {
+    font-size: 0.8rem;
+}
+
+/* Info grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.info-item {
+    padding: 1rem;
+    background: var(--gray-50);
+    border-left: 4px solid var(--primary-color);
+    border-radius: 8px;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    color: var(--gray-900);
+    font-weight: 600;
+}
+
+/* Badges */
+.badge-entree {
+    background: linear-gradient(135deg, #d1f4e0, #b3e5d1);
+    color: #0f5132;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.badge-sortie {
+    background: linear-gradient(135deg, #fde2e4, #fbc7ca);
+    color: #842029;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='📦 ' + article.designation + ' (' + article.code + ')',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Articles', 'url': url_for('stock_articles')},
+        {'name': article.code}
+    ],
+    actions=[
+        {'label': '← Retour Articles', 'url': url_for('stock_articles'), 'primary': False},
+        {'label': '✏️ Modifier', 'url': url_for('stock_article_edit', article_id=article.id), 'primary': True}
+    ]
+) }}
+
+<div class="page-grid">
+
+  <!-- Informations principales -->
+  <div class="card">
+    <h2 style="margin: 0 0 1.5rem 0;">📋 Informations</h2>
+    
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Catégorie</div>
+        <div class="info-value">{{ categorie.libelle if categorie else '-' }}</div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">Unité</div>
+        <div class="info-value">{{ article.unite }}</div>
+      </div>
+      
+      <div class="info-item" style="border-left-color: {{ 'var(--danger-color)' if article.quantite_stock <= article.quantite_min else 'var(--success-color)' }};">
+        <div class="info-label">Stock Actuel</div>
+        <div class="info-value" style="color: {{ 'var(--danger-color)' if article.quantite_stock <= article.quantite_min else 'var(--success-color)' }};">
+          {{ article.quantite_stock }} {{ article.unite }}
+        </div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">Stock Minimum</div>
+        <div class="info-value">{{ article.quantite_min }} {{ article.unite }}</div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">Stock Maximum</div>
+        <div class="info-value">{{ article.quantite_max if article.quantite_max else '-' }} {{ article.unite if article.quantite_max else '' }}</div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">Prix Unitaire</div>
+        <div class="info-value">{{ "{:,.0f}".format(article.prix_unitaire) if article.prix_unitaire else '-' }} FCFA</div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">Valeur Totale</div>
+        <div class="info-value">
+          {{ "{:,.0f}".format(article.quantite_stock * article.prix_unitaire) if article.prix_unitaire else '-' }} FCFA
+        </div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">Emplacement</div>
+        <div class="info-value">{{ article.emplacement or '-' }}</div>
+      </div>
+    </div>
+    
+    {% if article.description %}
+    <div style="margin-top: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+      <div class="info-label">Description</div>
+      <p style="margin: 0.5rem 0 0 0;">{{ article.description }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Historique des mouvements -->
+  <div class="card">
+    <h2 style="margin: 0 0 1.5rem 0;">🔄 Derniers Mouvements ({{ mouvements|length }})</h2>
+    
+    {% if mouvements %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Quantité</th>
+          <th>Stock Avant</th>
+          <th>Stock Après</th>
+          <th>Motif</th>
+          <th>Document</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for mvt in mouvements %}
+        <tr>
+          <td>{{ mvt.date_mouvement.strftime('%d/%m/%Y') }}</td>
+          <td>
+            {% if mvt.type_mouvement == 'ENTREE' %}
+              <span class="badge badge-entree">⬆️ Entrée</span>
+            {% else %}
+              <span class="badge badge-sortie">⬇️ Sortie</span>
+            {% endif %}
+          </td>
+          <td>
+            <strong style="color: {{ 'var(--success-color)' if mvt.type_mouvement == 'ENTREE' else 'var(--danger-color)' }};">
+              {{ '+' if mvt.type_mouvement == 'ENTREE' else '-' }}{{ mvt.quantite }} {{ article.unite }}
+            </strong>
+          </td>
+          <td>{{ mvt.quantite_avant }} {{ article.unite }}</td>
+          <td>{{ mvt.quantite_apres }} {{ article.unite }}</td>
+          <td>{{ mvt.motif or '-' }}</td>
+          <td>
+            {% if mvt.document_path %}
+              <a href="/uploads/{{ mvt.document_path }}" target="_blank" style="color: var(--secondary-color);">
+                📄 Voir
+              </a>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; padding: 2rem; color: var(--gray-500);">
+      Aucun mouvement enregistré pour cet article
+    </p>
+    {% endif %}
+  </div>
+  
+</div>
+</body>
+{% endblock %}
+

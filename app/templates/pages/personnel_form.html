@@ -1,303 +1,206 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}{{ 'Nouvel Agent' if mode == 'create' else 'Modifier Agent' }} - {{ app_name }}{% endblock %}
+{% block title %}{{ 'Nouvel Agent' if mode == 'create' else 'Modifier Agent' }} - {{ app_name }}
+{% endblock %}
 
 {% block styles %}
 <style>
-body {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  min-height: 100vh;
+/* ========== PERSONNEL FORM PAGE STYLES ========== */
+.personnel-form-container {
+    padding: 2rem 0;
+    background: #f8f9fa;
+    min-height: 100vh;
 }
 
+/* Formulaire */
 .form-container {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 2rem;
-  animation: slideIn 0.5s ease-out;
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    animation: slideIn 0.5s ease-out;
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.form-card {
-  background: white;
-  border-radius: 25px;
-  box-shadow: 0 15px 50px rgba(0,0,0,0.15);
-  padding: 3rem;
-  margin-bottom: 2rem;
-  transition: transform 0.3s;
-}
-
-.form-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-}
-
-.form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 3px solid transparent;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) border-box;
-  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-.form-header h1 {
-  margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-size: 2rem;
-  font-weight: bold;
-}
-
+/* Sections du formulaire */
 .form-section {
-  margin-bottom: 3rem;
-  padding: 2rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
-  border-radius: 20px;
-  border-left: 5px solid #667eea;
-  transition: all 0.3s;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    transition: all 0.3s;
 }
 
 .form-section:hover {
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
-  transform: translateX(5px);
+    background: #fafbfc;
+    border-radius: 10px;
+    padding: 1rem;
+    margin: -1rem -1rem 1rem -1rem;
+}
+
+.form-section:last-child {
+    border-bottom: none;
 }
 
 .form-section-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
+/* Grille du formulaire */
 .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
 }
 
 .form-group label {
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  color: #333;
+    font-weight: 600;
+    color: #000000;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
 
 .form-group label.required::after {
-  content: " *";
-  color: #dc3545;
+    content: " *";
+    color: #dc3545;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-  padding: 1rem 1.25rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  font-size: 1rem;
-  transition: all 0.3s;
-  background: white;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    background: #fff;
+    color: #000000;
+    font-size: 1rem;
+    transition: all 0.3s;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.15);
-  transform: translateY(-2px);
-  background: #fafbfc;
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    background: #fafbfc;
 }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 100px;
+/* Upload de photo */
+.file-input-group {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
 }
 
-.form-group small {
-  margin-top: 0.25rem;
-  color: #6c757d;
-  font-size: 0.85rem;
+.file-input-group:hover {
+    background: #e9ecef;
+    border-color: var(--primary-color);
 }
 
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  padding-top: 2rem;
-  border-top: 2px solid #f0f0f0;
-}
-
-.btn {
-  padding: 1rem 2.5rem;
-  border: none;
-  border-radius: 50px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-decoration: none;
-  display: inline-block;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.btn:hover::before {
-  width: 300px;
-  height: 300px;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-}
-
-.btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-  color: white;
-  box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
-}
-
-.btn-secondary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(108, 117, 125, 0.4);
-}
-
-.photo-upload {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.photo-preview {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background-color: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.photo-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photo-placeholder {
-  font-size: 3rem;
-  color: #ccc;
-}
-
-.file-input-wrapper {
-  position: relative;
-  overflow: hidden;
-  display: inline-block;
-}
-
-.file-input-wrapper input[type=file] {
-  position: absolute;
-  left: -9999px;
+.file-input-group input[type="file"] {
+    display: none;
 }
 
 .file-input-label {
-  padding: 0.5rem 1rem;
-  background: #667eea;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-block;
+    display: block;
+    cursor: pointer;
+    color: #666;
+    font-weight: 500;
 }
 
-.file-input-label:hover {
-  background: #5568d3;
+/* Actions du formulaire */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
 }
 
-.alert {
-  padding: 1.5rem 2rem;
-  border-radius: 15px;
-  margin-bottom: 2rem;
-  animation: slideDown 0.5s ease-out;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+/* Photo de l'agent */
+.photo-preview {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #f8f9fa;
+    border: 3px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+.photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.alert-info {
-  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-  color: #0c5460;
-  border-left: 5px solid #17a2b8;
-  font-weight: 500;
+.photo-placeholder {
+    font-size: 4rem;
+    color: #dee2e6;
+}
+
+/* Info box */
+.info-box {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    color: #0c5460;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border-left: 5px solid #17a2b8;
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-grid" style="max-width: 1200px;">
-  
-  <!-- En-tête -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-      <h1 style="margin: 0;">{{ '➕ Nouvel Agent' if mode == 'create' else '✏️ Modifier Agent' }}</h1>
-      <a href="/api/v1/personnel/" class="btn-back" title="Retour au Personnel">
-        <span style="font-size: 1.2rem;">←</span> Retour au Personnel
-      </a>
-    </div>
-    <p style="color: #6c757d; margin: 0;">
-      {{ 'Créez un nouveau dossier agent avec toutes les informations nécessaires' if mode == 'create' else 'Modifiez les informations de l\'agent' }}
-    </p>
+{{ page_header(
+    title='➕ Nouvel Agent' if mode == 'create' else '✏️ Modifier Agent',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'RH', 'url': '/api/v1/rh/'},
+        {'name': 'Personnel', 'url': '/api/v1/personnel/'},
+        {'name': 'Nouveau' if mode == 'create' else 'Modifier'}
+    ],
+    actions=[
+        {'label': '← Retour Personnel', 'url': '/api/v1/personnel/', 'primary': False}
+    ]
+) }}
+
+<div class="personnel-form-container container">
+
+  <!-- Info box -->
+  <div class="info-box">
+    ℹ️ Les champs marqués d'un astérisque (*) sont obligatoires
   </div>
 
   <!-- Formulaire -->
-  <div class="form-card">
-    <div class="alert alert-info">
-      ℹ️ Les champs marqués d'un astérisque (*) sont obligatoires
-    </div>
+  <div class="form-container">
 
     <form method="POST" action="{{ '/api/v1/personnel/api/agents/' + (agent.id|string) if mode == 'edit' else '/api/v1/personnel/api/agents' }}" enctype="multipart/form-data" id="agentForm" data-mode="{{ mode }}" {% if mode == 'edit' %}data-agent-id="{{ agent.id }}"{% endif %}>
       
@@ -417,7 +320,7 @@ body {
             <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
               Formats acceptés : JPG, PNG, GIF (max 5 MB)
             </small>
-            <button type="button" onclick="clearPhoto()" class="btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; display: none;" id="clearPhotoBtn">
+            <button type="button" onclick="clearPhoto()" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; display: none;" id="clearPhotoBtn">
               🗑️ Supprimer
             </button>
           </div>

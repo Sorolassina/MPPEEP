@@ -1,286 +1,286 @@
 {% extends "layouts/base.html" %}
-{% block title %}Circuit administratif · {{ app_name }}{% endblock %}
+{% from 'components/page_header.html' import page_header %}
+{% block title %}Circuit administratif · {{ app_name }}</body>
+{% endblock %}
 
 {% block styles %}
 <style>
-.wrap{
-  max-width:1100px;
-  margin:0 auto;
-  display:flex;
-  flex-direction:column;
-  gap:1.5rem;
-  padding: 1.5rem;
+/* ========== RH DEMANDE DETAIL PAGE STYLES ========== */
+.wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    background: #f8f9fa;
 }
 
-.card{
-  background:#fff;
-  border-radius:14px;
-  box-shadow:0 10px 25px rgba(0,0,0,.06);
-  padding:1.5rem;
-}
-
-.card h2, .card h3 {
-  margin: 0 0 1rem 0;
-  color: #222;
-}
-
-/* Informations de la demande */
-.meta{
-  display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap:.75rem;
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 10px;
+/* Meta informations */
+.meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
 }
 
 .meta-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .meta-label {
-  font-size: 0.85rem;
-  color: #666;
-  font-weight: 500;
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .meta-value {
-  font-size: 1rem;
-  color: #222;
-  font-weight: 600;
+    font-size: 1.1rem;
+    color: #212529;
+    font-weight: 500;
 }
 
-/* Badge type de demande */
-.badge{
-  display:inline-block;
-  padding:.4rem .8rem;
-  border-radius:999px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-weight:600;
-  font-size: 0.9rem;
-}
-
-/* État actuel */
 .current-state {
-  font-size: 1.1rem;
-  color: #1f6feb;
-  font-weight: 700;
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 8px;
+    font-weight: 600;
 }
 
 .assignee {
-  background: #fff3cd;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  color: #856404;
-  font-size: 0.85rem;
+    display: inline-block;
+    margin-left: 1rem;
+    padding: 0.5rem 1rem;
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 8px;
+    font-size: 0.9rem;
 }
 
-/* Circuit de validation visuel */
+/* Circuit de validation */
 .workflow-circuit {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 2rem 0;
 }
 
 .workflow-step {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
-  background: #f8f9fa;
-  border-left: 4px solid #dee2e6;
-  position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-left: 4px solid #dee2e6;
+    border-radius: 10px;
+    transition: all 0.3s;
 }
 
 .workflow-step.completed {
-  background: #d1e7dd;
-  border-left-color: #0f5132;
+    background: #d1e7dd;
+    border-left-color: #0f5132;
 }
 
 .workflow-step.current {
-  background: #cfe2ff;
-  border-left-color: #084298;
-  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+    background: #cfe2ff;
+    border-left-color: #084298;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
 }
 
 .workflow-step.pending {
-  background: #f8f9fa;
-  border-left-color: #dee2e6;
-  opacity: 0.7;
+    opacity: 0.6;
 }
 
 .step-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #6c757d;
-  color: white;
-  font-weight: 700;
-  flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .workflow-step.completed .step-number {
-  background: #198754;
+    background: #0f5132;
+    color: white;
 }
 
 .workflow-step.current .step-number {
-  background: #0d6efd;
+    background: #084298;
+    color: white;
 }
 
 .step-info {
-  flex: 1;
+    flex: 1;
 }
 
 .step-title {
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 0.25rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #212529;
+    margin-bottom: 0.25rem;
 }
 
 .step-role {
-  font-size: 0.85rem;
-  color: #666;
+    color: #6c757d;
+    font-size: 0.9rem;
 }
 
 .step-icon {
-  font-size: 1.5rem;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.workflow-step.completed .step-icon {
+    background: #198754;
 }
 
 .workflow-step.completed .step-icon::before {
-  content: "✅";
+    content: '✓';
+    color: white;
+    font-weight: bold;
+}
+
+.workflow-step.current .step-icon {
+    background: #0d6efd;
 }
 
 .workflow-step.current .step-icon::before {
-  content: "⏳";
+    content: '⏳';
+}
+
+.workflow-step.pending .step-icon {
+    background: #e9ecef;
 }
 
 .workflow-step.pending .step-icon::before {
-  content: "⏸️";
-}
-
-/* Timeline historique */
-.timeline{
-  position:relative;
-  margin:1rem 0;
-  padding-left:2rem;
-}
-
-.timeline::before{
-  content:"";
-  position:absolute;
-  left:.5rem;
-  top:0;
-  bottom:0;
-  width:2px;
-  background:#e5e7eb;
-}
-
-.t-item{
-  position:relative;
-  margin-bottom:1.25rem;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.t-item::before{
-  content:"";
-  position:absolute;
-  left:-1.6rem;
-  top:1rem;
-  width:12px;
-  height:12px;
-  border-radius:50%;
-  background:#1f6feb;
-  border: 2px solid white;
-}
-
-.t-title{
-  font-weight:600;
-  color: #222;
-  margin-bottom: 0.25rem;
-}
-
-.t-meta{
-  color:#666;
-  font-size:.9rem;
+    content: '○';
+    color: #6c757d;
 }
 
 /* Actions */
-.actions{
-  display:flex;
-  flex-wrap:wrap;
-  gap:.75rem;
-  margin-top:1rem;
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #dee2e6;
 }
 
-.btn{
-  display:inline-flex;
-  align-items:center;
-  gap:.5rem;
-  padding:.75rem 1.25rem;
-  border-radius:10px;
-  border:2px solid #ddd;
-  background:#fff;
-  color:#222;
-  cursor:pointer;
-  font-weight: 500;
-  transition: all 0.2s;
+.code {
+    display: block;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: #f6f8fa;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #666;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+/* Timeline */
+.timeline {
+    position: relative;
+    padding-left: 2rem;
 }
 
-.btn.primary{
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color:#fff;
-  border-color:#667eea;
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: #e5e7eb;
 }
 
-.btn.primary:hover {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+.t-item {
+    position: relative;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
 }
 
-small.code{
-  font-family: monospace;
-  background:#f6f8fa;
-  padding:.25rem .5rem;
-  border-radius:6px;
-  font-size: 0.85rem;
-  color: #666;
-  display: block;
-  margin-top: 0.5rem;
+.t-item::before {
+    content: '';
+    position: absolute;
+    left: -28px;
+    top: 20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #1f6feb;
+    border: 2px solid white;
+}
+
+.t-title {
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 0.5rem;
+    font-size: 1.05rem;
+}
+
+.t-meta {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.6;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .meta {
-    grid-template-columns: 1fr;
-  }
-  
-  .wrap {
-    padding: 1rem;
-  }
+    .wrap {
+        padding: 1rem;
+    }
+    
+    .meta {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .workflow-step {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .current-state,
+    .assignee {
+        display: block;
+        margin: 0.5rem 0;
+    }
 }
 </style>
 {% endblock %}
 
 {% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='📄 Demande #' + req.id|string + ' - ' + req.type.value,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'RH', 'url': url_for('rh_home')},
+        {'name': 'Demande #' + req.id|string}
+    ]
+) }}
+
 <div class="wrap">
   
   <!-- Informations de la demande -->
   <div class="card">
-    <h2>📄 Détails de la Demande #{{ req.id }}</h2>
     
     <div class="meta">
       <div class="meta-item">
@@ -330,7 +330,7 @@ small.code{
       <div class="meta-item" style="grid-column: 1/-1;">
         <span class="meta-label">📎 Document joint</span>
         <span class="meta-value">
-          <a href="/{{ req.document_joint }}" target="_blank" style="color: #667eea; text-decoration: underline;">
+          <a href="/{{ req.document_joint }}" target="_blank" style="color: var(--secondary-color); text-decoration: underline;">
             📥 {{ req.document_filename or 'Télécharger le document' }}
           </a>
         </span>
@@ -456,7 +456,7 @@ small.code{
           <strong>Actions disponibles :</strong>
         </div>
         {% for step in next_steps %}
-          <button class="btn primary" data-to="{{ step.to_state }}">
+          <button class="btn btn-primary" data-to="{{ step.to_state }}">
             ➡️ Passer à {{ step.to_state.value }}
           </button>
         {% endfor %}
@@ -504,12 +504,13 @@ small.code{
 
   <!-- Bouton retour -->
   <div style="text-align: center;">
-    <a href="{{ url_for('rh_home') }}" class="btn">
+    <a href="{{ url_for('rh_home') }}" class="btn btn-secondary">
       ⬅️ Retour au tableau de bord RH
     </a>
   </div>
 
 </div>
+</body>
 {% endblock %}
 
 {% block scripts %}
@@ -549,4 +550,5 @@ document.querySelectorAll('button[data-to]').forEach(btn => {
   btn.addEventListener('click', () => advance(btn.dataset.to));
 });
 </script>
+</body>
 {% endblock %}

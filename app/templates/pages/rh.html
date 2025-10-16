@@ -1,149 +1,100 @@
 {% extends "layouts/base.html" %}
-{% block title %}RH – Administration Publique · {{ app_name }}{% endblock %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}RH – Administration Publique · {{ app_name }}
+{% endblock %}
 
 {% block styles %}
 <style>
-/* Styles spécifiques page RH (les styles communs sont dans pages.css) */
-.card h2, .card h3 {
-  margin: 0 0 1rem 0;
-  color: #222;
-  font-size: 1.2rem;
+/* ========== RH PAGE STYLES ========== */
+.rh-container {
+    padding: 2rem 0;
+    background: #f8f9fa;
+    min-height: 100vh;
 }
 
 /* KPIs */
-.kpis{
-  display:grid; 
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
-  gap:.75rem;
-  margin-bottom: 1rem;
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
 }
 
-.kpi{ 
-  background: var(--white-color);
-  color: var(--secondary-color);
-  border-radius:12px; 
-  padding:1.2rem; 
-  text-align:center;
-  transition: transform 0.2s;
-  cursor:pointer;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+.kpi {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
 }
 
 .kpi:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    background: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
 }
 
 .kpi .label {
-  font-size: 0.85rem;
-  opacity: 0.9;
-  margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
 }
 
-.kpi .val{ 
-  font-size:2rem; 
-  font-weight:700;
-  display: block;
+.kpi .val {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
 }
 
-/* Actions */
-.actions{
-  display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap:.75rem; 
-  margin-top:1rem;
-}
+/* Les actions sont maintenant dans l'en-tête */
 
-.btn{
-  display:flex; 
-  align-items:center; 
-  justify-content: center;
-  gap:.5rem;
-  padding:.8rem 1rem; 
-  background:#fff; 
-  border:2px solid #667eea; 
-  border-radius:10px;
-  text-decoration:none; 
-  color:#667eea;
-  font-weight: 500;
-  box-shadow:0 4px 12px rgba(0,0,0,.08);
-  transition: all 0.2s;
-}
-
-.btn:hover {
-  background: #667eea;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
-}
-
-.btn svg{ 
-  width:20px; 
-  height:20px; 
-  stroke:currentColor; 
-  fill:none; 
-  stroke-width:1.8; 
-}
-
-/* Charts */
-.chart-wrap{ 
-  margin-top:.75rem; 
-}
-
-.chart-card {
-  min-height: 300px;
-}
-
-/* Badges spécifiques RH */
-.badge-type {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
+/* Badges d'état */
 .badge-state {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: #6c757d;
-  color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.badge-state.draft { background: #adb5bd; }
-.badge-state.submitted { background: #0dcaf0; }
-.badge-state.validation { background: #ffc107; }
-.badge-state.signature { background: #fd7e14; }
-.badge-state.archived { background: #198754; }
-.badge-state.rejected { background: #dc3545; }
+.badge-state.draft { background: #adb5bd; color: white; }
+.badge-state.submitted { background: #0dcaf0; color: white; }
+.badge-state.validation { background: #ffc107; color: white; }
+.badge-state.signature { background: #fd7e14; color: white; }
+.badge-state.archived { background: #198754; color: white; }
+.badge-state.rejected { background: #dc3545; color: white; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-grid">
-  
-  <!-- En-tête -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-      <h1 style="margin: 0;">📋 Gestion des Ressources Humaines</h1>
-      <a href="/accueil" class="btn-back" title="Retour à l'accueil">
-        <span style="font-size: 1.2rem;">←</span> Retour
-      </a>
-    </div>
-    <p style="color: #6c757d; margin: 0;">Gérez les demandes administratives, le workflow et les effectifs</p>
-  </div>
+{{ page_header(
+    title='📋 Gestion des Ressources Humaines',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Ressources Humaines'}
+    ],
+    actions=[
+        {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False},
+        {'label': '📝 Nouvelle demande', 'url': url_for('rh_new_demande'), 'primary': False},
+        {'label': '👥 Personnel', 'url': '/api/v1/personnel/', 'primary': False},
+        {'label': '📊 Besoins agents', 'url': url_for('besoins_home'), 'primary': True}
+    ]
+) }}
+
+<div class="rh-container container">
 
   <!-- KPIs et Actions -->
   <div class="card">
-    <h2 style="margin: 0 0 1.5rem 0; color: #222; font-size: 1.3rem;">📊 Statistiques et Indicateurs</h2>
+    <h2 style="margin: 0 0 1.5rem 0; color: #000000; font-size: 1.3rem;">📊 Statistiques et Indicateurs</h2>
     
     <!-- KPIs Agents -->
-    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">👥 Effectifs</h3>
+    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #000000;">👥 Effectifs</h3>
     <div class="kpis">
       <div class="kpi">
         <div class="label">Total Agents</div>
@@ -156,7 +107,7 @@
     </div>
     
     <!-- KPIs Demandes -->
-    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">📋 Demandes</h3>
+    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #000000;">📋 Demandes</h3>
     <div class="kpis">
       <div class="kpi">
         <div class="label">Total Demandes</div>
@@ -177,7 +128,7 @@
     </div>
     
     <!-- Circuit - En attente par étape -->
-    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">🔄 Circuit de Validation</h3>
+    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #000000;">🔄 Circuit de Validation</h3>
     <div class="kpis">
       <div class="kpi">
         <div class="label">⏳ Attente N+1</div>
@@ -197,21 +148,6 @@
       </div>
       </div>
 
-    <!-- Actions -->
-      <div class="actions">
-      <a href="{{ url_for('rh_new_demande') }}" class="btn" title="Nouvelle demande">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        Nouvelle demande
-      </a>
-      <a href="/api/v1/personnel/" class="btn" title="Gestion du Personnel">
-          <svg viewBox="0 0 24 24"><path d="M7 3v4M17 3v4M3 9h18M5 12h14M5 16h10"/></svg>
-        Personnel
-        </a>
-        <a href="{{ url_for('besoins_home') }}" class="btn" title="Suivi des besoins en agents">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Suivi des besoins agents
-        </a>
-      </div>
     </div>
 
   <!-- Évolution des effectifs -->
@@ -264,7 +200,7 @@
           <td>
             {{ d.objet }}
             {% if d.document_joint %}<span title="Document joint">📎</span>{% endif %}
-            {% if d.acte_type %}<br><small style="color: #666;">{{ d.acte_type.value }}</small>{% endif %}
+            {% if d.acte_type %}<br><small style="color: #000000;">{{ d.acte_type.value }}</small>{% endif %}
           </td>
           <td>#{{ d.agent_id }}</td>
           <td>
@@ -277,12 +213,12 @@
             {% endif %}
             <span class="badge-state {{ state_class }}">{{ d.current_state.value }}</span>
             {% if d.current_assignee_role %}
-            <br><small style="color: #666;">→ {{ d.current_assignee_role }}</small>
+            <br><small style="color: #000000;">→ {{ d.current_assignee_role }}</small>
             {% endif %}
           </td>
           <td style="font-size: 0.85rem;">
             {{ d.created_at.strftime('%d/%m/%Y') if d.created_at else '—' }}<br>
-            <small style="color: #999;">{{ d.created_at.strftime('%H:%M') if d.created_at else '' }}</small>
+            <small style="color: #000000;">{{ d.created_at.strftime('%H:%M') if d.created_at else '' }}</small>
           </td>
           <td>
             <div class="action-icons">
@@ -429,4 +365,5 @@ async function supprimerDemande(demandeId) {
   }
 }
 </script>
+</body>
 {% endblock %}

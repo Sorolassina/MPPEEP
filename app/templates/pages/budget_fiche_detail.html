@@ -1,30 +1,31 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}{{ fiche.numero_fiche }} - {{ app_name }}{% endblock %}
+{% block title %}{{ fiche.numero_fiche }} - {{ app_name }}
+{% endblock %}
 
 {% block content %}
+
+{{ page_header(
+    title='📋 ' + fiche.numero_fiche + ' - Budget ' + fiche.annee_budget|string,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Fiches', 'url': '/api/v1/budget/fiches'},
+        {'name': fiche.numero_fiche}
+    ]
+) }}
+
 <div class="page-grid" style="max-width: 1600px;">
   
-  <!-- En-tête -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-      <div>
-        <h1 style="margin: 0;">📋 {{ fiche.numero_fiche }}</h1>
-        <p style="color: #6c757d; margin: 0.5rem 0;">
-          Budget {{ fiche.annee_budget }} • {{ programme.libelle }}
-          {% if direction %} • {{ direction.libelle }}{% endif %}
-        </p>
-        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-          <span class="badge badge-info">{{ fiche.phase }}</span>
-          <span class="badge badge-{{ 'success' if fiche.statut == 'Approuvé' else 'warning' if fiche.statut == 'Soumis' else 'secondary' }}">
-            {{ fiche.statut }}
-          </span>
-        </div>
-      </div>
-      
-      <a href="/api/v1/budget/fiches" class="btn-back" title="Retour aux fiches">
-        <span style="font-size: 1.2rem;">←</span> Retour
-      </a>
+  <!-- Badges de statut -->
+  <div class="card" style="padding: 1rem;">
+    <div style="display: flex; gap: 0.5rem;">
+      <span class="badge badge-info">{{ fiche.phase }}</span>
+      <span class="badge badge-{{ 'success' if fiche.statut == 'Approuvé' else 'warning' if fiche.statut == 'Soumis' else 'secondary' }}">
+        {{ fiche.statut }}
+      </span>
+      <span class="badge badge-secondary">{{ programme.libelle }}{% if direction %} • {{ direction.libelle }}{% endif %}</span>
     </div>
   </div>
 
@@ -69,7 +70,7 @@
         </div>
       </div>
       
-      <div style="padding: 1.5rem; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 15px; text-align: center; color: white; grid-column: 1 / -1;">
+      <div style="padding: 1.5rem; background: linear-gradient(135deg, var(--secondary-color), var(--accent-color)); border-radius: 15px; text-align: center; color: var(--white-color); grid-column: 1 / -1;">
         <div style="font-size: 1.2rem; font-weight: 600;">💎 BUDGET TOTAL DEMANDÉ</div>
         <div style="font-size: 2.5rem; font-weight: 700; margin-top: 0.5rem;">
           {{ "{:,.0f}".format(fiche.budget_total_demande) }} FCFA
@@ -85,7 +86,7 @@
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
       <h2 style="margin: 0;">📊 Détail des Dépenses</h2>
-      <button onclick="ajouterLigne()" class="btn-primary">
+      <button onclick="ajouterLigne()" class="btn btn-primary">
         ➕ Ajouter une Ligne
       </button>
     </div>
@@ -162,7 +163,7 @@
     <div class="card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h2 style="margin: 0;">📎 Documents</h2>
-        <button onclick="document.getElementById('uploadModal').classList.add('show')" class="btn-primary">
+        <button onclick="document.getElementById('uploadModal').classList.add('show')" class="btn btn-primary">
           📤 Upload
         </button>
       </div>
@@ -180,7 +181,7 @@
               {{ doc.uploaded_at.strftime('%d/%m/%Y %H:%M') }}
             </div>
           </div>
-          <a href="{{ doc.file_path }}" target="_blank" class="btn-primary" style="padding: 0.5rem 1rem;">📥</a>
+          <a href="{{ doc.file_path }}" target="_blank" class="btn btn-primary" style="padding: 0.5rem 1rem;">📥</a>
         </div>
         {% endfor %}
       </div>
@@ -211,13 +212,13 @@
   <!-- Actions -->
   <div class="card">
     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-      <a href="/api/v1/budget/api/fiches/{{ fiche.id }}/export/pdf" target="_blank" class="btn-primary">
+      <a href="/api/v1/budget/api/fiches/{{ fiche.id }}/export/pdf" target="_blank" class="btn btn-primary">
         📄 Exporter en PDF
       </a>
-      <button onclick="changerStatut()" class="btn-primary" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+      <button onclick="changerStatut()" class="btn btn-primary" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
         🔄 Changer Statut
       </button>
-      <button onclick="window.print()" class="btn-primary" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+      <button onclick="window.print()" class="btn btn-primary" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
         🖨️ Imprimer
       </button>
     </div>
@@ -226,7 +227,7 @@
 </div>
 
 <!-- Modal Ajout Ligne -->
-<div id="ligneModal" class="modal-overlay">
+<div id="ligneModal" class="modal">
   <div class="modal-content" style="max-width: 700px;">
     <div class="modal-header">
       <h2>➕ Ajouter une Ligne Budgétaire</h2>
@@ -289,15 +290,15 @@
       </div>
       
       <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
-        <button type="button" class="btn-modal secondary" onclick="closeLigneModal()">Annuler</button>
-        <button type="submit" class="btn-modal primary">💾 Ajouter</button>
+        <button type="button" class="btn btn-secondary" onclick="closeLigneModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Ajouter</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Modal Upload Document -->
-<div id="uploadModal" class="modal-overlay">
+<div id="uploadModal" class="modal">
   <div class="modal-content">
     <div class="modal-header">
       <h2>📤 Upload Document</h2>
@@ -327,12 +328,13 @@
       </div>
       
       <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
-        <button type="button" class="btn-modal secondary" onclick="closeUploadModal()">Annuler</button>
-        <button type="submit" class="btn-modal primary">📤 Upload</button>
+        <button type="button" class="btn btn-secondary" onclick="closeUploadModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">📤 Upload</button>
       </div>
     </form>
   </div>
 </div>
+
 
 {% endblock %}
 
@@ -451,58 +453,16 @@ function changerStatut() {
 // Styles
 const style = document.createElement('style');
 style.textContent = `
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    justify-content: center;
-    align-items: center;
-  }
-  
+
   .modal-overlay.show {
     display: flex;
   }
-  
-  .modal-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    max-width: 600px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-  }
-  
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #e0e0e0;
-  }
-  
+
   .modal-header h2 {
     margin: 0;
     color: #333;
   }
-  
-  .modal-close {
-    font-size: 2rem;
-    color: #6c757d;
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 0;
-    line-height: 1;
-  }
-  
+
   .modal-close:hover {
     color: #dc3545;
   }
@@ -537,7 +497,7 @@ style.textContent = `
   .form-group select:focus,
   .form-group textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--secondary-color);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
   
@@ -547,33 +507,7 @@ style.textContent = `
     justify-content: flex-end;
   }
   
-  .btn-modal {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-  }
-  
-  .btn-modal.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-  }
-  
-  .btn-modal.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-  }
-  
-  .btn-modal.secondary {
-    background: #e9ecef;
-    color: #495057;
-  }
-  
-  .btn-modal.secondary:hover {
-    background: #dee2e6;
-  }
+  /* Les styles de boutons sont centralisés dans buttons.css */
   
   @media print {
     .modal-overlay, button, .action-icons, .btn-back {
@@ -585,5 +519,6 @@ document.head.appendChild(style);
 
 console.log('✅ Page détail fiche technique chargée');
 </script>
+
 {% endblock %}
 

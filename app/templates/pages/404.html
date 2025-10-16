@@ -12,8 +12,8 @@
         </p>
         
         <div class="error-actions">
-            <a href="{{ url_for('accueil') }}" class="btn btn-primary">Retour à l'accueil</a>
-            <a href="javascript:history.back()" class="btn btn-secondary">Page précédente</a>
+            <a href="{{ url_for('accueil') }}" class="btn btn-premium btn-primary">Retour à l'accueil</a>
+            <a href="javascript:history.back()" class="btn btn-premium btn-secondary">Page précédente</a>
         </div>
     </div>
     
@@ -27,48 +27,6 @@
 {% endblock %}
 
 {% block styles %}
-<style>
-.error-page {
-    min-height: 60vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 40px 20px;
-}
 
-.error-code {
-    font-size: 120px;
-    font-weight: bold;
-    color: var(--primary-color);
-    margin: 0;
-}
-
-.error-title {
-    font-size: 32px;
-    margin: 20px 0;
-    color: var(--gray-900);
-}
-
-.error-message {
-    font-size: 18px;
-    color: var(--gray-600);
-    margin-bottom: 30px;
-    max-width: 500px;
-}
-
-.error-actions {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.error-illustration {
-    margin-top: 40px;
-    max-width: 200px;
-}
-</style>
 {% endblock %}
 

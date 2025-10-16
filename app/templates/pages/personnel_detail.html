@@ -1,47 +1,188 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}{{ agent.prenom }} {{ agent.nom }} - {{ app_name }}{% endblock %}
+{% block title %}{{ agent.prenom }} {{ agent.nom }} - {{ app_name }}
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ========== PERSONNEL DETAIL PAGE STYLES ========== */
+.personnel-detail-container {
+    padding: 2rem 0;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+/* Photo et infos principales */
+.profile-header {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.profile-photo {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white-color);
+    font-size: 3rem;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-info {
+    flex: 1;
+    padding-left: 2rem;
+}
+
+.profile-name {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 0.5rem;
+}
+
+.profile-matricule {
+    font-size: 1.1rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.profile-details {
+    color: #6c757d;
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* Sections d'informations */
+.info-section {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0.5rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 1rem;
+    color: #000000;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+/* Bouton de retour */
+.btn-back {
+    background: #6c757d;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-back:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    color: white;
+    text-decoration: none;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="page-grid">
+{{ page_header(
+    title='👤 ' + agent.prenom + ' ' + agent.nom + ' - ' + agent.matricule,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'RH', 'url': '/api/v1/rh/'},
+        {'name': 'Personnel', 'url': '/api/v1/personnel/'},
+        {'name': agent.matricule}
+    ],
+    actions=[
+        {'label': '← Retour Personnel', 'url': '/api/v1/personnel/', 'primary': False},
+        {'label': '✏️ Modifier', 'url': '/api/v1/personnel/' + agent.id|string + '/edit', 'primary': True}
+    ]
+) }}
+
+<div class="personnel-detail-container container">
   
-  <!-- En-tête avec photo et infos principales -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-      <div style="display: flex; gap: 2rem; align-items: center;">
-        <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; font-weight: bold;">
-          {% if agent.photo_path %}
-            <img src="{{ agent.photo_path }}" alt="{{ agent.prenom }} {{ agent.nom }}" style="width: 100%; height: 100%; object-fit: cover;">
-          {% else %}
-            {{ agent.prenom[0] }}{{ agent.nom[0] }}
-          {% endif %}
-        </div>
-        
-        <div>
-          <h1 style="margin: 0;">{{ agent.prenom }} {{ agent.nom }}</h1>
-          <p style="color: #6c757d; margin: 0.5rem 0; font-size: 1.1rem;">
-            <strong>{{ agent.matricule }}</strong>
-            {% if grade %}
-              • {{ grade.libelle }} ({{ grade.code }})
-            {% endif %}
-          </p>
-          <p style="color: #6c757d; margin: 0;">
-            {% if service %}
-              📍 {{ service.libelle }}
-            {% endif %}
-            {% if agent.fonction %}
-              • {{ agent.fonction }}
-            {% endif %}
-          </p>
-        </div>
+  <!-- Photo et infos principales -->
+  <div class="profile-header">
+    <div style="display: flex; gap: 2rem; align-items: center;">
+      <div class="profile-photo">
+        <img src="{{ profile_picture_url(agent) }}" alt="{{ agent.prenom }} {{ agent.nom }}">
       </div>
       
-      <a href="/api/v1/personnel/" class="btn-back" title="Retour au Personnel">
-        <span style="font-size: 1.2rem;">←</span> Retour
-      </a>
+      <div class="profile-info">
+        <h1 class="profile-name">{{ agent.prenom }} {{ agent.nom }}</h1>
+        <div class="profile-matricule">Matricule: {{ agent.matricule }}</div>
+        <div class="profile-details">
+          {% if grade %}
+            <div>• {{ grade.libelle }} ({{ grade.code }})</div>
+          {% endif %}
+          {% if service %}
+            <div>📍 {{ service.libelle }}</div>
+          {% endif %}
+          {% if agent.fonction %}
+            <div>• {{ agent.fonction }}</div>
+          {% endif %}
+        </div>
+      </div>
     </div>
     
-    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
       <span class="badge badge-{{ 'success' if agent.actif else 'danger' }}">
         {{ '✅ Actif' if agent.actif else '❌ Inactif' }}
       </span>
@@ -50,68 +191,68 @@
   </div>
 
   <!-- Informations personnelles -->
-  <div class="card">
-    <h2 style="margin-bottom: 1.5rem;">👤 Informations Personnelles</h2>
+  <div class="info-section">
+    <h2 class="section-title">👤 Informations Personnelles</h2>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date de naissance</div>
-        <div>{{ agent.date_naissance or '-' }}</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Date de naissance</div>
+        <div class="info-value">{{ agent.date_naissance or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Lieu de naissance</div>
-        <div>{{ agent.lieu_naissance or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Lieu de naissance</div>
+        <div class="info-value">{{ agent.lieu_naissance or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Nationalité</div>
-        <div>{{ agent.nationalite or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Nationalité</div>
+        <div class="info-value">{{ agent.nationalite or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Sexe</div>
-        <div>{{ agent.sexe or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Sexe</div>
+        <div class="info-value">{{ agent.sexe or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Situation familiale</div>
-        <div>{{ agent.situation_familiale or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Situation familiale</div>
+        <div class="info-value">{{ agent.situation_familiale or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Nombre d'enfants</div>
-        <div>{{ agent.nombre_enfants or '0' }}</div>
+      <div class="info-item">
+        <div class="info-label">Nombre d'enfants</div>
+        <div class="info-value">{{ agent.nombre_enfants or '0' }}</div>
       </div>
     </div>
     
     <hr style="margin: 2rem 0; border: none; border-top: 2px solid #e0e0e0;">
     
     <h3 style="margin-bottom: 1rem;">📞 Contact</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Email professionnel</div>
-        <div>{{ agent.email_professionnel or '-' }}</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Email professionnel</div>
+        <div class="info-value">{{ agent.email_professionnel or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Email personnel</div>
-        <div>{{ agent.email_personnel or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Email personnel</div>
+        <div class="info-value">{{ agent.email_personnel or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Téléphone 1</div>
-        <div>{{ agent.telephone_1 or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Téléphone 1</div>
+        <div class="info-value">{{ agent.telephone_1 or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Téléphone 2</div>
-        <div>{{ agent.telephone_2 or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Téléphone 2</div>
+        <div class="info-value">{{ agent.telephone_2 or '-' }}</div>
       </div>
       
-      <div style="grid-column: 1 / -1;">
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Adresse</div>
-        <div>{{ agent.adresse or '-' }}</div>
+      <div class="info-item" style="grid-column: 1 / -1;">
+        <div class="info-label">Adresse</div>
+        <div class="info-value">{{ agent.adresse or '-' }}</div>
         {% if agent.ville or agent.code_postal %}
         <div style="color: #6c757d;">{{ agent.ville or '' }} {{ agent.code_postal or '' }}</div>
         {% endif %}
@@ -120,70 +261,70 @@
   </div>
 
   <!-- Informations professionnelles -->
-  <div class="card">
-    <h2 style="margin-bottom: 1.5rem;">💼 Informations Professionnelles</h2>
+  <div class="info-section">
+    <h2 class="section-title">💼 Informations Professionnelles</h2>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date de recrutement</div>
-        <div>{{ agent.date_recrutement or '-' }}</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Date de recrutement</div>
+        <div class="info-value">{{ agent.date_recrutement or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date de prise de service</div>
-        <div>{{ agent.date_prise_service or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Date de prise de service</div>
+        <div class="info-value">{{ agent.date_prise_service or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Grade</div>
-        <div>{{ grade.libelle if grade else '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Grade</div>
+        <div class="info-value">{{ grade.libelle if grade else '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Échelon</div>
-        <div>{{ agent.echelon or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Échelon</div>
+        <div class="info-value">{{ agent.echelon or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Indice</div>
-        <div>{{ agent.indice or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Indice</div>
+        <div class="info-value">{{ agent.indice or '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Date départ retraite prévue</div>
-        <div>{{ agent.date_depart_retraite_prevue or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Date départ retraite prévue</div>
+        <div class="info-value">{{ agent.date_depart_retraite_prevue or '-' }}</div>
       </div>
     </div>
     
     <hr style="margin: 2rem 0; border: none; border-top: 2px solid #e0e0e0;">
     
     <h3 style="margin-bottom: 1rem;">🏢 Affectation</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Programme</div>
-        <div>{{ programme.libelle if programme else '-' }}</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Programme</div>
+        <div class="info-value">{{ programme.libelle if programme else '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Direction</div>
-        <div>{{ direction.libelle if direction else '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Direction</div>
+        <div class="info-value">{{ direction.libelle if direction else '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Service</div>
-        <div>{{ service.libelle if service else '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Service</div>
+        <div class="info-value">{{ service.libelle if service else '-' }}</div>
       </div>
       
-      <div>
-        <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Fonction</div>
-        <div>{{ agent.fonction or '-' }}</div>
+      <div class="info-item">
+        <div class="info-label">Fonction</div>
+        <div class="info-value">{{ agent.fonction or '-' }}</div>
       </div>
     </div>
   </div>
 
   <!-- Congés -->
-  <div class="card">
-    <h2 style="margin-bottom: 1.5rem;">🏖️ Gestion des Congés</h2>
+  <div class="info-section">
+    <h2 class="section-title">🏖️ Gestion des Congés</h2>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
       <div style="text-align: center; padding: 1.5rem; background: #e3f2fd; border-radius: 15px;">
@@ -217,7 +358,7 @@
             <div style="font-weight: 600;">{{ doc.type_document }}</div>
             <div style="font-size: 0.9rem; color: #6c757d;">{{ doc.uploaded_at.strftime('%d/%m/%Y') }}</div>
           </div>
-          <a href="{{ doc.file_path }}" target="_blank" class="btn-primary" style="padding: 0.5rem 1rem;">📥</a>
+          <a href="{{ doc.file_path }}" target="_blank" class="btn btn-primary" style="padding: 0.5rem 1rem;">📥</a>
         </div>
         {% endfor %}
       </div>
@@ -235,8 +376,8 @@
       {% if historique %}
       <div style="display: flex; flex-direction: column; gap: 1rem;">
         {% for h in historique[:5] %}
-        <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px; border-left: 4px solid #667eea;">
-          <div style="font-weight: 600; color: #667eea;">{{ h.type_evenement }}</div>
+        <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px; border-left: 4px solid var(--secondary-color);">
+          <div style="font-weight: 600; color: var(--secondary-color);">{{ h.type_evenement }}</div>
           <div style="font-size: 0.9rem; color: #6c757d; margin-top: 0.25rem;">
             {{ h.date_evenement.strftime('%d/%m/%Y') }}
             {% if h.description %}
@@ -255,7 +396,7 @@
     </div>
 
     <!-- Évaluations -->
-    <div class="card">
+    <div class="card" style="grid-column: 1 / -1;">
       <h2 style="margin-bottom: 1.5rem;">⭐ Évaluations</h2>
       {% if evaluations %}
       <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -295,21 +436,22 @@
   {% endif %}
 
   <!-- Actions -->
-  <div class="card">
+  <div class="info-section">
     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-      <a href="/api/v1/personnel/{{ agent.id }}/edit" class="btn-primary">
+      <a href="/api/v1/personnel/{{ agent.id }}/edit" class="btn btn-primary">
         ✏️ Modifier
       </a>
-      <button onclick="confirmerDesactivation()" class="btn-primary" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <button onclick="confirmerDesactivation()" class="btn btn-primary" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
         {{ '🔓 Réactiver' if not agent.actif else '🔒 Désactiver' }}
       </button>
-      <button onclick="imprimerFiche()" class="btn-primary" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+      <button onclick="imprimerFiche()" class="btn btn-primary" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
         🖨️ Imprimer la fiche
       </button>
     </div>
   </div>
 
 </div>
+</body>
 {% endblock %}
 
 {% block scripts %}
@@ -371,19 +513,19 @@ console.log('✅ Page détail agent chargée');
 
 <style>
 @media print {
-  .btn-back, .card:last-child {
-    display: none !important;
-  }
-  
-  .page-grid {
-    padding: 0;
+  .personnel-detail-container {
     background: white;
+    padding: 0;
   }
   
-  .card {
+  .profile-header, .info-section {
     box-shadow: none;
-    border: 1px solid #ddd;
+    border: 1px solid #e0e0e0;
     page-break-inside: avoid;
+  }
+  
+  .btn-back {
+    display: none;
   }
 }
 </style>

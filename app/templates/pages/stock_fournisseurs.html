@@ -1,0 +1,327 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Fournisseurs - Gestion des Stocks{% endblock %}
+
+{% block styles %}
+<style>
+/* Réduction de la police du tableau */
+.data-table {
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+}
+
+.data-table th {
+    font-size: 0.8rem;
+}
+
+/* Search box */
+.search-box {
+    margin-bottom: 1rem;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--gray-300);
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title="🏢 Gestion des Fournisseurs",
+    breadcrumbs=[
+        {"name": "Stocks", "url": url_for('stock_home')},
+        {"name": "Fournisseurs"}
+    ],
+    actions=[
+        {"label": "← Retour Stock", "url": url_for('stock_home'), "primary": False},
+        {"label": "➕ Nouveau Fournisseur", "onclick": "ouvrirModalFournisseur()", "primary": True}
+    ]
+) }}
+
+<div class="content-wrapper">
+    <div class="card">
+        
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Rechercher un fournisseur..." onkeyup="filtrerFournisseurs()">
+            </div>
+      
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="data-table" id="fournisseursTable">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Nom</th>
+                            <th>Téléphone</th>
+                            <th>Email</th>
+                            <th>Adresse</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if fournisseurs %}
+                            {% for fournisseur in fournisseurs %}
+                            <tr data-id="{{ fournisseur.id }}">
+                                <td><strong>{{ fournisseur.code }}</strong></td>
+                                <td>{{ fournisseur.nom }}</td>
+                                <td>{{ fournisseur.telephone or '-' }}</td>
+                                <td>{{ fournisseur.email or '-' }}</td>
+                                <td>{{ fournisseur.adresse or '-' }}</td>
+                                <td>
+                                    {% if fournisseur.actif %}
+                                        <span class="badge badge-success">Actif</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">Inactif</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: center;">
+                                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                                        <button class="btn-action" onclick="modifierFournisseur({{ fournisseur.id }})" title="Modifier">✏️</button>
+                                        <button class="btn-action" onclick="supprimerFournisseur({{ fournisseur.id }})" title="Supprimer" style="color: var(--danger-color);">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2rem;">
+                                    Aucun fournisseur enregistré
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Fournisseur -->
+<div id="modalFournisseur" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Nouveau Fournisseur</h2>
+            <span class="close" onclick="fermerModalFournisseur()">&times;</span>
+        </div>
+        <form id="fournisseurForm" onsubmit="submitFournisseur(event)">
+            <input type="hidden" id="fournisseur_id" name="fournisseur_id">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="code">Code <span class="required">*</span></label>
+                    <input type="text" id="code" name="code" class="form-control" required maxlength="50">
+                </div>
+                
+                <div class="form-group">
+                    <label for="nom">Nom du Fournisseur <span class="required">*</span></label>
+                    <input type="text" id="nom" name="nom" class="form-control" required maxlength="200">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="telephone">Téléphone</label>
+                    <input type="tel" id="telephone" name="telephone" class="form-control" maxlength="20">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-control" maxlength="100">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="adresse">Adresse</label>
+                <textarea id="adresse" name="adresse" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="actif" name="actif" checked>
+                    Fournisseur actif
+                </label>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="fermerModalFournisseur()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Styles centralisés dans cards.css, tables.css, forms.css, modals.css, buttons.css -->
+
+<script>
+function filtrerFournisseurs() {
+    const input = document.getElementById('searchInput');
+    const filter = input.value.toUpperCase();
+    const table = document.getElementById('fournisseursTable');
+    const tr = table.getElementsByTagName('tr');
+    
+    for (let i = 1; i < tr.length; i++) {
+        const td = tr[i].getElementsByTagName('td');
+        let found = false;
+        
+        for (let j = 0; j < td.length - 1; j++) {
+            if (td[j]) {
+                const txtValue = td[j].textContent || td[j].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        tr[i].style.display = found ? '' : 'none';
+    }
+}
+
+function ouvrirModalFournisseur() {
+    document.getElementById('modalTitle').textContent = 'Nouveau Fournisseur';
+    document.getElementById('fournisseurForm').reset();
+    document.getElementById('fournisseur_id').value = '';
+    document.getElementById('actif').checked = true;
+    document.getElementById('modalFournisseur').classList.add('show');
+}
+
+function fermerModalFournisseur() {
+    document.getElementById('modalFournisseur').classList.remove('show');
+}
+
+async function modifierFournisseur(id) {
+    try {
+        const response = await fetch(`/api/v1/stock/api/fournisseurs/${id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const frn = data.data;
+            document.getElementById('modalTitle').textContent = 'Modifier Fournisseur';
+            document.getElementById('fournisseur_id').value = frn.id;
+            document.getElementById('code').value = frn.code;
+            document.getElementById('nom').value = frn.nom;
+            document.getElementById('telephone').value = frn.telephone || '';
+            document.getElementById('email').value = frn.email || '';
+            document.getElementById('adresse').value = frn.adresse || '';
+            document.getElementById('actif').checked = frn.actif;
+            document.getElementById('modalFournisseur').classList.add('show');
+        }
+    } catch (error) {
+        showError('Erreur lors du chargement du fournisseur');
+    }
+}
+
+// Variable pour confirmation
+let confirmSuppression = null;
+let confirmTimeout = null;
+
+async function supprimerFournisseur(id) {
+    if (confirmSuppression === id) {
+        clearTimeout(confirmTimeout);
+        confirmSuppression = null;
+        procederSuppressionFournisseur(id);
+    } else {
+        confirmSuppression = id;
+        showWarning('Cliquez à nouveau sur 🗑️ pour confirmer la suppression.', 'Confirmation requise', 3000);
+        confirmTimeout = setTimeout(() => {
+            confirmSuppression = null;
+        }, 3000);
+    }
+}
+
+async function procederSuppressionFournisseur(id) {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.classList.add('show');
+    
+    try {
+        const response = await fetch(`/api/v1/stock/api/fournisseurs/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            // L'overlay reste affiché pendant la redirection
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            // Masquer l'overlay SEULEMENT en cas d'erreur
+            if (overlay) overlay.classList.remove('show');
+            showError(result.error);
+        }
+    } catch (error) {
+        // Masquer l'overlay SEULEMENT en cas d'erreur
+        if (overlay) overlay.classList.remove('show');
+        showError('Erreur lors de la suppression');
+    }
+}
+
+async function submitFournisseur(event) {
+    event.preventDefault();
+    
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) overlay.classList.add('show');
+    
+    const formData = new FormData(event.target);
+    const id = formData.get('fournisseur_id');
+    
+    const url = id 
+        ? `/api/v1/stock/api/fournisseurs/${id}` 
+        : '/api/v1/stock/api/fournisseurs';
+    const method = id ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            fermerModalFournisseur();
+            // L'overlay reste affiché pendant la redirection
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            // Masquer l'overlay SEULEMENT en cas d'erreur
+            if (overlay) overlay.classList.remove('show');
+            showError(result.error);
+        }
+    } catch (error) {
+        // Masquer l'overlay SEULEMENT en cas d'erreur
+        if (overlay) overlay.classList.remove('show');
+        showError('Erreur lors de l\'enregistrement');
+    }
+}
+
+// Fermer le modal en cliquant en dehors
+window.onclick = function(event) {
+    const modal = document.getElementById('modalFournisseur');
+    if (event.target == modal) {
+        fermerModalFournisseur();
+    }
+}
+</script>
+</body>
+{% endblock %}

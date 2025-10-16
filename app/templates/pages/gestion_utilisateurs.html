@@ -1,106 +1,98 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
 {% block title %}Gestion des Utilisateurs{% endblock %}
 
-{% block page_title %}Gestion des Utilisateurs{% endblock %}
-
 {% block content %}
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-content">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Traitement en cours...</div>
-        <div class="loading-subtext">Veuillez patienter</div>
-    </div>
-</div>
+{{ page_header(
+    title='👥 Gestion des Utilisateurs',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Administration'},
+        {'name': 'Utilisateurs'}
+    ],
+    actions=[
+        {'label': '➕ Nouvel Utilisateur', 'onclick': 'openCreateModal()', 'primary': True}
+    ]
+) }}
 
 <div class="users-management">
     <!-- Messages -->
     <div id="message-container"></div>
 
-    <!-- En-tête avec actions -->
-    <div class="page-header">
-        <h2>👥 Liste des Utilisateurs</h2>
-        <div class="header-actions">
-            <button class="btn btn-primary" onclick="openCreateModal()">
-                ➕ Nouvel utilisateur
-            </button>
-        </div>
-    </div>
-
     <!-- Statistiques rapides -->
-    <div class="stats-cards">
-        <div class="mini-stat-card">
-            <span class="mini-stat-value">{{ users|length }}</span>
-            <span class="mini-stat-label">Utilisateurs</span>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ users|length }}</div>
+            <div class="stat-label">Utilisateurs</div>
         </div>
-        <div class="mini-stat-card">
-            <span class="mini-stat-value">{{ users|selectattr('is_active')|list|length }}</span>
-            <span class="mini-stat-label">Actifs</span>
+        <div class="stat-card">
+            <div class="stat-value">{{ users|selectattr('is_active')|list|length }}</div>
+            <div class="stat-label">Actifs</div>
         </div>
-        <div class="mini-stat-card">
-            <span class="mini-stat-value">{{ users|selectattr('type_user', 'equalto', 'admin')|list|length }}</span>
-            <span class="mini-stat-label">Admins</span>
+        <div class="stat-card">
+            <div class="stat-value">{{ users|selectattr('type_user', 'equalto', 'admin')|list|length }}</div>
+            <div class="stat-label">Admins</div>
         </div>
     </div>
 
     <!-- Tableau des utilisateurs -->
-    <div class="users-table-container">
+    <div class="card">
         {% if users %}
-        <table class="users-table">
-            <thead>
-                <tr>
-                    <th>Photo</th>
-                    <th>ID</th>
-                    <th>Nom</th>
-                    <th>Email</th>
-                    <th>Type</th>
-                    <th>Statut</th>
-                    <th>Créé le</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="users-tbody">
-                {% for user in users %}
-                <tr class="{% if not user.is_active %}user-inactive{% endif %}" data-user-id="{{ user.id }}">
-                    <td class="photo-cell">
-                        {% if user.profile_picture %}
-                            <img src="/uploads/{{ user.profile_picture }}?t={{ now().timestamp() }}" alt="Photo {{ user.full_name }}" class="user-photo">
-                        {% else %}
-                            <div class="user-photo-placeholder">👤</div>
-                        {% endif %}
-                    </td>
-                    <td>#{{ user.id }}</td>
-                    <td>{{ user.full_name or '-' }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>
-                        <span class="badge badge-{{ user.type_user }}">
-                            {{ user.type_user }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if user.is_active %}
-                            <span class="status-badge status-active">✓ Actif</span>
-                        {% else %}
-                            <span class="status-badge status-inactive">✗ Inactif</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ user.created_at|format_date }}</td>
-                    <td class="actions-cell">
-                        <button class="btn-icon" title="Modifier photo" onclick="openPhotoModal({{ user.id }}, '{{ user.full_name or user.email }}')">
-                            📸
-                        </button>
-                        <button class="btn-icon" title="Modifier" onclick="openEditModal({{ user.id }})">
-                            ✏️
-                        </button>
-                        <button class="btn-icon" title="Supprimer" onclick="deleteUser({{ user.id }}, '{{ user.email }}')">
-                            🗑️
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Photo</th>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Email</th>
+                        <th>Type</th>
+                        <th>Statut</th>
+                        <th>Créé le</th>
+                        <th class="actions-col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                    {% for user in users %}
+                    <tr class="{% if not user.is_active %}disabled{% endif %}" data-user-id="{{ user.id }}">
+                        <td class="text-center">
+                            <img src="{{ profile_picture_url(user) }}" alt="Photo {{ user.full_name or user.email }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                        </td>
+                        <td>#{{ user.id }}</td>
+                        <td><strong>{{ user.full_name or '-' }}</strong></td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="badge badge-{{ user.type_user }}">
+                                {{ user.type_user }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="status-badge status-active">✓ Actif</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">✗ Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at|format_date }}</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="btn-icon" title="Modifier photo" onclick="openPhotoModal({{ user.id }}, '{{ user.full_name or user.email }}')">
+                                    📸
+                                </button>
+                                <button class="btn-icon" title="Modifier" onclick="openEditModal({{ user.id }})">
+                                    ✏️
+                                </button>
+                                <button class="btn-icon btn-danger" title="Supprimer" onclick="deleteUser({{ user.id }}, '{{ user.email }}')">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
         <div class="empty-state">
             <p>Aucun utilisateur trouvé</p>
@@ -126,19 +118,19 @@
         <form id="createUserForm" onsubmit="createUser(event)">
             <div class="form-group">
                 <label>Email *</label>
-                <input type="email" name="email" required>
+                <input type="email" name="email" class="form-control" required>
             </div>
             <div class="form-group">
                 <label>Nom complet *</label>
-                <input type="text" name="full_name" required>
+                <input type="text" name="full_name" class="form-control" required>
             </div>
             <div class="form-group">
                 <label>Mot de passe *</label>
-                <input type="password" name="password" required minlength="6">
+                <input type="password" name="password" class="form-control" required minlength="6">
             </div>
             <div class="form-group">
                 <label>Type d'utilisateur</label>
-                <select name="type_user">
+                <select name="type_user" class="form-control">
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
                     <option value="moderator">Moderator</option>
@@ -196,19 +188,19 @@
             <input type="hidden" name="user_id" id="edit-user-id">
             <div class="form-group">
                 <label>Email *</label>
-                <input type="email" name="email" id="edit-email" required>
+                <input type="email" name="email" id="edit-email" class="form-control" required>
             </div>
             <div class="form-group">
                 <label>Nom complet *</label>
-                <input type="text" name="full_name" id="edit-full-name" required>
+                <input type="text" name="full_name" id="edit-full-name" class="form-control" required>
             </div>
             <div class="form-group">
                 <label>Nouveau mot de passe (laisser vide pour ne pas changer)</label>
-                <input type="password" name="password" id="edit-password" minlength="6">
+                <input type="password" name="password" id="edit-password" class="form-control" minlength="6">
             </div>
             <div class="form-group">
                 <label>Type d'utilisateur</label>
-                <select name="type_user" id="edit-type-user">
+                <select name="type_user" id="edit-type-user" class="form-control">
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
                     <option value="moderator">Moderator</option>
@@ -233,153 +225,26 @@
 
 {% block styles %}
 <style>
-/* Styles principaux */
+/* Styles spécifiques pour la gestion des utilisateurs */
 .users-management {
     max-width: 1400px;
     margin: 0 auto;
-    padding: var(--spacing-lg);
+    padding: 1rem;
 }
 
-/* Messages container */
 #message-container {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    z-index: 2000;
-    max-width: 400px;
-}
-
-/* Les styles .alert sont maintenant dans components.css */
-
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-xl);
-}
-
-.page-header h2 {
-    margin: 0;
-    color: var(--secondary-color);
-}
-
-.header-actions {
-    display: flex;
-    gap: var(--spacing-md);
-}
-
-/* Stats Cards */
-.stats-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-xl);
-}
-
-.mini-stat-card {
-    background: var(--white-color);
-    padding: var(--spacing-lg);
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-sm);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.mini-stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--secondary-color);
-}
-
-.mini-stat-label {
-    font-size: 0.875rem;
-    color: var(--gray-600);
-    text-transform: uppercase;
-}
-
-/* Tableau */
-.users-table-container {
-    background: var(--white-color);
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-    margin-bottom: var(--spacing-lg);
-}
-
-.users-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.users-table thead {
-    background-color: var(--secondary-color);
-    color: var(--white-color);
-}
-
-.users-table th,
-.users-table td {
-    padding: var(--spacing-md);
-    text-align: left;
-    border-bottom: 1px solid var(--gray-200);
-}
-
-.users-table th {
-    font-weight: 600;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-}
-
-.users-table tbody tr:hover {
-    background-color: var(--gray-100);
-}
-
-.user-inactive {
-    opacity: 0.6;
-}
-
-/* Photos de profil */
-.photo-cell {
-    text-align: center;
-}
-
-.user-photo {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--gray-300);
-}
-
-.user-photo-placeholder {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: var(--gray-200);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: var(--gray-500);
+    margin-bottom: 1rem;
 }
 
 .photo-upload-container {
-    padding: var(--spacing-lg);
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-xl);
+    gap: 2rem;
+    padding: 1rem;
 }
 
-.current-photo,
-.new-photo {
+.current-photo, .new-photo {
     text-align: center;
-}
-
-.current-photo h4,
-.new-photo h4 {
-    margin-bottom: var(--spacing-md);
-    color: var(--secondary-color);
 }
 
 .photo-preview {
@@ -387,113 +252,19 @@
     height: 150px;
     border-radius: 50%;
     object-fit: cover;
+    margin: 1rem auto;
+    display: block;
     border: 3px solid var(--gray-300);
-    margin: 0 auto var(--spacing-md);
-}
-
-.help-text {
-    font-size: 0.875rem;
-    color: var(--gray-600);
-    margin-top: var(--spacing-sm);
-}
-
-/* Badges et Status - définis dans components.css */
-
-/* Actions */
-.actions-cell {
-    display: flex;
-    gap: var(--spacing-sm);
-}
-
-.btn-icon {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 0.25rem;
-    transition: transform 0.2s;
-}
-
-.btn-icon:hover {
-    transform: scale(1.2);
 }
 
 .actions-footer {
-    display: flex;
-    justify-content: flex-start;
-    gap: var(--spacing-md);
+    margin-top: 2rem;
+    text-align: center;
 }
 
-/* Modaux - définis dans components.css */
-
-.form-group {
-    margin-bottom: var(--spacing-md);
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: var(--spacing-sm);
-    font-weight: 500;
-    color: var(--secondary-color);
-}
-
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: var(--spacing-sm);
-    border: 1px solid var(--gray-400);
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: var(--secondary-color);
-}
-
-.checkbox-group label {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    cursor: pointer;
-}
-
-.checkbox-group input[type="checkbox"] {
-    width: auto;
-    cursor: pointer;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-lg);
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-md);
-    }
-    
-    .users-table-container {
-        overflow-x: auto;
-    }
-    
-    .users-table {
-        min-width: 900px;
-    }
-
-    .modal-content {
-        width: 95%;
-    }
-    
     .photo-upload-container {
         grid-template-columns: 1fr;
-        gap: var(--spacing-lg);
     }
 }
 </style>
@@ -501,24 +272,32 @@
 
 {% block scripts %}
 <script>
-// Fonctions pour l'overlay de chargement
+// Fonctions pour l'overlay de chargement (utilise l'overlay global de base.html)
 function showLoading(message = 'Traitement en cours...', subtext = 'Veuillez patienter') {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.querySelector('.loading-text').textContent = message;
-    overlay.querySelector('.loading-subtext').textContent = subtext;
-    overlay.classList.add('show');
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        const loadingText = overlay.querySelector('.loading-text');
+        const loadingSubtext = overlay.querySelector('.loading-subtext');
+        if (loadingText) loadingText.textContent = message;
+        if (loadingSubtext) loadingSubtext.textContent = subtext;
+        overlay.classList.add('show');
+    }
 }
 
 function hideLoading() {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.classList.remove('show');
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
 }
 
 // Fonction pour recharger la page automatiquement après succès
+// L'overlay reste visible pendant la redirection et ne se ferme qu'au rechargement
 function reloadAfterSuccess(message, delay = 1500) {
     showMessage(message, 'success');
     showMessage('🔄 Actualisation automatique...', 'info');
     showLoading('Actualisation...', 'Mise à jour de la page en cours');
+    // NE PAS appeler hideLoading() - l'overlay reste visible jusqu'au rechargement
     setTimeout(() => {
         location.reload(true);  // true = force reload sans cache
     }, delay);
@@ -583,7 +362,7 @@ async function openPhotoModal(userId, userName) {
                 photoPreview.src = `/uploads/${data.user.profile_picture}`;
                 photoPreview.style.display = 'block';
             } else {
-                photoPreview.src = '/static/images/default-avatar.png';
+                photoPreview.src = '/static/images/default-avatar.svg';
                 photoPreview.style.display = 'block';
             }
             
@@ -627,11 +406,11 @@ async function uploadUserPhoto(input) {
         
         const data = await response.json();
         
-        hideLoading();
-        
         if (data.success) {
+            // NE PAS fermer l'overlay - il reste visible pendant le rechargement
             reloadAfterSuccess(data.message);
         } else {
+            hideLoading();
             showMessage(data.message, 'error');
         }
     } catch (error) {
@@ -666,11 +445,11 @@ async function createUser(event) {
         
         const data = await response.json();
         
-        hideLoading();
-        
         if (data.success) {
+            // NE PAS fermer l'overlay - il reste visible pendant le rechargement
             reloadAfterSuccess(data.message);
         } else {
+            hideLoading();
             showMessage(data.message, 'error');
         }
     } catch (error) {
@@ -697,11 +476,11 @@ async function updateUser(event) {
         
         const data = await response.json();
         
-        hideLoading();
-        
         if (data.success) {
+            // NE PAS fermer l'overlay - il reste visible pendant le rechargement
             reloadAfterSuccess(data.message);
         } else {
+            hideLoading();
             showMessage(data.message, 'error');
         }
     } catch (error) {
@@ -725,11 +504,11 @@ async function deleteUser(userId, email) {
         
         const data = await response.json();
         
-        hideLoading();
-        
         if (data.success) {
+            // NE PAS fermer l'overlay - il reste visible pendant le rechargement
             reloadAfterSuccess(data.message);
         } else {
+            hideLoading();
             showMessage(data.message, 'error');
         }
     } catch (error) {

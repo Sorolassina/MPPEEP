@@ -1,34 +1,30 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}{% if mode == 'edit' %}Modifier Fiche Technique{% else %}Nouvelle Fiche Technique{% endif %} - {{ app_name }}{% endblock %}
+{% block title %}{% if mode == 'edit' %}Modifier Fiche Technique{% else %}Nouvelle Fiche Technique{% endif %} - {{ app_name }}
+{% endblock %}
 
 {% block content %}
+
+{{ page_header(
+    title='📋 ' + ('Modifier Fiche Technique' if mode == 'edit' else 'Nouvelle Fiche Technique'),
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Fiches', 'url': url_for('budget_fiches_hierarchique')},
+        {'name': 'Modifier' if mode == 'edit' else 'Nouvelle'}
+    ]
+) }}
+
 <div class="page-grid" style="max-width: 1400px;">
-  
-  <!-- En-tête -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-      <h1 style="margin: 0;">📋 {% if mode == 'edit' %}Modifier Fiche Technique{% else %}Nouvelle Fiche Technique{% endif %}</h1>
-      <a href="{{ url_for('budget_fiches_hierarchique') }}" class="btn-back" title="Retour aux fiches">
-        <span style="font-size: 1.2rem;">←</span> Retour
-      </a>
-    </div>
-    <p style="color: #6c757d; margin: 0;">
-      {% if mode == 'edit' %}
-      Modifiez les informations de la fiche technique budgétaire.
-      {% else %}
-      Créez une fiche technique pour la conférence budgétaire. Cette fiche regroupe vos demandes budgétaires pour l'année à venir.
-      {% endif %}
-    </p>
-  </div>
 
   <!-- Formulaire -->
   <div class="card" style="padding: 2.5rem;">
     <form id="ficheForm" onsubmit="handleSubmit(event)" action="{% if mode == 'edit' %}/api/v1/budget/api/fiches/{{ fiche.id }}{% else %}/api/v1/budget/api/fiches{% endif %}" method="POST">
       
       <!-- IDENTIFICATION -->
-      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px; border-left: 5px solid #667eea;">
-        <h3 style="margin-bottom: 1.5rem; color: #667eea;">🎯 Identification</h3>
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px; border-left: 5px solid var(--secondary-color);">
+        <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">🎯 Identification</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
           <div class="form-group">
             <label class="required">Année Budget</label>
@@ -109,8 +105,8 @@
       </div>
 
       <!-- NOTE JUSTIFICATIVE -->
-      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px; border-left: 5px solid #667eea;">
-        <h3 style="margin-bottom: 1.5rem; color: #667eea;">📝 Note Justificative</h3>
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px; border-left: 5px solid var(--secondary-color);">
+        <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📝 Note Justificative</h3>
         <div class="form-group">
           <label>Justification de la demande</label>
           <textarea name="note_justificative" rows="6" placeholder="Expliquez les raisons de cette demande budgétaire, les objectifs visés, les priorités..."></textarea>
@@ -119,7 +115,7 @@
       </div>
 
       <!-- RÉCAPITULATIF AUTO -->
-      <div style="margin-bottom: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; color: white;">
+      <div style="margin-bottom: 2rem; padding: 1.5rem; background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%); border-radius: 15px; color: var(--white-color);">
         <h3 style="margin-bottom: 1.5rem;">📊 Récapitulatif Automatique</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
           <div style="text-align: center; padding: 1rem; background: rgba(255,255,255,0.2); border-radius: 10px;">
@@ -150,7 +146,7 @@
         <a href="/api/v1/budget/fiches" class="btn" style="padding: 1rem 2rem; border: 2px solid #dee2e6; border-radius: 50px; text-decoration: none; color: #6c757d; font-weight: 600;">
           Annuler
         </a>
-        <button type="submit" class="btn-primary">
+        <button type="submit" class="btn btn-primary">
           💾 Enregistrer la Fiche
         </button>
       </div>
@@ -159,6 +155,7 @@
   </div>
 
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -251,7 +248,7 @@ style.textContent = `
   .form-group select:focus,
   .form-group textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--secondary-color);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 
@@ -268,5 +265,6 @@ setTimeout(calculerTotal, 100);
 
 console.log('✅ Formulaire fiche technique chargé');
 </script>
+
 {% endblock %}
 

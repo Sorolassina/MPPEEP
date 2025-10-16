@@ -12,6 +12,11 @@
     <!-- CSS de base -->
     <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/theme.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/cards.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/buttons.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/forms.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/tables.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/modals.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/pages.css') }}">
     
@@ -43,6 +48,9 @@
             <div class="loading-subtext">Veuillez patienter</div>
         </div>
     </div>
+
+    <!-- Toast Notifications -->
+    {% include "components/toast_notifications.html" %}
 
     <!-- Bouton d'aide flottant -->
     <a href="{{ url_for('aide_home') }}" class="floating-help-button" title="Centre d'Aide">
@@ -215,6 +223,49 @@
             const form = e.target;
             if (form.method.toLowerCase() === 'get') {
                 showGlobalLoading();
+            }
+        });
+
+        // ========== GESTION GLOBALE DES MODALS - Bloquer scroll arrière-plan ==========
+        // Observer tous les modals pour bloquer le scroll du body
+        const modalObserver = new MutationObserver(function(mutations) {
+            const anyModalOpen = document.querySelector('.modal.show, .modal-sm.show, .modal-md.show, .modal-lg.show, .modal-xl.show');
+            
+            if (anyModalOpen) {
+                // Modal ouvert : bloquer le scroll
+                document.body.classList.add('modal-open');
+            } else {
+                // Tous les modals fermés : débloquer le scroll
+                document.body.classList.remove('modal-open');
+            }
+        });
+
+        // Observer les changements de classe sur tous les modals existants
+        document.addEventListener('DOMContentLoaded', function() {
+            const allModals = document.querySelectorAll('.modal, .modal-sm, .modal-md, .modal-lg, .modal-xl');
+            allModals.forEach(function(modal) {
+                modalObserver.observe(modal, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+            });
+        });
+
+        // Fermer modal en cliquant sur le backdrop
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal') || 
+                e.target.classList.contains('modal-sm') || 
+                e.target.classList.contains('modal-md') || 
+                e.target.classList.contains('modal-lg') || 
+                e.target.classList.contains('modal-xl')) {
+                e.target.classList.remove('show');
+            }
+        });
+
+        // Empêcher la fermeture en cliquant sur le contenu du modal
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal-content') || e.target.closest('.modal-content')) {
+                e.stopPropagation();
             }
         });
     </script>

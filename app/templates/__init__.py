@@ -122,6 +122,125 @@ def upload_url(file_path: str) -> str:
     """
     return path_config.get_file_url("uploads", file_path)
 
+def profile_picture_url(user_or_picture: any, add_cache_buster: bool = True) -> str:
+    """
+    Génère l'URL de la photo de profil avec fallback vers l'image par défaut
+    
+    Args:
+        user_or_picture: Peut être:
+            - Un objet User avec user.profile_picture
+            - Un objet Agent avec agent.photo_path
+            - Un dict avec user['profile_picture'] ou agent['photo_path']
+            - Une chaîne directe (chemin de l'image)
+            - None
+        add_cache_buster: Ajouter un paramètre de cache pour forcer le refresh
+    
+    Usage dans template:
+        {{ profile_picture_url(current_user) }}
+        {{ profile_picture_url(agent) }}  # Utilise photo_path
+        {{ profile_picture_url(user.profile_picture) }}
+        {{ profile_picture_url(None) }}  # Retourne l'image par défaut
+    
+    Returns:
+        URL de l'image de profil ou de l'image par défaut
+    """
+    from datetime import datetime
+    
+    # Image par défaut
+    default_image = "/static/images/default-avatar.svg"
+    
+    # Extraire le chemin de l'image
+    picture_path = None
+    user_id = None
+    
+    if user_or_picture is None:
+        return default_image
+    
+    # Si c'est un dict (comme current_user dans les templates)
+    if isinstance(user_or_picture, dict):
+        # Essayer profile_picture (User) puis photo_path (Agent)
+        picture_path = user_or_picture.get('profile_picture') or user_or_picture.get('photo_path')
+        user_id = user_or_picture.get('id')
+    # Si c'est une chaîne directe
+    elif isinstance(user_or_picture, str):
+        picture_path = user_or_picture
+    # Si c'est un objet avec attributs
+    else:
+        # Essayer profile_picture (User) puis photo_path (Agent/Personnel)
+        picture_path = getattr(user_or_picture, 'profile_picture', None) or getattr(user_or_picture, 'photo_path', None)
+        user_id = getattr(user_or_picture, 'id', None)
+    
+    # Si pas d'image définie, retourner l'image par défaut
+    if not picture_path:
+        return default_image
+    
+    # Si le chemin commence déjà par /uploads/ ou /static/, le retourner tel quel
+    if picture_path.startswith('/uploads/') or picture_path.startswith('/static/'):
+        return picture_path
+    
+    # Construire l'URL de l'image
+    image_url = f"/uploads/{picture_path}"
+    
+    # Ajouter un cache buster si demandé
+    if add_cache_buster and user_id:
+        timestamp = int(datetime.now().timestamp())
+        image_url += f"?v={user_id}_{timestamp}"
+    
+    return image_url
+
+def user_initials(user_or_name: any) -> str:
+    """
+    Génère les initiales d'un utilisateur pour l'affichage dans un avatar
+    
+    Args:
+        user_or_name: Peut être:
+            - Un objet User avec user.full_name
+            - Un dict avec user['full_name'] ou user['email']
+            - Une chaîne directe (nom complet)
+            - None
+    
+    Usage dans template:
+        {{ user_initials(current_user) }}
+        {{ user_initials("Jean Dupont") }}
+    
+    Returns:
+        Initiales (ex: "JD") ou "U" par défaut
+    """
+    name = None
+    email = None
+    
+    if user_or_name is None:
+        return "U"
+    
+    # Si c'est un dict
+    if isinstance(user_or_name, dict):
+        name = user_or_name.get('full_name')
+        email = user_or_name.get('email')
+    # Si c'est une chaîne directe
+    elif isinstance(user_or_name, str):
+        name = user_or_name
+    # Si c'est un objet
+    else:
+        name = getattr(user_or_name, 'full_name', None)
+        email = getattr(user_or_name, 'email', None)
+    
+    # Utiliser le nom si disponible
+    if name:
+        parts = name.strip().split()
+        if len(parts) >= 2:
+            # Prénom + Nom
+            return (parts[0][0] + parts[-1][0]).upper()
+        elif len(parts) == 1:
+            # Un seul mot : prendre les 2 premières lettres
+            return parts[0][:2].upper()
+    
+    # Fallback sur l'email
+    if email:
+        return email[0].upper()
+    
+    # Fallback final
+    return "U"
+
 # ==========================================
 # ENREGISTREMENT DES FILTRES
 # ==========================================
@@ -286,6 +405,8 @@ templates.env.globals.update(
     static_url=static_url,
     media_url=media_url,
     upload_url=upload_url,
+    profile_picture_url=profile_picture_url,  # Helper pour images de profil avec fallback
+    user_initials=user_initials,  # Helper pour générer les initiales
     path_config=path_config,  # Accès complet à path_config si nécessaire
 )
 

@@ -1,373 +1,75 @@
 {% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
 
-{% block title %}Gestion des Fichiers - {{ app_name }}{% endblock %}
+{% block title %}Gestion des Fichiers - {{ app_name }}</body>
+{% endblock %}
 
 {% block styles %}
 <style>
-    .files-container {
-        max-width: 1400px;
-        margin: 2rem auto;
-        padding: 0 2rem;
-    }
-
-    .files-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .files-header h1 {
-        margin: 0;
-        color: var(--primary-color);
-    }
-
-    .upload-section {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
-        overflow: hidden;
-    }
-
-    .accordion-header {
-        padding: 1.5rem 2rem;
-        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-        color: white;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.3s;
-        user-select: none;
-    }
-
-    .accordion-header:hover {
-        background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
-    }
-
-    .accordion-header h2 {
-        margin: 0;
-        font-size: 1.2rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .accordion-icon {
-        font-size: 1.5rem;
-        transition: transform 0.3s;
-    }
-
-    .accordion-icon.open {
-        transform: rotate(180deg);
-    }
-
-    .accordion-content {
-        max-height: 0;
-        overflow: hidden;
-        transition: max-height 0.3s ease-out;
-    }
-
-    .accordion-content.open {
-        max-height: 1000px;
-        transition: max-height 0.5s ease-in;
-    }
-
-    .accordion-body {
-        padding: 2rem;
-    }
-
-    .upload-form {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .form-group label {
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 1rem;
-    }
-
-    .form-group textarea {
-        resize: vertical;
-        min-height: 80px;
-    }
-
-    .file-input-wrapper {
-        position: relative;
-        overflow: hidden;
-        display: inline-block;
-        width: 100%;
-    }
-
-    .file-input-wrapper input[type=file] {
-        position: absolute;
-        left: -9999px;
-    }
-
-    .file-input-label {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1rem;
-        border: 2px dashed #ddd;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s;
-        background: #f9f9f9;
-    }
-
-    .file-input-label:hover {
-        border-color: var(--primary-color);
-        background: #f0f0f0;
-    }
-
-    .file-input-label.has-file {
-        border-color: var(--primary-color);
-        background: #e8f5e9;
-    }
-
-    .btn-upload {
-        padding: 1rem 2rem;
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        margin-top: 0.5rem;
-    }
-
-    .btn-upload:hover:not(:disabled) {
-        background: var(--primary-dark);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-
-    .btn-upload:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-    }
-
-    .filters-section {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        align-items: end;
-    }
-
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        min-width: 200px;
-    }
-
-    .filter-group label {
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #666;
-    }
-
-    .filter-group select {
-        padding: 0.5rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
-
-    .files-list {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .files-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .files-table thead {
-        background: #f5f5f5;
-    }
-
-    .files-table th,
-    .files-table td {
-        padding: 1rem;
-        text-align: left;
-        border-bottom: 1px solid #eee;
-    }
-
-    .files-table th {
-        font-weight: 600;
-        color: #333;
-    }
-
-    .files-table tbody tr:hover {
-        background: #f9f9f9;
-    }
-
-    .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
-    .status-uploaded {
-        background: #e3f2fd;
-        color: #1976d2;
-    }
-
-    .status-processing {
-        background: #fff3e0;
-        color: #f57c00;
-    }
-
-    .status-processed {
-        background: #e8f5e9;
-        color: #388e3c;
-    }
-
-    .status-error {
-        background: #ffebee;
-        color: #d32f2f;
-    }
-
-    .status-archived {
-        background: #f5f5f5;
-        color: #757575;
-    }
-
-    .file-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .btn-action {
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        transition: all 0.3s;
-    }
-
-    .btn-view {
-        background: #2196f3;
-        color: white;
-    }
-
-    .btn-view:hover {
-        background: #1976d2;
-    }
-
-    .btn-reprocess {
-        background: #ff9800;
-        color: white;
-    }
-
-    .btn-reprocess:hover {
-        background: #f57c00;
-    }
-
-    .btn-delete {
-        background: #f44336;
-        color: white;
-    }
-
-    .btn-delete:hover {
-        background: #d32f2f;
-    }
-
-    .loading {
-        text-align: center;
-        padding: 2rem;
-        color: #666;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 3rem;
-        color: #999;
-    }
-
-    .progress-bar {
-        width: 100%;
-        height: 4px;
-        background: #e0e0e0;
-        border-radius: 2px;
-        overflow: hidden;
-        margin-top: 1rem;
-    }
-
-    .progress-bar-fill {
-        height: 100%;
-        background: var(--primary-color);
-        transition: width 0.3s;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .stat-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-
-    .stat-card h3 {
-        margin: 0 0 0.5rem 0;
-        font-size: 2rem;
-        color: var(--primary-color);
-    }
-
-    .stat-card p {
-        margin: 0;
-        color: #666;
-        font-size: 0.9rem;
-    }
+transition: all 0.3s;
+.accordion-header:hover {
+transition: transform 0.3s;
+transition: max-height 0.3s ease-out;
+transition: max-height 0.5s ease-in;
+.accordion-body {
+color: #333;
+border: 1px solid #ddd;
+border: 2px dashed #ddd;
+transition: all 0.3s;
+background: #f9f9f9;
+.file-input-label:hover {
+background: #f0f0f0;
+background: #e8f5e9;
+transition: all 0.3s;
+.btn-upload:hover:not(:disabled) {
+background: #ccc;
+color: #666;
+border: 1px solid #ddd;
+background: #f5f5f5;
+border-bottom: 1px solid #eee;
+color: #333;
+.files-table tbody tr:hover {
+background: #f9f9f9;
+background: #e3f2fd;
+color: #1976d2;
+background: #fff3e0;
+color: #f57c00;
+background: #e8f5e9;
+color: #388e3c;
+background: #ffebee;
+color: #d32f2f;
+background: #f5f5f5;
+color: #757575;
+transition: all 0.3s;
+background: #2196f3;
+.btn-view:hover {
+background: #1976d2;
+background: #ff9800;
+.btn-reprocess:hover {
+background: #f57c00;
+background: #f44336;
+.btn-delete:hover {
+background: #d32f2f;
+color: #666;
+color: #999;
+background: #e0e0e0;
+transition: width 0.3s;
+color: #666;
 </style>
+</body>
 {% endblock %}
 
 {% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='📁 Gestion des Fichiers',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Fichiers'}
+    ]
+) }}
+
 <div class="files-container">
-    <!-- Header -->
-    <div class="files-header">
-        <h1>📁 Gestion des Fichiers</h1>
-    </div>
 
     <!-- Statistics -->
     <div class="stats-grid" id="statsGrid" style="display: none;">
@@ -387,7 +89,7 @@
             <div class="accordion-body">
                 <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
             <!-- File Input -->
-            <div class="form-group">
+            <div class="form-group-premium">
                 <label>Fichier Excel *</label>
                 <div class="file-input-wrapper">
                     <input type="file" id="fileInput" name="file" accept=".xlsx,.xls" required>
@@ -398,7 +100,7 @@
             </div>
 
             <!-- Type de fichier -->
-            <div class="form-group">
+            <div class="form-group-premium">
                 <label for="fileType">Type de fichier *</label>
                 <select id="fileType" name="file_type" required>
                     <option value="">-- Sélectionner --</option>
@@ -414,7 +116,7 @@
             </div>
 
             <!-- Programme -->
-            <div class="form-group">
+            <div class="form-group-premium">
                 <label for="program">Programme *</label>
                 <select id="program" name="program" required>
                     <option value="">-- Sélectionner --</option>
@@ -430,19 +132,19 @@
             </div>
 
             <!-- Période -->
-            <div class="form-group">
+            <div class="form-group-premium">
                 <label for="period">Période *</label>
                 <input type="text" id="period" name="period" placeholder="Ex: 2024-01, Q1-2024, 2024" required>
             </div>
 
             <!-- Titre -->
-            <div class="form-group">
+            <div class="form-group-premium">
                 <label for="title">Titre *</label>
                 <input type="text" id="title" name="title" placeholder="Ex: Budget annuel 2024" required>
             </div>
 
             <!-- Description -->
-            <div class="form-group">
+            <div class="form-group-premium">
                 <label for="description">Description (optionnel)</label>
                 <textarea id="description" name="description" placeholder="Description ou notes additionnelles..."></textarea>
             </div>
@@ -516,6 +218,7 @@
         </div>
     </div>
 </div>
+</body>
 {% endblock %}
 
 {% block scripts %}
@@ -885,5 +588,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStatistics();
 });
 </script>
+</body>
 {% endblock %}
 

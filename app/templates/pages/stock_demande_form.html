@@ -1,0 +1,253 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Nouvelle Demande - Stocks - {{ app_name }}</body>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ========== STOCK DEMANDE FORM PAGE STYLES ========== */
+
+/* Type Tabs */
+.type-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.type-tab {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid var(--gray-300);
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.type-tab:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.type-tab.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.type-tab .icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.type-tab .label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.type-tab small {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.type-tab.active small {
+    color: rgba(255, 255, 255, 0.9);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='📋 Nouvelle Demande de Stock',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Demandes', 'url': url_for('stock_demandes')},
+        {'name': 'Nouvelle'}
+    ],
+    actions=[
+        {'label': '← Retour Demandes', 'url': url_for('stock_demandes'), 'primary': False}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Formulaire -->
+  <div class="card">
+    <form id="demandeForm" onsubmit="submitForm(event)" enctype="multipart/form-data">
+      
+      <!-- Type de demande -->
+      <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">📋 Type de Demande</h3>
+      <div class="type-tabs">
+        <div class="type-tab" onclick="selectType('SORTIE', this)">
+          <div class="icon">📤</div>
+          <div class="label">Sortie</div>
+          <small>Demande d'article</small>
+        </div>
+        <div class="type-tab active" onclick="selectType('APPROVISIONNEMENT', this)">
+          <div class="icon">📥</div>
+          <div class="label">Approvisionnement</div>
+          <small>Demande d'achat</small>
+        </div>
+      </div>
+      <input type="hidden" name="type_demande" id="type_demande" value="APPROVISIONNEMENT">
+      
+      <!-- Article & Quantité -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📦 Article & Quantité</h3>
+      <div class="form-grid" style="margin-bottom: 2rem;">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label">Article *</label>
+          <select name="article_id" id="article_id" class="form-select" required onchange="updateArticleInfo()">
+            <option value="">-- Sélectionner un article --</option>
+            {% for article in articles %}
+            <option value="{{ article.id }}" 
+                    data-stock="{{ article.quantite_stock }}"
+                    data-min="{{ article.quantite_min }}"
+                    data-unite="{{ article.unite }}">
+              {{ article.code }} - {{ article.designation }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Quantité Demandée *</label>
+          <input type="number" name="quantite_demandee" id="quantite_demandee" class="form-input" 
+                 required min="0.01" step="0.01">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Service Demandeur</label>
+          <input type="text" name="service_demandeur" class="form-input" 
+                 placeholder="Ex: Direction Administrative">
+        </div>
+      </div>
+      
+      <!-- Info stock -->
+      <div id="stock-info" style="display: none; padding: 1rem; background: var(--info-light); border-left: 4px solid var(--info-color); border-radius: 8px; margin-bottom: 2rem;">
+        <div style="color: var(--info-dark);">
+          <strong>Stock actuel :</strong> <span id="info-stock">-</span> <span id="info-unite">-</span>
+          <span style="margin-left: 1rem;">•</span>
+          <strong>Stock minimum :</strong> <span id="info-min">-</span> <span id="info-unite2">-</span>
+        </div>
+      </div>
+      
+      <!-- Justification -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📝 Justification</h3>
+      <div class="form-grid" style="margin-bottom: 2rem;">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label">Motif *</label>
+          <input type="text" name="motif" class="form-input" required 
+                 placeholder="Raison de la demande">
+        </div>
+        
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label">Description détaillée</label>
+          <textarea name="description" class="form-textarea" rows="4"
+                    placeholder="Informations complémentaires..."></textarea>
+        </div>
+      </div>
+      
+      <!-- Document justificatif -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📎 Document Justificatif</h3>
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <input type="file" name="document" id="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+               style="border: 2px dashed var(--secondary-color); padding: 1rem; border-radius: 8px;">
+        <small style="color: var(--gray-600);">
+          Formats acceptés : PDF, Images, Word (max 10 MB) - Note de service, demande écrite, etc.
+        </small>
+      </div>
+      
+      <!-- Actions -->
+      <div class="form-actions">
+        <a href="{{ url_for('stock_demandes') }}" class="btn btn-secondary">Annuler</a>
+        <button type="submit" class="btn btn-primary">✅ Soumettre la Demande</button>
+      </div>
+      
+    </form>
+  </div>
+  
+</div>
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function selectType(type, element) {
+  document.getElementById('type_demande').value = type;
+  document.querySelectorAll('.type-tab').forEach(tab => tab.classList.remove('active'));
+  element.classList.add('active');
+}
+
+function updateArticleInfo() {
+  const select = document.getElementById('article_id');
+  const option = select.options[select.selectedIndex];
+  
+  if (option.value) {
+    const stock = option.dataset.stock;
+    const min = option.dataset.min;
+    const unite = option.dataset.unite;
+    
+    document.getElementById('info-stock').textContent = stock;
+    document.getElementById('info-min').textContent = min;
+    document.getElementById('info-unite').textContent = unite;
+    document.getElementById('info-unite2').textContent = unite;
+    document.getElementById('stock-info').style.display = 'block';
+    
+    // Alerte si stock faible
+    if (parseFloat(stock) <= parseFloat(min)) {
+      document.getElementById('stock-info').style.background = 'var(--warning-light)';
+      document.getElementById('stock-info').style.borderLeftColor = 'var(--warning-color)';
+    } else {
+      document.getElementById('stock-info').style.background = 'var(--info-light)';
+      document.getElementById('stock-info').style.borderLeftColor = 'var(--info-color)';
+    }
+  } else {
+    document.getElementById('stock-info').style.display = 'none';
+  }
+}
+
+async function submitForm(event) {
+  event.preventDefault();
+  
+  // Afficher l'overlay
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) overlay.classList.add('show');
+  
+  const formData = new FormData(event.target);
+  
+  try {
+    const response = await fetch('/api/v1/stock/api/demandes', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message);
+      // L'overlay reste affiché pendant la redirection
+      setTimeout(() => {
+        window.location.href = '{{ url_for("stock_demandes") }}';
+      }, 800);
+    } else {
+      // Masquer l'overlay SEULEMENT en cas d'erreur
+      if (overlay) overlay.classList.remove('show');
+      showError(result.error);
+    }
+  } catch (error) {
+    // Masquer l'overlay SEULEMENT en cas d'erreur
+    if (overlay) overlay.classList.remove('show');
+    console.error('Erreur:', error);
+    showError('Erreur lors de l\'enregistrement');
+  }
+}
+</script>
+</body>
+{% endblock %}
+

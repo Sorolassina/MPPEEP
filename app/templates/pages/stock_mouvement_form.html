@@ -1,0 +1,308 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Nouveau Mouvement - Stocks - {{ app_name }}</body>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* ========== STOCK MOUVEMENT FORM PAGE STYLES ========== */
+
+/* Type Tabs */
+.type-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.type-tab {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid var(--gray-300);
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.type-tab:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.type-tab.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.type-tab .icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.type-tab .label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.type-tab small {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.type-tab.active small {
+    color: rgba(255, 255, 255, 0.9);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='🔄 Nouveau Mouvement de Stock',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Mouvements', 'url': url_for('stock_mouvements')},
+        {'name': 'Nouveau'}
+    ],
+    actions=[
+        {'label': '← Retour Mouvements', 'url': url_for('stock_mouvements'), 'primary': False}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Formulaire -->
+  <div class="card">
+    <form id="mouvementForm" onsubmit="submitForm(event)" enctype="multipart/form-data">
+      
+      <!-- Type de mouvement -->
+      <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">📋 Type de Mouvement</h3>
+      <div class="type-tabs">
+        <div class="type-tab active" onclick="selectType('ENTREE', this)">
+          <div class="icon">⬆️</div>
+          <div class="label">Entrée</div>
+          <small>Achat / Réception</small>
+        </div>
+        <div class="type-tab" onclick="selectType('SORTIE', this)">
+          <div class="icon">⬇️</div>
+          <div class="label">Sortie</div>
+          <small>Distribution / Utilisation</small>
+        </div>
+        <div class="type-tab" onclick="selectType('AJUSTEMENT', this)">
+          <div class="icon">⚙️</div>
+          <div class="label">Ajustement</div>
+          <small>Correction inventaire</small>
+        </div>
+      </div>
+      <input type="hidden" name="type_mouvement" id="type_mouvement" value="ENTREE">
+      
+      <!-- Article & Quantité -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📦 Article & Quantité</h3>
+      <div class="form-grid" style="margin-bottom: 2rem;">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label">Article *</label>
+          <select name="article_id" id="article_id" class="form-select" required onchange="updateArticleInfo()">
+            <option value="">-- Sélectionner un article --</option>
+            {% for article in articles %}
+            <option value="{{ article.id }}" 
+                    data-stock="{{ article.quantite_stock }}"
+                    data-min="{{ article.quantite_min }}"
+                    data-unite="{{ article.unite }}">
+              {{ article.code }} - {{ article.designation }} (Stock: {{ article.quantite_stock }} {{ article.unite }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Quantité *</label>
+          <input type="number" name="quantite" id="quantite" class="form-input" required min="0.01" step="0.01" onchange="calculerMontant()">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Prix Unitaire (Optionnel)</label>
+          <input type="number" name="prix_unitaire_reel" id="prix_unitaire_reel" class="form-input" min="0" step="0.01" placeholder="Prix réel si différent" onchange="calculerMontant()">
+          <small style="color: var(--gray-600); font-size: 0.85rem;">Pour gérer les réductions ou prix spécifiques</small>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Montant Total</label>
+          <input type="text" id="montant_total_display" class="form-input" readonly style="background: #f5f5f5;" placeholder="Calculé automatiquement">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Motif *</label>
+          <input type="text" name="motif" class="form-input" required placeholder="Ex: Achat fournisseur">
+        </div>
+      </div>
+      
+      <!-- Info stock actuel -->
+      <div id="stock-info" style="display: none; padding: 1rem; background: var(--info-light); border-left: 4px solid var(--info-color); border-radius: 8px; margin-bottom: 2rem;">
+        <div style="color: var(--info-dark);">
+          <strong>Stock actuel :</strong> <span id="info-stock">-</span> <span id="info-unite">-</span>
+          <span style="margin-left: 1rem;">•</span>
+          <strong>Stock minimum :</strong> <span id="info-min">-</span> <span id="info-unite2">-</span>
+        </div>
+      </div>
+      
+      <!-- Détails spécifiques -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📝 Détails</h3>
+      <div class="form-grid" style="margin-bottom: 2rem;">
+        <div class="form-group" id="fournisseur-group" style="display: none;">
+          <label class="form-label">Fournisseur</label>
+          <select name="fournisseur_id" class="form-select">
+            <option value="">-- Aucun --</option>
+            {% for f in fournisseurs %}
+            <option value="{{ f.id }}">{{ f.nom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group" id="beneficiaire-group" style="display: none;">
+          <label class="form-label">Bénéficiaire</label>
+          <input type="text" name="beneficiaire" class="form-input" placeholder="Service ou Agent">
+        </div>
+        
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label">Observations</label>
+          <textarea name="observations" class="form-textarea" rows="3" 
+                    placeholder="Informations complémentaires..."></textarea>
+        </div>
+      </div>
+      
+      <!-- Document justificatif -->
+      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📎 Document Justificatif</h3>
+      <div class="form-group" style="margin-bottom: 2rem;">
+        <input type="file" name="document" id="document" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" 
+               style="border: 2px dashed var(--secondary-color); padding: 1rem; border-radius: 8px;">
+        <small style="color: var(--gray-600);">
+          Formats acceptés : PDF, Images, Word (max 10 MB) - Bon de commande, bon de livraison, etc.
+        </small>
+      </div>
+      
+      <!-- Actions -->
+      <div class="form-actions">
+        <a href="{{ url_for('stock_mouvements') }}" class="btn btn-secondary">Annuler</a>
+        <button type="submit" class="btn btn-primary">✅ Enregistrer le Mouvement</button>
+      </div>
+      
+    </form>
+  </div>
+  
+</div>
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function selectType(type, element) {
+  // Mettre à jour l'input hidden
+  document.getElementById('type_mouvement').value = type;
+  
+  // Mettre à jour les tabs
+  document.querySelectorAll('.type-tab').forEach(tab => tab.classList.remove('active'));
+  element.classList.add('active');
+  
+  // Afficher/masquer les champs spécifiques
+  const fournisseurGroup = document.getElementById('fournisseur-group');
+  const beneficiaireGroup = document.getElementById('beneficiaire-group');
+  
+  if (type === 'ENTREE') {
+    fournisseurGroup.style.display = 'block';
+    beneficiaireGroup.style.display = 'none';
+  } else if (type === 'SORTIE') {
+    fournisseurGroup.style.display = 'none';
+    beneficiaireGroup.style.display = 'block';
+  } else {
+    fournisseurGroup.style.display = 'none';
+    beneficiaireGroup.style.display = 'none';
+  }
+}
+
+function updateArticleInfo() {
+  const select = document.getElementById('article_id');
+  const option = select.options[select.selectedIndex];
+  
+  if (option.value) {
+    const stock = option.dataset.stock;
+    const min = option.dataset.min;
+    const unite = option.dataset.unite;
+    
+    document.getElementById('info-stock').textContent = stock;
+    document.getElementById('info-min').textContent = min;
+    document.getElementById('info-unite').textContent = unite;
+    document.getElementById('info-unite2').textContent = unite;
+    document.getElementById('stock-info').style.display = 'block';
+  } else {
+    document.getElementById('stock-info').style.display = 'none';
+  }
+}
+
+function calculerMontant() {
+  const quantite = parseFloat(document.getElementById('quantite').value) || 0;
+  const prixUnitaire = parseFloat(document.getElementById('prix_unitaire_reel').value) || 0;
+  
+  if (quantite > 0 && prixUnitaire > 0) {
+    const montant = quantite * prixUnitaire;
+    document.getElementById('montant_total_display').value = montant.toLocaleString('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + ' FCFA';
+  } else {
+    document.getElementById('montant_total_display').value = '';
+  }
+}
+
+async function submitForm(event) {
+  event.preventDefault();
+  
+  // Afficher l'overlay
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) overlay.classList.add('show');
+  
+  const formData = new FormData(event.target);
+  
+  try {
+    const response = await fetch('/api/v1/stock/api/mouvements', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message);
+      
+      // Afficher l'alerte si présente
+      if (result.alerte) {
+        setTimeout(() => {
+          showWarning(result.alerte, 'Alerte Stock', 8000);
+        }, 500);
+      }
+      
+      // L'overlay reste affiché pendant la redirection
+      setTimeout(() => {
+        window.location.href = '{{ url_for("stock_mouvements") }}';
+      }, result.alerte ? 1800 : 800);
+    } else {
+      // Masquer l'overlay SEULEMENT en cas d'erreur
+      if (overlay) overlay.classList.remove('show');
+      showError(result.error);
+    }
+  } catch (error) {
+    // Masquer l'overlay SEULEMENT en cas d'erreur
+    if (overlay) overlay.classList.remove('show');
+    console.error('Erreur:', error);
+    showError('Erreur lors de l\'enregistrement');
+  }
+}
+</script>
+</body>
+{% endblock %}
+

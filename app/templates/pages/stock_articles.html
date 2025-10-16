@@ -1,0 +1,173 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Articles - Gestion des Stocks - {{ app_name }}</body>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Réduction de la police du tableau */
+.data-table {
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+}
+
+.data-table th {
+    font-size: 0.8rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='📦 Gestion des Articles',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Articles'}
+    ],
+    actions=[
+        {'label': '← Retour Stock', 'url': url_for('stock_home'), 'primary': False},
+        {'label': '➕ Nouvel Article', 'url': url_for('stock_article_new'), 'primary': True}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Tableau des articles -->
+  <div class="card">
+    <div style="margin-bottom: 1rem;">
+      <h2 style="margin: 0;">Articles ({{ articles|length }})</h2>
+    </div>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Désignation</th>
+          <th>Catégorie</th>
+          <th>Stock</th>
+          <th>Stock Min</th>
+          <th>Prix Unit.</th>
+          <th>Valeur</th>
+          <th>État</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if articles %}
+          {% for article in articles %}
+          <tr>
+            <td><strong>{{ article.code }}</strong></td>
+            <td>{{ article.designation }}</td>
+            <td>
+              {% if article.categorie_id %}
+                {% for cat in categories %}
+                  {% if cat.id == article.categorie_id %}
+                    {{ cat.libelle }}
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ article.quantite_stock }} {{ article.unite }}</td>
+            <td>{{ article.quantite_min }} {{ article.unite }}</td>
+            <td>{{ "{:,.0f}".format(article.prix_unitaire) if article.prix_unitaire else '-' }} F</td>
+            <td>{{ "{:,.0f}".format(article.quantite_stock * article.prix_unitaire) if article.prix_unitaire else '-' }} F</td>
+            <td>
+              {% if article.quantite_stock <= article.quantite_min %}
+                {% if article.quantite_stock == 0 %}
+                  <span class="badge badge-danger">Rupture</span>
+                {% else %}
+                  <span class="badge badge-warning">Faible</span>
+                {% endif %}
+              {% else %}
+                <span class="badge badge-success">OK</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display: flex; gap: 0.5rem;">
+                <button onclick="voirArticle({{ article.id }})" class="btn-action" title="Voir">
+                  👁️
+                </button>
+                <button onclick="modifierArticle({{ article.id }})" class="btn-action" title="Modifier">
+                  ✏️
+                </button>
+                <button onclick="supprimerArticle({{ article.id }}, '{{ article.designation }}')" class="btn-action btn-premium btn-danger" title="Supprimer">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+              Aucun article enregistré
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Voir détail d'un article
+function voirArticle(articleId) {
+  window.location.href = `/api/v1/stock/articles/${articleId}`;
+}
+
+// Modifier un article
+function modifierArticle(articleId) {
+  window.location.href = `/api/v1/stock/articles/${articleId}/edit`;
+}
+
+// Supprimer un article
+async function supprimerArticle(articleId, designation) {
+  if (!confirm(`Êtes-vous sûr de vouloir supprimer l'article "${designation}" ?\n\nCette action est irréversible.`)) {
+    return;
+  }
+  
+  // Afficher l'overlay
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) overlay.classList.add('show');
+  
+  try {
+    const response = await fetch(`/api/v1/stock/api/articles/${articleId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showSuccess(result.message);
+      // L'overlay reste affiché pendant la redirection
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+    } else {
+      // Masquer l'overlay SEULEMENT en cas d'erreur
+      if (overlay) overlay.classList.remove('show');
+      showError(result.error);
+    }
+  } catch (error) {
+    // Masquer l'overlay SEULEMENT en cas d'erreur
+    if (overlay) overlay.classList.remove('show');
+    console.error('Erreur:', error);
+    showError('Erreur lors de la suppression');
+  }
+}
+</script>
+</body>
+{% endblock %}
+

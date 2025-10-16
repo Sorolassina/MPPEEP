@@ -1,0 +1,527 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Rapports - Gestion des Stocks{% endblock %}
+
+{% block styles %}
+<style>
+/* ========== STOCK RAPPORTS PAGE STYLES ========== */
+
+/* Tabs */
+.tabs-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.tab {
+    padding: 1rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--gray-600);
+    transition: all 0.3s;
+    font-size: 0.95rem;
+}
+
+.tab:hover {
+    color: var(--primary-color);
+    background: var(--gray-50);
+}
+
+.tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Rapport sections */
+.rapport-section {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Filters bar */
+.filters-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+/* Stats grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.3);
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* Tables dans rapports */
+.data-table {
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.6rem 0.75rem;
+}
+
+.data-table th {
+    font-size: 0.8rem;
+}
+
+/* Content wrapper */
+.content-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📈 Rapports & Statistiques',
+    breadcrumbs=[
+        {'name': 'Stocks', 'url': url_for('stock_home')},
+        {'name': 'Rapports'}
+    ],
+    actions=[
+        {'label': '← Retour Stock', 'url': url_for('stock_home'), 'primary': False}
+    ]
+) }}
+
+<div class="content-wrapper">
+    <!-- Onglets de rapports -->
+    <div class="tabs-container">
+        <div class="tab active" onclick="changerOnglet('valorisation', this)">💰 Valorisation Stock</div>
+        <div class="tab" onclick="changerOnglet('mouvements', this)">📊 Mouvements</div>
+        <div class="tab" onclick="changerOnglet('fournisseurs', this)">🏢 Fournisseurs</div>
+        <div class="tab" onclick="changerOnglet('alertes', this)">⚠️ Alertes</div>
+    </div>
+
+    <!-- Rapport Valorisation -->
+    <div id="rapport-valorisation" class="rapport-section">
+        <div class="filters-bar">
+            <button class="btn btn btn-primary" onclick="chargerValorisation()">🔄 Actualiser</button>
+            <button class="btn btn btn-secondary" onclick="exporterPDF('valorisation')">📄 Export PDF</button>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Valeur Totale du Stock</div>
+                <div class="stat-value" id="valeur-totale">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Nombre d'Articles</div>
+                <div class="stat-value" id="nb-articles">-</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Valorisation par Catégorie</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="chartValorisation"></canvas>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Détail par Catégorie</h3>
+            </div>
+            <div class="card-body">
+                <table class="data-table" id="tableValorisation">
+                    <thead>
+                        <tr>
+                            <th>Catégorie</th>
+                            <th>Nb Articles</th>
+                            <th>Quantité Totale</th>
+                            <th>Valeur</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rapport Mouvements -->
+    <div id="rapport-mouvements" class="rapport-section" style="display: none;">
+        <div class="filters-bar">
+            <select id="filtreMois" class="form-select">
+                <option value="1">1 mois</option>
+                <option value="3">3 mois</option>
+                <option value="6" selected>6 mois</option>
+                <option value="12">12 mois</option>
+            </select>
+            <button class="btn btn btn-primary" onclick="chargerMouvements()">🔄 Actualiser</button>
+            <button class="btn btn btn-secondary" onclick="exporterPDF('mouvements')">📄 Export PDF</button>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Entrées (période)</div>
+                <div class="stat-value" id="total-entrees">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Sorties (période)</div>
+                <div class="stat-value" id="total-sorties">-</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Évolution des Mouvements</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="chartMouvements"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rapport Fournisseurs -->
+    <div id="rapport-fournisseurs" class="rapport-section" style="display: none;">
+        <div class="filters-bar">
+            <button class="btn btn btn-primary" onclick="chargerFournisseurs()">🔄 Actualiser</button>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Top Fournisseurs</h3>
+            </div>
+            <div class="card-body">
+                <table class="data-table" id="tableFournisseurs">
+                    <thead>
+                        <tr>
+                            <th>Fournisseur</th>
+                            <th>Nb Mouvements</th>
+                            <th>Quantité Totale</th>
+                            <th>Montant Total</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rapport Alertes -->
+    <div id="rapport-alertes" class="rapport-section" style="display: none;">
+        <div class="filters-bar">
+            <button class="btn btn btn-primary" onclick="chargerAlertes()">🔄 Actualiser</button>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>🔴 Articles en Rupture de Stock</h3>
+            </div>
+            <div class="card-body">
+                <table class="data-table" id="tableRuptures">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Désignation</th>
+                            <th>Stock</th>
+                            <th>Min</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>🟡 Articles en Stock Faible</h3>
+            </div>
+            <div class="card-body">
+                <table class="data-table" id="tableFaibles">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Désignation</th>
+                            <th>Stock</th>
+                            <th>Min</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.content-wrapper {
+    padding: 2rem;
+}
+
+.tabs-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tab {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-weight: 500;
+    color: var(--gray-600);
+    transition: all 0.3s;
+    border-bottom: 3px solid transparent;
+}
+
+.tab:hover {
+    color: var(--primary-color);
+    background: var(--primary-light);
+}
+
+.tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Les styles de boutons sont centralisés dans buttons.css */
+
+.data-table tbody tr:hover {
+    background: #f8f9fa;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let chartsInstances = {};
+
+function changerOnglet(onglet, element) {
+    // Mettre à jour les onglets
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    element.classList.add('active');
+    
+    // Masquer tous les rapports
+    document.querySelectorAll('.rapport-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Afficher le rapport sélectionné
+    document.getElementById(`rapport-${onglet}`).style.display = 'block';
+    
+    // Charger les données
+    switch(onglet) {
+        case 'valorisation':
+            chargerValorisation();
+            break;
+        case 'mouvements':
+            chargerMouvements();
+            break;
+        case 'fournisseurs':
+            chargerFournisseurs();
+            break;
+        case 'alertes':
+            chargerAlertes();
+            break;
+    }
+}
+
+async function chargerValorisation() {
+    try {
+        const response = await fetch('/api/v1/stock/api/rapports/valorisation');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Mettre à jour les stats
+            document.getElementById('valeur-totale').textContent = 
+                data.data.valeur_totale.toLocaleString('fr-FR') + ' FCFA';
+            document.getElementById('nb-articles').textContent = data.data.nb_articles;
+            
+            // Remplir le tableau
+            const tbody = document.querySelector('#tableValorisation tbody');
+            tbody.innerHTML = data.data.par_categorie.map(cat => `
+                <tr>
+                    <td><strong>${cat.categorie}</strong></td>
+                    <td>${cat.nb_articles}</td>
+                    <td>${cat.quantite_totale}</td>
+                    <td>${cat.valeur.toLocaleString('fr-FR')} FCFA</td>
+                </tr>
+            `).join('');
+            
+            // Créer le graphique
+            const ctx = document.getElementById('chartValorisation');
+            if (chartsInstances.valorisation) {
+                chartsInstances.valorisation.destroy();
+            }
+            chartsInstances.valorisation = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.data.par_categorie.map(c => c.categorie),
+                    datasets: [{
+                        data: data.data.par_categorie.map(c => c.valeur),
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6384'
+                        ]
+                    }]
+                }
+            });
+        }
+    } catch (error) {
+        showError('Erreur lors du chargement de la valorisation');
+    }
+}
+
+async function chargerMouvements() {
+    const mois = document.getElementById('filtreMois').value;
+    try {
+        const response = await fetch(`/api/v1/stock/api/rapports/mouvements?mois=${mois}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('total-entrees').textContent = data.data.total_entrees;
+            document.getElementById('total-sorties').textContent = data.data.total_sorties;
+            
+            // Graphique
+            const ctx = document.getElementById('chartMouvements');
+            if (chartsInstances.mouvements) {
+                chartsInstances.mouvements.destroy();
+            }
+            chartsInstances.mouvements = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.data.par_mois.map(m => m.mois),
+                    datasets: [{
+                        label: 'Entrées',
+                        data: data.data.par_mois.map(m => m.entrees),
+                        borderColor: '#4BC0C0',
+                        fill: false
+                    }, {
+                        label: 'Sorties',
+                        data: data.data.par_mois.map(m => m.sorties),
+                        borderColor: '#FF6384',
+                        fill: false
+                    }]
+                }
+            });
+        }
+    } catch (error) {
+        showError('Erreur lors du chargement des mouvements');
+    }
+}
+
+async function chargerFournisseurs() {
+    try {
+        const response = await fetch('/api/v1/stock/api/rapports/fournisseurs');
+        const data = await response.json();
+        
+        if (data.success) {
+            const tbody = document.querySelector('#tableFournisseurs tbody');
+            tbody.innerHTML = data.data.map(f => `
+                <tr>
+                    <td><strong>${f.nom}</strong></td>
+                    <td>${f.nb_mouvements}</td>
+                    <td>${f.quantite_totale}</td>
+                    <td>${(f.montant_total || 0).toLocaleString('fr-FR')} FCFA</td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        showError('Erreur lors du chargement des fournisseurs');
+    }
+}
+
+async function chargerAlertes() {
+    try {
+        const response = await fetch('/api/v1/stock/api/alertes');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Ruptures
+            const tbodyRuptures = document.querySelector('#tableRuptures tbody');
+            const ruptures = data.data.ruptures || [];
+            if (ruptures.length > 0) {
+                tbodyRuptures.innerHTML = ruptures.map(a => `
+                    <tr>
+                        <td>${a.code}</td>
+                        <td>${a.designation}</td>
+                        <td><strong style="color: var(--danger-color);">${a.stock || 0}</strong></td>
+                        <td>${a.stock_min || a.quantite_min || 0}</td>
+                        <td><a href="/api/v1/stock/mouvements/new" class="btn btn-sm btn-primary">Approvisionner</a></td>
+                    </tr>
+                `).join('');
+            } else {
+                tbodyRuptures.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun article en rupture</td></tr>';
+            }
+            
+            // Stock faible
+            const tbodyFaibles = document.querySelector('#tableFaibles tbody');
+            const faibles = data.data.stock_faible || data.data.faible || [];
+            if (faibles.length > 0) {
+                tbodyFaibles.innerHTML = faibles.map(a => `
+                    <tr>
+                        <td>${a.code}</td>
+                        <td>${a.designation}</td>
+                        <td><strong style="color: var(--warning-color);">${a.stock || a.quantite_stock || 0}</strong></td>
+                        <td>${a.stock_min || a.quantite_min || 0}</td>
+                        <td><a href="/api/v1/stock/mouvements/new" class="btn btn-sm btn-primary">Approvisionner</a></td>
+                    </tr>
+                `).join('');
+            } else {
+                tbodyFaibles.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun article en stock faible</td></tr>';
+            }
+        } else {
+            showError(data.error || 'Erreur lors du chargement des alertes');
+        }
+    } catch (error) {
+        console.error('Erreur alertes:', error);
+        showError('Erreur lors du chargement des alertes');
+    }
+}
+
+function exporterPDF(type) {
+    showInfo('Export PDF en développement');
+}
+
+// Charger le premier onglet au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    chargerValorisation();
+});
+</script>
+</body>
+{% endblock %}
+
