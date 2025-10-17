@@ -166,6 +166,7 @@ async def create_user(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="create",
             target_type="user",
             target_id=new_user.id,
@@ -240,6 +241,7 @@ async def update_user(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="update",
             target_type="user",
             target_id=user.id,
@@ -292,6 +294,7 @@ async def delete_user(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="delete",
             target_type="user",
             target_id=user.id,
@@ -431,6 +434,7 @@ async def upload_user_photo(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="upload",
             target_type="profile_picture",
             target_id=user.id,
@@ -505,6 +509,7 @@ async def update_system_settings(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="settings",
             target_type="system",
             description=f"Mise à jour des paramètres système",
@@ -559,17 +564,23 @@ async def upload_logo(
                 content={"success": False, "message": "Format de fichier non supporté"}
             )
         
-        # Générer un nom de fichier unique
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        new_filename = f"logo_{timestamp}{file_ext}"
+        # Nom de fichier fixe : logo + extension
+        new_filename = f"logo{file_ext}"
         
         # Sauvegarder le fichier
         logo_dir = path_config.STATIC_IMAGES_DIR
         logo_dir.mkdir(parents=True, exist_ok=True)
         file_path = logo_dir / new_filename
         
-        # Lire et écrire le fichier
+        # Supprimer TOUS les anciens logos (logo.png, logo.jpg, etc.)
+        for old_logo in logo_dir.glob("logo.*"):
+            try:
+                old_logo.unlink()
+                logger.info(f"🗑️ Ancien logo supprimé: {old_logo.name}")
+            except Exception as e:
+                logger.warning(f"⚠️ Impossible de supprimer l'ancien logo {old_logo.name}: {e}")
+        
+        # Lire et écrire le nouveau fichier
         content = await logo_file.read()
         async with aiofiles.open(file_path, 'wb') as f:
             await f.write(content)
@@ -587,6 +598,7 @@ async def upload_logo(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="upload",
             target_type="logo",
             description=f"Upload du logo entreprise ({new_filename})",

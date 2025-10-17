@@ -1,0 +1,763 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Rapports de Performance - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles pour les rapports de performance */
+.reports-container {
+    margin-top: 2rem;
+}
+
+/* Section générateur de rapports */
+.report-generator {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+    color: white;
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+}
+
+.generator-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.generator-subtitle {
+    font-size: 0.95rem;
+    opacity: 0.95;
+    margin-bottom: 2rem;
+}
+
+.generator-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-field label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0.95;
+}
+
+.form-field select,
+.form-field input {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 0.95rem;
+    backdrop-filter: blur(10px);
+}
+
+.form-field select:focus,
+.form-field input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.form-field select option {
+    background: #667eea;
+    color: white;
+}
+
+.generate-btn {
+    grid-column: 1 / -1;
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    margin-top: 1rem;
+}
+
+.generate-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Templates de rapports */
+.report-templates {
+    margin-bottom: 3rem;
+}
+
+.templates-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.template-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.template-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-color);
+}
+
+.template-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.template-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.template-description {
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-align: center;
+    line-height: 1.4;
+    margin-bottom: 1rem;
+}
+
+.template-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin: 0.25rem;
+}
+
+.badge-periodique {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-analytique {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-executif {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Styles pour les cartes de rapports dans l'historique */
+.report-type {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Historique des rapports */
+.reports-history {
+    margin-top: 3rem;
+}
+
+.history-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+}
+
+/* Grille des rapports historiques */
+#reports-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 1.5rem;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+/* Carte de rapport */
+.report-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--secondary-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0 !important;
+}
+
+.report-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.report-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.report-type {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.report-description {
+    font-size: 0.85rem;
+    color: #6b7280;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.report-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.meta-label {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin: 0;
+}
+
+.meta-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.report-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* État vide */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border-radius: 16px;
+    border: 2px dashed #d1d5db;
+    margin-top: 2rem;
+    width: 100%;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-message {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    #reports-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .generator-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .templates-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .report-meta {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📋 Rapports de Performance',
+    breadcrumbs=[
+        {'name': 'Performance', 'url': url_for('performance_home')},
+        {'name': 'Rapports'}
+    ],
+    actions=[
+        {'label': '← Retour Performance', 'url': url_for('performance_home'), 'primary': False}
+    ]
+) }}
+
+<div class="reports-container">
+    <!-- Générateur de rapports -->
+    <div class="report-generator">
+        <h2 class="generator-title">📊 Générateur de Rapports</h2>
+        <p class="generator-subtitle">Créez un rapport personnalisé en sélectionnant vos critères</p>
+        
+        <div class="generator-form">
+            <div class="form-field">
+                <label for="report-type">Type de rapport</label>
+                <select id="report-type">
+                    <option value="GLOBAL">📊 Global</option>
+                    <option value="OBJECTIFS">🎯 Objectifs</option>
+                    <option value="INDICATEURS">📈 Indicateurs</option>
+                    <option value="SYNTHESE">📋 Synthèse</option>
+                </select>
+            </div>
+            
+            <div class="form-field">
+                <label for="report-period">Période</label>
+                <select id="report-period">
+                    <option value="CURRENT_MONTH">Mois en cours</option>
+                    <option value="LAST_MONTH">Mois dernier</option>
+                    <option value="CURRENT_QUARTER">Trimestre en cours</option>
+                    <option value="LAST_QUARTER">Trimestre dernier</option>
+                    <option value="CURRENT_YEAR">Année en cours</option>
+                    <option value="LAST_YEAR">Année dernière</option>
+                    <option value="CUSTOM">Période personnalisée</option>
+                </select>
+            </div>
+            
+            <div class="form-field">
+                <label for="report-format">Format</label>
+                <select id="report-format">
+                    <option value="PDF">📄 PDF</option>
+                    <option value="EXCEL">📊 Excel</option>
+                    <option value="POWERPOINT">📊 PowerPoint</option>
+                    <option value="HTML">🌐 HTML</option>
+                </select>
+            </div>
+            
+            <div class="form-field" id="custom-dates" style="display: none; grid-column: 1 / -1;">
+                <label>Dates personnalisées</label>
+                <div style="display: flex; gap: 1rem;">
+                    <input type="date" id="date-debut" class="form-control" style="flex: 1;">
+                    <input type="date" id="date-fin" class="form-control" style="flex: 1;">
+                </div>
+            </div>
+            
+            <button class="generate-btn" onclick="generateReport()">
+                ✨ Générer le Rapport
+            </button>
+        </div>
+    </div>
+
+    <!-- Templates de rapports prédéfinis -->
+    <div class="report-templates">
+        <h3 class="templates-title">📑 Templates de Rapports</h3>
+        <div class="templates-grid">
+            <div class="template-card" onclick="useTemplate('MENSUEL')">
+                <div class="template-icon">📅</div>
+                <div class="template-name">Rapport Mensuel</div>
+                <div class="template-description">
+                    Vue d'ensemble des performances du mois : objectifs, indicateurs, KPIs, et analyse détaillée des tendances
+                </div>
+                <div style="text-align: center;">
+                    <span class="template-badge badge-periodique">Périodique</span>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
+                    ✓ Objectifs mensuels<br>
+                    ✓ Indicateurs clés<br>
+                    ✓ Comparaison mois précédent
+                </div>
+            </div>
+            
+            <div class="template-card" onclick="useTemplate('TRIMESTRIEL')">
+                <div class="template-icon">📊</div>
+                <div class="template-name">Rapport Trimestriel</div>
+                <div class="template-description">
+                    Analyse détaillée des tendances et évolutions sur 3 mois avec graphiques et recommandations stratégiques
+                </div>
+                <div style="text-align: center;">
+                    <span class="template-badge badge-periodique">Périodique</span>
+                    <span class="template-badge badge-analytique">Analytique</span>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
+                    ✓ Vue trimestrielle<br>
+                    ✓ Évolution des KPIs<br>
+                    ✓ Analyse comparative
+                </div>
+            </div>
+            
+            <div class="template-card" onclick="useTemplate('ANNUEL')">
+                <div class="template-icon">📈</div>
+                <div class="template-name">Rapport Annuel</div>
+                <div class="template-description">
+                    Bilan complet de l'année avec comparaisons historiques, réalisations majeures et perspectives stratégiques
+                </div>
+                <div style="text-align: center;">
+                    <span class="template-badge badge-periodique">Périodique</span>
+                    <span class="template-badge badge-executif">Exécutif</span>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
+                    ✓ Bilan annuel complet<br>
+                    ✓ Statistiques détaillées<br>
+                    ✓ Recommandations stratégiques
+                </div>
+            </div>
+            
+            <div class="template-card" onclick="useTemplate('EXECUTIF')">
+                <div class="template-icon">👔</div>
+                <div class="template-name">Tableau de Bord Exécutif</div>
+                <div class="template-description">
+                    Synthèse concise des indicateurs clés pour la direction avec focus sur les décisions stratégiques
+                </div>
+                <div style="text-align: center;">
+                    <span class="template-badge badge-executif">Exécutif</span>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
+                    ✓ KPIs essentiels<br>
+                    ✓ Alertes prioritaires<br>
+                    ✓ Format condensé
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historique des rapports générés -->
+    <div class="reports-history">
+        <h3 class="history-title">📂 Historique des Rapports</h3>
+        <div id="reports-list">
+            <!-- Les rapports seront chargés dynamiquement -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Afficher/masquer les dates personnalisées
+document.getElementById('report-period').addEventListener('change', function() {
+    const customDates = document.getElementById('custom-dates');
+    if (this.value === 'CUSTOM') {
+        customDates.style.display = 'block';
+    } else {
+        customDates.style.display = 'none';
+    }
+});
+
+// Utiliser un template
+function useTemplate(template) {
+    const reportType = document.getElementById('report-type');
+    const reportPeriod = document.getElementById('report-period');
+    
+    switch(template) {
+        case 'MENSUEL':
+            reportType.value = 'GLOBAL';
+            reportPeriod.value = 'CURRENT_MONTH';
+            break;
+        case 'TRIMESTRIEL':
+            reportType.value = 'GLOBAL';
+            reportPeriod.value = 'CURRENT_QUARTER';
+            break;
+        case 'ANNUEL':
+            reportType.value = 'GLOBAL';
+            reportPeriod.value = 'CURRENT_YEAR';
+            break;
+        case 'EXECUTIF':
+            reportType.value = 'SYNTHESE';
+            reportPeriod.value = 'CURRENT_MONTH';
+            break;
+    }
+    
+    // Scroller vers le générateur
+    document.querySelector('.report-generator').scrollIntoView({ behavior: 'smooth' });
+    showSuccess(`Template "${getTemplateName(template)}" chargé !`);
+}
+
+// Générer un rapport
+async function generateReport() {
+    const type = document.getElementById('report-type').value;
+    const period = document.getElementById('report-period').value;
+    const format = document.getElementById('report-format').value;
+    
+    let dateDebut = null;
+    let dateFin = null;
+    
+    if (period === 'CUSTOM') {
+        dateDebut = document.getElementById('date-debut').value;
+        dateFin = document.getElementById('date-fin').value;
+        
+        if (!dateDebut || !dateFin) {
+            showError('Veuillez sélectionner les dates de début et fin');
+            return;
+        }
+    }
+    
+    try {
+        showGlobalLoading('Génération du rapport...', 'Veuillez patienter');
+        
+        // Créer le FormData
+        const formData = new FormData();
+        formData.append('report_type', type);
+        formData.append('period', period);
+        formData.append('format', format);
+        if (dateDebut) formData.append('date_debut', dateDebut);
+        if (dateFin) formData.append('date_fin', dateFin);
+        
+        // Appeler l'API pour générer le rapport
+        const response = await fetch('/api/v1/performance/api/rapports/generate', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            // Télécharger le fichier
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rapport_performance_${type.toLowerCase()}_${new Date().getTime()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            hideGlobalLoading();
+            showSuccess(`Rapport ${getReportTypeName(type)} généré et téléchargé avec succès !`);
+            
+            // Recharger la liste des rapports
+            loadReports();
+        } else {
+            const result = await response.json();
+            hideGlobalLoading();
+            showError(result.error || 'Erreur lors de la génération du rapport');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        hideGlobalLoading();
+        showError('Erreur lors de la génération du rapport');
+    }
+}
+
+// Charger l'historique des rapports
+async function loadReports() {
+    const container = document.getElementById('reports-list');
+    
+    try {
+        const response = await fetch('/api/v1/performance/api/rapports/historique');
+        const data = await response.json();
+        
+        if (!data.success || !data.rapports || data.rapports.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <h3 class="empty-state-title">Aucun rapport généré</h3>
+                    <p class="empty-state-message">
+                        Vous n'avez pas encore généré de rapports.<br>
+                        Utilisez le générateur ci-dessus ou choisissez un template pour commencer.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Afficher les rapports
+        container.innerHTML = data.rapports.map(rapport => `
+            <div class="report-card">
+                <div class="report-header">
+                    <h4 class="report-title">${rapport.titre}</h4>
+                    <span class="report-type badge-${getReportTypeBadgeClass(rapport.type_rapport)}">
+                        ${getReportTypeIcon(rapport.type_rapport)} ${rapport.type_rapport}
+                    </span>
+                </div>
+                
+                <p class="report-description">${rapport.description || 'Aucune description'}</p>
+                
+                <div class="report-meta">
+                    <div class="meta-item">
+                        <p class="meta-label">Période</p>
+                        <p class="meta-value">${formatPeriode(rapport.periode)}</p>
+                    </div>
+                    <div class="meta-item">
+                        <p class="meta-label">Format</p>
+                        <p class="meta-value">${rapport.format_fichier}</p>
+                    </div>
+                    <div class="meta-item">
+                        <p class="meta-label">Taux réalisation</p>
+                        <p class="meta-value">${rapport.taux_realisation}%</p>
+                    </div>
+                </div>
+                
+                <div class="report-meta">
+                    <div class="meta-item">
+                        <p class="meta-label">Objectifs</p>
+                        <p class="meta-value">${rapport.nb_objectifs}</p>
+                    </div>
+                    <div class="meta-item">
+                        <p class="meta-label">Indicateurs</p>
+                        <p class="meta-value">${rapport.nb_indicateurs}</p>
+                    </div>
+                    <div class="meta-item">
+                        <p class="meta-label">Taille</p>
+                        <p class="meta-value">${formatFileSize(rapport.fichier_taille)}</p>
+                    </div>
+                </div>
+                
+                <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem; font-size: 0.8rem; color: #6b7280;">
+                    📅 ${formatDate(rapport.created_at)} par ${rapport.created_by_nom}
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement des rapports:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <h3 class="empty-state-title">Erreur de chargement</h3>
+                <p class="empty-state-message">
+                    Impossible de charger l'historique des rapports.<br>
+                    Veuillez réessayer plus tard.
+                </p>
+            </div>
+        `;
+    }
+}
+
+// Fonctions utilitaires
+function getReportTypeName(type) {
+    const names = {
+        'GLOBAL': 'Global',
+        'OBJECTIFS': 'Objectifs',
+        'INDICATEURS': 'Indicateurs',
+        'SYNTHESE': 'Synthèse'
+    };
+    return names[type] || type;
+}
+
+function getTemplateName(template) {
+    const names = {
+        'MENSUEL': 'Rapport Mensuel',
+        'TRIMESTRIEL': 'Rapport Trimestriel',
+        'ANNUEL': 'Rapport Annuel',
+        'EXECUTIF': 'Tableau de Bord Exécutif'
+    };
+    return names[template] || template;
+}
+
+function getReportTypeBadgeClass(type) {
+    const classes = {
+        'GLOBAL': 'periodique',
+        'OBJECTIFS': 'analytique',
+        'INDICATEURS': 'analytique',
+        'SYNTHESE': 'executif'
+    };
+    return classes[type] || 'periodique';
+}
+
+function getReportTypeIcon(type) {
+    const icons = {
+        'GLOBAL': '📊',
+        'OBJECTIFS': '🎯',
+        'INDICATEURS': '📈',
+        'SYNTHESE': '📋'
+    };
+    return icons[type] || '📄';
+}
+
+function formatPeriode(periode) {
+    const periodes = {
+        'CURRENT_MONTH': 'Mois en cours',
+        'LAST_MONTH': 'Mois dernier',
+        'CURRENT_QUARTER': 'Trimestre en cours',
+        'LAST_QUARTER': 'Trimestre dernier',
+        'CURRENT_YEAR': 'Année en cours',
+        'LAST_YEAR': 'Année dernière',
+        'CUSTOM': 'Période personnalisée'
+    };
+    return periodes[periode] || periode;
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return 'N/A';
+    if (bytes < 1024) return bytes + ' o';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' Ko';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' Mo';
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    const options = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    return date.toLocaleDateString('fr-FR', options);
+}
+
+// Charger les rapports au démarrage
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+    loadReports();
+});
+</script>
+{% endblock %}

@@ -28,19 +28,19 @@
 
   <!-- Filtres -->
   <div class="card">
-    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; align-items: end;">
       <!-- Filtre Année -->
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <label style="font-weight: 600; color: #2c3e50;">📅 Année :</label>
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <label style="font-weight: 600; color: #2c3e50;">📅 Année</label>
         <select id="filter-annee" onchange="filtrerFiches()" style="
           padding: 0.75rem 1rem; 
           border: 2px solid #e0e0e0; 
           border-radius: 10px; 
           cursor: pointer; 
           font-weight: 500;
-          min-width: 180px;
           background: white;
           font-size: 1rem;
+          width: 100%;
         ">
           <option value="toutes" {{ 'selected' if annee == 'toutes' else '' }}>📋 Toutes</option>
           {% for a in annees_disponibles %}
@@ -50,17 +50,17 @@
       </div>
 
       <!-- Filtre Programme -->
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <label style="font-weight: 600; color: #2c3e50;">📊 Programme :</label>
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <label style="font-weight: 600; color: #2c3e50;">📊 Programme</label>
         <select id="filter-programme" onchange="filtrerFiches()" style="
           padding: 0.75rem 1rem; 
           border: 2px solid #e0e0e0; 
           border-radius: 10px; 
           cursor: pointer; 
           font-weight: 500;
-          min-width: 180px;
           background: white;
           font-size: 1rem;
+          width: 100%;
         ">
           <option value="tous" {{ 'selected' if programme_id == 'tous' else '' }}>📋 Tous</option>
           {% for p in programmes_list %}
@@ -76,14 +76,14 @@
     <h3 style="margin-bottom: 1.5rem;">📊 Fiches Techniques {% if annee == 'toutes' %}(Toutes années){% else %}{{ annee }}{% endif %}</h3>
     
     {% if fiches %}
-    <div class="data-table">
+    <div class="data-table" style="font-size: 0.9rem;">
       <table>
         <thead>
           <tr>
             <th>Numéro</th>
             <th>Année</th>
             <th>Programme</th>
-            <th>Budget Total</th>
+            <th>Budget</th>
             <th>Phase</th>
             <th>Statut</th>
             <th>Date</th>
@@ -118,11 +118,22 @@
             </td>
             <td>{{ f.date_creation.strftime('%d/%m/%Y') }}</td>
             <td>
-              <div class="action-icons">
-                <span class="action-icon" onclick="voirFiche({{ f.id }})" title="Voir structure">👁️</span>
-                <span class="action-icon" onclick="exporterPDF({{ f.id }})" title="Exporter PDF">📄</span>
-                <span class="action-icon" onclick="gererDocumentsFiche({{ f.id }})" title="Gérer documents">📎</span>
-                <span class="action-icon" onclick="supprimerFiche({{ f.id }})" title="Supprimer">🗑️</span>
+              <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                <button onclick="voirFiche({{ f.id }})" class="btn-action" title="Voir structure">
+                  👁️
+                </button>
+                <button onclick="exporterExcel({{ f.id }})" class="btn-action" title="Exporter Excel">
+                  📊
+                </button>
+                <button onclick="exporterPDF({{ f.id }})" class="btn-action" title="Exporter PDF">
+                  📄
+                </button>
+                <button onclick="gererDocumentsFiche({{ f.id }})" class="btn-action" title="Gérer documents">
+                  📎
+                </button>
+                <button onclick="supprimerFiche({{ f.id }})" class="btn-action btn-action-danger" title="Supprimer">
+                  🗑️
+                </button>
               </div>
             </td>
           </tr>
@@ -150,6 +161,23 @@
     </div>
     
     <form id="chargerForm" onsubmit="handleChargerFiche(event)" enctype="multipart/form-data">
+      
+      <!-- Bouton pour télécharger le modèle -->
+      <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #2196F3;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between;">
+          <div>
+            <h4 style="margin: 0 0 0.25rem 0; color: #1976D2; font-size: 1rem;">📥 Besoin d'un modèle ?</h4>
+            <p style="margin: 0; color: #424242; font-size: 0.9rem;">Téléchargez notre modèle Excel pré-formaté avec des exemples</p>
+          </div>
+          <button type="button"
+             onclick="telechargerTemplate()" 
+             class="btn btn-info" 
+             style="white-space: nowrap;">
+            📥 Télécharger le modèle Excel
+          </button>
+        </div>
+      </div>
+      
       <div class="form-group">
         <label class="required">Programme</label>
         <select name="programme_id" required style="padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
@@ -164,10 +192,22 @@
       </div>
       
       <div class="form-group">
+        <label class="required">Année budgétaire (N+1)</label>
+        <input type="number" name="annee" min="2020" max="2050" required 
+               value="{{ annee if annee != 'toutes' else '' }}" 
+               placeholder="Ex: 2025"
+               style="padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
+          📅 Année du budget à préparer (N+1). Ex: Pour préparer le budget 2025, saisissez 2025
+        </small>
+      </div>
+      
+      <div class="form-group">
         <label>Fichier de la fiche technique (.xlsx, .xls, .pdf)</label>
         <input type="file" name="fichier" accept=".xlsx,.xls,.pdf" required>
         <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
-          Formats supportés : Excel (.xlsx, .xls) ou PDF (.pdf)
+          Formats supportés : Excel (.xlsx, .xls) ou PDF (.pdf)<br>
+          <strong>💡 Utilisez le modèle Excel ci-dessus pour garantir la conformité</strong>
         </small>
       </div>
       
@@ -238,6 +278,11 @@
 
 {% block scripts %}
 <script>
+// Fermer l'overlay au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  hideGlobalLoading();
+});
+
 function filtrerFiches() {
   const annee = document.getElementById('filter-annee').value;
   const programmeId = document.getElementById('filter-programme').value;
@@ -268,12 +313,38 @@ function voirFiche(ficheId) {
   }, 300);
 }
 
+function exporterExcel(ficheId) {
+  showGlobalLoading('Génération Excel...', 'Création du fichier Excel');
+  
+  // Créer un lien temporaire pour le téléchargement
+  const link = document.createElement('a');
+  link.href = `/api/v1/budget/api/fiches/${ficheId}/export/excel`;
+  link.download = '';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Fermer l'overlay après 5 secondes
+  setTimeout(() => {
+    hideGlobalLoading();
+  }, 5000);
+}
+
 function exporterPDF(ficheId) {
   showGlobalLoading('Génération PDF...', 'Veuillez patienter');
+  
+  // Créer un lien temporaire pour le téléchargement
+  const link = document.createElement('a');
+  link.href = `/api/v1/budget/api/fiches/${ficheId}/export/pdf`;
+  link.download = '';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Fermer l'overlay après 5 secondes
   setTimeout(() => {
-    window.open(`/api/v1/budget/api/fiches/${ficheId}/export/pdf`, '_blank');
     hideGlobalLoading();
-  }, 500);
+  }, 5000);
 }
 
 async function gererDocumentsFiche(ficheId) {
@@ -407,6 +478,31 @@ async function supprimerFiche(ficheId) {
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }
+}
+
+function telechargerTemplate() {
+  // Récupérer l'année depuis le filtre (ou utiliser 2025 par défaut)
+  const anneeFilter = document.getElementById('filter-annee');
+  let annee = anneeFilter ? anneeFilter.value : '2025';
+  
+  // Si "toutes" est sélectionné, utiliser 2025
+  if (annee === 'toutes') {
+    annee = '2025';
+  }
+  
+  // Afficher l'overlay pendant le téléchargement
+  showGlobalLoading('Génération du modèle...', 'Téléchargement en cours');
+  
+  // Créer un lien temporaire pour le téléchargement
+  const link = document.createElement('a');
+  link.href = `/api/v1/budget/api/telecharger-template-fiche?annee=${annee}`;
+  link.download = `Modele_Fiche_Technique_${annee}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Recharger la page immédiatement pour fermer automatiquement les modals et l'overlay
+  location.reload();
 }
 
 async function handleChargerFiche(event) {

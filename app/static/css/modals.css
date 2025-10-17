@@ -67,6 +67,7 @@ body.modal-open {
 /* Modal Content */
 .modal-content {
     max-width: 400px;
+    max-height: 90vh;
     background: white;
     border-radius: 5px;
     width: 50%;
@@ -75,10 +76,11 @@ body.modal-open {
     animation: slideDown 0.3s ease-in-out;
     position: relative;
     padding: 1.5rem;
-    
 }
+
 .modal-sm.show .modal-content {
     max-width: 400px;
+    max-height: 80vh;
     background: white;
     border-radius: 5px;
     width: 50%;
@@ -91,6 +93,7 @@ body.modal-open {
 
 .modal-md.show .modal-content {
     max-width: 600px;
+    max-height: 85vh;
     background: white;
     border-radius: 5px;
     width: 60%;
@@ -103,6 +106,7 @@ body.modal-open {
 
 .modal-lg.show .modal-content {
     max-width: 900px;
+    max-height: 85vh;
     background: white;
     width: 80%;
     overflow-y: auto;
@@ -114,6 +118,7 @@ body.modal-open {
 
 .modal-xl.show .modal-content {
     max-width: 1200px;
+    max-height: 90vh;
     background: white;
     border-radius: 5px;
     width: 90%;

@@ -467,10 +467,12 @@ def api_create_article(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="create",
             target_type="stock_article",
             target_id=article.id,
-            description=f"Création de l'article {article.code} - {article.designation}"
+            description=f"Création de l'article {article.code} - {article.designation}",
+            icon="📦"
         )
         
         return {
@@ -538,10 +540,12 @@ def api_update_article(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="update",
             target_type="stock_article",
             target_id=article.id,
-            description=f"Modification de l'article {article.code} - {article.designation}"
+            description=f"Modification de l'article {article.code} - {article.designation}",
+            icon="✏️"
         )
         
         return {
@@ -590,10 +594,12 @@ def api_delete_article(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="delete",
             target_type="stock_article",
             target_id=article_id,
-            description=f"Suppression de l'article {article.code}"
+            description=f"Suppression de l'article {article.code}",
+            icon="🗑️"
         )
         
         return {
@@ -687,10 +693,12 @@ async def api_create_mouvement(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="create",
             target_type="stock_mouvement",
             target_id=mouvement.id,
-            description=f"{type_mouvement} : {article.designation} - {quantite} {article.unite}"
+            description=f"{type_mouvement} : {article.designation} - {quantite} {article.unite}",
+            icon="📦"
         )
         
         return {
@@ -788,10 +796,12 @@ async def api_delete_mouvement(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="delete",
             target_type="stock_mouvement",
             target_id=mouvement.id,
-            description=f"Suppression {mouvement.type_mouvement} : {article.designation} - {mouvement.quantite} {article.unite}"
+            description=f"Suppression {mouvement.type_mouvement} : {article.designation} - {mouvement.quantite} {article.unite}",
+            icon="🗑️"
         )
         
         # Supprimer le mouvement
@@ -873,10 +883,12 @@ async def api_create_demande(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="create",
             target_type="stock_demande",
             target_id=demande.id,
-            description=f"Demande {demande.numero} créée"
+            description=f"Demande {demande.numero} créée",
+            icon="📝"
         )
         
         return {
@@ -916,10 +928,12 @@ def api_valider_demande(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="update",
             target_type="stock_demande",
             target_id=demande.id,
-            description=f"Demande {demande.numero} {'validée' if accepte else 'rejetée'}"
+            description=f"Demande {demande.numero} {'validée' if accepte else 'rejetée'}",
+            icon="✅" if accepte else "❌"
         )
         
         return {
@@ -1169,10 +1183,12 @@ def api_create_fournisseur(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="create",
             target_type="fournisseur",
             target_id=fournisseur.id,
-            description=f"Création du fournisseur {fournisseur.code} - {fournisseur.nom}"
+            description=f"Création du fournisseur {fournisseur.code} - {fournisseur.nom}",
+            icon="🏢"
         )
         
         return {
@@ -1259,10 +1275,12 @@ def api_update_fournisseur(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="update",
             target_type="fournisseur",
             target_id=fournisseur.id,
-            description=f"Modification du fournisseur {fournisseur.code} - {fournisseur.nom}"
+            description=f"Modification du fournisseur {fournisseur.code} - {fournisseur.nom}",
+            icon="✏️"
         )
         
         return {
@@ -1315,10 +1333,12 @@ def api_delete_fournisseur(
                 db_session=session,
                 user_id=current_user.id,
                 user_email=current_user.email,
+                user_full_name=current_user.full_name,
                 action_type="delete",
                 target_type="fournisseur",
                 target_id=fournisseur_id,
-                description=f"Suppression du fournisseur {nom}"
+                description=f"Suppression du fournisseur {nom}",
+                icon="🗑️"
             )
             
             return {
@@ -1535,10 +1555,12 @@ def api_create_inventaire(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="create",
             target_type="inventaire",
             target_id=inventaire.id,
-            description=f"Création de l'inventaire {inventaire.numero}"
+            description=f"Création de l'inventaire {inventaire.numero}",
+            icon="📋"
         )
         
         return {
@@ -1750,10 +1772,12 @@ def api_cloturer_inventaire(
             db_session=session,
             user_id=current_user.id,
             user_email=current_user.email,
+            user_full_name=current_user.full_name,
             action_type="update",
             target_type="inventaire",
             target_id=inventaire.id,
-            description=f"Clôture de l'inventaire {inventaire.numero}"
+            description=f"Clôture de l'inventaire {inventaire.numero}",
+            icon="🔒"
         )
         
         return {

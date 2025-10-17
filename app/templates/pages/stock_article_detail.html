@@ -205,3 +205,18 @@
 </body>
 {% endblock %}
 
+{% block scripts %}
+<script>
+// ========================================
+// FERMER L'OVERLAY AU CHARGEMENT
+// ========================================
+document.addEventListener('DOMContentLoaded', function() {
+  // S'assurer que l'overlay est fermé au chargement de la page
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) {
+    overlay.classList.remove('show');
+  }
+});
+</script>
+{% endblock %}
+

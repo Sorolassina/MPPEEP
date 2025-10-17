@@ -122,13 +122,28 @@
 
 {% block scripts %}
 <script>
+// ========================================
+// FERMER L'OVERLAY AU CHARGEMENT
+// ========================================
+document.addEventListener('DOMContentLoaded', function() {
+  // S'assurer que l'overlay est fermé au chargement de la page
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) {
+    overlay.classList.remove('show');
+  }
+});
+
 // Voir détail d'un article
 function voirArticle(articleId) {
+  // Afficher l'overlay avant la navigation
+  showGlobalLoading('Chargement des détails...', 'Veuillez patienter');
   window.location.href = `/api/v1/stock/articles/${articleId}`;
 }
 
 // Modifier un article
 function modifierArticle(articleId) {
+  // Afficher l'overlay avant la navigation
+  showGlobalLoading('Chargement du formulaire...', 'Veuillez patienter');
   window.location.href = `/api/v1/stock/articles/${articleId}/edit`;
 }
 
@@ -138,9 +153,8 @@ async function supprimerArticle(articleId, designation) {
     return;
   }
   
-  // Afficher l'overlay
-  const overlay = document.getElementById('globalLoadingOverlay');
-  if (overlay) overlay.classList.add('show');
+  // Afficher l'overlay avec message personnalisé
+  showGlobalLoading('Suppression en cours...', 'Veuillez patienter');
   
   try {
     const response = await fetch(`/api/v1/stock/api/articles/${articleId}`, {
@@ -151,18 +165,18 @@ async function supprimerArticle(articleId, designation) {
     
     if (result.success) {
       showSuccess(result.message);
-      // L'overlay reste affiché pendant la redirection
+      // L'overlay reste affiché pendant le rechargement
       setTimeout(() => {
         window.location.reload();
       }, 800);
     } else {
       // Masquer l'overlay SEULEMENT en cas d'erreur
-      if (overlay) overlay.classList.remove('show');
+      hideGlobalLoading();
       showError(result.error);
     }
   } catch (error) {
     // Masquer l'overlay SEULEMENT en cas d'erreur
-    if (overlay) overlay.classList.remove('show');
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur lors de la suppression');
   }

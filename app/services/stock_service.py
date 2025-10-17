@@ -11,7 +11,8 @@ from app.core.logging_config import get_logger
 
 from app.models.stock import (
     Article, CategorieArticle, Fournisseur,
-    MouvementStock, DemandeStock, Inventaire, LigneInventaire
+    MouvementStock, DemandeStock, Inventaire, LigneInventaire,
+    LotPerissable, Amortissement
 )
 
 logger = get_logger(__name__)
@@ -518,4 +519,544 @@ class StockService:
                 for a in articles_surstock
             ]
         }
+    
+    # ============================================
+    # NOUVEAUTÉ : GESTION DES LOTS PÉRISSABLES
+    # ============================================
+    
+    @staticmethod
+    def creer_lot_perissable(
+        session: Session,
+        article_id: int,
+        numero_lot: str,
+        date_peremption: date,
+        quantite: Decimal,
+        fournisseur_id: Optional[int] = None,
+        date_fabrication: Optional[date] = None,
+        observations: Optional[str] = None
+    ) -> LotPerissable:
+        """Crée un nouveau lot d'article périssable"""
+        
+        # Vérifier que l'article existe et est périssable
+        article = session.get(Article, article_id)
+        if not article:
+            raise ValueError(f"Article {article_id} introuvable")
+        
+        if not article.est_perissable:
+            raise ValueError(f"L'article '{article.designation}' n'est pas défini comme périssable")
+        
+        # Vérifier si le lot existe déjà
+        existing = session.exec(
+            select(LotPerissable).where(
+                LotPerissable.article_id == article_id,
+                LotPerissable.numero_lot == numero_lot
+            )
+        ).first()
+        
+        if existing:
+            raise ValueError(f"Le lot '{numero_lot}' existe déjà pour cet article")
+        
+        # Calculer le statut initial
+        jours_avant_peremption = (date_peremption - date.today()).days
+        
+        if jours_avant_peremption < 0:
+            statut = "PERIME"
+        elif jours_avant_peremption <= article.seuil_alerte_peremption_jours:
+            statut = "ALERTE"
+        else:
+            statut = "ACTIF"
+        
+        lot = LotPerissable(
+            article_id=article_id,
+            numero_lot=numero_lot,
+            date_fabrication=date_fabrication,
+            date_peremption=date_peremption,
+            quantite_initiale=quantite,
+            quantite_restante=quantite,
+            statut=statut,
+            fournisseur_id=fournisseur_id,
+            observations=observations
+        )
+        
+        session.add(lot)
+        session.commit()
+        session.refresh(lot)
+        
+        logger.info(f"Lot périssable créé : {numero_lot} - Article: {article.designation} - Péremption: {date_peremption}")
+        return lot
+    
+    @staticmethod
+    def get_lots_perissables_article(session: Session, article_id: int) -> List[LotPerissable]:
+        """Récupère tous les lots d'un article périssable (triés par date de péremption)"""
+        
+        lots = session.exec(
+            select(LotPerissable)
+            .where(LotPerissable.article_id == article_id)
+            .order_by(LotPerissable.date_peremption)
+        ).all()
+        
+        return list(lots)
+    
+    @staticmethod
+    def get_lots_a_perimer(session: Session, jours: int = 30) -> List[Dict[str, Any]]:
+        """
+        Récupère les lots qui vont périmer dans X jours
+        
+        Args:
+            jours: Nombre de jours avant péremption pour l'alerte
+        """
+        from datetime import timedelta
+        
+        date_limite = date.today() + timedelta(days=jours)
+        
+        lots = session.exec(
+            select(LotPerissable)
+            .where(
+                LotPerissable.date_peremption <= date_limite,
+                LotPerissable.date_peremption >= date.today(),
+                LotPerissable.quantite_restante > 0,
+                LotPerissable.statut.in_(["ACTIF", "ALERTE"])
+            )
+            .order_by(LotPerissable.date_peremption)
+        ).all()
+        
+        resultat = []
+        for lot in lots:
+            article = session.get(Article, lot.article_id)
+            jours_restants = (lot.date_peremption - date.today()).days
+            
+            resultat.append({
+                "lot": lot,
+                "article": article,
+                "jours_restants": jours_restants,
+                "urgence": "CRITIQUE" if jours_restants <= 7 else "ELEVEE" if jours_restants <= 15 else "MOYENNE"
+            })
+        
+        return resultat
+    
+    @staticmethod
+    def get_lots_perimes(session: Session) -> List[Dict[str, Any]]:
+        """Récupère tous les lots périmés avec quantité restante > 0"""
+        
+        lots = session.exec(
+            select(LotPerissable)
+            .where(
+                LotPerissable.date_peremption < date.today(),
+                LotPerissable.quantite_restante > 0
+            )
+            .order_by(LotPerissable.date_peremption)
+        ).all()
+        
+        resultat = []
+        for lot in lots:
+            article = session.get(Article, lot.article_id)
+            jours_perime = (date.today() - lot.date_peremption).days
+            
+            resultat.append({
+                "lot": lot,
+                "article": article,
+                "jours_perime": jours_perime
+            })
+        
+        return resultat
+    
+    @staticmethod
+    def mettre_a_jour_statuts_lots(session: Session) -> Dict[str, int]:
+        """
+        Met à jour les statuts de tous les lots périssables
+        À exécuter quotidiennement (tâche planifiée)
+        
+        Returns:
+            dict: Nombre de lots par nouveau statut
+        """
+        
+        lots = session.exec(select(LotPerissable)).all()
+        
+        stats = {
+            "actifs": 0,
+            "alertes": 0,
+            "perimes": 0,
+            "epuises": 0
+        }
+        
+        for lot in lots:
+            article = session.get(Article, lot.article_id)
+            
+            # Lot épuisé
+            if lot.quantite_restante <= 0:
+                lot.statut = "EPUISE"
+                stats["epuises"] += 1
+            # Lot périmé
+            elif lot.date_peremption < date.today():
+                if lot.statut != "PERIME":
+                    lot.statut = "PERIME"
+                    logger.warning(f"Lot périmé détecté : {lot.numero_lot} - Article: {article.designation}")
+                stats["perimes"] += 1
+            # Lot en alerte
+            elif (lot.date_peremption - date.today()).days <= article.seuil_alerte_peremption_jours:
+                lot.statut = "ALERTE"
+                stats["alertes"] += 1
+            # Lot actif
+            else:
+                lot.statut = "ACTIF"
+                stats["actifs"] += 1
+            
+            lot.updated_at = datetime.now()
+            session.add(lot)
+        
+        session.commit()
+        
+        logger.info(f"Statuts lots mis à jour - Actifs: {stats['actifs']}, Alertes: {stats['alertes']}, Périmés: {stats['perimes']}, Épuisés: {stats['epuises']}")
+        return stats
+    
+    @staticmethod
+    def consommer_lot_fifo(
+        session: Session,
+        article_id: int,
+        quantite: Decimal
+    ) -> List[Dict[str, Any]]:
+        """
+        Consomme une quantité d'un article périssable en suivant la règle FIFO
+        (First In, First Out - premiers lots à périmer sont utilisés en premier)
+        
+        Returns:
+            List[dict]: Liste des lots consommés avec quantités
+        """
+        
+        # Récupérer les lots actifs triés par date de péremption (FIFO)
+        lots = session.exec(
+            select(LotPerissable)
+            .where(
+                LotPerissable.article_id == article_id,
+                LotPerissable.quantite_restante > 0,
+                LotPerissable.statut.in_(["ACTIF", "ALERTE"])
+            )
+            .order_by(LotPerissable.date_peremption)
+        ).all()
+        
+        if not lots:
+            raise ValueError("Aucun lot disponible pour cet article")
+        
+        quantite_restante = quantite
+        lots_consommes = []
+        
+        for lot in lots:
+            if quantite_restante <= 0:
+                break
+            
+            if lot.quantite_restante >= quantite_restante:
+                # Ce lot suffit
+                quantite_prise = quantite_restante
+                lot.quantite_restante -= quantite_restante
+                quantite_restante = Decimal(0)
+            else:
+                # On prend tout le lot et on continue
+                quantite_prise = lot.quantite_restante
+                quantite_restante -= lot.quantite_restante
+                lot.quantite_restante = Decimal(0)
+            
+            lot.updated_at = datetime.now()
+            session.add(lot)
+            
+            lots_consommes.append({
+                "lot_id": lot.id,
+                "numero_lot": lot.numero_lot,
+                "quantite_consommee": float(quantite_prise),
+                "date_peremption": lot.date_peremption
+            })
+        
+        if quantite_restante > 0:
+            raise ValueError(f"Stock insuffisant : {quantite_restante} {session.get(Article, article_id).unite} manquant(s)")
+        
+        session.commit()
+        
+        return lots_consommes
+    
+    # ============================================
+    # NOUVEAUTÉ : GESTION AMORTISSEMENT MATÉRIEL
+    # ============================================
+    
+    @staticmethod
+    def calculer_amortissement_lineaire(
+        valeur_acquisition: Decimal,
+        duree_annees: int,
+        valeur_residuelle: Decimal = Decimal(0)
+    ) -> Decimal:
+        """
+        Calcule l'amortissement annuel en méthode linéaire
+        
+        Formule: (Valeur d'acquisition - Valeur résiduelle) / Durée
+        """
+        return (valeur_acquisition - valeur_residuelle) / Decimal(duree_annees)
+    
+    @staticmethod
+    def calculer_amortissement_degressif(
+        valeur_nette_debut: Decimal,
+        taux_degressif: Decimal
+    ) -> Decimal:
+        """
+        Calcule l'amortissement annuel en méthode dégressive
+        
+        Formule: Valeur nette comptable début * Taux dégressif
+        """
+        return valeur_nette_debut * (taux_degressif / Decimal(100))
+    
+    @staticmethod
+    def calculer_amortissement_annee(
+        session: Session,
+        article_id: int,
+        annee: int,
+        user_id: int
+    ) -> Amortissement:
+        """
+        Calcule l'amortissement d'un matériel pour une année donnée
+        """
+        
+        article = session.get(Article, article_id)
+        if not article:
+            raise ValueError(f"Article {article_id} introuvable")
+        
+        if not article.est_amortissable:
+            raise ValueError(f"L'article '{article.designation}' n'est pas amortissable")
+        
+        if not article.date_acquisition or not article.valeur_acquisition or not article.duree_amortissement_annees:
+            raise ValueError("Données d'amortissement incomplètes (date acquisition, valeur, durée)")
+        
+        # Vérifier si l'amortissement existe déjà pour cette année
+        existing = session.exec(
+            select(Amortissement).where(
+                Amortissement.article_id == article_id,
+                Amortissement.annee == annee
+            )
+        ).first()
+        
+        if existing:
+            raise ValueError(f"L'amortissement pour l'année {annee} existe déjà")
+        
+        # Vérifier que l'année est >= année d'acquisition
+        annee_acquisition = article.date_acquisition.year
+        if annee < annee_acquisition:
+            raise ValueError(f"L'année {annee} est antérieure à l'année d'acquisition ({annee_acquisition})")
+        
+        # Récupérer l'amortissement de l'année précédente
+        amort_precedent = session.exec(
+            select(Amortissement)
+            .where(
+                Amortissement.article_id == article_id,
+                Amortissement.annee == annee - 1
+            )
+        ).first()
+        
+        if amort_precedent:
+            amortissement_cumule_debut = amort_precedent.amortissement_cumule_fin
+            
+            # Vérifier si déjà totalement amorti
+            if amort_precedent.totalement_amorti:
+                raise ValueError("Le matériel est déjà totalement amorti")
+        else:
+            # Première année ou années manquantes
+            if annee > annee_acquisition:
+                logger.warning(f"Amortissement(s) manquant(s) pour les années précédentes")
+            amortissement_cumule_debut = Decimal(0)
+        
+        # Calculer l'amortissement de l'année
+        valeur_residuelle = article.valeur_residuelle or Decimal(0)
+        
+        if article.methode_amortissement == "LINEAIRE":
+            amortissement_annuel = StockService.calculer_amortissement_lineaire(
+                article.valeur_acquisition,
+                article.duree_amortissement_annees,
+                valeur_residuelle
+            )
+            taux_applique = Decimal(100) / Decimal(article.duree_amortissement_annees)
+            base_calcul = article.valeur_acquisition - valeur_residuelle
+            
+        elif article.methode_amortissement == "DEGRESSIF":
+            # Taux dégressif = Taux linéaire * Coefficient (1.25, 1.75 ou 2.25 selon durée)
+            if not article.taux_amortissement:
+                raise ValueError("Le taux d'amortissement dégressif n'est pas défini")
+            
+            valeur_nette_debut = article.valeur_acquisition - amortissement_cumule_debut
+            amortissement_annuel = StockService.calculer_amortissement_degressif(
+                valeur_nette_debut,
+                article.taux_amortissement
+            )
+            taux_applique = article.taux_amortissement
+            base_calcul = valeur_nette_debut
+            
+        else:
+            raise ValueError(f"Méthode d'amortissement '{article.methode_amortissement}' non supportée")
+        
+        # Calculs finaux
+        amortissement_cumule_fin = amortissement_cumule_debut + amortissement_annuel
+        valeur_nette_comptable = article.valeur_acquisition - amortissement_cumule_fin
+        
+        # Vérifier si on atteint la valeur résiduelle
+        if valeur_nette_comptable <= valeur_residuelle:
+            # Ajuster pour ne pas dépasser la valeur résiduelle
+            amortissement_annuel = article.valeur_acquisition - amortissement_cumule_debut - valeur_residuelle
+            amortissement_cumule_fin = article.valeur_acquisition - valeur_residuelle
+            valeur_nette_comptable = valeur_residuelle
+            totalement_amorti = True
+        else:
+            totalement_amorti = False
+        
+        # Créer l'enregistrement d'amortissement
+        amortissement = Amortissement(
+            article_id=article_id,
+            annee=annee,
+            periode=str(annee),
+            valeur_brute=article.valeur_acquisition,
+            amortissement_cumule_debut=amortissement_cumule_debut,
+            amortissement_periode=amortissement_annuel,
+            amortissement_cumule_fin=amortissement_cumule_fin,
+            valeur_nette_comptable=valeur_nette_comptable,
+            taux_applique=taux_applique,
+            methode=article.methode_amortissement,
+            base_calcul=base_calcul,
+            totalement_amorti=totalement_amorti,
+            calcule_par_user_id=user_id
+        )
+        
+        session.add(amortissement)
+        session.commit()
+        session.refresh(amortissement)
+        
+        logger.info(f"Amortissement calculé pour {article.designation} - Année {annee} - Montant: {amortissement_annuel}")
+        return amortissement
+    
+    @staticmethod
+    def get_plan_amortissement(session: Session, article_id: int) -> List[Dict[str, Any]]:
+        """
+        Génère le plan d'amortissement complet d'un matériel
+        (pour toutes les années, calculées ou projetées)
+        """
+        
+        article = session.get(Article, article_id)
+        if not article or not article.est_amortissable:
+            raise ValueError("Article introuvable ou non amortissable")
+        
+        if not article.date_acquisition or not article.valeur_acquisition or not article.duree_amortissement_annees:
+            raise ValueError("Données d'amortissement incomplètes")
+        
+        # Récupérer les amortissements déjà calculés
+        amortissements_calcules = session.exec(
+            select(Amortissement)
+            .where(Amortissement.article_id == article_id)
+            .order_by(Amortissement.annee)
+        ).all()
+        
+        plan = []
+        annee_debut = article.date_acquisition.year
+        valeur_residuelle = article.valeur_residuelle or Decimal(0)
+        
+        # Ajouter les amortissements déjà calculés
+        amort_cumule = Decimal(0)
+        derniere_annee_calculee = annee_debut - 1
+        
+        for amort in amortissements_calcules:
+            plan.append({
+                "annee": amort.annee,
+                "valeur_brute": float(amort.valeur_brute),
+                "amortissement_periode": float(amort.amortissement_periode),
+                "amortissement_cumule": float(amort.amortissement_cumule_fin),
+                "valeur_nette_comptable": float(amort.valeur_nette_comptable),
+                "statut": amort.statut,
+                "calcule": True
+            })
+            amort_cumule = amort.amortissement_cumule_fin
+            derniere_annee_calculee = amort.annee
+            
+            if amort.totalement_amorti:
+                return plan  # Amortissement terminé
+        
+        # Projeter les années restantes
+        for i in range(int(derniere_annee_calculee - annee_debut + 1), article.duree_amortissement_annees):
+            annee = annee_debut + i
+            
+            if article.methode_amortissement == "LINEAIRE":
+                amort_annuel = StockService.calculer_amortissement_lineaire(
+                    article.valeur_acquisition,
+                    article.duree_amortissement_annees,
+                    valeur_residuelle
+                )
+            else:
+                valeur_nette = article.valeur_acquisition - amort_cumule
+                amort_annuel = StockService.calculer_amortissement_degressif(
+                    valeur_nette,
+                    article.taux_amortissement or Decimal(0)
+                )
+            
+            amort_cumule += amort_annuel
+            vnc = article.valeur_acquisition - amort_cumule
+            
+            # Ajuster si on atteint la valeur résiduelle
+            if vnc < valeur_residuelle:
+                amort_annuel = article.valeur_acquisition - (amort_cumule - amort_annuel) - valeur_residuelle
+                amort_cumule = article.valeur_acquisition - valeur_residuelle
+                vnc = valeur_residuelle
+            
+            plan.append({
+                "annee": annee,
+                "valeur_brute": float(article.valeur_acquisition),
+                "amortissement_periode": float(amort_annuel),
+                "amortissement_cumule": float(amort_cumule),
+                "valeur_nette_comptable": float(vnc),
+                "statut": "PROJETE",
+                "calcule": False
+            })
+            
+            if vnc <= valeur_residuelle:
+                break  # Amortissement terminé
+        
+        return plan
+    
+    @staticmethod
+    def get_materiels_a_amortir(session: Session, annee: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Récupère les matériels amortissables pour lesquels l'amortissement
+        n'a pas encore été calculé pour l'année donnée
+        """
+        
+        if annee is None:
+            annee = date.today().year
+        
+        # Récupérer tous les matériels amortissables
+        materiels = session.exec(
+            select(Article).where(
+                Article.est_amortissable == True,
+                Article.actif == True,
+                Article.date_acquisition.is_not(None)
+            )
+        ).all()
+        
+        resultat = []
+        
+        for materiel in materiels:
+            # Vérifier si déjà calculé pour cette année
+            amort_existe = session.exec(
+                select(Amortissement).where(
+                    Amortissement.article_id == materiel.id,
+                    Amortissement.annee == annee
+                )
+            ).first()
+            
+            if not amort_existe and materiel.date_acquisition.year <= annee:
+                # Vérifier si déjà totalement amorti
+                dernier_amort = session.exec(
+                    select(Amortissement)
+                    .where(Amortissement.article_id == materiel.id)
+                    .order_by(Amortissement.annee.desc())
+                ).first()
+                
+                if dernier_amort and dernier_amort.totalement_amorti:
+                    continue  # Déjà totalement amorti
+                
+                resultat.append({
+                    "article": materiel,
+                    "annee": annee,
+                    "annees_depuis_acquisition": annee - materiel.date_acquisition.year
+                })
+        
+        return resultat
 

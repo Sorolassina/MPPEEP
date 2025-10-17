@@ -329,6 +329,17 @@ def api_update_besoin(
         session.add(suivi)
         session.commit()
     
+    # Logger l'activité
+    ActivityService.log_user_activity(
+        session=session,
+        user=current_user,
+        action_type="update",
+        target_type="besoin_agent",
+        target_id=besoin.id,
+        description=f"Mise à jour du besoin - {besoin.poste_libelle} (statut: {besoin.statut})",
+        icon="✏️"
+    )
+    
     logger.info(f"✅ Besoin mis à jour : ID {besoin_id} par {current_user.email}")
     return {"ok": True, "message": "Besoin mis à jour avec succès"}
 
@@ -344,10 +355,23 @@ def api_delete_besoin(
     if not besoin:
         raise HTTPException(404, "Besoin non trouvé")
     
+    besoin_libelle = besoin.poste_libelle
+    
     besoin.actif = False
     besoin.updated_at = datetime.utcnow()
     session.add(besoin)
     session.commit()
+    
+    # Logger l'activité
+    ActivityService.log_user_activity(
+        session=session,
+        user=current_user,
+        action_type="delete",
+        target_type="besoin_agent",
+        target_id=besoin_id,
+        description=f"Suppression du besoin - {besoin_libelle}",
+        icon="🗑️"
+    )
     
     logger.info(f"✅ Besoin désactivé : ID {besoin_id} par {current_user.email}")
     return {"ok": True, "message": "Besoin désactivé avec succès"}
@@ -421,6 +445,17 @@ def api_generer_consolidation(
     session.add(consolidation)
     session.commit()
     session.refresh(consolidation)
+    
+    # Logger l'activité
+    ActivityService.log_user_activity(
+        session=session,
+        user=current_user,
+        action_type="generate",
+        target_type="consolidation_besoin",
+        target_id=consolidation.id,
+        description=f"Génération de consolidation - {niveau} - Année {annee}",
+        icon="📊"
+    )
     
     logger.info(f"✅ Consolidation générée : {niveau} - Année {annee} par {current_user.email}")
     return {"ok": True, "id": consolidation.id, "message": "Consolidation générée avec succès"}

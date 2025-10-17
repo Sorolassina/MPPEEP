@@ -60,6 +60,7 @@ class ActivityService:
             activity = Activity(
                 user_id=user.id,
                 user_email=user.email,
+                user_full_name=user.full_name,
                 action_type=action_type,
                 target_type=target_type,
                 target_id=target_id,
@@ -90,7 +91,8 @@ class ActivityService:
         target_type: str,
         description: str,
         target_id: Optional[int] = None,
-        icon: Optional[str] = None
+        icon: Optional[str] = None,
+        user_full_name: Optional[str] = None
     ) -> Optional['Activity']:
         """
         Enregistre une nouvelle activité
@@ -116,6 +118,7 @@ class ActivityService:
             activity = Activity(
                 user_id=user_id,
                 user_email=user_email,
+                user_full_name=user_full_name,
                 action_type=action_type,
                 target_type=target_type,
                 target_id=target_id,
@@ -174,6 +177,7 @@ class ActivityService:
                     "id": a.id,
                     "user_id": a.user_id,
                     "user_email": a.user_email,
+                    "user_full_name": a.user_full_name,
                     "action_type": a.action_type,
                     "target_type": a.target_type,
                     "target_id": a.target_id,

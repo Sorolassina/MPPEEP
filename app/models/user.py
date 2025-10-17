@@ -29,6 +29,10 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)  # Rétrocompatibilité
     type_user: str = Field(default=UserType.USER)  # Stocké comme VARCHAR
+    
+    # Lien avec AgentComplet (optionnel - un user peut être lié à un agent)
+    agent_id: Optional[int] = Field(default=None, foreign_key="agent_complet.id", index=True)
+    
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     

@@ -377,11 +377,11 @@
           <div class="execution-details">
             <div class="execution-detail-item">
               <span class="detail-label">Budget :</span>
-              <span class="detail-value">{{ "{:,.0f}".format(budget_actuel_total) }} FCFA</span>
+              <span class="detail-value">{{ "{:,.0f}".format(budget_actuel_n1 if budget_actuel_n1 else 0) }} FCFA</span>
             </div>
             <div class="execution-detail-item">
               <span class="detail-label">Engagé :</span>
-              <span class="detail-value">{{ "{:,.0f}".format(engagements_total) }} FCFA</span>
+              <span class="detail-value">{{ "{:,.0f}".format(engagements_n1 if engagements_n1 else 0) }} FCFA</span>
             </div>
           </div>
         </div>
@@ -457,9 +457,9 @@
     gap: 12px;
     margin-bottom: 2rem;
     padding: 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 85%, #000) 100%);
     border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
 }
 
 .filter-group {
@@ -471,7 +471,7 @@
 
 .filter-label {
     font-weight: 600;
-    color: var(--white-color);
+    color: #FFFFFF !important;
     font-size: 0.9rem;
 }
 
@@ -1319,6 +1319,9 @@ function filtrerDashboard() {
 
 // Animation des montants avec compteur
 document.addEventListener('DOMContentLoaded', function() {
+  // Fermer l'overlay au chargement de la page
+  hideGlobalLoading();
+  
   document.querySelectorAll('.kpi-item-amount').forEach((el, index) => {
     const text = el.textContent.trim();
     const match = text.match(/[\d,]+/);

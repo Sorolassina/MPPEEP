@@ -22,41 +22,6 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.filters-grid {
-    display: flex;
-    gap: 2rem;
-    align-items: end;
-}
-
-.filter-group {
-    flex: 1;
-}
-
-.filter-group label {
-    display: block;
-    font-weight: 600;
-    color: #000000;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.filter-group select {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    background: white;
-    color: #000000;
-    font-size: 1rem;
-    transition: border-color 0.3s;
-}
-
-.filter-group select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
 /* Section Chargements */
 .chargements-section {
     background: white;
@@ -144,13 +109,120 @@
 }
 
 /* Les boutons utilisent maintenant les classes centralisées .btn */
+
+/* Menu déroulant d'actions */
+.dropdown-actions {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.action-menu-btn {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #2c3e50;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.action-menu-btn:hover {
+    background: rgba(0,0,0,0.05);
+    transform: scale(1.2);
+}
+
+.action-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 180px;
+    z-index: 9999;
+    display: none;
+    margin-top: 0.25rem;
+    overflow: visible;
+}
+
+.action-menu.show {
+    display: block;
+    animation: slideDownMenu 0.2s ease-out;
+}
+
+@keyframes slideDownMenu {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.action-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+.action-menu-item:hover {
+    background: #f8f9fa;
+}
+
+.action-menu-item-danger:hover {
+    background: #fee;
+    color: #dc3545;
+}
+
+.action-menu-icon {
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+}
+
+/* Accordéons */
+.accordion-header:hover {
+    background: #e9ecef !important;
+}
+
+.accordion-content {
+    animation: slideDownContent 0.3s ease-out;
+}
+
+@keyframes slideDownContent {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 1000px;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 
 {{ page_header(
-    title='📊 SIGOBE - Système d\'Information de Gestion et d\'Observation Budgétaire',
+    title='📊 SIGOBE - Syst. d\'Infor. de Gestion et d\'Obser. Budg.',
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
         {'name': 'Budget', 'url': url_for('budget_home')},
@@ -167,10 +239,18 @@
   <!-- Filtres -->
   <div class="filters-section">
     <form method="get" action="{{ url_for('budget_sigobe') }}">
-      <div class="filters-grid">
-        <div class="filter-group">
-          <label>📅 Année</label>
-          <select name="annee" onchange="submitFilterWithLoading()">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; align-items: end;">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-weight: 600; color: #2c3e50;">📅 Année</label>
+          <select name="annee" onchange="submitFilterWithLoading()" style="
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            font-size: 1rem;
+            width: 100%;
+            cursor: pointer;
+          ">
             <option value="">Toutes les années</option>
             {% for a in annees %}
             <option value="{{ a }}" {{ 'selected' if annee_selected == a else '' }}>{{ a }}</option>
@@ -178,9 +258,17 @@
           </select>
         </div>
         
-        <div class="filter-group">
-          <label>📆 Trimestre</label>
-          <select name="trimestre" onchange="submitFilterWithLoading()">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-weight: 600; color: #2c3e50;">📆 Trimestre</label>
+          <select name="trimestre" onchange="submitFilterWithLoading()" style="
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            font-size: 1rem;
+            width: 100%;
+            cursor: pointer;
+          ">
             <option value="">Tous les trimestres</option>
             <option value="1" {{ 'selected' if trimestre_selected == 1 else '' }}>T1</option>
             <option value="2" {{ 'selected' if trimestre_selected == 2 else '' }}>T2</option>
@@ -196,7 +284,7 @@
   <div class="chargements-section">
     {% if chargements %}
     <div class="table-responsive">
-      <table class="data-table chargements-table">
+      <table class="data-table chargements-table" style="font-size: 0.9rem;">
         <thead>
           <tr>
             <th>Période</th>
@@ -210,7 +298,7 @@
         </thead>
         <tbody>
           {% for c in chargements %}
-          <tr>
+          <tr data-annee="{{ c.annee }}" data-trimestre="{{ c.trimestre or '' }}" data-chargement-id="{{ c.id }}">
             <td><strong>{{ c.periode_libelle }}</strong></td>
             <td>{{ c.nom_fichier }}</td>
             <td>{{ c.date_chargement.strftime('%d/%m/%Y %H:%M') }}</td>
@@ -222,9 +310,26 @@
               </span>
             </td>
             <td>
-              <div class="action-icons">
-                <span class="action-icon" onclick="voirKPIs({{ c.id }})" title="Voir les KPIs">📊</span>
-                <span class="action-icon" onclick="supprimerChargement({{ c.id }})" title="Supprimer">🗑️</span>
+              <div class="dropdown-actions">
+                <button class="action-menu-btn" onclick="toggleActionMenu(event, 'sigobe-{{ c.id }}')" title="Actions">⋮</button>
+                <div class="action-menu" id="menu-action-sigobe-{{ c.id }}">
+                  <button onclick="voirTable({{ c.id }}); closeAllMenus();" class="action-menu-item">
+                    <span class="action-menu-icon">📋</span>
+                    <span>Voir la table</span>
+                  </button>
+                  <button onclick="exporterExcel({{ c.id }}); closeAllMenus();" class="action-menu-item">
+                    <span class="action-menu-icon">📊</span>
+                    <span>Exporter Excel</span>
+                  </button>
+                  <button onclick="voirKPIs({{ c.id }}); closeAllMenus();" class="action-menu-item">
+                    <span class="action-menu-icon">📈</span>
+                    <span>Voir les KPIs</span>
+                  </button>
+                  <button onclick="supprimerChargement({{ c.id }}); closeAllMenus();" class="action-menu-item action-menu-item-danger">
+                    <span class="action-menu-icon">🗑️</span>
+                    <span>Supprimer</span>
+                  </button>
+                </div>
               </div>
             </td>
           </tr>
@@ -244,22 +349,33 @@
 </div>
 
 <!-- Modal Upload -->
-<div id="modalUpload" class="modal">
+<div id="modalUpload" class="modal-lg">
   <div class="modal-content">
     <div class="modal-header">
       <h2>📤 Charger des données SIGOBE</h2>
       <button class="modal-close" onclick="closeModal('modalUpload')">&times;</button>
     </div>
     
-    <div class="info-box">
-      <strong>ℹ️ Format attendu :</strong><br>
-      Fichier Excel "Situation Exécution" avec colonnes : CODE ET LIBELLE, Budget Voté, Budget Actuel, Engagements, Mandats, etc.
+    <!-- Bouton pour télécharger le modèle -->
+    <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1rem; margin-bottom: 1.5rem">
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between;">
+        <div>
+          <h4 style="margin: 0 0 0.25rem 0; color: #1976D2; font-size: 1rem;">📥 Besoin d'un modèle ?</h4>
+          <p style="margin: 0; color: #424242; font-size: 0.9rem;">Téléchargez notre modèle Excel SIGOBE pré-formaté</p>
+        </div>
+        <button type="button"
+           onclick="telechargerTemplateSigobe()" 
+           class="btn btn-info" 
+           style="white-space: nowrap;">
+          📥 Télécharger le modèle Excel
+        </button>
+      </div>
     </div>
     
     <form id="formUpload" onsubmit="handleUpload(event)" enctype="multipart/form-data">
       <div class="form-group">
-        <label class="required">📅 Année *</label>
-        <select name="annee" required>
+        <label class="form-label">📅 Année *</label>
+        <select name="annee" class="form-select" required>
           <option value="">-- Sélectionner --</option>
           <option value="2024">2024</option>
           <option value="2025">2025</option>
@@ -268,8 +384,8 @@
       </div>
       
       <div class="form-group">
-        <label>📆 Trimestre (optionnel)</label>
-        <select name="trimestre">
+        <label class="form-label">📆 Trimestre (optionnel)</label>
+        <select name="trimestre" class="form-select" required>
           <option value="">Annuel</option>
           <option value="1">T1</option>
           <option value="2">T2</option>
@@ -280,8 +396,8 @@
       </div>
       
       <div class="form-group">
-        <label class="required">📎 Fichier Excel *</label>
-        <input type="file" name="fichier" accept=".xlsx,.xls" required>
+        <label class="form-label required">📎 Fichier Excel </label>
+        <input type="file" name="fichier" class="form-control" accept=".xlsx,.xls" required>
         <small>Formats acceptés : .xlsx, .xls (max 50 MB)</small>
       </div>
       
@@ -298,6 +414,83 @@
 
 {% block scripts %}
 <script>
+// Fermer l'overlay au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  hideGlobalLoading();
+});
+
+// Gestion du menu déroulant d'actions
+function toggleActionMenu(event, menuId) {
+  event.stopPropagation();
+  const menu = document.getElementById(`menu-action-${menuId}`);
+  const allMenus = document.querySelectorAll('.action-menu');
+  
+  if (!menu) {
+    console.error(`Menu non trouvé: menu-action-${menuId}`);
+    return;
+  }
+  
+  // Fermer tous les autres menus
+  allMenus.forEach(m => {
+    if (m !== menu) {
+      m.classList.remove('show');
+    }
+  });
+  
+  // Toggle le menu actuel
+  menu.classList.toggle('show');
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.action-menu').forEach(menu => {
+    menu.classList.remove('show');
+  });
+}
+
+// Fermer les menus en cliquant ailleurs
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('.dropdown-actions')) {
+    closeAllMenus();
+  }
+});
+
+// Gestion des accordéons de prévisualisation
+function toggleAccordion(accordionId) {
+  const content = document.getElementById(accordionId);
+  const icon = document.getElementById(`icon-${accordionId}`);
+  
+  if (!content || !icon) return;
+  
+  const isOpen = content.style.display === 'block';
+  
+  if (isOpen) {
+    content.style.display = 'none';
+    icon.style.transform = 'rotate(0deg)';
+    icon.textContent = '▼';
+  } else {
+    content.style.display = 'block';
+    icon.style.transform = 'rotate(180deg)';
+    icon.textContent = '▲';
+  }
+}
+
+// Télécharger le template SIGOBE
+function telechargerTemplateSigobe() {
+  // Afficher l'overlay pendant le téléchargement
+  showGlobalLoading('Génération du modèle...', 'Téléchargement en cours');
+  
+  // Créer un lien temporaire pour le téléchargement
+  const link = document.createElement('a');
+  link.href = '/api/v1/budget/api/telecharger-template-sigobe';
+  link.download = 'Modele_SIGOBE.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);  
+  
+  // Recharger la page immédiatement pour fermer automatiquement les modals et l'overlay
+  location.reload();
+}
+
 // Soumettre le formulaire de filtres avec indicateur de chargement
 function submitFilterWithLoading() {
   showGlobalLoading('Filtrage...', 'Actualisation des chargements SIGOBE');
@@ -352,68 +545,105 @@ function afficherPrevisualisation(result) {
   const totaux = result.totaux;
   
   let html = `
-    <div style="background: #e0f2fe; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;">
-      <h3 style="margin: 0 0 1rem 0; color: #0369a1;">📊 Analyse du fichier</h3>
+    <div style="margin-bottom: 1.5rem;">
+      <h3 style="margin: 0 0 1.5rem 0; color: #2c3e50; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          ✨ Analyse du fichier SIGOBE
+        </span>
+      </h3>
       
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-        <div>
-          <strong>Lignes :</strong> ${stats.nb_lignes.toLocaleString()}
+      <!-- Statistiques globales -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="card" style="padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold;">${stats.nb_lignes.toLocaleString()}</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">📄 Lignes détectées</div>
         </div>
-        <div>
-          <strong>Programmes :</strong> ${stats.nb_programmes}
+        <div class="card" style="padding: 1rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold;">${stats.nb_programmes}</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">🎯 Programmes</div>
         </div>
-        <div>
-          <strong>Actions :</strong> ${stats.nb_actions}
+        <div class="card" style="padding: 1rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold;">${stats.nb_actions}</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">📋 Actions</div>
         </div>
-        <div>
-          <strong>Colonnes :</strong> ${stats.nb_colonnes}
+        <div class="card" style="padding: 1rem; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold;">${stats.nb_colonnes}</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">📊 Colonnes</div>
         </div>
       </div>
       
-      <div style="margin-bottom: 1rem;">
-        <strong>📋 Colonnes hiérarchiques détectées :</strong><br>
-        <code style="background: white; padding: 0.5rem; border-radius: 5px; display: inline-block; margin-top: 0.5rem;">
-          ${stats.colonnes_hierarchiques.join(' → ')}
-        </code>
-      </div>
-      
-      <div>
-        <strong>💰 Totaux financiers :</strong><br>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
-          ${Object.entries(totaux).map(([key, val]) => 
-            `<div style="background: white; padding: 0.5rem; border-radius: 5px;">
-              <strong>${key.replace('_', ' ')} :</strong> ${val.toLocaleString()} FCFA
-            </div>`
-          ).join('')}
+      <!-- Accordéons -->
+      <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+        
+        <!-- Accordéon 1: Colonnes hiérarchiques -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion('acc-colonnes')" style="width: 100%; padding: 1rem; background: #f8f9fa; border: none; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;">
+            <span style="font-weight: 600; color: #2c3e50;">📋 Colonnes hiérarchiques détectées</span>
+            <span id="icon-acc-colonnes" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+          </button>
+          <div id="acc-colonnes" class="accordion-content" style="padding: 1rem; display: none; background: white;">
+            <code style="background: #f8f9fa; padding: 1rem; border-radius: 8px; display: block; font-family: 'Courier New', monospace; color: #0369a1; font-size: 0.95rem;">
+              ${stats.colonnes_hierarchiques.join(' → ')}
+            </code>
+          </div>
         </div>
-      </div>
-    </div>
-    
-    <div style="background: #fef3c7; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
-      <strong>⚠️ Aperçu des 20 premières lignes :</strong>
-    </div>
-    
-    <div style="max-height: 400px; overflow: auto; margin-bottom: 1.5rem;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-        <thead style="position: sticky; top: 0; background: #f8f9fa;">
-          <tr>
-            ${stats.colonnes.slice(0, 8).map(col => `<th style="padding: 0.5rem; border: 1px solid #e0e0e0; text-align: left;">${col}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${preview.map(row => `
-            <tr>
-              ${stats.colonnes.slice(0, 8).map(col => 
-                `<td style="padding: 0.5rem; border: 1px solid #e0e0e0;">${row[col] || ''}</td>`
+        
+        <!-- Accordéon 2: Totaux financiers -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion('acc-totaux')" style="width: 100%; padding: 1rem; background: #f8f9fa; border: none; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;">
+            <span style="font-weight: 600; color: #2c3e50;">💰 Totaux financiers</span>
+            <span id="icon-acc-totaux" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+          </button>
+          <div id="acc-totaux" class="accordion-content" style="padding: 1rem; display: none; background: white;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
+              ${Object.entries(totaux).map(([key, val]) => 
+                `<div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 1rem; border-radius: 8px; border-left: 4px solid #0369a1;">
+                  <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">${key.replace('_', ' ')}</div>
+                  <div style="font-size: 1.25rem; font-weight: bold; color: #2c3e50;">${val.toLocaleString()} <span style="font-size: 0.85rem; font-weight: normal;">FCFA</span></div>
+                </div>`
               ).join('')}
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Accordéon 3: Aperçu des données -->
+        <div class="accordion-item">
+          <button class="accordion-header" onclick="toggleAccordion('acc-apercu')" style="width: 100%; padding: 1rem; background: #f8f9fa; border: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;">
+            <span style="font-weight: 600; color: #2c3e50;">👁️ Aperçu des 20 premières lignes</span>
+            <span id="icon-acc-apercu" style="font-size: 1.2rem; transition: transform 0.3s;">▼</span>
+          </button>
+          <div id="acc-apercu" class="accordion-content" style="padding: 1rem; display: none; background: white;">
+            <div style="max-height: 400px; overflow-x: auto; overflow-y: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 1400px;">
+                <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">
+                  <tr>
+                    ${stats.colonnes.map(col => {
+                      const isHierarchical = ['Programmes', 'Actions', 'Rprog', 'Type_depense', 'Activites', 'Taches'].includes(col);
+                      const bgColor = isHierarchical ? '#FF8C00' : '#0369a1';
+                      return `<th style="padding: 0.5rem; border: 1px solid #e0e0e0; text-align: left; background: ${bgColor}; color: white; white-space: nowrap;">${col}</th>`;
+                    }).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${preview.map((row, idx) => `
+                    <tr style="${idx % 2 === 0 ? 'background: white;' : 'background: #f8f9fa;'}">
+                      ${stats.colonnes.map(col => 
+                        `<td style="padding: 0.5rem; border: 1px solid #e0e0e0; white-space: nowrap;">${row[col] || ''}</td>`
+                      ).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+      </div>
     </div>
     
-    <div style="background: #d1fae5; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; text-align: center;">
-      <strong style="color: #065f46;">✅ Le fichier est prêt à être importé</strong>
+    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1.5rem; border-radius: 10px; margin-bottom: 1rem; text-align: center; border: 2px solid #10b981;">
+      <div style="font-size: 1.2rem; font-weight: bold; color: #065f46; margin-bottom: 0.5rem;">✅ Fichier conforme et prêt</div>
+      <div style="color: #047857; font-size: 0.95rem;">Le fichier sera importé dans la base de données</div>
     </div>
     
     <div style="display: flex; gap: 1rem; justify-content: flex-end;">
@@ -501,9 +731,60 @@ async function supprimerChargement(id) {
   }
 }
 
-function voirKPIs(id) {
-  showSuccess('📊 Visualisation des KPIs (en développement)');
-  // TODO: Implémenter modal de visualisation des KPIs détaillés
+function voirTable(chargementId) {
+  showGlobalLoading('Chargement...', 'Ouverture de la table SIGOBE');
+  setTimeout(() => {
+    window.location.href = `/api/v1/budget/sigobe/${chargementId}/table`;
+  }, 300);
+}
+
+function exporterExcel(chargementId) {
+  showGlobalLoading('Génération Excel...', 'Création du fichier Excel');
+  
+  // Créer un lien temporaire pour le téléchargement
+  const link = document.createElement('a');
+  link.href = `/api/v1/budget/api/sigobe/${chargementId}/export/excel`;
+  link.download = '';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Fermer l'overlay après 5 secondes
+  setTimeout(() => {
+    hideGlobalLoading();
+  }, 5000);
+}
+
+function voirKPIs(chargementId) {
+  // Trouver la ligne du chargement dans le tableau
+  const row = document.querySelector(`tr[data-chargement-id="${chargementId}"]`);
+  
+  if (!row) {
+    showError('Chargement non trouvé');
+    return;
+  }
+  
+  // Récupérer l'année et le trimestre depuis les attributs data-*
+  const annee = row.dataset.annee;
+  const trimestre = row.dataset.trimestre;
+  
+  if (!annee) {
+    showError('Impossible de déterminer la période du chargement');
+    return;
+  }
+  
+  showGlobalLoading('Chargement du Dashboard...', 'Affichage des KPIs');
+  
+  // Construire l'URL vers le dashboard avec les filtres
+  let url = `/api/v1/budget/?annee=${annee}`;
+  if (trimestre) {
+    url += `&trimestre=${trimestre}`;
+  }
+  
+  // Redirection après un court délai
+  setTimeout(() => {
+    window.location.href = url;
+  }, 300);
 }
 </script>
 

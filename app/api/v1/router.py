@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, users, auth, admin, dashboard, files, rh, personnel, referentiels, aide, besoins, budget, stock
+from app.api.v1.endpoints import health, users, auth, admin, dashboard, files, rh, personnel, referentiels, aide, besoins, budget, stock, performance
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
@@ -14,4 +14,5 @@ api_router.include_router(referentiels.router, prefix="/referentiels", tags=["re
 api_router.include_router(besoins.router, prefix="/besoins", tags=["besoins"])
 api_router.include_router(budget.router, prefix="/budget", tags=["budget"])
 api_router.include_router(stock.router, prefix="/stock", tags=["stock"])
+api_router.include_router(performance.router, prefix="/performance", tags=["performance"])
 api_router.include_router(aide.router, prefix="/aide", tags=["aide"])

@@ -1,0 +1,833 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Indicateurs de Performance - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles pour la gestion des indicateurs */
+.indicators-container {
+    margin-top: 2rem;
+}
+
+/* Grille des indicateurs - style similaire aux objectifs */
+#indicators-list {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap: 2rem;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+/* Carte d'indicateur - style KPI */
+.indicator-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--secondary-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem !important;
+    margin: 0 !important;
+    padding: 1.5rem !important;
+}
+
+.indicator-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.indicator-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.indicator-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.3;
+    margin: 0;
+}
+
+/* Catégories d'indicateurs */
+.indicator-category {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.category-qualite {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.category-efficacite {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.category-financier {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.category-rh {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.category-operationnel {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.indicator-description {
+    color: #6b7280;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+}
+
+/* Icône de catégorie */
+.indicator-icon {
+    font-size: 2rem;
+    color: var(--secondary-color);
+}
+
+/* Valeur actuelle et cible */
+.indicator-value {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+}
+
+.current-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.target-value {
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Métadonnées */
+.indicator-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.meta-label {
+    font-size: 0.65rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+    margin: 0;
+}
+
+.meta-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+/* Responsive - grille des indicateurs */
+@media (max-width: 1200px) {
+    #indicators-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    #indicators-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Section des filtres */
+.filters-section {
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-group select,
+.filter-group input[type="text"] {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* Actions sur les cartes */
+.indicator-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Formulaire spécifique aux indicateurs */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* État vide amélioré */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border-radius: 16px;
+    border: 2px dashed #d1d5db;
+    margin-top: 2rem;
+    width: 100%;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-message {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.empty-state-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.875rem 1.75rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.empty-state-action:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .indicator-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .indicator-value {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📊 Indicateurs de Performance',
+    breadcrumbs=[
+        {'name': 'Performance', 'url': url_for('performance_home')},
+        {'name': 'Indicateurs'}
+    ],
+    actions=[
+        {'label': '← Retour Performance', 'url': url_for('performance_home'), 'primary': False},
+        {'label': '➕ Nouvel Indicateur', 'onclick': 'openCreateModal()', 'primary': True}
+    ]
+) }}
+
+<div class="indicators-container">
+    <!-- Filtres et recherche -->
+    <div class="card filters-section">
+        <div class="filter-group">
+            <label for="search-input">🔍 Recherche:</label>
+            <input 
+                type="text" 
+                id="search-input" 
+                class="form-control" 
+                placeholder="Rechercher un indicateur..." 
+                oninput="filterIndicateurs()"
+            >
+        </div>
+        <div class="filter-group">
+            <label for="filter-categorie">Catégorie:</label>
+            <select id="filter-categorie" class="form-control" onchange="filterIndicateurs()">
+                <option value="">Toutes</option>
+                <option value="QUALITE">Qualité</option>
+                <option value="EFFICACITE">Efficacité</option>
+                <option value="FINANCIER">Financier</option>
+                <option value="RH">RH</option>
+                <option value="OPERATIONNEL">Opérationnel</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter-frequence">Fréquence:</label>
+            <select id="filter-frequence" class="form-control" onchange="filterIndicateurs()">
+                <option value="">Toutes</option>
+                <option value="JOURNALIER">Journalier</option>
+                <option value="HEBDOMADAIRE">Hebdomadaire</option>
+                <option value="MENSUEL">Mensuel</option>
+                <option value="TRIMESTRIEL">Trimestriel</option>
+                <option value="ANNUEL">Annuel</option>
+            </select>
+        </div>
+        <button class="btn btn-secondary" onclick="loadIndicateurs()">
+            🔄 Actualiser
+        </button>
+    </div>
+
+    <!-- Liste des indicateurs -->
+    <div id="indicators-list">
+        <!-- Les indicateurs seront chargés dynamiquement -->
+    </div>
+</div>
+
+<!-- Modal de création/modification -->
+<div id="indicatorModal" class="modal-md">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" class="modal-title">Nouvel Indicateur</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <form id="indicatorForm" class="modal-body">
+            <input type="hidden" id="indicatorId" name="indicator_id">
+            
+            <div class="form-group">
+                <label for="nom" class="form-label">Nom de l'indicateur *</label>
+                <input type="text" id="nom" name="nom" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="categorie" class="form-label">Catégorie</label>
+                    <select id="categorie" name="categorie" class="form-control">
+                        <option value="QUALITE">Qualité</option>
+                        <option value="EFFICACITE">Efficacité</option>
+                        <option value="FINANCIER">Financier</option>
+                        <option value="RH">RH</option>
+                        <option value="OPERATIONNEL">Opérationnel</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="frequence_mesure" class="form-label">Fréquence de mesure</label>
+                    <select id="frequence_mesure" name="frequence_mesure" class="form-control">
+                        <option value="JOURNALIER">Journalier</option>
+                        <option value="HEBDOMADAIRE">Hebdomadaire</option>
+                        <option value="MENSUEL">Mensuel</option>
+                        <option value="TRIMESTRIEL">Trimestriel</option>
+                        <option value="ANNUEL">Annuel</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="valeur_cible" class="form-label">Valeur cible *</label>
+                    <input type="number" id="valeur_cible" name="valeur_cible" class="form-control" step="0.01" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="valeur_actuelle" class="form-label">Valeur actuelle</label>
+                    <input type="number" id="valeur_actuelle" name="valeur_actuelle" class="form-control" step="0.01" value="0">
+                </div>
+                
+                <div class="form-group">
+                    <label for="unite_mesure" class="form-label">Unité *</label>
+                    <input type="text" id="unite_mesure" name="unite_mesure" class="form-control" placeholder="%, €, h, unités..." required>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="seuil_alerte_min" class="form-label">Seuil alerte min</label>
+                    <input type="number" id="seuil_alerte_min" name="seuil_alerte_min" class="form-control" step="0.01">
+                </div>
+                
+                <div class="form-group">
+                    <label for="seuil_alerte_max" class="form-label">Seuil alerte max</label>
+                    <input type="number" id="seuil_alerte_max" name="seuil_alerte_max" class="form-control" step="0.01">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="service_responsable" class="form-label">Service responsable</label>
+                <select id="service_responsable" name="service_responsable" class="form-control" onchange="filterUsersByService()">
+                    <option value="">Sélectionner un service...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="responsable_id" class="form-label">Responsable *</label>
+                <select id="responsable_id" name="responsable_id" class="form-control" required>
+                    <option value="">Sélectionner d'abord un service...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="source_donnees" class="form-label">Source des données</label>
+                <input type="text" id="source_donnees" name="source_donnees" class="form-control" placeholder="ex: Système, Enquêtes, Comptabilité...">
+            </div>
+            
+            <div class="form-group">
+                <label for="commentaires" class="form-label">Commentaires</label>
+                <textarea id="commentaires" name="commentaires" class="form-control" rows="2"></textarea>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// URLs générées par le serveur
+const API_URLS = {
+    list: "{{ url_for('get_indicateurs_api') }}",
+    create: "{{ url_for('create_indicateur_api') }}",
+    detail: (id) => `/api/v1/performance/api/indicateurs/${id}`,
+    update: (id) => `/api/v1/performance/api/indicateurs/${id}`,
+    delete: (id) => `/api/v1/performance/api/indicateurs/${id}`
+};
+
+let currentIndicateurs = [];
+let editingIndicateurId = null;
+let allUsers = []; // Stocker tous les utilisateurs
+let allServices = []; // Stocker tous les services avec leurs IDs
+
+// Charger les indicateurs au démarrage
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+    loadIndicateurs();
+    loadUsers();
+    loadServices();
+});
+
+// Charger la liste des indicateurs
+async function loadIndicateurs() {
+    try {
+        showGlobalLoading('Chargement des indicateurs...', 'Veuillez patienter');
+        
+        const response = await fetch(API_URLS.list);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentIndicateurs = result.data;
+            displayIndicateurs(result.data);
+        } else {
+            showError('Erreur lors du chargement des indicateurs');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors du chargement des indicateurs');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// Charger la liste des utilisateurs
+async function loadUsers() {
+    try {
+        const response = await fetch('/api/v1/users/');
+        allUsers = await response.json();
+        
+        // Ne pas peupler le select ici, attendre la sélection du service
+        const select = document.getElementById('responsable_id');
+        select.innerHTML = '<option value="">Sélectionner d\'abord un service...</option>';
+    } catch (error) {
+        console.error('Erreur lors du chargement des utilisateurs:', error);
+    }
+}
+
+// Filtrer les utilisateurs par service
+async function filterUsersByService() {
+    const serviceSelect = document.getElementById('service_responsable');
+    const userSelect = document.getElementById('responsable_id');
+    const selectedServiceId = serviceSelect.value;
+    
+    userSelect.innerHTML = '<option value="">Chargement...</option>';
+    
+    if (!selectedServiceId) {
+        userSelect.innerHTML = '<option value="">Sélectionner d\'abord un service...</option>';
+        return;
+    }
+    
+    try {
+        // Charger les utilisateurs du service sélectionné
+        const response = await fetch(`/api/v1/users/by-service/${selectedServiceId}`);
+        const users = await response.json();
+        
+        userSelect.innerHTML = '<option value="">Sélectionner un responsable...</option>';
+        
+        if (users && users.length > 0) {
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.full_name || user.email;
+                userSelect.appendChild(option);
+            });
+        } else {
+            userSelect.innerHTML += '<option value="" disabled>Aucun utilisateur dans ce service</option>';
+        }
+    } catch (error) {
+        console.error('Erreur lors du filtrage des utilisateurs:', error);
+        userSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+    }
+}
+
+// Charger la liste des services
+async function loadServices() {
+    try {
+        const response = await fetch('/api/v1/personnel/api/services');
+        const services = await response.json();
+        allServices = services; // Stocker pour le filtrage
+        
+        const select = document.getElementById('service_responsable');
+        select.innerHTML = '<option value="">Sélectionner un service...</option>';
+        
+        if (services && Array.isArray(services)) {
+            services.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service.id; // Utiliser l'ID au lieu du libellé
+                option.textContent = `${service.code} - ${service.libelle}`;
+                option.setAttribute('data-libelle', service.libelle); // Stocker le libellé comme data attribute
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des services:', error);
+        // Si l'API n'existe pas encore, on laisse le champ vide
+    }
+}
+
+// Afficher les indicateurs
+function displayIndicateurs(indicateurs) {
+    const container = document.getElementById('indicators-list');
+    
+    if (indicateurs.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
+                <h3 class="empty-state-title">Aucun indicateur de performance</h3>
+                <p class="empty-state-message">
+                    Vous n'avez pas encore défini d'indicateurs de performance.<br>
+                    Commencez par créer votre premier indicateur pour mesurer et suivre vos résultats.
+                </p>
+                <button class="empty-state-action" onclick="openCreateModal()">
+                    <span>➕</span>
+                    <span>Créer mon premier indicateur</span>
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = indicateurs.map(ind => `
+        <div class="indicator-card" data-id="${ind.id}">
+            <div class="indicator-icon">${getCategoryIcon(ind.categorie)}</div>
+            
+            <div class="indicator-header">
+                <div style="flex: 1;">
+                    <h3 class="indicator-title">${ind.nom}</h3>
+                </div>
+                <div class="indicator-actions">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editIndicateur(${ind.id})" title="Modifier">✏️</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteIndicateur(${ind.id}, '${ind.nom}')" title="Supprimer">🗑️</button>
+                </div>
+            </div>
+            
+            <span class="indicator-category category-${ind.categorie.toLowerCase()}">${getCategoryLabel(ind.categorie)}</span>
+            
+            <p class="indicator-description">${ind.description || 'Aucune description'}</p>
+            
+            <div class="indicator-value">
+                <div class="current-value">${ind.valeur_actuelle || 0} ${ind.unite_mesure}</div>
+                <div class="target-value">Cible: ${ind.valeur_cible} ${ind.unite_mesure}</div>
+            </div>
+            
+            <div class="indicator-meta">
+                <div class="meta-item">
+                    <div class="meta-label">Fréquence</div>
+                    <div class="meta-value">${getFrequenceLabel(ind.frequence_mesure)}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Source</div>
+                    <div class="meta-value">${ind.source_donnees || 'Non définie'}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Fonctions pour gérer les modales
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+    }
+}
+
+// Ouvrir le modal de création
+function openCreateModal() {
+    editingIndicateurId = null;
+    document.getElementById('modalTitle').textContent = 'Nouvel Indicateur';
+    document.getElementById('indicatorForm').reset();
+    showModal('indicatorModal');
+}
+
+// Modifier un indicateur
+function editIndicateur(id) {
+    const indicateur = currentIndicateurs.find(ind => ind.id === id);
+    if (!indicateur) return;
+    
+    editingIndicateurId = id;
+    document.getElementById('modalTitle').textContent = 'Modifier l\'Indicateur';
+    
+    // Remplir le formulaire
+    document.getElementById('indicatorId').value = indicateur.id;
+    document.getElementById('nom').value = indicateur.nom;
+    document.getElementById('description').value = indicateur.description || '';
+    document.getElementById('categorie').value = indicateur.categorie;
+    document.getElementById('frequence_mesure').value = indicateur.frequence_mesure;
+    document.getElementById('valeur_cible').value = indicateur.valeur_cible;
+    document.getElementById('valeur_actuelle').value = indicateur.valeur_actuelle;
+    document.getElementById('unite_mesure').value = indicateur.unite_mesure;
+    document.getElementById('seuil_alerte_min').value = indicateur.seuil_alerte_min || '';
+    document.getElementById('seuil_alerte_max').value = indicateur.seuil_alerte_max || '';
+    document.getElementById('source_donnees').value = indicateur.source_donnees || '';
+    document.getElementById('commentaires').value = indicateur.commentaires || '';
+    
+    // Trouver l'ID du service à partir du libellé
+    const serviceLibelle = indicateur.service_responsable || '';
+    const serviceSelect = document.getElementById('service_responsable');
+    for (let option of serviceSelect.options) {
+        if (option.getAttribute('data-libelle') === serviceLibelle) {
+            serviceSelect.value = option.value;
+            break;
+        }
+    }
+    
+    // Déclencher le filtrage des utilisateurs par service
+    filterUsersByService();
+    
+    // Puis sélectionner le responsable
+    setTimeout(() => {
+        document.getElementById('responsable_id').value = indicateur.responsable_id;
+    }, 200);
+    
+    showModal('indicatorModal');
+}
+
+// Supprimer un indicateur
+async function deleteIndicateur(id, nom) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer l'indicateur "${nom}" ?\n\nCette action est irréversible.`)) {
+        return;
+    }
+    
+    try {
+        showGlobalLoading('Suppression en cours...', 'Veuillez patienter');
+        
+        const response = await fetch(API_URLS.delete(id), {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            loadIndicateurs();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la suppression');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// Fermer le modal
+function closeModal() {
+    hideModal('indicatorModal');
+    document.getElementById('indicatorForm').reset();
+    editingIndicateurId = null;
+}
+
+// Soumettre le formulaire
+document.getElementById('indicatorForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    try {
+        showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
+        
+        const formData = new FormData(this);
+        
+        // Convertir l'ID du service en libellé pour la sauvegarde
+        const serviceSelect = document.getElementById('service_responsable');
+        const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+        if (selectedOption && selectedOption.getAttribute('data-libelle')) {
+            formData.set('service_responsable', selectedOption.getAttribute('data-libelle'));
+        }
+        
+        const url = editingIndicateurId 
+            ? API_URLS.update(editingIndicateurId)
+            : API_URLS.create;
+        const method = editingIndicateurId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            body: formData
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            closeModal();
+            loadIndicateurs();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de l\'enregistrement');
+    } finally {
+        hideGlobalLoading();
+    }
+});
+
+// Filtrer les indicateurs
+function filterIndicateurs() {
+    const searchInput = document.getElementById('search-input').value.toLowerCase();
+    const categorieFilter = document.getElementById('filter-categorie').value;
+    const frequenceFilter = document.getElementById('filter-frequence').value;
+    
+    let filteredIndicateurs = currentIndicateurs;
+    
+    // Filtre de recherche par nom ou description
+    if (searchInput) {
+        filteredIndicateurs = filteredIndicateurs.filter(ind => 
+            ind.nom.toLowerCase().includes(searchInput) || 
+            (ind.description && ind.description.toLowerCase().includes(searchInput))
+        );
+    }
+    
+    // Filtre par catégorie
+    if (categorieFilter) {
+        filteredIndicateurs = filteredIndicateurs.filter(ind => ind.categorie === categorieFilter);
+    }
+    
+    // Filtre par fréquence
+    if (frequenceFilter) {
+        filteredIndicateurs = filteredIndicateurs.filter(ind => ind.frequence_mesure === frequenceFilter);
+    }
+    
+    displayIndicateurs(filteredIndicateurs);
+}
+
+// Fonctions utilitaires
+function getCategoryLabel(categorie) {
+    const labels = {
+        'QUALITE': 'Qualité',
+        'EFFICACITE': 'Efficacité',
+        'FINANCIER': 'Financier',
+        'RH': 'RH',
+        'OPERATIONNEL': 'Opérationnel'
+    };
+    return labels[categorie] || categorie;
+}
+
+function getCategoryIcon(categorie) {
+    const icons = {
+        'QUALITE': '⭐',
+        'EFFICACITE': '⚡',
+        'FINANCIER': '💰',
+        'RH': '👥',
+        'OPERATIONNEL': '⚙️'
+    };
+    return icons[categorie] || '📊';
+}
+
+function getFrequenceLabel(frequence) {
+    const labels = {
+        'JOURNALIER': 'Journalier',
+        'HEBDOMADAIRE': 'Hebdomadaire',
+        'MENSUEL': 'Mensuel',
+        'TRIMESTRIEL': 'Trimestriel',
+        'ANNUEL': 'Annuel'
+    };
+    return labels[frequence] || frequence;
+}
+</script>
+{% endblock %}

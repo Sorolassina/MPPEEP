@@ -1,0 +1,593 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Table SIGOBE - {{ chargement.periode_libelle }} - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Menu déroulant d'actions */
+.dropdown-actions {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.action-menu-btn {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #2c3e50;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.action-menu-btn:hover {
+    background: rgba(0,0,0,0.05);
+    transform: scale(1.2);
+}
+
+.action-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 180px;
+    z-index: 9999;
+    display: none;
+    margin-top: 0.25rem;
+    overflow: visible;
+}
+
+.action-menu.show {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.action-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+.action-menu-item:hover {
+    background: #f8f9fa;
+}
+
+.action-menu-item-danger:hover {
+    background: #fee;
+    color: #dc3545;
+}
+
+.action-menu-icon {
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+}
+
+.montant {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* Table SIGOBE optimisée */
+.sigobe-table-container .data-table {
+    font-size: 0.7rem;
+    width: 100%;
+}
+
+.sigobe-table-container .data-table th {
+    font-size: 0.65rem;
+    padding: 0.4rem 0.3rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.sigobe-table-container .data-table td {
+    padding: 0.4rem 0.3rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sigobe-table-container .data-table td.montant {
+    max-width: 80px;
+    font-size: 0.7rem;
+}
+
+.sigobe-table-container .data-table td:last-child {
+    overflow: visible;
+}
+
+/* Tooltip pour les cellules tronquées */
+.sigobe-table-container .data-table td[title]:hover::after {
+    content: attr(title);
+    position: fixed;
+    background: linear-gradient(135deg, #2c3e50 0%, #3d4e6b 100%);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    max-width: 300px;
+    white-space: normal;
+    word-wrap: break-word;
+    font-size: 0.85rem;
+    pointer-events: none;
+    transform: translateX(-50%);
+    left: 50%;
+    bottom: 100%;
+    margin-bottom: 0.5rem;
+}
+
+/* Largeurs optimisées pour éviter scroll horizontal */
+.sigobe-table-container .data-table th:nth-child(1),
+.sigobe-table-container .data-table td:nth-child(1) { width: 12%; } /* Programme */
+.sigobe-table-container .data-table th:nth-child(2),
+.sigobe-table-container .data-table td:nth-child(2) { width: 10%; } /* Action */
+.sigobe-table-container .data-table th:nth-child(3),
+.sigobe-table-container .data-table td:nth-child(3) { width: 5%; } /* RPROG */
+.sigobe-table-container .data-table th:nth-child(4),
+.sigobe-table-container .data-table td:nth-child(4) { width: 7%; } /* Type */
+.sigobe-table-container .data-table th:nth-child(5),
+.sigobe-table-container .data-table td:nth-child(5) { width: 10%; } /* Activité */
+.sigobe-table-container .data-table th:nth-child(6),
+.sigobe-table-container .data-table td:nth-child(6) { width: 10%; } /* Tâche */
+.sigobe-table-container .data-table th:nth-child(7),
+.sigobe-table-container .data-table td:nth-child(7) { width: 7%; } /* Budget Voté */
+.sigobe-table-container .data-table th:nth-child(8),
+.sigobe-table-container .data-table td:nth-child(8) { width: 7%; } /* Budget Actuel */
+.sigobe-table-container .data-table th:nth-child(9),
+.sigobe-table-container .data-table td:nth-child(9) { width: 7%; } /* Engagements */
+.sigobe-table-container .data-table th:nth-child(10),
+.sigobe-table-container .data-table td:nth-child(10) { width: 6%; } /* Disponible */
+.sigobe-table-container .data-table th:nth-child(11),
+.sigobe-table-container .data-table td:nth-child(11) { width: 6%; } /* Mandats Émis */
+.sigobe-table-container .data-table th:nth-child(12),
+.sigobe-table-container .data-table td:nth-child(12) { width: 6%; } /* Mandats Visé */
+.sigobe-table-container .data-table th:nth-child(13),
+.sigobe-table-container .data-table td:nth-child(13) { width: 6%; } /* Mandats PEC */
+.sigobe-table-container .data-table th:nth-child(14),
+.sigobe-table-container .data-table td:nth-child(14) { width: 3%; } /* Actions */
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📋 SIGOBE - ' + chargement.periode_libelle,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'SIGOBE', 'url': url_for('budget_sigobe')},
+        {'name': chargement.periode_libelle}
+    ],
+    actions=[
+        {'label': '← Retour SIGOBE', 'url': url_for('budget_sigobe'), 'primary': False}
+    ]
+) }}
+
+<div class="sigobe-table-container" style="padding: 2rem 0;">
+  
+  <!-- Info du chargement -->
+  <div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+      <div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">📅 Période</div>
+        <div style="font-weight: 600; color: #2c3e50;">{{ chargement.periode_libelle }}</div>
+      </div>
+      <div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">📁 Fichier</div>
+        <div style="font-weight: 600; color: #2c3e50;">{{ chargement.nom_fichier }}</div>
+      </div>
+      <div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">📊 Lignes importées</div>
+        <div style="font-weight: 600; color: #2c3e50;">{{ "{:,}".format(chargement.nb_lignes_importees) }}</div>
+      </div>
+      <div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">🎯 Programmes</div>
+        <div style="font-weight: 600; color: #2c3e50;">{{ chargement.nb_programmes }}</div>
+      </div>
+      <div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">📆 Date chargement</div>
+        <div style="font-weight: 600; color: #2c3e50;">{{ chargement.date_chargement.strftime('%d/%m/%Y %H:%M') }}</div>
+      </div>
+      <div>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.25rem;">✅ Statut</div>
+        <div><span class="badge badge-success">{{ chargement.statut }}</span></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Filtres -->
+  <div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
+    <h3 style="margin: 0 0 1rem 0; color: #2c3e50; font-size: 1.1rem;">🔍 Filtres</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+      <div>
+        <label style="font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem; display: block;">🎯 Programme</label>
+        <select id="filter-programme" onchange="filtrerLignes()" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">Tous les programmes</option>
+          {% for prog in programmes %}
+          <option value="{{ prog }}">{{ prog }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem; display: block;">📋 Action</label>
+        <select id="filter-action" onchange="filtrerLignes()" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">Toutes les actions</option>
+          {% for action in actions %}
+          <option value="{{ action }}">{{ action }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem; display: block;">🏷️ Type de dépense</label>
+        <select id="filter-type" onchange="filtrerLignes()" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+          <option value="">Tous les types</option>
+          {% for type in types_depense %}
+          <option value="{{ type }}">{{ type }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display: flex; align-items: flex-end;">
+        <button onclick="reinitialiserFiltres()" class="btn btn-secondary" style="width: 100%;">🔄 Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Table des lignes SIGOBE -->
+  <div class="card" style="padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 style="margin: 0; color: #2c3e50; font-size: 1.1rem;">📊 Lignes d'exécution budgétaire</h3>
+      <div style="color: #6c757d; font-size: 0.95rem;">
+        <span id="nb-lignes-affichees">{{ executions|length }}</span> ligne(s) affichée(s)
+      </div>
+    </div>
+    
+    <div style="overflow-x: auto;">
+      <table class="data-table" id="table-executions">
+        <thead>
+          <tr>
+            <th>Programme</th>
+            <th>Action</th>
+            <th>RPROG</th>
+            <th>Type Dépense</th>
+            <th>Activité</th>
+            <th>Tâche</th>
+            <th>Budget Voté</th>
+            <th>Budget Actuel</th>
+            <th>Engagements Émis</th>
+            <th>Disponible Eng</th>
+            <th>Mandats Émis</th>
+            <th>Mandats Visé CF</th>
+            <th>Mandats PEC</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for exec in executions %}
+          <tr data-programme="{{ exec.programmes or '' }}" data-action="{{ exec.actions or '' }}" data-type="{{ exec.type_depense or '' }}">
+            <td title="Programme : {{ exec.programmes or '-' }}"><strong>{{ exec.programmes or '-' }}</strong></td>
+            <td title="Action : {{ exec.actions or '-' }}">{{ exec.actions or '-' }}</td>
+            <td title="RPROG : {{ exec.rprog or '-' }}">{{ exec.rprog or '-' }}</td>
+            <td title="Type de dépense : {{ exec.type_depense or '-' }}" style="color: {{ '#0369a1' if exec.type_depense == 'Fonctionnement' else '#f59e0b' if exec.type_depense == 'Investissement' else '#6c757d' }}; font-weight: 600;">
+              {{ exec.type_depense or '-' }}
+            </td>
+            <td title="Activité : {{ exec.activites or '-' }}">{{ exec.activites or '-' }}</td>
+            <td title="Tâche : {{ exec.taches or '-' }}">{{ exec.taches or '-' }}</td>
+            <td class="montant" title="Budget Voté : {{ '{:,.0f}'.format(exec.budget_vote) }} FCFA">{{ "{:,.0f}".format(exec.budget_vote) }}</td>
+            <td class="montant" title="Budget Actuel : {{ '{:,.0f}'.format(exec.budget_actuel) }} FCFA">{{ "{:,.0f}".format(exec.budget_actuel) }}</td>
+            <td class="montant" title="Engagements Émis : {{ '{:,.0f}'.format(exec.engagements_emis) }} FCFA">{{ "{:,.0f}".format(exec.engagements_emis) }}</td>
+            <td class="montant" title="Disponible Eng : {{ '{:,.0f}'.format(exec.disponible_eng) }} FCFA">{{ "{:,.0f}".format(exec.disponible_eng) }}</td>
+            <td class="montant" title="Mandats Émis : {{ '{:,.0f}'.format(exec.mandats_emis) }} FCFA">{{ "{:,.0f}".format(exec.mandats_emis) }}</td>
+            <td class="montant" title="Mandats Visé CF : {{ '{:,.0f}'.format(exec.mandats_vise_cf) }} FCFA">{{ "{:,.0f}".format(exec.mandats_vise_cf) }}</td>
+            <td class="montant" title="Mandats PEC : {{ '{:,.0f}'.format(exec.mandats_pec) }} FCFA">{{ "{:,.0f}".format(exec.mandats_pec) }}</td>
+            <td>
+              <div class="dropdown-actions">
+                <button class="action-menu-btn" onclick="toggleActionMenuExec(event, 'exec-{{ exec.id }}')" title="Actions">⋮</button>
+                <div class="action-menu" id="menu-action-exec-{{ exec.id }}">
+                  <button onclick="editerLigne({{ exec.id }}); closeAllMenus();" class="action-menu-item">
+                    <span class="action-menu-icon">✏️</span>
+                    <span>Modifier</span>
+                  </button>
+                  <button onclick="supprimerLigne({{ exec.id }}); closeAllMenus();" class="action-menu-item action-menu-item-danger">
+                    <span class="action-menu-icon">🗑️</span>
+                    <span>Supprimer</span>
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Éditer Ligne -->
+<div id="modalEditerLigne" class="modal modal-lg">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>✏️ Modifier la ligne d'exécution</h2>
+      <button class="modal-close" onclick="closeModal('modalEditerLigne')">&times;</button>
+    </div>
+    
+    <form id="formEditerLigne" onsubmit="handleEditerLigne(event); return false;">
+      <input type="hidden" id="ligne_id" name="ligne_id">
+      
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+        <!-- Colonnes financières -->
+        <div class="form-group">
+          <label>Budget Voté</label>
+          <input type="number" name="budget_vote" id="edit_budget_vote" required step="1" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        
+        <div class="form-group">
+          <label>Budget Actuel</label>
+          <input type="number" name="budget_actuel" id="edit_budget_actuel" required step="1" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        
+        <div class="form-group">
+          <label>Engagements Émis</label>
+          <input type="number" name="engagements_emis" id="edit_engagements_emis" required step="1" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        
+        <div class="form-group">
+          <label>Disponible Engagement</label>
+          <input type="number" name="disponible_eng" id="edit_disponible_eng" required step="1" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        
+        <div class="form-group">
+          <label>Mandats Émis</label>
+          <input type="number" name="mandats_emis" id="edit_mandats_emis" required step="1" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        
+        <div class="form-group">
+          <label>Mandats Visé CF</label>
+          <input type="number" name="mandats_vise_cf" id="edit_mandats_vise_cf" required step="1" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+        
+        <div class="form-group">
+          <label>Mandats PEC</label>
+          <input type="number" name="mandats_pec" id="edit_mandats_pec" required step="1" min="0" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
+        </div>
+      </div>
+      
+      <div class="form-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modalEditerLigne')">Annuler</button>
+        <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Fermer l'overlay au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  hideGlobalLoading();
+});
+
+// Gestion des modals
+function showModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('show');
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('show');
+  }
+}
+
+// Gestion du menu déroulant d'actions
+function toggleActionMenuExec(event, menuId) {
+  event.stopPropagation();
+  const menu = document.getElementById(`menu-action-${menuId}`);
+  const allMenus = document.querySelectorAll('.action-menu');
+  
+  if (!menu) {
+    console.error(`Menu non trouvé: menu-action-${menuId}`);
+    return;
+  }
+  
+  // Fermer tous les autres menus
+  allMenus.forEach(m => {
+    if (m !== menu) {
+      m.classList.remove('show');
+    }
+  });
+  
+  // Toggle le menu actuel
+  menu.classList.toggle('show');
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.action-menu').forEach(menu => {
+    menu.classList.remove('show');
+  });
+}
+
+// Fermer les menus en cliquant ailleurs
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('.dropdown-actions')) {
+    closeAllMenus();
+  }
+});
+
+// Filtrage des lignes
+function filtrerLignes() {
+  const programme = document.getElementById('filter-programme').value.toLowerCase();
+  const action = document.getElementById('filter-action').value.toLowerCase();
+  const type = document.getElementById('filter-type').value.toLowerCase();
+  
+  const rows = document.querySelectorAll('#table-executions tbody tr');
+  let count = 0;
+  
+  rows.forEach(row => {
+    const rowProg = (row.dataset.programme || '').toLowerCase();
+    const rowAction = (row.dataset.action || '').toLowerCase();
+    const rowType = (row.dataset.type || '').toLowerCase();
+    
+    const matchProg = !programme || rowProg.includes(programme);
+    const matchAction = !action || rowAction.includes(action);
+    const matchType = !type || rowType.includes(type);
+    
+    if (matchProg && matchAction && matchType) {
+      row.style.display = '';
+      count++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  
+  document.getElementById('nb-lignes-affichees').textContent = count;
+}
+
+function reinitialiserFiltres() {
+  document.getElementById('filter-programme').value = '';
+  document.getElementById('filter-action').value = '';
+  document.getElementById('filter-type').value = '';
+  filtrerLignes();
+}
+
+// Éditer une ligne
+function editerLigne(ligneId) {
+  showGlobalLoading('Chargement...', 'Récupération des données');
+  
+  fetch(`/api/v1/budget/api/sigobe/executions/${ligneId}`)
+    .then(response => response.json())
+    .then(result => {
+      hideGlobalLoading();
+      
+      if (result.ok) {
+        const ligne = result.execution;
+        
+        document.getElementById('ligne_id').value = ligneId;
+        document.getElementById('edit_budget_vote').value = ligne.budget_vote;
+        document.getElementById('edit_budget_actuel').value = ligne.budget_actuel;
+        document.getElementById('edit_engagements_emis').value = ligne.engagements_emis;
+        document.getElementById('edit_disponible_eng').value = ligne.disponible_eng;
+        document.getElementById('edit_mandats_emis').value = ligne.mandats_emis;
+        document.getElementById('edit_mandats_vise_cf').value = ligne.mandats_vise_cf;
+        document.getElementById('edit_mandats_pec').value = ligne.mandats_pec;
+        
+        document.getElementById('modalEditerLigne').classList.add('show');
+      } else {
+        showError('Erreur lors du chargement de la ligne');
+      }
+    })
+    .catch(error => {
+      hideGlobalLoading();
+      console.error('Erreur:', error);
+      showError('Erreur réseau');
+    });
+}
+
+// Sauvegarder les modifications
+async function handleEditerLigne(event) {
+  event.preventDefault();
+  
+  const ligneId = document.getElementById('ligne_id').value;
+  const formData = new FormData(event.target);
+  
+  showGlobalLoading('Enregistrement...', 'Mise à jour de la ligne');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/sigobe/executions/${ligneId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        budget_vote: parseFloat(formData.get('budget_vote')),
+        budget_actuel: parseFloat(formData.get('budget_actuel')),
+        engagements_emis: parseFloat(formData.get('engagements_emis')),
+        disponible_eng: parseFloat(formData.get('disponible_eng')),
+        mandats_emis: parseFloat(formData.get('mandats_emis')),
+        mandats_vise_cf: parseFloat(formData.get('mandats_vise_cf')),
+        mandats_pec: parseFloat(formData.get('mandats_pec'))
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      closeModal('modalEditerLigne');
+      showGlobalLoading('✅ Ligne modifiée', 'Actualisation de la page...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      showError(result.detail || 'Erreur lors de la modification');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau');
+  }
+}
+
+// Supprimer une ligne
+async function supprimerLigne(ligneId) {
+  if (!confirm('⚠️ Supprimer cette ligne d\'exécution ?\n\nCette action est irréversible.')) return;
+  
+  showGlobalLoading('Suppression...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`/api/v1/budget/api/sigobe/executions/${ligneId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.ok) {
+      showGlobalLoading('✅ Ligne supprimée', 'Actualisation...');
+      setTimeout(() => location.reload(), 500);
+    } else {
+      hideGlobalLoading();
+      showError('Erreur lors de la suppression');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau');
+  }
+}
+</script>
+
+{% endblock %}
+

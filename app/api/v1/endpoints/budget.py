@@ -15,6 +15,9 @@ from io import BytesIO
 import re
 from collections import defaultdict
 import unicodedata
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 from app.db.session import get_session
 from app.api.v1.endpoints.auth import get_current_user
@@ -29,7 +32,10 @@ from app.models.budget import (
 from app.models.personnel import Programme, Direction
 from app.templates import templates, get_template_context
 from app.core.logging_config import get_logger
+from app.core.config import settings
 from app.services.activity_service import ActivityService
+from app.services.fiche_technique_service import FicheTechniqueService
+from app.services.sigobe_service import SigobeService
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -188,6 +194,9 @@ def budget_home(
     taux_mandatement_vise_n1 = None
     taux_mandatement_pec_n1 = None
     taux_execution_global_n1 = None
+    budget_actuel_n1 = 0
+    budget_vote_n1 = 0
+    engagements_n1 = 0
     
     if annee and (annee - 1) in annees_sigobe:
         # Récupérer le dernier chargement de l'année N-1
@@ -268,6 +277,9 @@ def budget_home(
             taux_mandatement_vise_n1=round(taux_mandatement_vise_n1, 2) if taux_mandatement_vise_n1 is not None else None,
             taux_mandatement_pec_n1=round(taux_mandatement_pec_n1, 2) if taux_mandatement_pec_n1 is not None else None,
             taux_execution_global_n1=round(taux_execution_global_n1, 2) if taux_execution_global_n1 is not None else None,
+            budget_actuel_n1=budget_actuel_n1,
+            budget_vote_n1=budget_vote_n1,
+            engagements_n1=engagements_n1,
             current_user=current_user
         )
     )
@@ -1470,6 +1482,415 @@ def api_export_fiche_pdf(
     )
 
 
+@router.get("/api/fiches/{fiche_id}/export/excel")
+def api_export_fiche_excel(
+    fiche_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Exporter une fiche technique en Excel avec la structure hiérarchique et les couleurs
+    """
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise HTTPException(500, "openpyxl n'est pas installé")
+    
+    fiche = session.get(FicheTechnique, fiche_id)
+    if not fiche:
+        raise HTTPException(404, "Fiche technique non trouvée")
+    
+    # Récupérer la structure hiérarchique
+    actions = session.exec(
+        select(ActionBudgetaire)
+        .where(ActionBudgetaire.fiche_technique_id == fiche_id)
+        .order_by(ActionBudgetaire.ordre)
+    ).all()
+    
+    for action in actions:
+        services = session.exec(
+            select(ServiceBeneficiaire)
+            .where(ServiceBeneficiaire.action_id == action.id)
+            .order_by(ServiceBeneficiaire.ordre)
+        ).all()
+        object.__setattr__(action, 'services', services)
+        
+        for service in services:
+            activites = session.exec(
+                select(ActiviteBudgetaire)
+                .where(ActiviteBudgetaire.service_beneficiaire_id == service.id)
+                .order_by(ActiviteBudgetaire.ordre)
+            ).all()
+            object.__setattr__(service, 'activites', activites)
+            
+            for activite in activites:
+                lignes = session.exec(
+                    select(LigneBudgetaireDetail)
+                    .where(LigneBudgetaireDetail.activite_id == activite.id)
+                    .order_by(LigneBudgetaireDetail.ordre)
+                ).all()
+                object.__setattr__(activite, 'lignes', lignes)
+    
+    from collections import defaultdict
+    actions_par_nature = defaultdict(list)
+    for action in actions:
+        nature = action.nature_depense or "BIENS ET SERVICES"
+        actions_par_nature[nature].append(action)
+    
+    programme = session.get(Programme, fiche.programme_id)
+    
+    # Créer le classeur Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Fiche {fiche.numero_fiche}"
+    
+    # Styles
+    header_fill = PatternFill(start_color="FF8C00", end_color="FF8C00", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    border_style = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Couleurs hiérarchiques
+    nature_fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+    action_fill = PatternFill(start_color="9BC2E6", end_color="9BC2E6", fill_type="solid")
+    service_fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
+    activite_fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")
+    ligne_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    sous_total_activite_fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
+    sous_total_service_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+    sous_total_action_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")
+    total_nature_fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+    total_general_fill = PatternFill(start_color="DC3545", end_color="DC3545", fill_type="solid")
+    
+    # En-têtes
+    headers = [
+        "CODE ET LIBELLE",
+        "BUDGET VOTÉ N",
+        "BUDGET ACTUEL N",
+        "ENVELOPPE N+1",
+        "COMPLEMENT SOLLICITÉ",
+        "BUDGET SOUHAITÉ",
+        "ENGAGEMENT ÉTAT",
+        "AUTRE COMPLEMENT",
+        "PROJET BUDGET N+1",
+        "JUSTIFICATIFS"
+    ]
+    
+    current_row = 1
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=current_row, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = border_style
+    
+    # Ajuster largeurs
+    ws.column_dimensions['A'].width = 50
+    for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
+        ws.column_dimensions[col].width = 18
+    ws.column_dimensions['J'].width = 40
+    
+    current_row = 2
+    
+    # Parcourir la hiérarchie
+    for nature, actions_nature in actions_par_nature.items():
+        # Nature
+        cell = ws.cell(row=current_row, column=1)
+        cell.value = nature.upper()
+        cell.fill = nature_fill
+        cell.font = Font(bold=True, size=11)
+        cell.border = border_style
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        for col in range(2, 11):
+            ws.cell(row=current_row, column=col).border = border_style
+            ws.cell(row=current_row, column=col).fill = nature_fill
+        current_row += 1
+        
+        for action in actions_nature:
+            # Action
+            row_data = [
+                f"Action : {action.libelle}",
+                float(action.budget_vote_n),
+                float(action.budget_actuel_n),
+                float(action.enveloppe_n_plus_1),
+                float(action.complement_solicite),
+                float(action.budget_souhaite),
+                float(action.engagement_etat),
+                float(action.autre_complement),
+                float(action.projet_budget_n_plus_1),
+                action.justificatifs or ""
+            ]
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=current_row, column=col_num)
+                cell.value = value
+                cell.fill = action_fill
+                cell.font = Font(bold=True, size=10)
+                cell.border = border_style
+                if col_num > 1 and col_num < 10:
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                    cell.number_format = '#,##0'
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+            current_row += 1
+            
+            for service in action.services:
+                # Service
+                cell = ws.cell(row=current_row, column=1)
+                cell.value = f"Service Bénéficiaire : {service.libelle}"
+                cell.fill = service_fill
+                cell.font = Font(bold=True, size=9)
+                cell.border = border_style
+                cell.alignment = Alignment(horizontal="left", vertical="center")
+                for col in range(2, 11):
+                    ws.cell(row=current_row, column=col).border = border_style
+                    ws.cell(row=current_row, column=col).fill = service_fill
+                current_row += 1
+                
+                for activite in service.activites:
+                    # Activité
+                    row_data = [
+                        f"Activité : {activite.libelle}",
+                        float(activite.budget_vote_n),
+                        float(activite.budget_actuel_n),
+                        float(activite.enveloppe_n_plus_1),
+                        float(activite.complement_solicite),
+                        float(activite.budget_souhaite),
+                        float(activite.engagement_etat),
+                        float(activite.autre_complement),
+                        float(activite.projet_budget_n_plus_1),
+                        activite.justificatifs or ""
+                    ]
+                    for col_num, value in enumerate(row_data, 1):
+                        cell = ws.cell(row=current_row, column=col_num)
+                        cell.value = value
+                        cell.fill = activite_fill
+                        cell.font = Font(bold=True, size=9)
+                        cell.border = border_style
+                        if col_num > 1 and col_num < 10:
+                            cell.alignment = Alignment(horizontal="right", vertical="center")
+                            cell.number_format = '#,##0'
+                        else:
+                            cell.alignment = Alignment(horizontal="left", vertical="center")
+                    current_row += 1
+                    
+                    # Lignes budgétaires
+                    for ligne in activite.lignes:
+                        row_data = [
+                            f"{ligne.code} - {ligne.libelle}",
+                            float(ligne.budget_vote_n),
+                            float(ligne.budget_actuel_n),
+                            float(ligne.enveloppe_n_plus_1),
+                            float(ligne.complement_solicite),
+                            float(ligne.budget_souhaite),
+                            float(ligne.engagement_etat),
+                            float(ligne.autre_complement),
+                            float(ligne.projet_budget_n_plus_1),
+                            ligne.justificatifs or ""
+                        ]
+                        for col_num, value in enumerate(row_data, 1):
+                            cell = ws.cell(row=current_row, column=col_num)
+                            cell.value = value
+                            cell.fill = ligne_fill
+                            cell.font = Font(size=9)
+                            cell.border = border_style
+                            if col_num > 1 and col_num < 10:
+                                cell.alignment = Alignment(horizontal="right", vertical="center")
+                                cell.number_format = '#,##0'
+                            else:
+                                cell.alignment = Alignment(horizontal="left", vertical="center")
+                        current_row += 1
+                    
+                    # Sous-total Activité
+                    row_data = [
+                        f"SOUS-TOTAL Activité : {activite.libelle}",
+                        float(activite.budget_vote_n),
+                        float(activite.budget_actuel_n),
+                        float(activite.enveloppe_n_plus_1),
+                        float(activite.complement_solicite),
+                        float(activite.budget_souhaite),
+                        float(activite.engagement_etat),
+                        float(activite.autre_complement),
+                        float(activite.projet_budget_n_plus_1),
+                        ""
+                    ]
+                    for col_num, value in enumerate(row_data, 1):
+                        cell = ws.cell(row=current_row, column=col_num)
+                        cell.value = value
+                        cell.fill = sous_total_activite_fill
+                        cell.font = Font(bold=True, size=8, italic=True)
+                        cell.border = border_style
+                        if col_num > 1 and col_num < 10:
+                            cell.alignment = Alignment(horizontal="right", vertical="center")
+                            cell.number_format = '#,##0'
+                        else:
+                            cell.alignment = Alignment(horizontal="right", vertical="center")
+                    current_row += 1
+                
+                # Sous-total Service
+                service_totals = {
+                    'vote': sum(a.budget_vote_n for a in service.activites),
+                    'actuel': sum(a.budget_actuel_n for a in service.activites),
+                    'enveloppe': sum(a.enveloppe_n_plus_1 for a in service.activites),
+                    'complement': sum(a.complement_solicite for a in service.activites),
+                    'souhaite': sum(a.budget_souhaite for a in service.activites),
+                    'engagement': sum(a.engagement_etat for a in service.activites),
+                    'autre': sum(a.autre_complement for a in service.activites),
+                    'projet': sum(a.projet_budget_n_plus_1 for a in service.activites)
+                }
+                row_data = [
+                    f"SOUS-TOTAL Service : {service.libelle}",
+                    float(service_totals['vote']),
+                    float(service_totals['actuel']),
+                    float(service_totals['enveloppe']),
+                    float(service_totals['complement']),
+                    float(service_totals['souhaite']),
+                    float(service_totals['engagement']),
+                    float(service_totals['autre']),
+                    float(service_totals['projet']),
+                    ""
+                ]
+                for col_num, value in enumerate(row_data, 1):
+                    cell = ws.cell(row=current_row, column=col_num)
+                    cell.value = value
+                    cell.fill = sous_total_service_fill
+                    cell.font = Font(bold=True, size=9, italic=True)
+                    cell.border = border_style
+                    if col_num > 1 and col_num < 10:
+                        cell.alignment = Alignment(horizontal="right", vertical="center")
+                        cell.number_format = '#,##0'
+                    else:
+                        cell.alignment = Alignment(horizontal="right", vertical="center")
+                current_row += 1
+            
+            # Sous-total Action
+            row_data = [
+                f"SOUS-TOTAL Action : {action.libelle}",
+                float(action.budget_vote_n),
+                float(action.budget_actuel_n),
+                float(action.enveloppe_n_plus_1),
+                float(action.complement_solicite),
+                float(action.budget_souhaite),
+                float(action.engagement_etat),
+                float(action.autre_complement),
+                float(action.projet_budget_n_plus_1),
+                ""
+            ]
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=current_row, column=col_num)
+                cell.value = value
+                cell.fill = sous_total_action_fill
+                cell.font = Font(bold=True, size=10, italic=True)
+                cell.border = border_style
+                if col_num > 1 and col_num < 10:
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                    cell.number_format = '#,##0'
+                else:
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+            current_row += 1
+        
+        # Total Nature
+        nature_totals = {
+            'vote': sum(a.budget_vote_n for a in actions_nature),
+            'actuel': sum(a.budget_actuel_n for a in actions_nature),
+            'enveloppe': sum(a.enveloppe_n_plus_1 for a in actions_nature),
+            'complement': sum(a.complement_solicite for a in actions_nature),
+            'souhaite': sum(a.budget_souhaite for a in actions_nature),
+            'engagement': sum(a.engagement_etat for a in actions_nature),
+            'autre': sum(a.autre_complement for a in actions_nature),
+            'projet': sum(a.projet_budget_n_plus_1 for a in actions_nature)
+        }
+        row_data = [
+            f"TOTAL {nature.upper()}",
+            float(nature_totals['vote']),
+            float(nature_totals['actuel']),
+            float(nature_totals['enveloppe']),
+            float(nature_totals['complement']),
+            float(nature_totals['souhaite']),
+            float(nature_totals['engagement']),
+            float(nature_totals['autre']),
+            float(nature_totals['projet']),
+            ""
+        ]
+        for col_num, value in enumerate(row_data, 1):
+            cell = ws.cell(row=current_row, column=col_num)
+            cell.value = value
+            cell.fill = total_nature_fill
+            cell.font = Font(bold=True, size=11)
+            cell.border = border_style
+            if col_num > 1 and col_num < 10:
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.number_format = '#,##0'
+            else:
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+        current_row += 1
+        
+        # Ligne vide entre natures
+        current_row += 1
+    
+    # Total Général
+    total_general = {
+        'vote': sum(sum(a.budget_vote_n for a in acts) for acts in actions_par_nature.values()),
+        'actuel': sum(sum(a.budget_actuel_n for a in acts) for acts in actions_par_nature.values()),
+        'enveloppe': sum(sum(a.enveloppe_n_plus_1 for a in acts) for acts in actions_par_nature.values()),
+        'complement': sum(sum(a.complement_solicite for a in acts) for acts in actions_par_nature.values()),
+        'souhaite': sum(sum(a.budget_souhaite for a in acts) for acts in actions_par_nature.values()),
+        'engagement': sum(sum(a.engagement_etat for a in acts) for acts in actions_par_nature.values()),
+        'autre': sum(sum(a.autre_complement for a in acts) for acts in actions_par_nature.values()),
+        'projet': sum(sum(a.projet_budget_n_plus_1 for a in acts) for acts in actions_par_nature.values())
+    }
+    row_data = [
+        "TOTAL GÉNÉRAL",
+        float(total_general['vote']),
+        float(total_general['actuel']),
+        float(total_general['enveloppe']),
+        float(total_general['complement']),
+        float(total_general['souhaite']),
+        float(total_general['engagement']),
+        float(total_general['autre']),
+        float(total_general['projet']),
+        ""
+    ]
+    for col_num, value in enumerate(row_data, 1):
+        cell = ws.cell(row=current_row, column=col_num)
+        cell.value = value
+        cell.fill = total_general_fill
+        cell.font = Font(bold=True, size=12, color="FFFFFF")
+        cell.border = border_style
+        if col_num > 1 and col_num < 10:
+            cell.alignment = Alignment(horizontal="right", vertical="center")
+            cell.number_format = '#,##0'
+        else:
+            cell.alignment = Alignment(horizontal="right", vertical="center")
+    
+    # Figer les en-têtes
+    ws.freeze_panes = "A2"
+    
+    # Sauvegarder dans un buffer
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    logger.info(f"✅ Excel généré pour fiche {fiche.numero_fiche}")
+    
+    # Nom du fichier
+    programme_nom_clean = programme.libelle.replace(' ', '_').replace('/', '_')
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=Fiche_{programme_nom_clean}_{fiche.annee_budget}_{fiche.numero_fiche}.xlsx"
+        }
+    )
+
+
 # ============================================
 # FICHES TECHNIQUES HIÉRARCHIQUES
 # ============================================
@@ -1487,7 +1908,7 @@ def budget_fiche_structure(
         raise HTTPException(404, "Fiche technique non trouvée")
     
     # Recalculer les totaux pour s'assurer que tout est à jour
-    _recalculer_totaux_hierarchie(fiche_id, session)
+    FicheTechniqueService._recalculer_totaux_hierarchie(fiche_id, session)
     
     # Recharger la fiche après recalcul
     session.expire(fiche)
@@ -1552,10 +1973,441 @@ def budget_fiche_structure(
     )
 
 
+@router.get("/api/telecharger-template-fiche")
+async def api_telecharger_template_fiche(
+    annee: int = 2025,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Télécharger un modèle Excel vierge pour créer une fiche technique
+    """
+    try:
+        # Créer un classeur Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Fiche Technique N"
+        
+        # Définir les styles
+        header_fill = PatternFill(start_color="FF8C00", end_color="FF8C00", fill_type="solid")  # Orange
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        example_fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        border_style = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Définir les en-têtes de colonnes (notation N et N+1)
+        headers = [
+            "CODE / LIBELLE",
+            "BUDGET VOTÉ N",
+            "BUDGET ACTUEL N",
+            "ENVELOPPE N+1",
+            "COMPLEMENT SOLLICITÉ",
+            "BUDGET SOUHAITÉ",
+            "ENGAGEMENT DE L'ETAT",
+            "AUTRE COMPLEMENT",
+            "PROJET DE BUDGET N+1",
+            "JUSTIFICATIFS"
+        ]
+        
+        # Écrire les en-têtes
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = border_style
+        
+        # Ajuster la largeur des colonnes
+        ws.column_dimensions['A'].width = 50
+        for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
+            ws.column_dimensions[col].width = 18
+        ws.column_dimensions['J'].width = 40
+        
+        # Ajouter des exemples de structure hiérarchique complète et réaliste
+        exemples = [
+            # === NATURE 1 : BIENS ET SERVICES ===
+            ("BIENS ET SERVICES", "", "", "", "", "", "", "", "", "Nature de dépense"),
+            
+            # Action 1.1
+            ("Action : Pilotage et Gouvernance Institutionnelle", "", "", "", "", "", "", "", "", "Coordination générale et gouvernance"),
+            
+            # Service 1.1.1
+            ("Service Bénéficiaire : Direction Générale", "", "", "", "", "", "", "", "", ""),
+            # Activité 1.1.1.1
+            ("Activité : Coordination Administrative", "", "", "", "", "", "", "", "", ""),
+            ("601100 - Fournitures de bureau", "500000", "480000", "550000", "20000", "570000", "30000", "0", "580000", "Papeterie, consommables"),
+            ("601200 - Documentation et abonnements", "300000", "290000", "350000", "15000", "365000", "20000", "0", "370000", "Revues, documentation technique"),
+            ("SOUS-TOTAL Activité : Coordination Administrative", "800000", "770000", "900000", "35000", "935000", "50000", "0", "950000", ""),
+            # Activité 1.1.1.2
+            ("Activité : Communication Institutionnelle", "", "", "", "", "", "", "", "", ""),
+            ("606300 - Frais de publicité et communication", "800000", "750000", "900000", "40000", "940000", "50000", "0", "950000", "Campagnes de communication"),
+            ("606400 - Réception et manifestations", "600000", "580000", "700000", "30000", "730000", "40000", "0", "740000", "Cérémonies officielles"),
+            ("SOUS-TOTAL Activité : Communication Institutionnelle", "1400000", "1330000", "1600000", "70000", "1670000", "90000", "0", "1690000", ""),
+            ("SOUS-TOTAL Service : Direction Générale", "2200000", "2100000", "2500000", "105000", "2605000", "140000", "0", "2640000", ""),
+            
+            # Service 1.1.2
+            ("Service Bénéficiaire : Direction des Affaires Financières", "", "", "", "", "", "", "", "", ""),
+            # Activité 1.1.2.1
+            ("Activité : Gestion Budgétaire et Comptable", "", "", "", "", "", "", "", "", ""),
+            ("601800 - Fournitures et matériel informatique", "1200000", "1150000", "1400000", "60000", "1460000", "80000", "0", "1480000", "Matériel bureautique"),
+            ("606100 - Frais de formation du personnel", "900000", "850000", "1000000", "45000", "1045000", "60000", "0", "1060000", "Formations comptables et financières"),
+            ("SOUS-TOTAL Activité : Gestion Budgétaire et Comptable", "2100000", "2000000", "2400000", "105000", "2505000", "140000", "0", "2540000", ""),
+            # Activité 1.1.2.2
+            ("Activité : Suivi et Contrôle de Gestion", "", "", "", "", "", "", "", "", ""),
+            ("602200 - Services extérieurs (audit, conseil)", "1500000", "1400000", "1700000", "75000", "1775000", "100000", "0", "1800000", "Audits externes, consultants"),
+            ("605000 - Logiciels et licences", "800000", "770000", "900000", "40000", "940000", "50000", "0", "950000", "Logiciels de gestion"),
+            ("SOUS-TOTAL Activité : Suivi et Contrôle de Gestion", "2300000", "2170000", "2600000", "115000", "2715000", "150000", "0", "2750000", ""),
+            ("SOUS-TOTAL Service : Direction des Affaires Financières", "4400000", "4170000", "5000000", "220000", "5220000", "290000", "0", "5290000", ""),
+            
+            ("SOUS-TOTAL Action : Pilotage et Gouvernance Institutionnelle", "6600000", "6270000", "7500000", "325000", "7825000", "430000", "0", "7930000", ""),
+            
+            # Action 1.2
+            ("Action : Gestion des Ressources et Services Généraux", "", "", "", "", "", "", "", "", "Gestion administrative et logistique"),
+            
+            # Service 1.2.1
+            ("Service Bénéficiaire : Service des Moyens Généraux", "", "", "", "", "", "", "", "", ""),
+            # Activité 1.2.1.1
+            ("Activité : Entretien et Maintenance des Locaux", "", "", "", "", "", "", "", "", ""),
+            ("605200 - Entretien bâtiments", "2000000", "1900000", "2300000", "100000", "2400000", "130000", "0", "2430000", "Réparations, peinture"),
+            ("605300 - Maintenance des équipements", "1500000", "1450000", "1700000", "75000", "1775000", "95000", "0", "1795000", "Climatisation, électricité"),
+            ("SOUS-TOTAL Activité : Entretien et Maintenance des Locaux", "3500000", "3350000", "4000000", "175000", "4175000", "225000", "0", "4225000", ""),
+            # Activité 1.2.1.2
+            ("Activité : Gestion du Parc Automobile", "", "", "", "", "", "", "", "", ""),
+            ("606100 - Carburants et lubrifiants", "3000000", "2850000", "3400000", "150000", "3550000", "190000", "0", "3590000", "Essence, diesel"),
+            ("605400 - Réparations véhicules", "1800000", "1700000", "2000000", "90000", "2090000", "115000", "0", "2115000", "Entretien, pièces détachées"),
+            ("SOUS-TOTAL Activité : Gestion du Parc Automobile", "4800000", "4550000", "5400000", "240000", "5640000", "305000", "0", "5705000", ""),
+            ("SOUS-TOTAL Service : Service des Moyens Généraux", "8300000", "7900000", "9400000", "415000", "9815000", "530000", "0", "9930000", ""),
+            
+            # Service 1.2.2
+            ("Service Bénéficiaire : Service Informatique", "", "", "", "", "", "", "", "", ""),
+            # Activité 1.2.2.1
+            ("Activité : Maintenance Infrastructure IT", "", "", "", "", "", "", "", "", ""),
+            ("601800 - Matériel réseau et serveurs", "2500000", "2400000", "2800000", "120000", "2920000", "160000", "0", "2960000", "Switches, routeurs, serveurs"),
+            ("605000 - Licences logicielles", "1200000", "1150000", "1400000", "60000", "1460000", "80000", "0", "1480000", "Windows, Office, antivirus"),
+            ("SOUS-TOTAL Activité : Maintenance Infrastructure IT", "3700000", "3550000", "4200000", "180000", "4380000", "240000", "0", "4440000", ""),
+            # Activité 1.2.2.2
+            ("Activité : Support Utilisateurs et Formation", "", "", "", "", "", "", "", "", ""),
+            ("606100 - Formation informatique", "800000", "770000", "900000", "40000", "940000", "50000", "0", "950000", "Formation bureautique, cybersécurité"),
+            ("622800 - Prestations de services IT", "1500000", "1450000", "1700000", "75000", "1775000", "95000", "0", "1795000", "Support technique externe"),
+            ("SOUS-TOTAL Activité : Support Utilisateurs et Formation", "2300000", "2220000", "2600000", "115000", "2715000", "145000", "0", "2745000", ""),
+            ("SOUS-TOTAL Service : Service Informatique", "6000000", "5770000", "6800000", "295000", "7095000", "385000", "0", "7185000", ""),
+            
+            ("SOUS-TOTAL Action : Gestion des Ressources et Services Généraux", "14300000", "13670000", "16200000", "710000", "16910000", "915000", "0", "17115000", ""),
+            
+            ("TOTAL BIENS ET SERVICES", "20900000", "19940000", "23700000", "1035000", "24735000", "1345000", "0", "25045000", ""),
+            
+            # === NATURE 2 : PERSONNEL ===
+            ("", "", "", "", "", "", "", "", "", ""),
+            ("PERSONNEL", "", "", "", "", "", "", "", "", "Nature de dépense"),
+            
+            # Action 2.1
+            ("Action : Gestion des Ressources Humaines", "", "", "", "", "", "", "", "", "Recrutement, formation, administration du personnel"),
+            
+            # Service 2.1.1
+            ("Service Bénéficiaire : Direction des Ressources Humaines", "", "", "", "", "", "", "", "", ""),
+            # Activité 2.1.1.1
+            ("Activité : Recrutement et Mobilité", "", "", "", "", "", "", "", "", ""),
+            ("661100 - Salaires et traitements nouveaux agents", "15000000", "14500000", "17000000", "750000", "17750000", "1000000", "0", "18000000", "10 nouveaux recrutements"),
+            ("661200 - Indemnités et primes", "3000000", "2900000", "3500000", "150000", "3650000", "200000", "0", "3700000", "Primes de rendement"),
+            ("SOUS-TOTAL Activité : Recrutement et Mobilité", "18000000", "17400000", "20500000", "900000", "21350000", "1200000", "0", "21700000", ""),
+            # Activité 2.1.1.2
+            ("Activité : Formation et Développement des Compétences", "", "", "", "", "", "", "", "", ""),
+            ("661400 - Frais de formation continue", "2500000", "2400000", "2900000", "125000", "3025000", "165000", "0", "3065000", "Formations qualifiantes"),
+            ("661500 - Séminaires et ateliers", "1500000", "1450000", "1800000", "75000", "1875000", "100000", "0", "1900000", "Ateliers de renforcement capacités"),
+            ("SOUS-TOTAL Activité : Formation et Développement des Compétences", "4000000", "3850000", "4700000", "200000", "4900000", "265000", "0", "4965000", ""),
+            ("SOUS-TOTAL Service : Direction des Ressources Humaines", "22000000", "21250000", "25200000", "1100000", "26250000", "1465000", "0", "26665000", ""),
+            
+            # Service 2.1.2
+            ("Service Bénéficiaire : Services Déconcentrés", "", "", "", "", "", "", "", "", ""),
+            # Activité 2.1.2.1
+            ("Activité : Gestion Personnel Déconcentré", "", "", "", "", "", "", "", "", ""),
+            ("661100 - Salaires personnel déconcentré", "25000000", "24000000", "28000000", "1200000", "29200000", "1600000", "0", "29600000", "Agents en régions"),
+            ("661300 - Charges sociales", "5000000", "4800000", "5600000", "240000", "5840000", "320000", "0", "5920000", "CNPS, assurances"),
+            ("SOUS-TOTAL Activité : Gestion Personnel Déconcentré", "30000000", "28800000", "33600000", "1440000", "35040000", "1920000", "0", "35520000", ""),
+            # Activité 2.1.2.2
+            ("Activité : Avantages et Œuvres Sociales", "", "", "", "", "", "", "", "", ""),
+            ("661600 - Allocations familiales", "3000000", "2900000", "3400000", "145000", "3545000", "190000", "0", "3590000", "Allocations"),
+            ("661700 - Œuvres sociales", "2000000", "1950000", "2300000", "95000", "2395000", "130000", "0", "2430000", "Assistance sociale"),
+            ("SOUS-TOTAL Activité : Avantages et Œuvres Sociales", "5000000", "4850000", "5700000", "240000", "5940000", "320000", "0", "6020000", ""),
+            ("SOUS-TOTAL Service : Services Déconcentrés", "35000000", "33650000", "39300000", "1680000", "40980000", "2240000", "0", "41540000", ""),
+            
+            ("SOUS-TOTAL Action : Gestion des Ressources Humaines", "57000000", "54900000", "64500000", "2780000", "67230000", "3705000", "0", "68205000", ""),
+            
+            # Action 2.2
+            ("Action : Valorisation et Motivation du Personnel", "", "", "", "", "", "", "", "", "Amélioration conditions de travail"),
+            
+            # Service 2.2.1
+            ("Service Bénéficiaire : Direction du Bien-être au Travail", "", "", "", "", "", "", "", "", ""),
+            # Activité 2.2.1.1
+            ("Activité : Santé et Sécurité au Travail", "", "", "", "", "", "", "", "", ""),
+            ("661800 - Assurance maladie du personnel", "8000000", "7700000", "9000000", "385000", "9385000", "515000", "0", "9515000", "Couverture médicale"),
+            ("661900 - Médecine du travail", "1500000", "1450000", "1700000", "75000", "1775000", "95000", "0", "1795000", "Visites médicales, vaccinations"),
+            ("SOUS-TOTAL Activité : Santé et Sécurité au Travail", "9500000", "9150000", "10700000", "460000", "11160000", "610000", "0", "11310000", ""),
+            # Activité 2.2.1.2
+            ("Activité : Motivation et Reconnaissance", "", "", "", "", "", "", "", "", ""),
+            ("662100 - Primes de performance", "5000000", "4800000", "5600000", "240000", "5840000", "320000", "0", "5920000", "Primes trimestrielles"),
+            ("662200 - Bonus et gratifications", "3000000", "2900000", "3400000", "145000", "3545000", "190000", "0", "3590000", "Primes de fin d'année"),
+            ("SOUS-TOTAL Activité : Motivation et Reconnaissance", "8000000", "7700000", "9000000", "385000", "9385000", "510000", "0", "9510000", ""),
+            ("SOUS-TOTAL Service : Direction du Bien-être au Travail", "17500000", "16850000", "19700000", "845000", "20545000", "1120000", "0", "20820000", ""),
+            
+            # Service 2.2.2
+            ("Service Bénéficiaire : Direction de la Formation", "", "", "", "", "", "", "", "", ""),
+            # Activité 2.2.2.1
+            ("Activité : Formation Continue et Perfectionnement", "", "", "", "", "", "", "", "", ""),
+            ("662400 - Bourses de formation", "6000000", "5800000", "6800000", "290000", "7090000", "385000", "0", "7185000", "Formations diplômantes"),
+            ("662500 - Stages et séminaires internationaux", "4000000", "3850000", "4500000", "195000", "4695000", "255000", "0", "4755000", "Stages à l'étranger"),
+            ("SOUS-TOTAL Activité : Formation Continue et Perfectionnement", "10000000", "9650000", "11300000", "485000", "11785000", "640000", "0", "11940000", ""),
+            # Activité 2.2.2.2
+            ("Activité : Renforcement des Capacités Techniques", "", "", "", "", "", "", "", "", ""),
+            ("662600 - Formations techniques spécialisées", "3500000", "3400000", "4000000", "170000", "4170000", "225000", "0", "4225000", "Formations métiers"),
+            ("662700 - Certifications professionnelles", "2500000", "2400000", "2800000", "120000", "2920000", "160000", "0", "2960000", "Certifications ISO, PMP"),
+            ("SOUS-TOTAL Activité : Renforcement des Capacités Techniques", "6000000", "5800000", "6800000", "290000", "7090000", "385000", "0", "7185000", ""),
+            ("SOUS-TOTAL Service : Direction de la Formation", "16000000", "15450000", "18100000", "775000", "18875000", "1025000", "0", "19125000", ""),
+            
+            ("SOUS-TOTAL Action : Valorisation et Motivation du Personnel", "33500000", "32300000", "37800000", "1620000", "39420000", "2145000", "0", "39945000", ""),
+            
+            ("TOTAL PERSONNEL", "90500000", "87200000", "102300000", "4400000", "106700000", "5850000", "0", "108150000", ""),
+            
+            # === NATURE 3 : INVESTISSEMENT ===
+            ("", "", "", "", "", "", "", "", "", ""),
+            ("INVESTISSEMENT", "", "", "", "", "", "", "", "", "Nature de dépense"),
+            
+            # Action 3.1
+            ("Action : Équipements et Infrastructures", "", "", "", "", "", "", "", "", "Modernisation des équipements"),
+            
+            # Service 3.1.1
+            ("Service Bénéficiaire : Direction des Infrastructures", "", "", "", "", "", "", "", "", ""),
+            # Activité 3.1.1.1
+            ("Activité : Construction et Réhabilitation", "", "", "", "", "", "", "", "", ""),
+            ("221100 - Travaux de construction", "50000000", "48000000", "58000000", "2500000", "60500000", "3300000", "0", "61300000", "Construction nouveaux locaux"),
+            ("221200 - Réhabilitation bâtiments existants", "30000000", "29000000", "35000000", "1500000", "36500000", "2000000", "0", "37000000", "Rénovation bureaux"),
+            ("SOUS-TOTAL Activité : Construction et Réhabilitation", "80000000", "77000000", "93000000", "4000000", "97000000", "5300000", "0", "98300000", ""),
+            # Activité 3.1.1.2
+            ("Activité : Aménagements et Installations", "", "", "", "", "", "", "", "", ""),
+            ("221300 - Aménagements extérieurs", "15000000", "14500000", "17500000", "750000", "18250000", "1000000", "0", "18500000", "Parkings, espaces verts"),
+            ("221400 - Installations techniques", "10000000", "9700000", "11500000", "490000", "11990000", "650000", "0", "12150000", "Électricité, plomberie"),
+            ("SOUS-TOTAL Activité : Aménagements et Installations", "25000000", "24200000", "29000000", "1240000", "30240000", "1650000", "0", "30650000", ""),
+            ("SOUS-TOTAL Service : Direction des Infrastructures", "105000000", "101200000", "122000000", "5240000", "127240000", "6950000", "0", "128950000", ""),
+            
+            # Service 3.1.2
+            ("Service Bénéficiaire : Direction des Équipements", "", "", "", "", "", "", "", "", ""),
+            # Activité 3.1.2.1
+            ("Activité : Acquisition Matériels et Équipements", "", "", "", "", "", "", "", "", ""),
+            ("244100 - Mobilier de bureau", "12000000", "11600000", "14000000", "600000", "14600000", "800000", "0", "14800000", "Bureaux, chaises, armoires"),
+            ("244200 - Matériel informatique", "20000000", "19300000", "23000000", "1000000", "24000000", "1300000", "0", "24300000", "PC, imprimantes, serveurs"),
+            ("SOUS-TOTAL Activité : Acquisition Matériels et Équipements", "32000000", "30900000", "37000000", "1600000", "38600000", "2100000", "0", "39100000", ""),
+            # Activité 3.1.2.2
+            ("Activité : Véhicules et Engins", "", "", "", "", "", "", "", "", ""),
+            ("245100 - Acquisition véhicules de service", "35000000", "33800000", "40000000", "1720000", "41720000", "2280000", "0", "42280000", "Véhicules 4x4, berlines"),
+            ("245200 - Engins et matériel roulant", "18000000", "17400000", "21000000", "900000", "21900000", "1200000", "0", "22200000", "Engins de chantier"),
+            ("SOUS-TOTAL Activité : Véhicules et Engins", "53000000", "51200000", "61000000", "2620000", "63620000", "3480000", "0", "64480000", ""),
+            ("SOUS-TOTAL Service : Direction des Équipements", "85000000", "82100000", "98000000", "4220000", "102220000", "5580000", "0", "103580000", ""),
+            
+            ("SOUS-TOTAL Action : Équipements et Infrastructures", "190000000", "183300000", "220000000", "9460000", "229460000", "12530000", "0", "232530000", ""),
+            
+            # Action 3.2
+            ("Action : Modernisation et Digitalisation", "", "", "", "", "", "", "", "", "Transformation numérique"),
+            
+            # Service 3.2.1
+            ("Service Bénéficiaire : Direction de la Transformation Numérique", "", "", "", "", "", "", "", "", ""),
+            # Activité 3.2.1.1
+            ("Activité : Systèmes d'Information", "", "", "", "", "", "", "", "", ""),
+            ("218300 - Logiciels de gestion intégrés (ERP)", "25000000", "24000000", "29000000", "1250000", "30250000", "1650000", "0", "30650000", "SAP, Oracle, Microsoft Dynamics"),
+            ("218400 - Infrastructure cloud et cybersécurité", "15000000", "14500000", "17500000", "750000", "18250000", "1000000", "0", "18500000", "Serveurs cloud, pare-feu"),
+            ("SOUS-TOTAL Activité : Systèmes d'Information", "40000000", "38500000", "46500000", "2000000", "48500000", "2650000", "0", "49150000", ""),
+            # Activité 3.2.1.2
+            ("Activité : Équipements Technologiques", "", "", "", "", "", "", "", "", ""),
+            ("218500 - Équipements audiovisuels", "8000000", "7700000", "9200000", "395000", "9595000", "525000", "0", "9725000", "Vidéoprojecteurs, écrans"),
+            ("218600 - Solutions de visioconférence", "6000000", "5800000", "7000000", "300000", "7300000", "400000", "0", "7400000", "Systèmes de réunion à distance"),
+            ("SOUS-TOTAL Activité : Équipements Technologiques", "14000000", "13500000", "16200000", "695000", "16895000", "925000", "0", "17125000", ""),
+            ("SOUS-TOTAL Service : Direction de la Transformation Numérique", "54000000", "52000000", "62700000", "2695000", "65395000", "3575000", "0", "66275000", ""),
+            
+            # Service 3.2.2
+            ("Service Bénéficiaire : Direction de l'Innovation", "", "", "", "", "", "", "", "", ""),
+            # Activité 3.2.2.1
+            ("Activité : Recherche et Développement", "", "", "", "", "", "", "", "", ""),
+            ("218700 - Équipements de laboratoire", "12000000", "11600000", "14000000", "600000", "14600000", "800000", "0", "14800000", "Matériel scientifique"),
+            ("218800 - Prototypes et pilots", "8000000", "7700000", "9200000", "395000", "9595000", "525000", "0", "9725000", "Projets pilotes"),
+            ("SOUS-TOTAL Activité : Recherche et Développement", "20000000", "19300000", "23200000", "995000", "24195000", "1325000", "0", "24525000", ""),
+            # Activité 3.2.2.2
+            ("Activité : Veille Technologique et Innovation", "", "", "", "", "", "", "", "", ""),
+            ("218900 - Abonnements bases de données techniques", "5000000", "4800000", "5800000", "250000", "6050000", "330000", "0", "6130000", "Bases de données scientifiques"),
+            ("219000 - Partenariats innovation", "7000000", "6750000", "8100000", "350000", "8450000", "460000", "0", "8560000", "Collaborations universités"),
+            ("SOUS-TOTAL Activité : Veille Technologique et Innovation", "12000000", "11550000", "13900000", "600000", "14500000", "790000", "0", "14690000", ""),
+            ("SOUS-TOTAL Service : Direction de l'Innovation", "32000000", "30850000", "37100000", "1595000", "38695000", "2115000", "0", "39215000", ""),
+            
+            ("SOUS-TOTAL Action : Modernisation et Digitalisation", "86000000", "82850000", "99800000", "4290000", "104090000", "5690000", "0", "105490000", ""),
+            
+            ("TOTAL INVESTISSEMENT", "276000000", "266150000", "319800000", "13750000", "333550000", "18220000", "0", "338020000", ""),
+            
+            # === TOTAL GÉNÉRAL ===
+            ("", "", "", "", "", "", "", "", "", ""),
+            ("TOTAL GÉNÉRAL", "387400000", "373290000", "445800000", "19185000", "464985000", "25415000", "0", "471215000", ""),
+        ]
+        
+        current_row = 2
+        
+        # Définir les couleurs selon la hiérarchie (comme dans le PDF)
+        nature_fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")  # Or (jaune doré)
+        action_fill = PatternFill(start_color="9BC2E6", end_color="9BC2E6", fill_type="solid")  # Bleu clair
+        service_fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")  # Jaune orangé
+        activite_fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")  # Vert clair
+        ligne_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Blanc
+        sous_total_activite_fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")  # Vert très clair
+        sous_total_service_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")  # Jaune très clair
+        sous_total_action_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")  # Bleu très clair
+        total_nature_fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")  # Or
+        total_general_fill = PatternFill(start_color="DC3545", end_color="DC3545", fill_type="solid")  # Rouge
+        
+        for idx, exemple in enumerate(exemples):
+            libelle = exemple[0]
+            
+            # Déterminer le type de ligne et appliquer la couleur
+            if libelle.upper() in ["BIENS ET SERVICES", "PERSONNEL", "INVESTISSEMENT", "INVESTISSEMENTS", "TRANSFERTS"]:
+                row_fill = nature_fill
+                row_font = Font(bold=True, size=11)
+            elif libelle.startswith("Action :") or libelle.startswith("- Action :"):
+                row_fill = action_fill
+                row_font = Font(bold=True, size=10)
+            elif libelle.startswith("Service Bénéficiaire :") or libelle.startswith("- Service Bénéficiaire :"):
+                row_fill = service_fill
+                row_font = Font(bold=True, size=9)
+            elif libelle.startswith("Activité :") or libelle.startswith("- Activité :"):
+                row_fill = activite_fill
+                row_font = Font(bold=True, size=9)
+            elif libelle.startswith("SOUS-TOTAL Activité"):
+                row_fill = sous_total_activite_fill
+                row_font = Font(bold=True, size=8, italic=True)
+            elif libelle.startswith("SOUS-TOTAL Service"):
+                row_fill = sous_total_service_fill
+                row_font = Font(bold=True, size=9, italic=True)
+            elif libelle.startswith("SOUS-TOTAL Action"):
+                row_fill = sous_total_action_fill
+                row_font = Font(bold=True, size=10, italic=True)
+            elif libelle.startswith("TOTAL ") and not libelle.startswith("TOTAL GÉNÉRAL"):
+                row_fill = total_nature_fill
+                row_font = Font(bold=True, size=11)
+            elif libelle.startswith("TOTAL GÉNÉRAL"):
+                row_fill = total_general_fill
+                row_font = Font(bold=True, size=12, color="FFFFFF")
+            elif libelle == "":
+                row_fill = PatternFill()  # Transparent
+                row_font = Font(size=9)
+            else:
+                # Ligne budgétaire normale
+                row_fill = ligne_fill
+                row_font = Font(size=9)
+            
+            for col_num, value in enumerate(exemple, 1):
+                cell = ws.cell(row=current_row, column=col_num)
+                cell.value = value
+                cell.border = border_style
+                cell.fill = row_fill
+                cell.font = row_font
+                
+                # Aligner les nombres à droite
+                if col_num > 1 and col_num < 10 and value and value != "":
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+                    
+                # Formater les nombres
+                if col_num > 1 and col_num < 10 and value and str(value).replace(" ", "").isdigit():
+                    cell.number_format = '#,##0'
+            
+            current_row += 1
+        
+        # Ajouter une feuille d'instructions
+        ws_instructions = wb.create_sheet("📋 Instructions")
+        ws_instructions.column_dimensions['A'].width = 80
+        
+        instructions = [
+            ("MODÈLE DE FICHE TECHNIQUE BUDGÉTAIRE", header_font, header_fill),
+            ("", None, None),
+            ("📅 NOTATION TEMPORELLE", Font(bold=True, size=12, color="2196F3"), None),
+            ("", None, None),
+            ("N = Année en cours (année de référence)", None, None),
+            ("N+1 = Année budgétaire à préparer (année suivante)", None, None),
+            ("", None, None),
+            ("Exemple : Si vous préparez le budget 2025, alors N = 2024 et N+1 = 2025", Font(italic=True), example_fill),
+            ("", None, None),
+            ("📌 STRUCTURE DU FICHIER", Font(bold=True, size=12), None),
+            ("", None, None),
+            ("Ce fichier doit respecter une hiérarchie stricte :", None, None),
+            ("", None, None),
+            ("1️⃣ NATURE DE DÉPENSE : BIENS ET SERVICES, PERSONNEL, INVESTISSEMENT, ou TRANSFERTS", None, example_fill),
+            ("   ↓", None, None),
+            ("2️⃣ ACTION : Commencer par 'Action :' ou '- Action :'", None, example_fill),
+            ("   ↓", None, None),
+            ("3️⃣ SERVICE BÉNÉFICIAIRE : Commencer par 'Service Bénéficiaire :' ou '- Service Bénéficiaire :'", None, example_fill),
+            ("   ↓", None, None),
+            ("4️⃣ ACTIVITÉ : Commencer par 'Activité :' ou '- Activité :'", None, example_fill),
+            ("   ↓", None, None),
+            ("5️⃣ LIGNES BUDGÉTAIRES : Détails des dépenses (sans préfixe spécial)", None, example_fill),
+            ("", None, None),
+            ("", None, None),
+            ("⚠️ RÈGLES IMPORTANTES", Font(bold=True, size=12, color="DC3545"), None),
+            ("", None, None),
+            ("✅ Les montants doivent être des nombres (sans espace ni symbole)", None, None),
+            ("✅ La colonne 'CODE / LIBELLE' ne doit JAMAIS être vide", None, None),
+            ("✅ Respectez exactement les préfixes : 'Action :', 'Service Bénéficiaire :', 'Activité :'", None, None),
+            ("✅ Les natures de dépenses doivent être en MAJUSCULES", None, None),
+            ("✅ Ne supprimez pas les en-têtes de colonnes", None, None),
+            ("", None, None),
+            ("", None, None),
+            ("💡 EXEMPLES", Font(bold=True, size=12, color="28A745"), None),
+            ("", None, None),
+            ("Consultez la feuille 'Fiche Technique' pour voir des exemples concrets.", None, None),
+            ("Les lignes en gris sont des exemples à SUPPRIMER avant de charger votre fichier.", None, None),
+            ("", None, None),
+            ("", None, None),
+            (f"📅 Modèle généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", Font(italic=True, size=9), None),
+        ]
+        
+        for row_num, (text, font, fill) in enumerate(instructions, 1):
+            cell = ws_instructions.cell(row=row_num, column=1)
+            cell.value = text
+            if font:
+                cell.font = font
+            if fill:
+                cell.fill = fill
+            cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        
+        # Figer la première ligne (en-têtes uniquement) dans la feuille Fiche Technique
+        ws.freeze_panes = "A2"
+        
+        # Sauvegarder dans un buffer
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        # Log de l'activité
+        logger.info(f"📥 Template de fiche technique téléchargé par {current_user.email}")
+        
+        # Retourner le fichier (nom générique sans année)
+        filename = f"Modele_Fiche_Technique_N.xlsx"
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Erreur génération template: {e}")
+        raise HTTPException(500, f"Erreur lors de la génération du modèle: {str(e)}")
+
+
 @router.post("/api/charger-fiche")
 async def api_charger_fiche(
     fichier: UploadFile = File(...),
     programme_id: int = Form(...),
+    annee: int = Form(...),
     nom_fiche: Optional[str] = Form(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -1574,9 +2426,9 @@ async def api_charger_fiche(
         
         # Déterminer le type de fichier
         if fichier.filename.endswith('.pdf'):
-            return await _analyser_fiche_pdf(content, nom_fiche, programme_id, session, current_user)
+            return await _analyser_fiche_pdf(content, nom_fiche, programme_id, annee, session, current_user)
         elif fichier.filename.endswith(('.xlsx', '.xls')):
-            return await _analyser_fiche_excel(content, nom_fiche, programme_id, session, current_user)
+            return await _analyser_fiche_excel(content, nom_fiche, programme_id, annee, session, current_user)
         else:
             raise HTTPException(400, "Format de fichier non supporté. Utilisez Excel (.xlsx, .xls) ou PDF (.pdf)")
             
@@ -1585,22 +2437,185 @@ async def api_charger_fiche(
         raise HTTPException(500, f"Erreur lors du chargement: {str(e)}")
 
 
-async def _analyser_fiche_excel(content: bytes, nom_fiche: Optional[str], programme_id: int, session: Session, current_user: User):
-    """Analyser un fichier Excel de fiche technique"""
+async def _analyser_fiche_excel(content: bytes, nom_fiche: Optional[str], programme_id: int, annee: int, session: Session, current_user: User):
+    """
+    Analyser un fichier Excel de fiche technique avec le template standardisé
+    Utilise le FicheTechniqueService pour toute la logique métier
+    """
+    return FicheTechniqueService.analyser_fichier_excel(
+        content=content,
+        nom_fiche=nom_fiche,
+        programme_id=programme_id,
+        annee=annee,
+        session=session,
+        current_user=current_user
+    )
+
+
+async def _analyser_fiche_pdf(content: bytes, nom_fiche: Optional[str], programme_id: int, annee: int, session: Session, current_user: User):
+    """
+    Analyser un fichier PDF de fiche technique et extraire la structure hiérarchique
+    """
     try:
-        # Lire le fichier Excel
-        df = pd.read_excel(io.BytesIO(content))
+        import PyPDF2
+        from io import BytesIO
+    except ImportError:
+        raise HTTPException(
+            500,
+            "❌ PyPDF2 n'est pas installé.\n\n"
+            "💡 Installez-le avec : uv add pypdf2\n\n"
+            "📥 Ou utilisez le modèle Excel pour plus de fiabilité."
+        )
+    
+    try:
+        # Extraire le texte du PDF
+        pdf_reader = PyPDF2.PdfReader(BytesIO(content))
         
-        # Analyser la structure du fichier
-        structure = _detecter_structure_excel(df)
+        logger.info(f"📄 PDF chargé : {len(pdf_reader.pages)} page(s)")
         
-        # Créer la fiche technique
-        fiche = _creer_fiche_technique(structure, nom_fiche, programme_id, session, current_user)
+        # Extraire tout le texte
+        full_text = ""
+        for page_num, page in enumerate(pdf_reader.pages):
+            text = page.extract_text()
+            full_text += text + "\n"
+            logger.debug(f"  📄 Page {page_num + 1} : {len(text)} caractères")
         
-        # Créer la structure hiérarchique
-        result = _creer_structure_hierarchique(df, structure, fiche.id, session)
+        if not full_text.strip():
+            raise HTTPException(400, "❌ Impossible d'extraire le texte du PDF. Le fichier est peut-être scanné ou protégé.")
         
-        logger.info(f"✅ Fiche technique chargée : {fiche.numero_fiche}")
+        logger.info(f"✅ Texte extrait : {len(full_text)} caractères")
+        
+        # Créer un DataFrame à partir du texte parsé
+        df_data = []
+        lignes_texte = full_text.split('\n')
+        
+        current_nature = None
+        current_action = None
+        current_service = None
+        current_activite = None
+        
+        for ligne_idx, ligne in enumerate(lignes_texte):
+            ligne = ligne.strip()
+            if not ligne:
+                continue
+            
+            # Détecter les natures de dépenses
+            if ligne.upper() in ["BIENS ET SERVICES", "PERSONNEL", "INVESTISSEMENT", "INVESTISSEMENTS", "TRANSFERTS"]:
+                current_nature = ligne.upper()
+                df_data.append({
+                    'type': 'nature',
+                    'nature': current_nature,
+                    'libelle': ligne,
+                    'montants': {}
+                })
+                logger.debug(f"📌 Nature : {current_nature}")
+                continue
+            
+            # Détecter les actions (avec pattern flexible)
+            if any(ligne.startswith(p) for p in ["Action :", "- Action :", "ACTION :"]):
+                action_libelle = ligne.replace("Action :", "").replace("- Action :", "").replace("ACTION :", "").strip()
+                current_action = action_libelle
+                df_data.append({
+                    'type': 'action',
+                    'nature': current_nature,
+                    'libelle': action_libelle,
+                    'montants': _extraire_montants_ligne(ligne)
+                })
+                logger.debug(f"  → Action : {action_libelle[:50]}")
+                continue
+            
+            # Détecter les services
+            if any(ligne.startswith(p) for p in ["Service Bénéficiaire :", "- Service Bénéficiaire :", "SERVICE :"]):
+                service_libelle = ligne.replace("Service Bénéficiaire :", "").replace("- Service Bénéficiaire :", "").replace("SERVICE :", "").strip()
+                current_service = service_libelle
+                df_data.append({
+                    'type': 'service',
+                    'nature': current_nature,
+                    'action': current_action,
+                    'libelle': service_libelle,
+                    'montants': {}
+                })
+                logger.debug(f"    → Service : {service_libelle[:50]}")
+                continue
+            
+            # Détecter les activités
+            if any(ligne.startswith(p) for p in ["Activité :", "- Activité :", "ACTIVITÉ :", "ACTIVITE :"]):
+                activite_libelle = ligne.replace("Activité :", "").replace("- Activité :", "").replace("ACTIVITÉ :", "").replace("ACTIVITE :", "").strip()
+                current_activite = activite_libelle
+                df_data.append({
+                    'type': 'activite',
+                    'nature': current_nature,
+                    'action': current_action,
+                    'service': current_service,
+                    'libelle': activite_libelle,
+                    'montants': _extraire_montants_ligne(ligne)
+                })
+                logger.debug(f"      → Activité : {activite_libelle[:50]}")
+                continue
+            
+            # Détecter les lignes budgétaires (commence par un numéro de compte)
+            if ligne and ligne[0].isdigit() and len(ligne) > 5:
+                df_data.append({
+                    'type': 'ligne',
+                    'nature': current_nature,
+                    'action': current_action,
+                    'service': current_service,
+                    'activite': current_activite,
+                    'libelle': ligne,
+                    'montants': _extraire_montants_ligne(ligne)
+                })
+                logger.debug(f"        → Ligne : {ligne[:50]}")
+        
+        logger.info(f"✅ {len(df_data)} éléments extraits du PDF")
+        
+        # Créer la fiche et la structure
+        prog = session.get(Programme, programme_id)
+        if not prog:
+            raise HTTPException(400, "Programme non trouvé")
+        
+        # Générer numéro de fiche
+        count = session.exec(
+            select(func.count(FicheTechnique.id))
+            .where(FicheTechnique.annee_budget == annee)
+        ).one()
+        
+        numero_fiche = nom_fiche or f"FT-{annee}-{prog.code}-{count + 1:03d}"
+        
+        fiche = FicheTechnique(
+            numero_fiche=numero_fiche,
+            annee_budget=annee,
+            programme_id=programme_id,
+            direction_id=None,
+            budget_total_demande=Decimal("0"),
+            statut="Brouillon",
+            phase="Conférence interne",
+            created_by_user_id=current_user.id
+        )
+        
+        session.add(fiche)
+        session.commit()
+        session.refresh(fiche)
+        
+        logger.info(f"✅ Fiche créée : {fiche.numero_fiche}")
+        
+        # Créer la structure depuis les données extraites
+        result = _creer_structure_depuis_pdf_data(df_data, fiche.id, session)
+        
+        # Recalculer les totaux
+        FicheTechniqueService._recalculer_totaux_hierarchie(fiche.id, session)
+        
+        # Mettre à jour le budget total
+        fiche_updated = session.get(FicheTechnique, fiche.id)
+        if fiche_updated:
+            budget_total = sum(
+                action.projet_budget_n_plus_1 or Decimal("0")
+                for action in session.exec(
+                    select(ActionBudgetaire).where(ActionBudgetaire.fiche_technique_id == fiche.id)
+                ).all()
+            )
+            fiche_updated.budget_total_demande = budget_total
+            session.add(fiche_updated)
+            session.commit()
         
         return {
             "ok": True,
@@ -1609,436 +2624,191 @@ async def _analyser_fiche_excel(content: bytes, nom_fiche: Optional[str], progra
             "services_count": result["services_count"],
             "activites_count": result["activites_count"],
             "lignes_count": result["lignes_count"],
-            "budget_total": float(result["budget_total"]),
-            "errors": result["errors"]
+            "budget_total": float(budget_total),
+            "errors": result.get("errors", [])
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        session.rollback()
-        raise HTTPException(500, f"Erreur analyse Excel: {str(e)}")
+        logger.error(f"❌ Erreur analyse PDF : {e}")
+        raise HTTPException(500, f"Erreur lors de l'analyse du PDF : {str(e)}")
 
 
-async def _analyser_fiche_pdf(content: bytes, nom_fiche: Optional[str], programme_id: int, session: Session, current_user: User):
-    """Analyser un fichier PDF de fiche technique"""
-    # Pour l'instant, on simule l'analyse PDF
-    # Dans une vraie implémentation, on utiliserait PyPDF2 ou pdfplumber
-    
-    # Créer une fiche technique basique
-    fiche = _creer_fiche_technique({
-        "annee": 2025,
-        "programme": "P01",
-        "direction": "D01"
-    }, nom_fiche, programme_id, session, current_user)
-    
-    return {
-        "ok": True,
-        "fiche_numero": fiche.numero_fiche,
-        "actions_count": 0,
-        "services_count": 0,
-        "activites_count": 0,
-        "lignes_count": 0,
-        "budget_total": 0.0,
-        "errors": ["Analyse PDF non encore implémentée - Fiche créée sans structure"]
-    }
-
-
-def _detecter_structure_excel(df: pd.DataFrame) -> dict:
-    """Détecter la structure du fichier Excel avec années réelles"""
+def _extraire_montants_ligne(ligne: str) -> dict:
+    """
+    Extraire les montants d'une ligne de texte PDF
+    Recherche des nombres (avec ou sans séparateurs)
+    """
     import re
     
-    structure = {
-        "colonnes": {},
-        "annee": 2025,
-        "programme": "P01",
-        "direction": "D01"
-    }
+    # Pattern pour trouver les nombres (avec espaces, virgules, points)
+    pattern = r'[\d\s,\.]+(?=\s|$)'
+    montants_trouves = re.findall(pattern, ligne)
     
-    # Nettoyer les noms de colonnes (enlever \n et espaces superflus)
-    df.columns = [str(col).replace('\n', ' ').strip() for col in df.columns]
+    montants = {}
+    colonnes = ['budget_vote_n', 'budget_actuel_n', 'enveloppe_n_plus_1', 'complement_solicite', 
+                'budget_souhaite', 'engagement_etat', 'autre_complement', 'projet_budget_n_plus_1']
     
-    # Détecter les années dans les colonnes
-    annees_detectees = set()
-    for col in df.columns:
-        col_str = str(col).upper()
-        # Rechercher des années (2020-2030)
-        annees = re.findall(r'20[2-3][0-9]', col_str)
-        annees_detectees.update(annees)
+    for idx, montant_str in enumerate(montants_trouves):
+        if idx < len(colonnes):
+            try:
+                # Nettoyer le montant
+                montant_clean = montant_str.replace(' ', '').replace(',', '').replace('.', '')
+                if montant_clean.isdigit():
+                    montants[colonnes[idx]] = Decimal(montant_clean)
+            except:
+                pass
     
-    # Trier les années pour identifier N et N+1
-    annees_triees = sorted(annees_detectees)
-    annee_n = annees_triees[0] if len(annees_triees) > 0 else "2024"
-    annee_n_plus_1 = annees_triees[1] if len(annees_triees) > 1 else "2025"
-    
-    # Patterns de colonnes avec années dynamiques (plus flexibles)
-    colonnes_patterns = [
-        (("CODE", "LIBELLE"), "code_libelle"),
-        (("BUDGET", "VOTE", annee_n), "budget_vote_n"),  # Sans accent
-        (("BUDGET", "ACTUEL", annee_n), "budget_actuel_n"),
-        (("ENVELOPPE", annee_n_plus_1), "enveloppe_n_plus_1"),
-        (("COMPLEMENT", "SOLLICITE"), "complement_solicite"),  # Sans accent
-        (("BUDGET", "SOUHAITE"), "budget_souhaite"),  # Sans accent
-        (("ENGAGEMENT", "ETAT"), "engagement_etat"),  # Sans accent
-        (("AUTRE", "COMPLEMENT"), "autre_complement"),
-        (("PROJET", "BUDGE", annee_n_plus_1), "projet_budget_n_plus_1"),  # "BUDGE" car "PROJET DE BUDGE"
-        (("JUSTIFICATIFS",), "justificatifs"),
-    ]
-    
-    # Détecter les colonnes
-    for col in df.columns:
-        col_upper = str(col).upper().replace('É', 'E').replace('È', 'E').replace('Ê', 'E')  # Enlever accents
-        for patterns, field in colonnes_patterns:
-            if all(p in col_upper for p in patterns):
-                structure["colonnes"][field] = col
-                break
-    
-    # Mettre à jour l'année du budget
-    if annee_n_plus_1:
-        structure["annee"] = int(annee_n_plus_1)
-    
-    return structure
+    return montants
 
 
-def _creer_fiche_technique(structure: dict, nom_fiche: Optional[str], programme_id: int, session: Session, current_user: User) -> FicheTechnique:
-    """Créer une nouvelle fiche technique"""
-    # Générer numéro de fiche
-    annee = structure.get("annee", 2025)
-    count = session.exec(
-        select(func.count(FicheTechnique.id))
-        .where(FicheTechnique.annee_budget == annee)
-    ).one()
-    
-    # Récupérer le programme sélectionné
-    programme = session.get(Programme, programme_id)
-    if not programme:
-        raise HTTPException(400, "Programme non trouvé")
-    
-    numero_fiche = f"FT-{annee}-{programme.code}-{count + 1:03d}"
-    
-    fiche = FicheTechnique(
-        numero_fiche=numero_fiche,
-        annee_budget=annee,
-        programme_id=programme.id,
-        direction_id=None,  # À déterminer selon le contenu
-        budget_total_demande=Decimal("0"),
-        statut="Brouillon",
-        phase="Conférence interne",
-        created_by_user_id=current_user.id
-    )
-    
-    session.add(fiche)
-    session.commit()
-    session.refresh(fiche)
-    
-    return fiche
-
-
-def _creer_structure_hierarchique(df: pd.DataFrame, structure: dict, fiche_id: int, session: Session) -> dict:
-    """Créer la structure hiérarchique à partir des données Excel"""
+def _creer_structure_depuis_pdf_data(df_data: list, fiche_id: int, session: Session) -> dict:
+    """
+    Créer la structure hiérarchique depuis les données extraites du PDF
+    """
     actions_count = 0
     services_count = 0
     activites_count = 0
     lignes_count = 0
-    budget_total = Decimal("0")
     errors = []
     
-    current_nature = None
-    current_action = None
-    current_service = None
-    current_activite = None
+    actions_map = {}  # {libelle_action: action_obj}
+    services_map = {}  # {(libelle_action, libelle_service): service_obj}
+    activites_map = {}  # {(libelle_action, libelle_service, libelle_activite): activite_obj}
     
-    logger.info(f"📊 Import de {len(df)} lignes depuis Excel...")
-    
-    for idx, row in df.iterrows():
+    for idx, item in enumerate(df_data):
         try:
-            # Détecter le niveau hiérarchique
-            code_libelle_col = structure["colonnes"].get("code_libelle")
-            if not code_libelle_col or code_libelle_col not in row:
-                continue
-                
-            code_libelle = str(row[code_libelle_col]).strip()
-            if not code_libelle or code_libelle == "nan":
+            if item['type'] == 'nature':
+                # Juste pour le contexte, pas d'objet à créer
                 continue
             
-            logger.debug(f"Ligne {idx+1}: {code_libelle[:80]}")
-            
-            # Détecter le type de ligne
-            # Nature de dépenses : doit être exactement l'une de ces valeurs (pas de chiffre au début)
-            if (code_libelle.upper() in ["BIENS ET SERVICES", "PERSONNEL", "INVESTISSEMENT", "INVESTISSEMENTS", "TRANSFERTS", "4 - INVESTISSEMENTS"] or
-                code_libelle.upper().startswith("TOTAL ")):
-                # C'est une nature de dépenses ou un total - on réinitialise la hiérarchie
-                if not code_libelle.upper().startswith("TOTAL "):
-                    current_nature = code_libelle
-                    logger.info(f"📌 Nouvelle nature de dépense: {current_nature}")
-                current_action = None
-                current_service = None
-                current_activite = None
-                
-            elif code_libelle.strip().startswith("Action :") or code_libelle.strip().startswith("- Action :"):
-                current_action = _creer_action(row, structure, fiche_id, current_nature, session)
-                actions_count += 1
-                current_service = None
-                current_activite = None
-                logger.debug(f"  → ACTION créée ({current_nature}): {code_libelle[:60]}")
-                
-            elif code_libelle.strip().startswith("Service Bénéficiaire :") or code_libelle.strip().startswith("- Service Bénéficiaire :"):
-                if current_action:
-                    current_service = _creer_service(row, structure, fiche_id, current_action.id, session)
-                    services_count += 1
-                    current_activite = None
-                    logger.debug(f"    → SERVICE créé: {code_libelle[:60]}")
-                else:
-                    logger.warning(f"⚠️  Service sans action (ligne {idx+1}): {code_libelle[:60]}")
-                
-            elif code_libelle.strip().startswith("Activité :") or code_libelle.strip().startswith("- Activité :"):
-                if current_service:
-                    current_activite = _creer_activite(row, structure, fiche_id, current_service.id, session)
-                    activites_count += 1
-                    logger.debug(f"      → ACTIVITÉ créée: {code_libelle[:60]}")
-                else:
-                    logger.warning(f"⚠️  Activité sans service (ligne {idx+1}): {code_libelle[:60]}")
+            elif item['type'] == 'action':
+                action_key = item['libelle']
+                if action_key not in actions_map:
+                    # Générer code
+                    code = f"ACT_{actions_count + 1:03d}"
                     
-            elif code_libelle.strip() and code_libelle.strip()[0].isdigit():
-                # C'est une ligne budgétaire (commence par un numéro de compte)
-                if current_activite:
-                    ligne = _creer_ligne(row, structure, fiche_id, current_activite.id, session)
+                    action = ActionBudgetaire(
+                        fiche_technique_id=fiche_id,
+                        nature_depense=item.get('nature'),
+                        code=code,
+                        libelle=item['libelle'],
+                        budget_vote_n=item['montants'].get('budget_vote_n', Decimal("0")),
+                        budget_actuel_n=item['montants'].get('budget_actuel_n', Decimal("0")),
+                        enveloppe_n_plus_1=item['montants'].get('enveloppe_n_plus_1', Decimal("0")),
+                        complement_solicite=item['montants'].get('complement_solicite', Decimal("0")),
+                        budget_souhaite=item['montants'].get('budget_souhaite', Decimal("0")),
+                        engagement_etat=item['montants'].get('engagement_etat', Decimal("0")),
+                        autre_complement=item['montants'].get('autre_complement', Decimal("0")),
+                        projet_budget_n_plus_1=item['montants'].get('projet_budget_n_plus_1', Decimal("0")),
+                        ordre=actions_count
+                    )
+                    session.add(action)
+                    session.commit()
+                    session.refresh(action)
+                    actions_map[action_key] = action
+                    actions_count += 1
+                    logger.debug(f"  ✅ Action créée : {item['libelle'][:50]}")
+            
+            elif item['type'] == 'service':
+                service_key = (item.get('action'), item['libelle'])
+                if service_key not in services_map:
+                    action_parent = actions_map.get(item.get('action'))
+                    if action_parent:
+                        code = f"SRV_{services_count + 1:03d}"
+                        
+                        service = ServiceBeneficiaire(
+                            fiche_technique_id=fiche_id,
+                            action_id=action_parent.id,
+                            code=code,
+                            libelle=item['libelle'],
+                            ordre=services_count
+                        )
+                        session.add(service)
+                        session.commit()
+                        session.refresh(service)
+                        services_map[service_key] = service
+                        services_count += 1
+                        logger.debug(f"    ✅ Service créé : {item['libelle'][:50]}")
+                    else:
+                        errors.append(f"Service sans action : {item['libelle']}")
+            
+            elif item['type'] == 'activite':
+                activite_key = (item.get('action'), item.get('service'), item['libelle'])
+                if activite_key not in activites_map:
+                    service_parent = services_map.get((item.get('action'), item.get('service')))
+                    if service_parent:
+                        code = f"ACTIV_{activites_count + 1:03d}"
+                        
+                        activite = ActiviteBudgetaire(
+                            fiche_technique_id=fiche_id,
+                            service_beneficiaire_id=service_parent.id,
+                            code=code,
+                            libelle=item['libelle'],
+                            budget_vote_n=item['montants'].get('budget_vote_n', Decimal("0")),
+                            budget_actuel_n=item['montants'].get('budget_actuel_n', Decimal("0")),
+                            enveloppe_n_plus_1=item['montants'].get('enveloppe_n_plus_1', Decimal("0")),
+                            complement_solicite=item['montants'].get('complement_solicite', Decimal("0")),
+                            budget_souhaite=item['montants'].get('budget_souhaite', Decimal("0")),
+                            engagement_etat=item['montants'].get('engagement_etat', Decimal("0")),
+                            autre_complement=item['montants'].get('autre_complement', Decimal("0")),
+                            projet_budget_n_plus_1=item['montants'].get('projet_budget_n_plus_1', Decimal("0")),
+                            ordre=activites_count
+                        )
+                        session.add(activite)
+                        session.commit()
+                        session.refresh(activite)
+                        activites_map[activite_key] = activite
+                        activites_count += 1
+                        logger.debug(f"      ✅ Activité créée : {item['libelle'][:50]}")
+                    else:
+                        errors.append(f"Activité sans service : {item['libelle']}")
+            
+            elif item['type'] == 'ligne':
+                activite_parent = activites_map.get((item.get('action'), item.get('service'), item.get('activite')))
+                if activite_parent:
+                    # Extraire le code du début de la ligne
+                    libelle = item['libelle']
+                    code_match = re.match(r'^(\d+)', libelle)
+                    code = code_match.group(1) if code_match else f"LIGNE_{lignes_count + 1:05d}"
+                    
+                    ligne = LigneBudgetaireDetail(
+                        fiche_technique_id=fiche_id,
+                        activite_id=activite_parent.id,
+                        code=code,
+                        libelle=libelle,
+                        budget_vote_n=item['montants'].get('budget_vote_n', Decimal("0")),
+                        budget_actuel_n=item['montants'].get('budget_actuel_n', Decimal("0")),
+                        enveloppe_n_plus_1=item['montants'].get('enveloppe_n_plus_1', Decimal("0")),
+                        complement_solicite=item['montants'].get('complement_solicite', Decimal("0")),
+                        budget_souhaite=item['montants'].get('budget_souhaite', Decimal("0")),
+                        engagement_etat=item['montants'].get('engagement_etat', Decimal("0")),
+                        autre_complement=item['montants'].get('autre_complement', Decimal("0")),
+                        projet_budget_n_plus_1=item['montants'].get('projet_budget_n_plus_1', Decimal("0")),
+                        ordre=lignes_count
+                    )
+                    session.add(ligne)
+                    session.commit()
+                    session.refresh(ligne)
                     lignes_count += 1
-                    budget_total += ligne.budget_souhaite
-                    logger.debug(f"        → LIGNE créée: {code_libelle[:60]}")
+                    logger.debug(f"        ✅ Ligne créée : {libelle[:50]}")
                 else:
-                    logger.warning(f"⚠️  Ligne sans activité (ligne {idx+1}): {code_libelle[:60]}")
-                    
+                    errors.append(f"Ligne sans activité : {item['libelle']}")
+        
         except Exception as e:
-            errors.append(f"Ligne {idx + 2}: {str(e)}")
+            errors.append(f"Erreur élément {idx}: {str(e)}")
+            logger.error(f"❌ Erreur élément {idx}: {e}")
     
-    logger.info(f"📊 Résumé import: {actions_count} actions, {services_count} services, {activites_count} activités, {lignes_count} lignes")
-    
-    # Recalculer tous les totaux de la hiérarchie
-    _recalculer_totaux_hierarchie(fiche_id, session)
-    
-    # Mettre à jour le budget total de la fiche
-    fiche = session.get(FicheTechnique, fiche_id)
-    if fiche:
-        fiche.budget_total_demande = budget_total
-        session.add(fiche)
-        session.commit()
-    
-    logger.info(f"✅ Import terminé: Budget total = {budget_total}")
+    logger.info(f"📊 Structure créée : {actions_count} actions, {services_count} services, {activites_count} activités, {lignes_count} lignes")
     
     return {
         "actions_count": actions_count,
         "services_count": services_count,
         "activites_count": activites_count,
         "lignes_count": lignes_count,
-        "budget_total": budget_total,
         "errors": errors
     }
-
-
-def _creer_action(row, structure: dict, fiche_id: int, nature_depense: Optional[str], session: Session) -> ActionBudgetaire:
-    """Créer une action budgétaire"""
-    code_libelle_col = structure["colonnes"]["code_libelle"]
-    libelle = str(row[code_libelle_col]).strip()
-    
-    # Extraire le code
-    code = libelle.split()[1] if len(libelle.split()) > 1 else f"ACT_{len(session.exec(select(ActionBudgetaire)).all()) + 1}"
-    
-    action = ActionBudgetaire(
-        fiche_technique_id=fiche_id,
-        nature_depense=nature_depense,
-        code=code,
-        libelle=libelle,
-        budget_vote_n=Decimal("0"),
-        budget_actuel_n=Decimal("0"),
-        enveloppe_n_plus_1=Decimal("0"),
-        complement_solicite=Decimal("0"),
-        budget_souhaite=Decimal("0"),
-        engagement_etat=Decimal("0"),
-        autre_complement=Decimal("0"),
-        projet_budget_n_plus_1=Decimal("0"),
-        justificatifs=None
-    )
-    
-    session.add(action)
-    session.commit()
-    session.refresh(action)
-    return action
-
-
-def _creer_service(row, structure: dict, fiche_id: int, action_id: int, session: Session) -> ServiceBeneficiaire:
-    """Créer un service bénéficiaire"""
-    code_libelle_col = structure["colonnes"]["code_libelle"]
-    libelle = str(row[code_libelle_col]).strip()
-    
-    # Extraire le code
-    code = libelle.split(":")[1].strip().replace(" ", "_") if ":" in libelle else f"SRV_{len(session.exec(select(ServiceBeneficiaire)).all()) + 1}"
-    
-    service = ServiceBeneficiaire(
-        fiche_technique_id=fiche_id,
-        action_id=action_id,
-        code=code,
-        libelle=libelle
-    )
-    
-    session.add(service)
-    session.commit()
-    session.refresh(service)
-    return service
-
-
-def _creer_activite(row, structure: dict, fiche_id: int, service_id: int, session: Session) -> ActiviteBudgetaire:
-    """Créer une activité budgétaire"""
-    code_libelle_col = structure["colonnes"]["code_libelle"]
-    libelle = str(row[code_libelle_col]).strip()
-    
-    # Extraire le code
-    code = libelle.split()[1] if len(libelle.split()) > 1 else f"ACT_{len(session.exec(select(ActiviteBudgetaire)).all()) + 1}"
-    
-    activite = ActiviteBudgetaire(
-        fiche_technique_id=fiche_id,
-        service_beneficiaire_id=service_id,
-        code=code,
-        libelle=libelle,
-        budget_vote_n=Decimal("0"),
-        budget_actuel_n=Decimal("0"),
-        enveloppe_n_plus_1=Decimal("0"),
-        complement_solicite=Decimal("0"),
-        budget_souhaite=Decimal("0"),
-        engagement_etat=Decimal("0"),
-        autre_complement=Decimal("0"),
-        projet_budget_n_plus_1=Decimal("0"),
-        justificatifs=None
-    )
-    
-    session.add(activite)
-    session.commit()
-    session.refresh(activite)
-    return activite
-
-
-def _recalculer_totaux_hierarchie(fiche_id: int, session: Session):
-    """Recalculer tous les totaux de la hiérarchie (des lignes vers le haut)"""
-    
-    # 1. Recalculer les totaux des Activités (somme de leurs lignes)
-    activites = session.exec(
-        select(ActiviteBudgetaire).where(ActiviteBudgetaire.fiche_technique_id == fiche_id)
-    ).all()
-    
-    for activite in activites:
-        lignes = session.exec(
-            select(LigneBudgetaireDetail).where(LigneBudgetaireDetail.activite_id == activite.id)
-        ).all()
-        
-        activite.budget_vote_n = sum(l.budget_vote_n for l in lignes)
-        activite.budget_actuel_n = sum(l.budget_actuel_n for l in lignes)
-        activite.enveloppe_n_plus_1 = sum(l.enveloppe_n_plus_1 for l in lignes)
-        activite.complement_solicite = sum(l.complement_solicite for l in lignes)
-        activite.budget_souhaite = sum(l.budget_souhaite for l in lignes)
-        activite.engagement_etat = sum(l.engagement_etat for l in lignes)
-        activite.autre_complement = sum(l.autre_complement for l in lignes)
-        activite.projet_budget_n_plus_1 = sum(l.projet_budget_n_plus_1 for l in lignes)
-        session.add(activite)
-    
-    session.commit()
-    
-    # 2. Recalculer les totaux des Actions (somme de leurs activités)
-    actions = session.exec(
-        select(ActionBudgetaire).where(ActionBudgetaire.fiche_technique_id == fiche_id)
-    ).all()
-    
-    for action in actions:
-        activites_action = session.exec(
-            select(ActiviteBudgetaire)
-            .join(ServiceBeneficiaire)
-            .where(ServiceBeneficiaire.action_id == action.id)
-        ).all()
-        
-        action.budget_vote_n = sum(a.budget_vote_n for a in activites_action)
-        action.budget_actuel_n = sum(a.budget_actuel_n for a in activites_action)
-        action.enveloppe_n_plus_1 = sum(a.enveloppe_n_plus_1 for a in activites_action)
-        action.complement_solicite = sum(a.complement_solicite for a in activites_action)
-        action.budget_souhaite = sum(a.budget_souhaite for a in activites_action)
-        action.engagement_etat = sum(a.engagement_etat for a in activites_action)
-        action.autre_complement = sum(a.autre_complement for a in activites_action)
-        action.projet_budget_n_plus_1 = sum(a.projet_budget_n_plus_1 for a in activites_action)
-        session.add(action)
-    
-    session.commit()
-    
-    # 3. Mettre à jour le budget total de la fiche
-    # Rafraîchir les actions depuis la DB pour avoir les valeurs à jour
-    session.expire_all()  # Force le rafraîchissement de tous les objets
-    
-    actions_fresh = session.exec(
-        select(ActionBudgetaire).where(ActionBudgetaire.fiche_technique_id == fiche_id)
-    ).all()
-    
-    fiche = session.get(FicheTechnique, fiche_id)
-    if fiche:
-        budget_total = sum(a.budget_souhaite for a in actions_fresh)
-        fiche.budget_total_demande = budget_total
-        session.add(fiche)
-        session.commit()
-        logger.info(f"📊 Budget total de la fiche {fiche_id} mis à jour: {budget_total:,.0f} FCFA (depuis {len(actions_fresh)} actions)")
-
-
-def _creer_ligne(row, structure: dict, fiche_id: int, activite_id: int, session: Session) -> LigneBudgetaireDetail:
-    """Créer une ligne budgétaire détaillée"""
-    code_libelle_col = structure["colonnes"]["code_libelle"]
-    libelle = str(row[code_libelle_col]).strip()
-    
-    # Extraire le code
-    code = libelle.split()[0] if len(libelle.split()) > 0 else f"LIG_{len(session.exec(select(LigneBudgetaireDetail)).all()) + 1}"
-    
-    ligne = LigneBudgetaireDetail(
-        fiche_technique_id=fiche_id,
-        activite_id=activite_id,
-        code=code,
-        libelle=libelle,
-        budget_vote_n=_get_montant(row, structure, "budget_vote_n"),
-        budget_actuel_n=_get_montant(row, structure, "budget_actuel_n"),
-        enveloppe_n_plus_1=_get_montant(row, structure, "enveloppe_n_plus_1"),
-        complement_solicite=_get_montant(row, structure, "complement_solicite"),
-        budget_souhaite=_get_montant(row, structure, "budget_souhaite"),
-        engagement_etat=_get_montant(row, structure, "engagement_etat"),
-        autre_complement=_get_montant(row, structure, "autre_complement"),
-        projet_budget_n_plus_1=_get_montant(row, structure, "projet_budget_n_plus_1"),
-        justificatifs=_get_texte(row, structure, "justificatifs")
-    )
-    
-    session.add(ligne)
-    session.commit()
-    session.refresh(ligne)
-    return ligne
-
-
-def _get_montant(row, structure: dict, field: str) -> Decimal:
-    """Extraire un montant d'une ligne Excel"""
-    col = structure["colonnes"].get(field)
-    if not col or col not in row:
-        return Decimal("0")
-    
-    try:
-        value = row[col]
-        if pd.isna(value) or value == "":
-            return Decimal("0")
-        return Decimal(str(value).replace(",", "").replace(" ", ""))
-    except:
-        return Decimal("0")
-
-
-def _get_texte(row, structure: dict, field: str) -> Optional[str]:
-    """Extraire un texte d'une ligne Excel"""
-    col = structure["colonnes"].get(field)
-    if not col or col not in row:
-        return None
-    
-    try:
-        value = row[col]
-        if pd.isna(value) or value == "":
-            return None
-        return str(value).strip()
-    except:
-        return None
 
 
 # ============================================
@@ -2281,7 +3051,7 @@ async def api_create_ligne(
             session.commit()
         
         # Recalculer les totaux de toute la hiérarchie
-        _recalculer_totaux_hierarchie(activite.fiche_technique_id, session)
+        FicheTechniqueService._recalculer_totaux_hierarchie(activite.fiche_technique_id, session)
         
         logger.info(f"✅ Ligne budgétaire {code} créée avec {documents_count} document(s) par {current_user.email}")
         return {
@@ -2425,7 +3195,7 @@ def api_update_ligne(
         session.commit()
         
         # Recalculer les totaux de toute la hiérarchie
-        _recalculer_totaux_hierarchie(ligne.fiche_technique_id, session)
+        FicheTechniqueService._recalculer_totaux_hierarchie(ligne.fiche_technique_id, session)
         
         logger.info(f"✅ Ligne budgétaire {ligne_id} modifiée par {current_user.email}")
         return {"ok": True, "message": "Ligne budgétaire modifiée avec succès"}
@@ -2470,7 +3240,7 @@ def api_delete_action(
         session.commit()
         
         # Recalculer les totaux
-        _recalculer_totaux_hierarchie(fiche_id, session)
+        FicheTechniqueService._recalculer_totaux_hierarchie(fiche_id, session)
         
         logger.info(f"✅ Action {action_id} supprimée par {current_user.email}")
         return {"ok": True, "message": "Action supprimée avec succès"}
@@ -2513,7 +3283,7 @@ def api_delete_service(
         session.commit()
         
         # Recalculer les totaux
-        _recalculer_totaux_hierarchie(fiche_id, session)
+        FicheTechniqueService._recalculer_totaux_hierarchie(fiche_id, session)
         
         logger.info(f"✅ Service {service_id} supprimé par {current_user.email}")
         return {"ok": True, "message": "Service supprimé avec succès"}
@@ -2556,7 +3326,7 @@ def api_delete_activite(
         session.commit()
         
         # Recalculer les totaux
-        _recalculer_totaux_hierarchie(fiche_id, session)
+        FicheTechniqueService._recalculer_totaux_hierarchie(fiche_id, session)
         
         logger.info(f"✅ Activité {activite_id} supprimée par {current_user.email}")
         return {"ok": True, "message": "Activité supprimée avec succès"}
@@ -2606,7 +3376,7 @@ def api_delete_ligne(
         session.commit()
         
         # Recalculer les totaux
-        _recalculer_totaux_hierarchie(fiche_id, session)
+        FicheTechniqueService._recalculer_totaux_hierarchie(fiche_id, session)
         
         logger.info(f"✅ Ligne budgétaire {ligne_id} et ses documents supprimés par {current_user.email}")
         return {"ok": True, "message": "Ligne budgétaire supprimée avec succès"}
@@ -2827,66 +3597,6 @@ def parse_date_flexible(value) -> Optional[date]:
     return None
 
 
-def find_metadata_row(df: pd.DataFrame) -> Optional[dict]:
-    """
-    Trouve la ligne de métadonnées (Exercice/Année, Période, etc.)
-    Inspiré de fxFindExerciceRow_Safe
-    """
-    search_terms = ['exercice', 'exercice:']
-    
-    for idx in range(min(20, len(df))):  # Scanner les 20 premières lignes
-        row_values = df.iloc[idx].astype(str).str.lower().str.strip()
-        
-        for term in search_terms:
-            if any(term in val for val in row_values if val):
-                # Ligne trouvée, extraire les métadonnées
-                row_data = df.iloc[idx]
-                metadata = {}
-                
-                for col_idx, val in enumerate(row_data):
-                    val_str = str(val).strip()
-                    if ':' in val_str:
-                        parts = val_str.split(':', 1)
-                        key = normalize_text(parts[0])
-                        value = parts[1].strip() if len(parts) > 1 else ""
-                        
-                        if 'exercice' in key or 'annee' in key:
-                            metadata['annee'] = value
-                        elif 'periode' in key:
-                            metadata['periode'] = value
-                        elif 'section' in key:
-                            metadata['section'] = value
-                        elif 'categorie' in key:
-                            metadata['categorie'] = value
-                        elif 'credit' in key or 'type' in key:
-                            metadata['type_credit'] = value
-                
-                return metadata
-    
-    return None
-
-
-def detect_hierarchy_depth(df: pd.DataFrame, start_row: int) -> int:
-    """
-    Détecte la profondeur de la hiérarchie (nombre de colonnes significatives)
-    Inspiré de fxFirstEmptyInRow
-    """
-    if start_row >= len(df):
-        return 6  # Par défaut
-    
-    row = df.iloc[start_row]
-    
-    # Compter les colonnes non vides
-    non_empty = 0
-    for val in row:
-        if pd.notna(val) and str(val).strip() != '':
-            non_empty += 1
-        else:
-            break  # Première colonne vide trouvée
-    
-    return max(3, min(6, non_empty))  # Entre 3 et 6
-
-
 def standardize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     """
     Renomme automatiquement les colonnes financières
@@ -3017,6 +3727,333 @@ def budget_sigobe(
             current_user=current_user
         )
     )
+
+
+@router.get("/sigobe/{chargement_id}/table", response_class=HTMLResponse)
+def budget_sigobe_table(
+    chargement_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Page de détail d'un chargement SIGOBE avec table éditable"""
+    
+    # Récupérer le chargement
+    chargement = session.get(SigobeChargement, chargement_id)
+    if not chargement:
+        raise HTTPException(404, "Chargement SIGOBE non trouvé")
+    
+    # Récupérer les lignes d'exécution
+    executions = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.chargement_id == chargement_id)
+        .order_by(SigobeExecution.programmes, SigobeExecution.actions, SigobeExecution.activites, SigobeExecution.taches)
+    ).all()
+    
+    # Extraire les valeurs uniques pour les filtres
+    programmes = sorted(set(e.programmes for e in executions if e.programmes))
+    actions = sorted(set(e.actions for e in executions if e.actions))
+    types_depense = sorted(set(e.type_depense for e in executions if e.type_depense))
+    
+    return templates.TemplateResponse(
+        "pages/budget_sigobe_table.html",
+        get_template_context(
+            request,
+            chargement=chargement,
+            executions=executions,
+            programmes=programmes,
+            actions=actions,
+            types_depense=types_depense
+        )
+    )
+
+
+@router.get("/api/telecharger-template-sigobe")
+async def api_telecharger_template_sigobe(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Télécharger un modèle Excel vierge pour les données SIGOBE
+    """
+    try:
+        # Créer un classeur Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "SIGOBE - Situation Exécution"
+        
+        # Définir les styles
+        header_fill = PatternFill(start_color="FF8C00", end_color="FF8C00", fill_type="solid")  # Orange
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        example_fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        total_action_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")  # Bleu clair
+        total_programme_fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")  # Or
+        total_general_fill = PatternFill(start_color="FF6B6B", end_color="FF6B6B", fill_type="solid")  # Rouge
+        total_font = Font(bold=True, size=10)
+        total_general_font = Font(bold=True, size=11, color="FFFFFF")
+        border_style = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Définir les en-têtes de colonnes SIGOBE (hiérarchie + finances)
+        headers = [
+            "PROGRAMMES",
+            "ACTIONS",
+            "RPROG",
+            "TYPE DEPENSE",
+            "ACTIVITES",
+            "TACHES",
+            "BUDGET VOTE",
+            "BUDGET ACTUEL",
+            "ENGAGEMENTS EMIS",
+            "DISPONIBLE ENG",
+            "MANDATS EMIS",
+            "MANDATS VISE CF",
+            "MANDATS PEC"
+        ]
+        
+        # Écrire les en-têtes (ligne 1 directement, sans titre pour éviter confusion au parsing)
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = border_style
+        
+        # Ajuster la largeur des colonnes
+        # Colonnes hiérarchiques (A-F) plus larges
+        for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+            ws.column_dimensions[col].width = 30
+        # Colonnes financières (G-M) 
+        for col in ['G', 'H', 'I', 'J', 'K', 'L', 'M']:
+            ws.column_dimensions[col].width = 18
+        
+        # Ajouter des exemples avec la hiérarchie complète (13 colonnes)
+        # Format: (PROGRAMMES, ACTIONS, RPROG, TYPE DEPENSE, ACTIVITES, TACHES, BUDGET VOTE, BUDGET ACTUEL, ENGAGEMENTS EMIS, DISPONIBLE ENG, MANDATS EMIS, MANDATS VISE CF, MANDATS PEC)
+        exemples = [           
+            # ===== PROGRAMME 001 : PILOTAGE ET COORDINATION =====
+            ("Programme 001 - Pilotage et Coordination", "", "", "", "", "", "", "", "", "", "", "", ""),
+            
+            # Action 1.1
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "", "", "", "", "", "", "", "", ""),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "Activité 1.1.1 - Gestion courante", "", "50000000", "48000000", "35000000", "13000000", "30000000", "28000000", "25000000"),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "Activité 1.1.1 - Gestion courante", "Tâche 1.1.1.1 - Fournitures de bureau", "10000000", "9500000", "7000000", "2500000", "6000000", "5500000", "5000000"),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "Activité 1.1.1 - Gestion courante", "Tâche 1.1.1.2 - Matériel informatique", "15000000", "14500000", "10000000", "4500000", "8500000", "8000000", "7500000"),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "Activité 1.1.1 - Gestion courante", "Tâche 1.1.1.3 - Entretien des locaux", "25000000", "24000000", "18000000", "6000000", "16000000", "14500000", "12500000"),
+            
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "Activité 1.1.2 - Communication institutionnelle", "", "30000000", "29000000", "20000000", "9000000", "18000000", "17000000", "15000000"),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "Activité 1.1.2 - Communication institutionnelle", "Tâche 1.1.2.1 - Supports de communication", "12000000", "11500000", "8000000", "3500000", "7000000", "6500000", "6000000"),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.1 - Coordination administrative", "RPROG-001", "Fonctionnement", "Activité 1.1.2 - Communication institutionnelle", "Tâche 1.1.2.2 - Événements institutionnels", "18000000", "17500000", "12000000", "5500000", "11000000", "10500000", "9000000"),
+            
+            # TOTAL Action 1.1
+            ("Programme 001 - Pilotage et Coordination", "TOTAL Action 1.1 - Coordination administrative", "", "", "", "", "80000000", "77000000", "55000000", "22000000", "48000000", "45000000", "40000000"),
+            
+            # Action 1.2
+            ("Programme 001 - Pilotage et Coordination", "Action 1.2 - Suivi et évaluation", "", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.2 - Suivi et évaluation", "RPROG-001", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.2 - Suivi et évaluation", "RPROG-001", "Fonctionnement", "", "", "", "", "", "", "", "", ""),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.2 - Suivi et évaluation", "RPROG-001", "Fonctionnement", "Activité 1.2.1 - Suivi des performances", "", "20000000", "19500000", "14000000", "5500000", "12000000", "11500000", "10000000"),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.2 - Suivi et évaluation", "RPROG-001", "Fonctionnement", "Activité 1.2.1 - Suivi des performances", "Tâche 1.2.1.1 - Indicateurs de performance", "8000000", "7800000", "5500000", "2300000", "5000000", "4800000", "4200000"),
+            ("Programme 001 - Pilotage et Coordination", "Action 1.2 - Suivi et évaluation", "RPROG-001", "Fonctionnement", "Activité 1.2.1 - Suivi des performances", "Tâche 1.2.1.2 - Rapports d'activité", "12000000", "11700000", "8500000", "3200000", "7000000", "6700000", "5800000"),
+            
+            # TOTAL Action 1.2
+            ("Programme 001 - Pilotage et Coordination", "TOTAL Action 1.2 - Suivi et évaluation", "", "", "", "", "20000000", "19500000", "14000000", "5500000", "12000000", "11500000", "10000000"),
+            
+            # TOTAL PROGRAMME 001
+            ("TOTAL Programme 001 - Pilotage et Coordination", "", "", "", "", "", "100000000", "96500000", "69000000", "27500000", "60000000", "57500000", "50000000"),
+            
+            # ===== PROGRAMME 002 : DÉVELOPPEMENT STRATÉGIQUE =====
+            ("Programme 002 - Développement Stratégique", "", "", "", "", "", "", "", "", "", "", "", ""),
+            
+            # Action 2.1
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "Fonctionnement", "", "", "", "", "", "", "", "", ""),
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "Fonctionnement", "Activité 2.1.1 - Analyses sectorielles", "", "25000000", "24000000", "18000000", "6000000", "15000000", "14000000", "13000000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "Fonctionnement", "Activité 2.1.1 - Analyses sectorielles", "Tâche 2.1.1.1 - Études de marché", "12000000", "11500000", "9000000", "2500000", "7500000", "7000000", "6500000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "Fonctionnement", "Activité 2.1.1 - Analyses sectorielles", "Tâche 2.1.1.2 - Consultations externes", "13000000", "12500000", "9000000", "3500000", "7500000", "7000000", "6500000"),
+            
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "Fonctionnement", "Activité 2.1.2 - Planification stratégique", "", "35000000", "34000000", "25000000", "9000000", "22000000", "20000000", "18000000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "Fonctionnement", "Activité 2.1.2 - Planification stratégique", "Tâche 2.1.2.1 - Élaboration des plans", "20000000", "19500000", "14000000", "5500000", "12000000", "11000000", "10000000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.1 - Études et planification", "RPROG-002", "Fonctionnement", "Activité 2.1.2 - Planification stratégique", "Tâche 2.1.2.2 - Ateliers de validation", "15000000", "14500000", "11000000", "3500000", "10000000", "9000000", "8000000"),
+            
+            # TOTAL Action 2.1
+            ("Programme 002 - Développement Stratégique", "TOTAL Action 2.1 - Études et planification", "", "", "", "", "60000000", "58000000", "43000000", "15000000", "37000000", "34000000", "31000000"),
+            
+            # Action 2.2
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "Investissement", "", "", "", "", "", "", "", "", ""),
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "Investissement", "Activité 2.2.1 - Infrastructures", "", "80000000", "78000000", "55000000", "23000000", "50000000", "48000000", "45000000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "Investissement", "Activité 2.2.1 - Infrastructures", "Tâche 2.2.1.1 - Construction bâtiments", "50000000", "49000000", "35000000", "14000000", "32000000", "31000000", "29000000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "Investissement", "Activité 2.2.1 - Infrastructures", "Tâche 2.2.1.2 - Équipements techniques", "30000000", "29000000", "20000000", "9000000", "18000000", "17000000", "16000000"),
+            
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "Investissement", "Activité 2.2.2 - Équipements informatiques", "", "45000000", "44000000", "32000000", "12000000", "28000000", "27000000", "25000000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "Investissement", "Activité 2.2.2 - Équipements informatiques", "Tâche 2.2.2.1 - Serveurs et réseaux", "25000000", "24500000", "18000000", "6500000", "16000000", "15500000", "14500000"),
+            ("Programme 002 - Développement Stratégique", "Action 2.2 - Mise en œuvre des projets", "RPROG-002", "Investissement", "Activité 2.2.2 - Équipements informatiques", "Tâche 2.2.2.2 - Postes de travail", "20000000", "19500000", "14000000", "5500000", "12000000", "11500000", "10500000"),
+            
+            # TOTAL Action 2.2
+            ("Programme 002 - Développement Stratégique", "TOTAL Action 2.2 - Mise en œuvre des projets", "", "", "", "", "125000000", "122000000", "87000000", "35000000", "78000000", "75000000", "70000000"),
+            
+            # TOTAL PROGRAMME 002
+            ("TOTAL Programme 002 - Développement Stratégique", "", "", "", "", "", "185000000", "180000000", "130000000", "50000000", "115000000", "109000000", "101000000"),
+            
+            # ===== PROGRAMME 003 : RESSOURCES HUMAINES =====
+            ("Programme 003 - Gestion des Ressources Humaines", "", "", "", "", "", "", "", "", "", "", "", ""),
+            
+            # Action 3.1
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "", "", "", "", "", "", "", "", "", ""),
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "Fonctionnement", "", "", "", "", "", "", "", "", ""),
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "Fonctionnement", "Activité 3.1.1 - Formation continue", "", "40000000", "38500000", "28000000", "10500000", "25000000", "24000000", "22000000"),
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "Fonctionnement", "Activité 3.1.1 - Formation continue", "Tâche 3.1.1.1 - Formations techniques", "25000000", "24000000", "17500000", "6500000", "15000000", "14500000", "13500000"),
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "Fonctionnement", "Activité 3.1.1 - Formation continue", "Tâche 3.1.1.2 - Formations managériales", "15000000", "14500000", "10500000", "4000000", "10000000", "9500000", "8500000"),
+            
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "Fonctionnement", "Activité 3.1.2 - Recrutement", "", "15000000", "14800000", "10000000", "4800000", "8500000", "8200000", "7500000"),
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "Fonctionnement", "Activité 3.1.2 - Recrutement", "Tâche 3.1.2.1 - Procédures de sélection", "10000000", "9800000", "7000000", "2800000", "6000000", "5800000", "5300000"),
+            ("Programme 003 - Gestion des Ressources Humaines", "Action 3.1 - Formation et développement", "RPROG-003", "Fonctionnement", "Activité 3.1.2 - Recrutement", "Tâche 3.1.2.2 - Tests et évaluations", "5000000", "5000000", "3000000", "2000000", "2500000", "2400000", "2200000"),
+            
+            # TOTAL Action 3.1
+            ("Programme 003 - Gestion des Ressources Humaines", "TOTAL Action 3.1 - Formation et développement", "", "", "", "", "55000000", "53300000", "38000000", "15300000", "33500000", "32200000", "29500000"),
+            
+            # TOTAL PROGRAMME 003
+            ("TOTAL Programme 003 - Gestion des Ressources Humaines", "", "", "", "", "", "55000000", "53300000", "38000000", "15300000", "33500000", "32200000", "29500000"),
+            
+            # ===== TOTAL GÉNÉRAL =====
+            ("", "", "", "", "", "", "", "", "", "", "", "", ""),
+            ("TOTAL GÉNÉRAL - TOUS PROGRAMMES", "", "", "", "", "", "340000000", "329800000", "237000000", "92800000", "208500000", "198700000", "180500000"),
+        ]
+        
+        current_row = 2
+        for exemple in exemples:
+            # Déterminer le type de ligne pour le style
+            first_value = str(exemple[0]) if exemple[0] else ""
+            second_value = str(exemple[1]) if len(exemple) > 1 and exemple[1] else ""
+            
+            is_total_action = second_value.startswith("TOTAL Action")
+            is_total_programme = first_value.startswith("TOTAL Programme")
+            is_total_general = first_value.startswith("TOTAL GÉNÉRAL")
+            
+            for col_num, value in enumerate(exemple, 1):
+                cell = ws.cell(row=current_row, column=col_num)
+                cell.value = value
+                cell.border = border_style
+                
+                # Appliquer les styles selon le type de ligne
+                if is_total_general:
+                    cell.fill = total_general_fill
+                    cell.font = total_general_font
+                elif is_total_programme:
+                    cell.fill = total_programme_fill
+                    cell.font = total_font
+                elif is_total_action:
+                    cell.fill = total_action_fill
+                    cell.font = total_font
+                elif current_row > 2:
+                    cell.fill = example_fill
+                
+                # Aligner les nombres à droite (colonnes financières G-M = 7-13)
+                if col_num > 6 and value and value != "":
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                    cell.number_format = '#,##0'
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+            
+            current_row += 1
+        
+        # Ajouter une feuille d'instructions
+        ws_instructions = wb.create_sheet("📋 Instructions")
+        ws_instructions.column_dimensions['A'].width = 80
+        
+        instructions = [
+            ("MODÈLE SIGOBE - SITUATION D'EXÉCUTION BUDGÉTAIRE", header_font, header_fill),
+            ("", None, None),
+            ("📊 STRUCTURE HIÉRARCHIQUE (Colonnes A-F)", Font(bold=True, size=12), None),
+            ("", None, None),
+            ("1. PROGRAMMES : Libellé du programme budgétaire", None, example_fill),
+            ("2. ACTIONS : Libellé de l'action (sous le programme)", None, example_fill),
+            ("3. RPROG : Code du responsable de programme", None, example_fill),
+            ("4. TYPE DEPENSE : Type de dépense (Fonctionnement, Investissement, etc.)", None, example_fill),
+            ("5. ACTIVITES : Libellé de l'activité", None, example_fill),
+            ("6. TACHES : Libellé de la tâche (niveau le plus détaillé)", None, example_fill),
+            ("", None, None),
+            ("💰 COLONNES FINANCIÈRES (Colonnes G-M)", Font(bold=True, size=12), None),
+            ("", None, None),
+            ("7. BUDGET VOTE : Montant du budget voté", None, None),
+            ("8. BUDGET ACTUEL : Montant du budget actuel (après modifications)", None, None),
+            ("9. ENGAGEMENTS EMIS : Montant des engagements émis", None, None),
+            ("10. DISPONIBLE ENG : Montant disponible pour engagement", None, None),
+            ("11. MANDATS EMIS : Montant des mandats émis", None, None),
+            ("12. MANDATS VISE CF : Mandats visés par le contrôle financier", None, None),
+            ("13. MANDATS PEC : Mandats pris en charge", None, None),
+            ("", None, None),
+            ("", None, None),
+            ("⚠️ RÈGLES IMPORTANTES", Font(bold=True, size=12, color="DC3545"), None),
+            ("", None, None),
+            ("✅ RÉPÉTEZ la hiérarchie parente sur chaque ligne pour faciliter le tri/filtrage", None, None),
+            ("✅ Chaque niveau hiérarchique a sa propre colonne (une colonne = un niveau)", None, None),
+            ("✅ Sur une ligne, remplissez TOUS les niveaux parents + le niveau actuel", None, None),
+            ("✅ Les montants doivent être des nombres entiers (sans espace ni symbole)", None, None),
+            ("✅ Supprimez TOUTES les lignes d'exemples en gris avant l'import", None, None),
+            ("", None, None),
+            ("", None, None),
+            ("💡 EXEMPLE DE HIÉRARCHIE COMPLÈTE", Font(bold=True, size=12, color="28A745"), None),
+            ("", None, None),
+            ("Pour une tâche au niveau le plus détaillé, RÉPÉTEZ tous les niveaux parents :", None, None),
+            ("", None, None),
+            ("Ligne Programme : [Programme 001] [vide] [vide] [vide] [vide] [vide] [montants...]", None, None),
+            ("Ligne Action    : [Programme 001] [Action 1.1] [vide] [vide] [vide] [vide] [montants...]", None, None),
+            ("Ligne RPROG     : [Programme 001] [Action 1.1] [RPROG-001] [vide] [vide] [vide] [montants...]", None, None),
+            ("Ligne Type Dép. : [Programme 001] [Action 1.1] [RPROG-001] [Fonctionnement] [vide] [vide] [montants...]", None, None),
+            ("Ligne Activité  : [Programme 001] [Action 1.1] [RPROG-001] [Fonctionnement] [Activité 1.1.1] [vide] [montants...]", None, None),
+            ("Ligne Tâche     : [Programme 001] [Action 1.1] [RPROG-001] [Fonctionnement] [Activité 1.1.1] [Tâche 1.1.1.1] [montants...]", None, None),
+            ("", None, None),
+            ("⚡ AVANTAGES : Chaque ligne est autonome et peut être triée/filtrée facilement dans Excel", None, None),
+            ("", None, None),
+            ("", None, None),
+            (f"📅 Modèle généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", Font(italic=True, size=9), None),
+        ]
+        
+        for row_num, (text, font, fill) in enumerate(instructions, 1):
+            cell = ws_instructions.cell(row=row_num, column=1)
+            cell.value = text
+            if font:
+                cell.font = font
+            if fill:
+                cell.fill = fill
+            cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        
+        # Figer la première ligne (en-têtes uniquement, pas de titre)
+        ws.freeze_panes = "A2"
+        
+        # Sauvegarder dans un buffer
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        # Log de l'activité
+        logger.info(f"📥 Template SIGOBE téléchargé par {current_user.email}")
+        
+        # Retourner le fichier
+        filename = f"Modele_SIGOBE.xlsx"
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Erreur génération template SIGOBE: {e}")
+        raise HTTPException(500, f"Erreur lors de la génération du modèle: {str(e)}")
+
+
 @router.post("/api/sigobe/preview")
 async def api_sigobe_preview(
     fichier: UploadFile = File(...),
@@ -3033,8 +4070,8 @@ async def api_sigobe_preview(
         content = await fichier.read()
         excel_file = BytesIO(content)
         
-        # Réutiliser la même logique de parsing
-        Result, Metadatafile, ColsToKeep = _parse_sigobe_file(excel_file, annee, trimestre)
+        # Parser le fichier SIGOBE avec le service
+        Result, Metadatafile, ColsToKeep = SigobeService.parse_fichier_excel(excel_file, annee, trimestre)
         
         # Statistiques
         stats = {
@@ -3083,209 +4120,9 @@ async def api_sigobe_preview(
 
 def _parse_sigobe_file(excel_file: BytesIO, annee: int, trimestre: Optional[int]) -> tuple:
     """
-    Parse un fichier SIGOBE et retourne (DataFrame nettoyé, Métadonnées, ColsToKeep)
-    Fonction réutilisable pour preview et upload
+    Parse un fichier SIGOBE - Wrapper vers SigobeService
     """
-    # --- A. Charger le classeur et prendre la 1ʳᵉ feuille ---
-    Source = pd.ExcelFile(excel_file)
-    Raw = pd.read_excel(Source, sheet_name=0, header=None)
-    
-    logger.info(f"📊 [A] Classeur chargé, shape={Raw.shape}")
-    
-    # --- B. Métadonnées (robuste aux nulls) ---
-    Metadatafile = find_metadata_row(Raw)
-    if not Metadatafile:
-        Metadatafile = {}
-    
-    if 'annee' not in Metadatafile or not Metadatafile['annee']:
-        Metadatafile['annee'] = str(annee)
-    
-    logger.info(f"📋 [B] Métadonnées : {Metadatafile}")
-    
-    # --- C. Suppression des lignes 100 % vides ---
-    NonEmpty = Raw.dropna(how='all')
-    logger.info(f"🧹 [C] Lignes non vides : {len(NonEmpty)}")
-    
-    # --- D. Début des données (fxFirstEmptyFromBottom) ---
-    first_col = NonEmpty.iloc[:, 0]
-    empty_from_bottom_idx = None
-    
-    for i in range(len(first_col) - 1, -1, -1):
-        val = first_col.iloc[i]
-        if pd.isna(val) or str(val).strip() == '':
-            empty_from_bottom_idx = i
-            break
-    
-    if empty_from_bottom_idx is None:
-        empty_from_bottom_idx = 0
-    
-    PosRaw = empty_from_bottom_idx + 1
-    PosSafe = max(1, int(PosRaw))
-    KeepFromPos = NonEmpty.iloc[PosSafe - 1:]
-    
-    logger.info(f"📍 [D] Ligne d'en-têtes : {empty_from_bottom_idx}, PosSafe={PosSafe}")
-    
-    # --- F. Promotion des en-têtes ---
-    # ⚠️ D'abord promouvoir les en-têtes pour savoir combien de "Column" on a
-    Promoted = KeepFromPos.copy()
-    
-    new_col_names = []
-    col_counter = 1
-    
-    for i, col_val in enumerate(Promoted.iloc[0]):
-        if pd.isna(col_val) or str(col_val).strip() == '' or str(col_val).lower() == 'nan':
-            new_col_names.append(f"Column{col_counter}")
-            col_counter += 1
-        else:
-            new_col_names.append(str(col_val).strip())
-    
-    Promoted.columns = new_col_names
-    Promoted = Promoted.iloc[1:]
-    Promoted = Promoted.reset_index(drop=True)
-    
-    logger.info(f"🏷️ [F] En-têtes promus : {list(Promoted.columns[:10])}")
-    
-    # --- E. Détermination du nombre de colonnes utiles (fxFirstNonEmptyInRow) ---
-    # ⚠️ Compter le nombre de colonnes qui s'appellent "ColumnN" dans Promoted
-    # Car ces colonnes correspondent aux colonnes hiérarchiques sans nom
-    NbreCol_arenommer = sum(1 for col in Promoted.columns if col.startswith('Column'))
-    
-    logger.info(f"📏 [E] Nombre colonnes hiérarchiques (colonnes 'Column') : {NbreCol_arenommer}")
-    
-    # --- G. Sélection des lignes utiles (PivotCol) ---
-    pivot_col_index = max(2, NbreCol_arenommer - 1)
-    if pivot_col_index < len(Promoted.columns):
-        PivotCol = Promoted.columns[pivot_col_index]
-        OnlyData = Promoted[Promoted[PivotCol].notna() & (Promoted[PivotCol] != '')]
-    else:
-        OnlyData = Promoted
-    
-    logger.info(f"🎯 [G] Lignes après filtrage pivot : {len(OnlyData)}")
-    
-    # --- I. Renommage dynamique selon le niveau hiérarchique ---
-    HierarchyCols = ["Programmes", "Actions", "Rprog", "Type_depense", "Activites", "Taches"]
-    
-    # Si on a 5 colonnes "Column", on veut renommer les 5
-    # Donc DepthIndex = NbreCol_arenommer (pas -1)
-    DepthIndex = min(max(NbreCol_arenommer, 1), 6)
-    ColsToKeep = HierarchyCols[:DepthIndex]
-    
-    Pairs = {}
-    for i, col_name in enumerate(ColsToKeep):
-        column_name = f"Column{i+1}"
-        if column_name in OnlyData.columns:
-            Pairs[column_name] = col_name
-    
-    Base6 = OnlyData.rename(columns=Pairs)
-    logger.info(f"🔤 [I] Renommage hiérarchique : {Pairs} → ColsToKeep={ColsToKeep}")
-    
-    # --- J. Suppression colonnes taux/ratio (AVANT mapping !) ---
-    cols_to_drop = []
-    
-    for col in Base6.columns:
-        # Protéger les colonnes hiérarchiques
-        if any(col.startswith(h) for h in HierarchyCols):
-            continue
-        
-        col_lower = normalize_text(str(col))
-        
-        # Règle 1 : nom contient "tx", "taux", "ratio", "%"
-        if any(word in col_lower for word in ['tx', 'taux', 'ratio', '%', '(d=', 'd=']):
-            cols_to_drop.append(col)
-            continue
-        
-        # Règle 2 : valeurs numériques entre 0 et 1
-        try:
-            col_data = pd.to_numeric(Base6[col], errors='coerce')
-            valid_vals = col_data.dropna()
-            if len(valid_vals) > 0:
-                if ((valid_vals >= 0) & (valid_vals <= 1)).all():
-                    cols_to_drop.append(col)
-        except:
-            pass  # Si pas numérique, ignorer
-    
-    CleanRates = Base6.drop(columns=cols_to_drop, errors='ignore')
-    logger.info(f"🗑️ [J] Colonnes taux/ratios supprimées : {cols_to_drop}")
-    
-    # --- K. Métadonnées (pas de fusion) ---
-    WithMeta = CleanRates
-    logger.info(f"📊 [K] Métadonnées conservées séparément")
-    
-    # --- L. Mapping automatique des colonnes financières ---
-    Mapped = standardize_column_names(WithMeta)
-    
-    logger.info(f"🗺️ [L] Colonnes après mapping : {list(Mapped.columns)}")
-    
-    # --- M. Séparation des codes/libellés (SIMPLIFIÉ Python) ---
-    # En Python : pas besoin de créer 2 colonnes puis supprimer/renommer
-    # On applique directement : garder seulement le libellé (supprimer le code)
-    Canon = Mapped.copy()
-    
-    for col in ColsToKeep:
-        if col in Canon.columns:
-            # Appliquer split_code_libelle et garder seulement le libellé (index 1)
-            Canon[col] = Canon[col].apply(lambda x: split_code_libelle(x)[1] if pd.notna(x) else '')
-    
-    logger.info(f"✂️ [M] Codes supprimés, libellés conservés")
-    
-    # DEBUG : Exporter Canon en Excel pour inspection
-    try:
-        debug_path = Path(f"app/static/uploads/sigobe/debug_canon_{annee}.xlsx")
-        debug_path.parent.mkdir(parents=True, exist_ok=True)
-        Canon.to_excel(debug_path, index=False)
-        logger.info(f"🐛 [DEBUG] Table Canon exportée : {debug_path}")
-        logger.info(f"🐛 [DEBUG] Colonnes Canon : {list(Canon.columns)}")
-        logger.info(f"🐛 [DEBUG] Shape Canon : {Canon.shape}")
-        logger.info(f"🐛 [DEBUG] Dtypes Canon : {Canon.dtypes.to_dict()}")
-    except Exception as e:
-        logger.warning(f"⚠️ [DEBUG] Impossible d'exporter Canon : {e}")
-    
-    # --- N. Typage ---
-    # 1) Colonnes numériques (si présentes)
-    colsNum = ["Budget_Vote", "Budget_Actuel", "Engagements_Emis", 
-               "Disponible_Eng", "Mandats_Emis", "Mandats_Vise_CF", "Mandats_Pec"]
-    
-    for col in colsNum:
-        if col in Canon.columns:
-            try:
-                # Vérifier que c'est bien une Series et pas un DataFrame
-                col_data = Canon[col]
-                if isinstance(col_data, pd.Series):
-                    Canon[col] = pd.to_numeric(col_data, errors='coerce').fillna(0)
-                else:
-                    logger.warning(f"⚠️ [N] {col} n'est pas une Series, ignoré")
-            except Exception as e:
-                logger.warning(f"⚠️ [N] Erreur typage numérique {col} : {e}")
-    
-    # 2) Textes : colonnes hiérarchiques seulement
-    for col in ColsToKeep:
-        if col in Canon.columns:
-            try:
-                col_data = Canon[col]
-                if isinstance(col_data, pd.Series):
-                    Canon[col] = col_data.fillna('').astype(str).str.strip()
-                else:
-                    logger.warning(f"⚠️ [N] {col} n'est pas une Series, ignoré")
-            except Exception as e:
-                logger.warning(f"⚠️ [N] Erreur typage texte {col} : {e}")
-    
-    Final = Canon
-    logger.info(f"🔢 [N] Typage effectué")
-    
-    # --- O. Filtrage sur la dernière colonne hiérarchique ---
-    LastKey = ColsToKeep[-1] if ColsToKeep else None
-    
-    if LastKey and LastKey in Final.columns:
-        # Filtrer : garder seulement les lignes où LastKey n'est pas vide
-        # Convertir en string pour la comparaison
-        KeepRows = Final[Final[LastKey].notna() & (Final[LastKey].astype(str).str.strip() != '')]
-    else:
-        KeepRows = Final
-    
-    logger.info(f"🎯 [O] Filtrage final : {len(KeepRows)} lignes")
-    
-    # Retourner le DataFrame + métadonnées + colonnes hiérarchiques
-    return (KeepRows, Metadatafile, ColsToKeep)
+    return SigobeService.parse_fichier_excel(excel_file, annee, trimestre)
 
 
 @router.post("/api/sigobe/upload")
@@ -3304,8 +4141,8 @@ async def api_sigobe_upload(
         content = await fichier.read()
         excel_file = BytesIO(content)
         
-        # Parser le fichier (étapes A→O de PowerQuery)
-        Result, Metadatafile, ColsToKeep = _parse_sigobe_file(excel_file, annee, trimestre)
+        # Parser le fichier SIGOBE avec le service
+        Result, Metadatafile, ColsToKeep = SigobeService.parse_fichier_excel(excel_file, annee, trimestre)
         
         logger.info(f"✅ Parsing réussi : {len(Result)} lignes à importer")
         
@@ -3646,9 +4483,372 @@ def api_delete_sigobe(
         return {"ok": True, "message": "Chargement supprimé avec succès"}
     
     except Exception as e:
+        logger.error(f"❌ Erreur suppression SIGOBE {chargement_id}: {e}")
         session.rollback()
-        logger.error(f"❌ Erreur suppression chargement {chargement_id}: {e}")
+        raise HTTPException(500, f"Erreur lors de la suppression : {str(e)}")
+
+
+@router.get("/api/sigobe/executions/{execution_id}")
+def api_get_sigobe_execution(
+    execution_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Récupérer une ligne d'exécution SIGOBE"""
+    execution = session.get(SigobeExecution, execution_id)
+    if not execution:
+        raise HTTPException(404, "Ligne d'exécution non trouvée")
+    
+    return {
+        "ok": True,
+        "execution": {
+            "id": execution.id,
+            "programmes": execution.programmes,
+            "actions": execution.actions,
+            "rprog": execution.rprog,
+            "type_depense": execution.type_depense,
+            "activites": execution.activites,
+            "taches": execution.taches,
+            "budget_vote": float(execution.budget_vote),
+            "budget_actuel": float(execution.budget_actuel),
+            "engagements_emis": float(execution.engagements_emis),
+            "disponible_eng": float(execution.disponible_eng),
+            "mandats_emis": float(execution.mandats_emis),
+            "mandats_vise_cf": float(execution.mandats_vise_cf),
+            "mandats_pec": float(execution.mandats_pec)
+        }
+    }
+
+
+@router.put("/api/sigobe/executions/{execution_id}")
+async def api_update_sigobe_execution(
+    execution_id: int,
+    data: dict,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Modifier une ligne d'exécution SIGOBE"""
+    execution = session.get(SigobeExecution, execution_id)
+    if not execution:
+        raise HTTPException(404, "Ligne d'exécution non trouvée")
+    
+    try:
+        # Mettre à jour les montants financiers
+        execution.budget_vote = Decimal(str(data.get('budget_vote', 0)))
+        execution.budget_actuel = Decimal(str(data.get('budget_actuel', 0)))
+        execution.engagements_emis = Decimal(str(data.get('engagements_emis', 0)))
+        execution.disponible_eng = Decimal(str(data.get('disponible_eng', 0)))
+        execution.mandats_emis = Decimal(str(data.get('mandats_emis', 0)))
+        execution.mandats_vise_cf = Decimal(str(data.get('mandats_vise_cf', 0)))
+        execution.mandats_pec = Decimal(str(data.get('mandats_pec', 0)))
+        
+        session.add(execution)
+        session.commit()
+        
+        logger.info(f"✅ Ligne SIGOBE {execution_id} modifiée par {current_user.email}")
+        
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="update",
+            target_type="sigobe_execution",
+            description=f"Modification ligne SIGOBE {execution.taches or execution.activites or execution.actions}",
+            target_id=execution_id,
+            icon="✏️"
+        )
+        
+        return {"ok": True, "message": "Ligne modifiée avec succès"}
+    
+    except Exception as e:
+        logger.error(f"❌ Erreur modification ligne SIGOBE {execution_id}: {e}")
+        session.rollback()
+        raise HTTPException(500, f"Erreur lors de la modification : {str(e)}")
+
+
+@router.delete("/api/sigobe/executions/{execution_id}")
+def api_delete_sigobe_execution(
+    execution_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Supprimer une ligne d'exécution SIGOBE"""
+    execution = session.get(SigobeExecution, execution_id)
+    if not execution:
+        raise HTTPException(404, "Ligne d'exécution non trouvée")
+    
+    try:
+        tache_libelle = execution.taches or execution.activites or execution.actions or "ligne"
+        
+        session.delete(execution)
+        session.commit()
+        
+        logger.info(f"✅ Ligne SIGOBE {execution_id} supprimée par {current_user.email}")
+        
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="delete",
+            target_type="sigobe_execution",
+            description=f"Suppression ligne SIGOBE {tache_libelle}",
+            target_id=execution_id,
+            icon="🗑️"
+        )
+        
+        return {"ok": True, "message": "Ligne supprimée avec succès"}
+    
+    except Exception as e:
+        session.rollback()
+        logger.error(f"❌ Erreur suppression ligne SIGOBE {execution_id}: {e}")
         raise HTTPException(500, f"Erreur lors de la suppression: {str(e)}")
+
+
+@router.get("/api/sigobe/{chargement_id}/export/excel")
+def api_export_sigobe_excel(
+    chargement_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Exporter un chargement SIGOBE en Excel avec la même mise en forme que le template
+    """
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        raise HTTPException(500, "openpyxl n'est pas installé")
+    
+    # Récupérer le chargement
+    chargement = session.get(SigobeChargement, chargement_id)
+    if not chargement:
+        raise HTTPException(404, "Chargement SIGOBE non trouvé")
+    
+    # Récupérer toutes les lignes d'exécution
+    executions = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.chargement_id == chargement_id)
+        .order_by(SigobeExecution.programmes, SigobeExecution.actions, SigobeExecution.activites, SigobeExecution.taches)
+    ).all()
+    
+    # Créer le classeur Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"SIGOBE {chargement.periode_libelle}"
+    
+    # Styles
+    header_fill = PatternFill(start_color="FF8C00", end_color="FF8C00", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    data_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    total_action_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")
+    total_programme_fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+    total_general_fill = PatternFill(start_color="FF6B6B", end_color="FF6B6B", fill_type="solid")
+    total_font = Font(bold=True, size=10)
+    total_general_font = Font(bold=True, size=11, color="FFFFFF")
+    border_style = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # En-têtes
+    headers = [
+        "PROGRAMMES",
+        "ACTIONS",
+        "RPROG",
+        "TYPE DEPENSE",
+        "ACTIVITES",
+        "TACHES",
+        "BUDGET VOTE",
+        "BUDGET ACTUEL",
+        "ENGAGEMENTS EMIS",
+        "DISPONIBLE ENG",
+        "MANDATS EMIS",
+        "MANDATS VISE CF",
+        "MANDATS PEC"
+    ]
+    
+    current_row = 1
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=current_row, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = border_style
+    
+    # Ajuster largeurs
+    for col in ['A', 'B', 'C', 'D', 'E', 'F']:
+        ws.column_dimensions[col].width = 30
+    for col in ['G', 'H', 'I', 'J', 'K', 'L', 'M']:
+        ws.column_dimensions[col].width = 18
+    
+    current_row = 2
+    
+    # Organiser par hiérarchie
+    from collections import defaultdict
+    programmes_dict = defaultdict(lambda: defaultdict(list))
+    
+    for exec in executions:
+        prog = exec.programmes or "Sans programme"
+        action = exec.actions or "Sans action"
+        programmes_dict[prog][action].append(exec)
+    
+    # Totaux globaux
+    totaux_generaux = {
+        'vote': 0, 'actuel': 0, 'engagements': 0, 'disponible': 0,
+        'mandats': 0, 'mandats_vise': 0, 'mandats_pec': 0
+    }
+    
+    # Écrire les données avec hiérarchie
+    for programme, actions_dict in sorted(programmes_dict.items()):
+        # Ligne Programme
+        cell = ws.cell(row=current_row, column=1)
+        cell.value = programme
+        cell.fill = total_programme_fill
+        cell.font = total_font
+        cell.border = border_style
+        for col in range(2, 14):
+            ws.cell(row=current_row, column=col).border = border_style
+            ws.cell(row=current_row, column=col).fill = total_programme_fill
+        current_row += 1
+        
+        totaux_programme = {
+            'vote': 0, 'actuel': 0, 'engagements': 0, 'disponible': 0,
+            'mandats': 0, 'mandats_vise': 0, 'mandats_pec': 0
+        }
+        
+        for action, execs in sorted(actions_dict.items()):
+            # Ligne Action
+            cell = ws.cell(row=current_row, column=2)
+            cell.value = action
+            cell.fill = total_action_fill
+            cell.font = total_font
+            cell.border = border_style
+            ws.cell(row=current_row, column=1).border = border_style
+            for col in range(3, 14):
+                ws.cell(row=current_row, column=col).border = border_style
+                ws.cell(row=current_row, column=col).fill = total_action_fill
+            current_row += 1
+            
+            # Lignes d'exécution (tâches)
+            for exec in execs:
+                row_data = [
+                    exec.programmes or '',
+                    exec.actions or '',
+                    exec.rprog or '',
+                    exec.type_depense or '',
+                    exec.activites or '',
+                    exec.taches or '',
+                    float(exec.budget_vote or 0),
+                    float(exec.budget_actuel or 0),
+                    float(exec.engagements_emis or 0),
+                    float(exec.disponible_eng or 0),
+                    float(exec.mandats_emis or 0),
+                    float(exec.mandats_vise_cf or 0),
+                    float(exec.mandats_pec or 0)
+                ]
+                
+                for col_num, value in enumerate(row_data, 1):
+                    cell = ws.cell(row=current_row, column=col_num)
+                    cell.value = value
+                    cell.border = border_style
+                    
+                    if col_num > 6:  # Colonnes financières
+                        cell.alignment = Alignment(horizontal="right", vertical="center")
+                        cell.number_format = '#,##0'
+                    else:
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+                
+                # Accumuler totaux
+                totaux_programme['vote'] += float(exec.budget_vote or 0)
+                totaux_programme['actuel'] += float(exec.budget_actuel or 0)
+                totaux_programme['engagements'] += float(exec.engagements_emis or 0)
+                totaux_programme['disponible'] += float(exec.disponible_eng or 0)
+                totaux_programme['mandats'] += float(exec.mandats_emis or 0)
+                totaux_programme['mandats_vise'] += float(exec.mandats_vise_cf or 0)
+                totaux_programme['mandats_pec'] += float(exec.mandats_pec or 0)
+                
+                current_row += 1
+        
+        # Total Programme
+        row_data = [
+            f"TOTAL {programme}",
+            "", "", "", "", "",
+            totaux_programme['vote'],
+            totaux_programme['actuel'],
+            totaux_programme['engagements'],
+            totaux_programme['disponible'],
+            totaux_programme['mandats'],
+            totaux_programme['mandats_vise'],
+            totaux_programme['mandats_pec']
+        ]
+        
+        for col_num, value in enumerate(row_data, 1):
+            cell = ws.cell(row=current_row, column=col_num)
+            cell.value = value
+            cell.fill = total_programme_fill
+            cell.font = total_font
+            cell.border = border_style
+            if col_num > 6:
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.number_format = '#,##0'
+            else:
+                cell.alignment = Alignment(horizontal="left", vertical="center")
+        
+        # Accumuler totaux généraux
+        for key in totaux_generaux:
+            totaux_generaux[key] += totaux_programme[key]
+        
+        current_row += 1
+        current_row += 1  # Ligne vide
+    
+    # Total Général
+    row_data = [
+        "TOTAL GÉNÉRAL",
+        "", "", "", "", "",
+        totaux_generaux['vote'],
+        totaux_generaux['actuel'],
+        totaux_generaux['engagements'],
+        totaux_generaux['disponible'],
+        totaux_generaux['mandats'],
+        totaux_generaux['mandats_vise'],
+        totaux_generaux['mandats_pec']
+    ]
+    
+    for col_num, value in enumerate(row_data, 1):
+        cell = ws.cell(row=current_row, column=col_num)
+        cell.value = value
+        cell.fill = total_general_fill
+        cell.font = total_general_font
+        cell.border = border_style
+        if col_num > 6:
+            cell.alignment = Alignment(horizontal="right", vertical="center")
+            cell.number_format = '#,##0'
+        else:
+            cell.alignment = Alignment(horizontal="left", vertical="center")
+    
+    # Figer les en-têtes
+    ws.freeze_panes = "A2"
+    
+    # Sauvegarder dans un buffer
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    logger.info(f"✅ Excel exporté pour chargement SIGOBE {chargement_id}")
+    
+    # Nom du fichier
+    filename = f"SIGOBE_{chargement.periode_libelle.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
 
 
 @router.get("/api/sigobe/{chargement_id}/kpis")

@@ -140,6 +140,17 @@
 
 {% block scripts %}
 <script>
+// ========================================
+// FERMER L'OVERLAY AU CHARGEMENT
+// ========================================
+document.addEventListener('DOMContentLoaded', function() {
+  // S'assurer que l'overlay est fermé au chargement de la page
+  const overlay = document.getElementById('globalLoadingOverlay');
+  if (overlay) {
+    overlay.classList.remove('show');
+  }
+});
+
 // Générer automatiquement le code article
 async function genererCode() {
   const select = document.getElementById('categorie_id');
@@ -170,9 +181,8 @@ async function genererCode() {
 async function submitForm(event) {
   event.preventDefault();
   
-  // Afficher l'overlay
-  const overlay = document.getElementById('globalLoadingOverlay');
-  if (overlay) overlay.classList.add('show');
+  // Afficher l'overlay avec message personnalisé
+  showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
   
   const formData = new FormData(event.target);
   const articleId = formData.get('article_id');
@@ -192,6 +202,8 @@ async function submitForm(event) {
     const result = await response.json();
     
     if (result.success) {
+      // Changer le message de l'overlay pour la redirection
+      showGlobalLoading('Redirection...', 'Article enregistré avec succès');
       showSuccess(result.message);
       // L'overlay reste affiché pendant la redirection
       setTimeout(() => {
@@ -199,12 +211,12 @@ async function submitForm(event) {
       }, 800);
     } else {
       // Masquer l'overlay SEULEMENT en cas d'erreur
-      if (overlay) overlay.classList.remove('show');
+      hideGlobalLoading();
       showError(result.error);
     }
   } catch (error) {
     // Masquer l'overlay SEULEMENT en cas d'erreur
-    if (overlay) overlay.classList.remove('show');
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur lors de l\'enregistrement');
   }

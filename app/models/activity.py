@@ -28,6 +28,7 @@ class Activity(SQLModel, table=True):
     # Utilisateur qui a fait l'action
     user_id: Optional[int] = Field(default=None, index=True)
     user_email: str = Field(max_length=255)
+    user_full_name: Optional[str] = Field(default=None, max_length=255)
     
     # Type d'action
     action_type: str = Field(max_length=50, index=True)  # create, update, delete, login, logout, etc.

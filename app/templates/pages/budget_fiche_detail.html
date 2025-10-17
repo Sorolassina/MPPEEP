@@ -340,6 +340,11 @@
 
 {% block scripts %}
 <script>
+// Fermer l'overlay au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  hideGlobalLoading();
+});
+
 function ajouterLigne() {
   document.getElementById('ligneModal').classList.add('show');
 }

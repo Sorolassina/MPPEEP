@@ -67,9 +67,6 @@
     <button onclick="ouvrirModalAjouterLigne()" class="btn btn-action" style="background: linear-gradient(135deg, #6b7280, #4b5563);">
       ➕ Ajouter Ligne
     </button>
-    <button onclick="exporterPDF({{ fiche.id }})" class="btn btn-action" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
-      📥 Export PDF
-    </button>
     <button onclick="ouvrirModalChangerStatut()" class="btn btn-action" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
       🔄 Changer Statut
     </button>
@@ -96,16 +93,16 @@
       <tbody>
         {% for nature, actions_nature in actions_par_nature.items() %}
         <!-- Header Nature de Dépense -->
-        <tr style="background: #ffff00;">
-          <th colspan="11" style="text-align: center; font-weight: 700; color: #2c3e50; font-size: 0.9rem; padding: 0.5rem;">
+        <tr style="background: #FFD700;">
+          <th colspan="11" style="text-align: center; font-weight: 700; color: #2c3e50; font-size: 1rem; padding: 0.6rem;">
             {{ nature.upper() }}
           </th>
         </tr>
         
         {% for action in actions_nature %}
         <!-- Action -->
-        <tr class="row-action" data-action-id="{{ action.id }}">
-          <td><strong>{{ action.libelle.replace('- ', '').strip() }}</strong></td>
+        <tr class="row-action" data-action-id="{{ action.id }}" style="background: #9BC2E6;">
+          <td><strong>Action : {{ action.libelle.replace('Action :', '').replace('- Action :', '').replace('- ', '').strip() }}</strong></td>
           <td class="montant">{{ "{:,.0f}".format(action.budget_vote_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.budget_actuel_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.enveloppe_n_plus_1) }}</td>
@@ -116,71 +113,118 @@
           <td class="montant">{{ "{:,.0f}".format(action.projet_budget_n_plus_1) }}</td>
           <td style="max-width: 200px;">{{ action.justificatifs or '' }}</td>
           <td>
-            <button onclick="editerAction({{ action.id }})" class="action-icon" title="Modifier">✏️</button>
-            <button onclick="supprimerAction({{ action.id }})" class="action-icon" title="Supprimer">🗑️</button>
+            <div class="dropdown-actions">
+              <button class="action-menu-btn" onclick="toggleActionMenu(event, 'action-{{ action.id }}')" title="Actions">⋮</button>
+              <div class="action-menu" id="menu-action-action-{{ action.id }}">
+                <button onclick="editerAction({{ action.id }}); closeAllMenus();" class="action-menu-item">
+                  <span class="action-menu-icon">✏️</span>
+                  <span>Modifier</span>
+                </button>
+                <button onclick="supprimerAction({{ action.id }}); closeAllMenus();" class="action-menu-item action-menu-item-danger">
+                  <span class="action-menu-icon">🗑️</span>
+                  <span>Supprimer</span>
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
         
         {% for service in action.services %}
         <!-- Service Bénéficiaire -->
-        <tr class="row-service" data-service-id="{{ service.id }}"">
-          <td colspan="10" style="background: #ffc000; padding: 0.10rem 0.75rem; line-height: 1.2;">
-            <strong>{{ service.libelle.replace('- ', '').strip() }}</strong>
+        <tr class="row-service" data-service-id="{{ service.id }}">
+          <td colspan="10" style="background: #FFC000; padding: 0.5rem 0.75rem; line-height: 1.4;">
+            <strong>Service Bénéficiaire : {{ service.libelle.replace('Service Bénéficiaire :', '').replace('- Service Bénéficiaire :', '').replace('- ', '').strip() }}</strong>
           </td>
-          <td style="background: #ffc000; padding: 0.10rem;">
-            <button onclick="editerService({{ service.id }})" class="action-icon" title="Modifier">✏️</button>
-            <button onclick="supprimerService({{ service.id }})" class="action-icon" title="Supprimer">🗑️</button>
+          <td style="background: #FFC000; padding: 0.5rem;">
+            <div class="dropdown-actions">
+              <button class="action-menu-btn" onclick="toggleActionMenu(event, 'service-{{ service.id }}')" title="Actions">⋮</button>
+              <div class="action-menu" id="menu-action-service-{{ service.id }}">
+                <button onclick="editerService({{ service.id }}); closeAllMenus();" class="action-menu-item">
+                  <span class="action-menu-icon">✏️</span>
+                  <span>Modifier</span>
+                </button>
+                <button onclick="supprimerService({{ service.id }}); closeAllMenus();" class="action-menu-item action-menu-item-danger">
+                  <span class="action-menu-icon">🗑️</span>
+                  <span>Supprimer</span>
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
         
         {% for activite in service.activites %}
         <!-- Activité -->
-        <tr class="row-activite" data-activite-id="{{ activite.id }}">
-          <td><strong>{{ activite.libelle.replace('- ', '').strip() }}</strong></td>
+        <tr class="row-activite" data-activite-id="{{ activite.id }}" style="background: #92D050;">
+          <td><strong>Activité : {{ activite.libelle.replace('Activité :', '').replace('- Activité :', '').replace('- ', '').strip() }}</strong></td>
           <td class="montant">{{ "{:,.0f}".format(activite.budget_vote_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.budget_actuel_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.enveloppe_n_plus_1) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.complement_solicite) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.budget_souhaite) }}</td>
-          <td class="montant" style="background: #90EE90;">{{ "{:,.0f}".format(activite.engagement_etat) }}</td>
-          <td class="montant" style="background: #90EE90;">{{ "{:,.0f}".format(activite.autre_complement) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.engagement_etat) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.autre_complement) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.projet_budget_n_plus_1) }}</td>
           <td style="max-width: 200px;">{{ activite.justificatifs or '' }}</td>
           <td>
-            <button onclick="editerActivite({{ activite.id }})" class="action-icon" title="Modifier">✏️</button>
-            <button onclick="supprimerActivite({{ activite.id }})" class="action-icon" title="Supprimer">🗑️</button>
+            <div class="dropdown-actions">
+              <button class="action-menu-btn" onclick="toggleActionMenu(event, 'activite-{{ activite.id }}')" title="Actions">⋮</button>
+              <div class="action-menu" id="menu-action-activite-{{ activite.id }}">
+                <button onclick="editerActivite({{ activite.id }}); closeAllMenus();" class="action-menu-item">
+                  <span class="action-menu-icon">✏️</span>
+                  <span>Modifier</span>
+                </button>
+                <button onclick="supprimerActivite({{ activite.id }}); closeAllMenus();" class="action-menu-item action-menu-item-danger">
+                  <span class="action-menu-icon">🗑️</span>
+                  <span>Supprimer</span>
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
         
         {% for ligne in activite.lignes %}
         <!-- Ligne Budgétaire -->
-        <tr class="row-ligne" data-ligne-id="{{ ligne.id }}">
-          <td>{% if ligne.libelle.startswith(ligne.code) %}{{ ligne.libelle }}{% else %}{{ ligne.code }} - {{ ligne.libelle }}{% endif %}</td>
+        <tr class="row-ligne" data-ligne-id="{{ ligne.id }}" style="background: #FFFFFF;">
+          <td style="padding-left: 2rem;">{% if ligne.libelle.startswith(ligne.code) %}{{ ligne.libelle }}{% else %}{{ ligne.code }} - {{ ligne.libelle }}{% endif %}</td>
           <td class="montant">{{ "{:,.0f}".format(ligne.budget_vote_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(ligne.budget_actuel_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(ligne.enveloppe_n_plus_1) }}</td>
           <td class="montant">{{ "{:,.0f}".format(ligne.complement_solicite) }}</td>
-          <td class="montant" style="background: #ffff99;">{{ "{:,.0f}".format(ligne.budget_souhaite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(ligne.budget_souhaite) }}</td>
           <td class="montant">{{ "{:,.0f}".format(ligne.engagement_etat) }}</td>
           <td class="montant">{{ "{:,.0f}".format(ligne.autre_complement) }}</td>
           <td class="montant">{{ "{:,.0f}".format(ligne.projet_budget_n_plus_1) }}</td>
           <td style="max-width: 200px;">{{ ligne.justificatifs or '' }}</td>
           <td>
-            <button onclick="editerLigne({{ ligne.id }})" class="action-icon" title="Modifier">✏️</button>
-            <button onclick="gererDocuments({{ ligne.id }})" class="action-icon" title="Gérer les documents">📎</button>
-            <button onclick="supprimerLigne({{ ligne.id }})" class="action-icon" title="Supprimer">🗑️</button>
+            <div class="dropdown-actions">
+              <button class="action-menu-btn" onclick="toggleActionMenu(event, 'ligne-{{ ligne.id }}')" title="Actions">⋮</button>
+              <div class="action-menu" id="menu-action-ligne-{{ ligne.id }}">
+                <button onclick="editerLigne({{ ligne.id }}); closeAllMenus();" class="action-menu-item">
+                  <span class="action-menu-icon">✏️</span>
+                  <span>Modifier</span>
+                </button>
+                <button onclick="gererDocuments({{ ligne.id }}); closeAllMenus();" class="action-menu-item">
+                  <span class="action-menu-icon">📎</span>
+                  <span>Documents</span>
+                </button>
+                <button onclick="supprimerLigne({{ ligne.id }}); closeAllMenus();" class="action-menu-item action-menu-item-danger">
+                  <span class="action-menu-icon">🗑️</span>
+                  <span>Supprimer</span>
+                </button>
+              </div>
+            </div>
           </td>
         </tr>
         {% endfor %}
         
         <!-- Sous-total Activité -->
-        <tr style="background: #b8e6b8; font-weight: 700; border-top: 2px solid #92d050; font-size: 0.75rem;">
-          <td style="text-align: right; padding: 0.5rem 0.25rem;">SOUS-TOTAL ACTIVITÉ</td>
+        <tr style="background: #D4EDDA; font-weight: 700; border-top: 2px solid #92D050; font-size: 0.85rem;">
+          <td style="text-align: right; padding: 0.5rem 0.75rem; font-style: italic;">SOUS-TOTAL Activité : {{ activite.libelle.replace('Activité :', '').replace('- Activité :', '').replace('- ', '').strip() }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.budget_vote_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.budget_actuel_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.enveloppe_n_plus_1) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.complement_solicite) }}</td>
-          <td class="montant" style="background: #c3e6cb;">{{ "{:,.0f}".format(activite.budget_souhaite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(activite.budget_souhaite) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.engagement_etat) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.autre_complement) }}</td>
           <td class="montant">{{ "{:,.0f}".format(activite.projet_budget_n_plus_1) }}</td>
@@ -209,13 +253,13 @@
           {% set service_total_projet.value = service_total_projet.value + act.projet_budget_n_plus_1 %}
         {% endfor %}
         
-        <tr style="background: #ffe680; font-weight: 700; border-top: 2px solid #ffc000; font-size: 0.75rem;">
-          <td style="text-align: right; padding: 0.5rem 0.25rem;">SOUS-TOTAL SERVICE</td>
+        <tr style="background: #FFF3CD; font-weight: 700; border-top: 2px solid #FFC000; font-size: 0.9rem;">
+          <td style="text-align: right; padding: 0.6rem 0.75rem; font-style: italic;">SOUS-TOTAL Service : {{ service.libelle.replace('Service Bénéficiaire :', '').replace('- Service Bénéficiaire :', '').replace('- ', '').strip() }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_vote.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_actuel.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_enveloppe.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_complement.value) }}</td>
-          <td class="montant" style="background: #ffe69c;">{{ "{:,.0f}".format(service_total_souhaite.value) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(service_total_souhaite.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_engagement.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_autre.value) }}</td>
           <td class="montant">{{ "{:,.0f}".format(service_total_projet.value) }}</td>
@@ -224,13 +268,13 @@
         {% endfor %}
         
         <!-- Sous-total Action -->
-        <tr style="background: #d9e9f7; font-weight: 700; font-size: 0.75rem; border-top: 2px solid #9bc2e6;">
-          <td style="text-align: right; padding: 0.5rem 0.25rem;">SOUS-TOTAL ACTION</td>
+        <tr style="background: #CCE5FF; font-weight: 700; font-size: 0.95rem; border-top: 2px solid #9BC2E6;">
+          <td style="text-align: right; padding: 0.6rem 0.75rem; font-style: italic;">SOUS-TOTAL Action : {{ action.libelle.replace('Action :', '').replace('- Action :', '').replace('- ', '').strip() }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.budget_vote_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.budget_actuel_n) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.enveloppe_n_plus_1) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.complement_solicite) }}</td>
-          <td class="montant" style="background: #b3d9ff;">{{ "{:,.0f}".format(action.budget_souhaite) }}</td>
+          <td class="montant">{{ "{:,.0f}".format(action.budget_souhaite) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.engagement_etat) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.autre_complement) }}</td>
           <td class="montant">{{ "{:,.0f}".format(action.projet_budget_n_plus_1) }}</td>
@@ -259,16 +303,16 @@
           {% set nature_total_projet.value = nature_total_projet.value + act.projet_budget_n_plus_1 %}
         {% endfor %}
         
-        <tr style="background: #ffff99; font-weight: 800; font-size: 0.8rem; border-top: 3px solid #ffff00;">
-          <td style="text-align: right; padding: 0.5rem 0.25rem; color: #2c3e50;">TOTAL {{ nature.upper() }}</td>
-          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_vote.value) }}</td>
-          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_actuel.value) }}</td>
-          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_enveloppe.value) }}</td>
-          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_complement.value) }}</td>
-          <td class="montant" style="background: #ffff00; color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_souhaite.value) }}</td>
-          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_engagement.value) }}</td>
-          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_autre.value) }}</td>
-          <td class="montant" style="color: #2c3e50; font-size: 0.75rem;">{{ "{:,.0f}".format(nature_total_projet.value) }}</td>
+        <tr style="background: #FFD700; font-weight: 800; font-size: 1.05rem; border-top: 3px solid #FFD700;">
+          <td style="text-align: right; padding: 0.7rem 0.75rem; color: #2c3e50;">TOTAL {{ nature.upper() }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_vote.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_actuel.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_enveloppe.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_complement.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_souhaite.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_engagement.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_autre.value) }}</td>
+          <td class="montant" style="color: #2c3e50;">{{ "{:,.0f}".format(nature_total_projet.value) }}</td>
           <td colspan="2"></td>
         </tr>
         
@@ -297,16 +341,16 @@
           {% endfor %}
         {% endfor %}
         
-        <tr style="background: #ff0000; color: white; font-weight: 900; font-size: 0.8rem; border-top: 3px solid #cc0000;">
-          <td style="text-align: right; padding: 0.75rem 0.5rem; text-transform: uppercase;">TOTAL GÉNÉRAL</td>
-          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_vote.value) }}</td>
-          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_actuel.value) }}</td>
-          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_enveloppe.value) }}</td>
-          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_complement.value) }}</td>
-          <td class="montant" style="background: #cc0000; color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_souhaite.value) }}</td>
-          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_engagement.value) }}</td>
-          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_autre.value) }}</td>
-          <td class="montant" style="color: white; font-size: 0.75rem;">{{ "{:,.0f}".format(total_general_projet.value) }}</td>
+        <tr style="background: #DC3545; color: white; font-weight: 900; font-size: 1.1rem; border-top: 4px solid #DC3545;">
+          <td style="text-align: right; padding: 0.8rem 0.75rem; text-transform: uppercase;">TOTAL GÉNÉRAL</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_vote.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_actuel.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_enveloppe.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_complement.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_souhaite.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_engagement.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_autre.value) }}</td>
+          <td class="montant" style="color: white;">{{ "{:,.0f}".format(total_general_projet.value) }}</td>
           <td colspan="2"></td>
         </tr>
       </tbody>
@@ -316,8 +360,8 @@
 </div>
 
 <!-- Modal Gérer Documents d'une Ligne -->
-<div id="modalDocumentsLigne" class="modal">
-  <div class="modal-content" style="max-width: 800px;">
+<div id="modalDocumentsLigne" class="modal modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>📎 Documents de la Ligne Budgétaire</h2>
       <button class="modal-close" onclick="closeModal('modalDocumentsLigne')">&times;</button>
@@ -351,8 +395,8 @@
 </div>
 
 <!-- Modal Ajouter Action -->
-<div id="modalAjouterAction" class="modal">
-  <div class="modal-content" style="max-width: 700px;">
+<div id="modalAjouterAction" class="modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>➕ Ajouter une Action</h2>
       <button class="modal-close" onclick="closeModal('modalAjouterAction')">&times;</button>
@@ -387,8 +431,8 @@
 </div>
 
 <!-- Modal Ajouter Service -->
-<div id="modalAjouterService" class="modal">
-  <div class="modal-content" style="max-width: 700px;">
+<div id="modalAjouterService" class="modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>➕ Ajouter un Service Bénéficiaire</h2>
       <button class="modal-close" onclick="closeModal('modalAjouterService')">&times;</button>
@@ -425,8 +469,8 @@
 </div>
 
 <!-- Modal Ajouter Activité -->
-<div id="modalAjouterActivite" class="modal">
-  <div class="modal-content" style="max-width: 700px;">
+<div id="modalAjouterActivite" class="modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>➕ Ajouter une Activité</h2>
       <button class="modal-close" onclick="closeModal('modalAjouterActivite')">&times;</button>
@@ -463,8 +507,8 @@
 </div>
 
 <!-- Modal Ajouter Ligne Budgétaire -->
-<div id="modalAjouterLigne" class="modal">
-  <div class="modal-content" style="max-width: 1000px;">
+<div id="modalAjouterLigne" class="modal-lg">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>➕ Ajouter une Ligne Budgétaire</h2>
       <button class="modal-close" onclick="closeModal('modalAjouterLigne')">&times;</button>
@@ -548,8 +592,8 @@
 </div>
 
 <!-- Modal Éditer Action -->
-<div id="modalEditerAction" class="modal">
-  <div class="modal-content" style="max-width: 600px;">
+<div id="modalEditerAction" class="modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>✏️ Modifier l'Action</h2>
       <button class="modal-close" onclick="closeModal('modalEditerAction')">&times;</button>
@@ -570,8 +614,8 @@
 </div>
 
 <!-- Modal Éditer Service -->
-<div id="modalEditerService" class="modal">
-  <div class="modal-content" style="max-width: 600px;">
+<div id="modalEditerService" class="modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>✏️ Modifier le Service Bénéficiaire</h2>
       <button class="modal-close" onclick="closeModal('modalEditerService')">&times;</button>
@@ -592,8 +636,8 @@
 </div>
 
 <!-- Modal Éditer Activité -->
-<div id="modalEditerActivite" class="modal">
-  <div class="modal-content" style="max-width: 600px;">
+<div id="modalEditerActivite" class="modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>✏️ Modifier l'Activité</h2>
       <button class="modal-close" onclick="closeModal('modalEditerActivite')">&times;</button>
@@ -614,8 +658,8 @@
 </div>
 
 <!-- Modal Éditer Ligne Budgétaire -->
-<div id="modalEditerLigne" class="modal">
-  <div class="modal-content" style="max-width: 900px;">
+<div id="modalEditerLigne" class="modal-lg">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>✏️ Modifier la Ligne Budgétaire</h2>
       <button class="modal-close" onclick="closeModal('modalEditerLigne')">&times;</button>
@@ -665,8 +709,8 @@
 </div>
 
 <!-- Modal Changer Statut -->
-<div id="modalChangerStatut" class="modal">
-  <div class="modal-content" style="max-width: 600px;">
+<div id="modalChangerStatut" class="modal-sm">
+  <div class="modal-content">
     <div class="modal-header">
       <h2>🔄 Changer le Statut de la Fiche</h2>
       <button class="modal-close" onclick="closeModal('modalChangerStatut')">&times;</button>
@@ -827,6 +871,7 @@
 .fiche-table tbody tr {
     border-bottom: 1px solid var(--gray-200);
     transition: all 0.2s;
+    position: relative;
 }
 
 .fiche-table tbody tr:hover {
@@ -839,6 +884,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Permettre le débordement pour les cellules contenant des menus */
+.fiche-table tbody td:last-child {
+    overflow: visible !important;
 }
 
 .fiche-table tbody td:first-child {
@@ -893,6 +943,99 @@
 .action-icon:hover {
     background: rgba(0,0,0,0.05);
     transform: scale(1.1);
+}
+
+/* Menu déroulant d'actions */
+.dropdown-actions {
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* S'assurer que les td n'ont pas d'overflow qui cache le menu */
+.fiche-table td:has(.dropdown-actions) {
+    position: relative;
+    overflow: visible !important;
+}
+
+.action-menu-btn {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #2c3e50;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.action-menu-btn:hover {
+    background: rgba(0,0,0,0.05);
+    transform: scale(1.2);
+}
+
+.action-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 180px;
+    z-index: 9999;
+    display: none;
+    margin-top: 0.25rem;
+    overflow: visible;
+}
+
+.action-menu.show {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.action-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    font-size: 0.95rem;
+}
+
+.action-menu-item:hover {
+    background: #f8f9fa;
+}
+
+.action-menu-item-danger:hover {
+    background: #fee;
+    color: #dc3545;
+}
+
+.action-menu-icon {
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
 }
 
 /* Tooltip pour les colonnes */
@@ -975,6 +1118,45 @@
 
 {% block scripts %}
 <script>
+// Gestion du menu déroulant d'actions
+function toggleActionMenu(event, menuId) {
+  event.stopPropagation();
+  console.log('🔍 Toggle menu:', menuId);
+  const menu = document.getElementById(`menu-action-${menuId}`);
+  const allMenus = document.querySelectorAll('.action-menu');
+  
+  if (!menu) {
+    console.error(`❌ Menu non trouvé: menu-action-${menuId}`);
+    return;
+  }
+  
+  console.log('✅ Menu trouvé:', menu);
+  
+  // Fermer tous les autres menus
+  allMenus.forEach(m => {
+    if (m !== menu) {
+      m.classList.remove('show');
+    }
+  });
+  
+  // Toggle le menu actuel
+  menu.classList.toggle('show');
+  console.log('📋 Menu état:', menu.classList.contains('show') ? 'OUVERT' : 'FERMÉ');
+}
+
+function closeAllMenus() {
+  document.querySelectorAll('.action-menu').forEach(menu => {
+    menu.classList.remove('show');
+  });
+}
+
+// Fermer les menus en cliquant ailleurs
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('.dropdown-actions')) {
+    closeAllMenus();
+  }
+});
+
 function editerFiche(ficheId) {
   showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
   setTimeout(() => {
@@ -1658,6 +1840,9 @@ async function supprimerLigne(ligneId) {
 
 // Animation des montants au chargement
 document.addEventListener('DOMContentLoaded', function() {
+  // Fermer l'overlay au chargement de la page
+  hideGlobalLoading();
+  
   const montants = document.querySelectorAll('.montant');
   montants.forEach((montant, index) => {
     setTimeout(() => {

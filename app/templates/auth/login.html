@@ -11,7 +11,15 @@
     <!-- CSS de base -->
     <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/theme.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/cards.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/buttons.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/forms.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/tables.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/modals.css') }}">
     <link rel="stylesheet" href="{{ static_url('css/components.css') }}">
+    <link rel="stylesheet" href="{{ static_url('css/pages.css') }}">
+    
+
     
     <style>
         /* ========================================
@@ -51,6 +59,7 @@
             left: 0;
             right: 0;
             bottom: 0;
+            gap: 2px;
         }
 
         .login-wrapper {
@@ -286,20 +295,21 @@
 
         /* Les styles de boutons sont centralisés dans buttons.css */
 
-        .loading-spinner {
+        /* Spinner du BOUTON de connexion (renommé pour éviter conflit avec l'overlay) */
+        .button-spinner {
             width: 20px;
             height: 20px;
-            animation: spin 1s linear infinite;
+            animation: buttonSpin 1s linear infinite;
             display: none;
             /* Caché par défaut */
         }
 
-        .loading-spinner.show {
+        .button-spinner.show {
             display: inline-block;
             /* Visible quand la classe show est ajoutée */
         }
 
-        @keyframes spin {
+        @keyframes buttonSpin {
             from {
                 transform: rotate(0deg);
             }
@@ -405,7 +415,7 @@
                         <img src="{{ static_url('images/logo.jpg') }}" alt="Logo {{ app_name }}" class="logo-image">
                     </div>
                     <h2 class="login-title">
-                        Ministère du Portefeuille et du Patrimoine de l'État de CI
+                        Ministère du patrimoine, du Portefeuille de l'Etat et des Entreprises Publiques
                     </h2>
                     <h3 class="login-subtitle">
                         Bienvenue sur {{ app_name }}
@@ -456,7 +466,7 @@
 
                         <!-- Mot de passe -->
                         <div>
-                            <label for="password" class="form-label">
+                            <label for="password" class="form-label" >
                                 Mot de passe
                             </label>
                             <div class="password-container">
@@ -492,10 +502,10 @@
 
                         <!-- Bouton de connexion -->
                         <div>
-                            <button type="submit" id="login-button" class="btn btn-primary"
-                                style="border: 1px solid #000000;box-shadow: 0 4px 6px rgba(0, 0, 0, 0.8);width: 100%;border-radius: 10px;border-color: antiquewhite;">
+                            <button type="submit" id="login-button" class="btn-primary"
+                                style="border: 1px solid #000000;box-shadow: 0 4px 6px rgba(0, 0, 0, 0.8);width: 100%;border-radius: 15px;border-color: antiquewhite;height: 50px;">
                                 <span id="button-text">Se connecter</span>
-                                <svg id="loading-spinner" class="loading-spinner" fill="none" viewBox="0 0 24 24">
+                                <svg id="button-spinner" class="button-spinner" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                         stroke-width="4">
                                     </circle>
@@ -548,7 +558,7 @@
             const eyeIcon = document.getElementById('eye-icon');
             const loginButton = document.getElementById('login-button');
             const buttonText = document.getElementById('button-text');
-            const loadingSpinner = document.getElementById('loading-spinner');
+            const buttonSpinner = document.getElementById('button-spinner');
             const errorMessage = document.getElementById('error-message');
             const successMessage = document.getElementById('success-message');
             const errorText = document.getElementById('error-text');

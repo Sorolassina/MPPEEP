@@ -1,0 +1,235 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Tableau de Bord Performance - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles pour le tableau de bord Performance */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid var(--primary-color);
+    transition: transform 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.kpi-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.kpi-title {
+    font-size: 0.9rem;
+    color: #6b7280;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.kpi-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-change {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.kpi-change.positive {
+    color: #10b981;
+}
+
+.kpi-change.negative {
+    color: #ef4444;
+}
+
+.kpi-change.neutral {
+    color: #6b7280;
+}
+
+/* Section des graphiques */
+.charts-section {
+    margin-top: 3rem;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chart-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1rem;
+}
+
+.chart-placeholder {
+    height: 300px;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-size: 1rem;
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📈 Tableau de Bord Performance',
+    breadcrumbs=[
+        {'name': 'Performance', 'url': url_for('performance_home')},
+        {'name': 'Tableau de Bord'}
+    ],
+    actions=[
+        {'label': '← Retour Performance', 'url': url_for('performance_home'), 'primary': False}
+    ]
+) }}
+
+<div class="dashboard-grid">
+    <!-- KPI 1: Taux de Réalisation -->
+    <div class="kpi-card">
+        <div class="kpi-icon">🎯</div>
+        <div class="kpi-title">Taux de Réalisation</div>
+        <div class="kpi-value">87%</div>
+        <div class="kpi-change positive">↗ +5% vs mois dernier</div>
+    </div>
+
+    <!-- KPI 2: Objectifs Atteints -->
+    <div class="kpi-card">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-title">Objectifs Atteints</div>
+        <div class="kpi-value">24/30</div>
+        <div class="kpi-change positive">↗ +3 ce mois</div>
+    </div>
+
+    <!-- KPI 3: Indicateurs en Alerte -->
+    <div class="kpi-card">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-title">Indicateurs en Alerte</div>
+        <div class="kpi-value">3</div>
+        <div class="kpi-change negative">↘ -2 vs semaine dernière</div>
+    </div>
+
+    <!-- KPI 4: Score Global -->
+    <div class="kpi-card">
+        <div class="kpi-icon">⭐</div>
+        <div class="kpi-title">Score Global</div>
+        <div class="kpi-value">8.2/10</div>
+        <div class="kpi-change positive">↗ +0.3 vs trimestre</div>
+    </div>
+
+    <!-- KPI 5: Programmes Actifs -->
+    <div class="kpi-card">
+        <div class="kpi-icon">🏢</div>
+        <div class="kpi-title">Programmes Actifs</div>
+        <div class="kpi-value">12</div>
+        <div class="kpi-change neutral">→ Stable</div>
+    </div>
+
+    <!-- KPI 6: Évaluations en Cours -->
+    <div class="kpi-card">
+        <div class="kpi-icon">📝</div>
+        <div class="kpi-title">Évaluations en Cours</div>
+        <div class="kpi-value">8</div>
+        <div class="kpi-change positive">↗ +2 nouvelles</div>
+    </div>
+</div>
+
+<div class="charts-section">
+    <h2 style="color: #1f2937; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">
+        📊 Analyses et Tendances
+    </h2>
+    
+    <div class="charts-grid">
+        <!-- Graphique Évolution des Objectifs -->
+        <div class="chart-card">
+            <h3 class="chart-title">Évolution des Objectifs (6 derniers mois)</h3>
+            <div class="chart-placeholder">
+                📈 Graphique d'évolution des objectifs<br>
+                <small>Les graphiques interactifs seront intégrés prochainement</small>
+            </div>
+        </div>
+
+        <!-- Graphique Performance par Programme -->
+        <div class="chart-card">
+            <h3 class="chart-title">Performance par Programme</h3>
+            <div class="chart-placeholder">
+                📊 Graphique en barres par programme<br>
+                <small>Comparaison des performances par secteur</small>
+            </div>
+        </div>
+
+        <!-- Graphique Indicateurs Clés -->
+        <div class="chart-card">
+            <h3 class="chart-title">Indicateurs Clés de Performance</h3>
+            <div class="chart-placeholder">
+                🎯 Graphique radar des KPIs<br>
+                <small>Vue d'ensemble des indicateurs principaux</small>
+            </div>
+        </div>
+
+        <!-- Graphique Tendances -->
+        <div class="chart-card">
+            <h3 class="chart-title">Tendances et Prévisions</h3>
+            <div class="chart-placeholder">
+                📈 Graphique de tendances<br>
+                <small>Projections et analyses prédictives</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// S'assurer que l'overlay est fermé au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+});
+</script>
+{% endblock %}

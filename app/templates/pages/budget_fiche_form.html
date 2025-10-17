@@ -176,6 +176,11 @@ function calculerTotal() {
   document.getElementById('recap-total').textContent = total.toLocaleString('fr-FR') + ' FCFA';
 }
 
+// Fermer l'overlay au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+  hideGlobalLoading();
+});
+
 // Écouter les changements
 ['enveloppe_demandee', 'complement_demande', 'engagement_etat', 'financement_bailleurs'].forEach(name => {
   const input = document.querySelector(`[name="${name}"]`);
@@ -207,9 +212,11 @@ async function handleSubmit(event) {
         window.location.href = `/api/v1/budget/fiches/${result.id}`;
       }, 1000);
     } else {
+      hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la création');
     }
   } catch (error) {
+    hideGlobalLoading();
     console.error('Erreur:', error);
     showError('Erreur réseau. Vérifiez votre connexion.');
   }

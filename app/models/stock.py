@@ -65,6 +65,24 @@ class Article(SQLModel, table=True):
     # Localisation
     emplacement: Optional[str] = Field(default=None, max_length=100)  # Magasin A - Rayon 3
     
+    # ========================================
+    # NOUVEAUTÉ : GESTION ARTICLES PÉRISSABLES
+    # ========================================
+    est_perissable: bool = Field(default=False)  # Article périssable (denrées, médicaments, etc.)
+    duree_conservation_jours: Optional[int] = Field(default=None)  # Durée de conservation standard
+    seuil_alerte_peremption_jours: int = Field(default=30)  # Alerte X jours avant péremption
+    
+    # ========================================
+    # NOUVEAUTÉ : GESTION AMORTISSEMENT MATÉRIEL
+    # ========================================
+    est_amortissable: bool = Field(default=False)  # Matériel amortissable (équipements, véhicules, etc.)
+    date_acquisition: Optional[date] = None  # Date d'achat du matériel
+    valeur_acquisition: Optional[Decimal] = Field(default=None, max_digits=15, decimal_places=2)  # Prix d'achat initial
+    duree_amortissement_annees: Optional[int] = Field(default=None)  # Durée d'amortissement (en années)
+    taux_amortissement: Optional[Decimal] = Field(default=None, max_digits=5, decimal_places=2)  # Taux d'amortissement annuel (%)
+    valeur_residuelle: Optional[Decimal] = Field(default=None, max_digits=15, decimal_places=2)  # Valeur résiduelle finale
+    methode_amortissement: Optional[str] = Field(default="LINEAIRE", max_length=20)  # LINEAIRE, DEGRESSIF, UNITE_OEUVRE
+    
     # État
     actif: bool = Field(default=True)
     
@@ -220,6 +238,88 @@ class LigneInventaire(SQLModel, table=True):
     # Traçabilité
     compteur_id: Optional[int] = Field(default=None, foreign_key="user.id")
     date_comptage: Optional[date] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+# ============================================
+# NOUVEAUTÉ : GESTION DES LOTS PÉRISSABLES
+# ============================================
+
+class LotPerissable(SQLModel, table=True):
+    """Suivi des lots d'articles périssables avec dates de péremption"""
+    __tablename__ = "lot_perissable"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Article concerné
+    article_id: int = Field(foreign_key="article.id")
+    
+    # Identification du lot
+    numero_lot: str = Field(max_length=100, index=True)  # Numéro de lot fournisseur
+    
+    # Dates
+    date_fabrication: Optional[date] = None  # Date de fabrication
+    date_reception: date = Field(default_factory=date.today)  # Date de réception
+    date_peremption: date  # Date de péremption (OBLIGATOIRE)
+    
+    # Quantités
+    quantite_initiale: Decimal = Field(max_digits=10, decimal_places=2)  # Quantité à la réception
+    quantite_restante: Decimal = Field(max_digits=10, decimal_places=2)  # Quantité actuelle
+    
+    # Statut
+    statut: str = Field(default="ACTIF", max_length=20)  # ACTIF, ALERTE, PERIME, EPUISE
+    
+    # Fournisseur
+    fournisseur_id: Optional[int] = Field(default=None, foreign_key="fournisseur.id")
+    
+    # Observations
+    observations: Optional[str] = None
+    
+    # Traçabilité
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+
+
+# ============================================
+# NOUVEAUTÉ : AMORTISSEMENT DU MATÉRIEL
+# ============================================
+
+class Amortissement(SQLModel, table=True):
+    """Historique des amortissements annuels du matériel"""
+    __tablename__ = "amortissement"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    # Article concerné (matériel)
+    article_id: int = Field(foreign_key="article.id")
+    
+    # Période
+    annee: int = Field(index=True)  # Année d'amortissement
+    periode: str = Field(max_length=50)  # Ex: "2025", "T1-2025", etc.
+    
+    # Calculs
+    valeur_brute: Decimal = Field(max_digits=15, decimal_places=2)  # Valeur d'acquisition
+    amortissement_cumule_debut: Decimal = Field(max_digits=15, decimal_places=2)  # Amortissement cumulé en début de période
+    amortissement_periode: Decimal = Field(max_digits=15, decimal_places=2)  # Amortissement de la période
+    amortissement_cumule_fin: Decimal = Field(max_digits=15, decimal_places=2)  # Amortissement cumulé en fin de période
+    valeur_nette_comptable: Decimal = Field(max_digits=15, decimal_places=2)  # VNC = Valeur brute - Amort. cumulé
+    
+    # Détails de calcul
+    taux_applique: Decimal = Field(max_digits=5, decimal_places=2)  # Taux utilisé (%)
+    methode: str = Field(max_length=20)  # LINEAIRE, DEGRESSIF, UNITE_OEUVRE
+    base_calcul: Optional[Decimal] = Field(default=None, max_digits=15, decimal_places=2)  # Base de calcul si dégressif
+    
+    # Statut
+    statut: str = Field(default="CALCULE", max_length=20)  # CALCULE, VALIDE, CLOTURE
+    totalement_amorti: bool = Field(default=False)  # True si VNC = Valeur résiduelle
+    
+    # Observations
+    observations: Optional[str] = None
+    
+    # Traçabilité
+    calcule_par_user_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    date_calcul: date = Field(default_factory=date.today)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 

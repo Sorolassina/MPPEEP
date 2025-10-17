@@ -21,6 +21,8 @@ dependencies = [
     "seaborn>=0.13.2",
     "matplotlib>=3.10.7",
     "reportlab>=4.0.0", # Pour générer des PDF
+    "pypdf2>=3.0.1",
+    "pdfplumber>=0.11.7",
 ]
 
 [project.optional-dependencies]

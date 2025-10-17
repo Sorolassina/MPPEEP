@@ -20,7 +20,7 @@
                         <div class="activity-icon">{{ activity.icon }}</div>
                         <div class="activity-content">
                             <div class="activity-header">
-                                <span class="activity-user">{{ activity.user_email }}</span>
+                                <span class="activity-user">{{ activity.user_full_name or activity.user_email }}</span>
                                 <span class="activity-badge">{{ activity.action_type }}</span>
                             </div>
                             <div class="activity-description">{{ activity.description }}</div>
