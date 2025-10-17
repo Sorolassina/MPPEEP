@@ -181,6 +181,26 @@
     flex-shrink: 0;
 }
 
+/* Bouton de suppression dans les cartes */
+.btn-icon {
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.btn-danger {
+    color: #dc3545;
+}
+
+.btn-danger:hover {
+    background: #fee;
+    transform: scale(1.1);
+}
+
 /* Historique des rapports */
 .reports-history {
     margin-top: 3rem;
@@ -657,8 +677,15 @@ async function loadReports() {
                     </div>
                 </div>
                 
-                <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem; font-size: 0.8rem; color: #6b7280;">
-                    📅 ${formatDate(rapport.created_at)} par ${rapport.created_by_nom}
+                <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 0.8rem; color: #6b7280;">
+                            📅 ${formatDate(rapport.created_at)} par ${rapport.created_by_nom}
+                        </div>
+                        <button class="btn-icon btn-danger" onclick="deleteReport(${rapport.id})" title="Supprimer ce rapport">
+                            🗑️
+                        </button>
+                    </div>
                 </div>
             </div>
         `).join('');
@@ -749,6 +776,36 @@ function formatDate(dateStr) {
         minute: '2-digit'
     };
     return date.toLocaleDateString('fr-FR', options);
+}
+
+// Supprimer un rapport
+async function deleteReport(reportId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce rapport de l\'historique ?')) {
+        return;
+    }
+    
+    try {
+        showGlobalLoading('Suppression du rapport...', 'Veuillez patienter');
+        
+        const response = await fetch(`/api/v1/performance/api/rapports/${reportId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        hideGlobalLoading();
+        
+        if (result.success) {
+            showSuccess('Rapport supprimé avec succès !');
+            loadReports();  // Recharger la liste
+        } else {
+            showError(result.error || 'Erreur lors de la suppression du rapport');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        hideGlobalLoading();
+        showError('Erreur lors de la suppression du rapport');
+    }
 }
 
 // Charger les rapports au démarrage

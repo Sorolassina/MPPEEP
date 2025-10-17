@@ -852,3 +852,43 @@ def get_rapports_historique(
     except Exception as e:
         logger.error(f"Erreur API get_rapports_historique: {e}")
         return {"success": False, "error": f"Erreur lors de la récupération de l'historique: {str(e)}"}
+
+
+@router.delete("/api/rapports/{rapport_id}")
+def delete_rapport_api(
+    rapport_id: int,
+    db: Session = Depends(get_session),
+    current_user = Depends(require_roles("admin", "user"))
+):
+    """API: Supprime un rapport de l'historique"""
+    try:
+        # Récupérer le rapport
+        rapport = db.get(RapportPerformance, rapport_id)
+        
+        if not rapport:
+            return {"success": False, "error": "Rapport non trouvé"}
+        
+        # Supprimer le rapport
+        db.delete(rapport)
+        db.commit()
+        
+        # Logger l'activité
+        ActivityService.log_activity(
+            db_session=db,
+            user_id=current_user.id if hasattr(current_user, 'id') else 1,
+            user_email=current_user.email if hasattr(current_user, 'email') else "user@system",
+            user_full_name=current_user.full_name if hasattr(current_user, 'full_name') else None,
+            action_type="delete",
+            target_type="rapport_performance",
+            description=f"Suppression du rapport: {rapport.titre}",
+            icon="🗑️"
+        )
+        
+        return {
+            'success': True,
+            'message': 'Rapport supprimé avec succès'
+        }
+        
+    except Exception as e:
+        logger.error(f"Erreur API delete_rapport: {e}")
+        return {"success": False, "error": f"Erreur lors de la suppression du rapport: {str(e)}"}
