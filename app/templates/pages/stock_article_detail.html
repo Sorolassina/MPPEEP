@@ -183,7 +183,7 @@
           <td>{{ mvt.motif or '-' }}</td>
           <td>
             {% if mvt.document_path %}
-              <a href="/uploads/{{ mvt.document_path }}" target="_blank" style="color: var(--secondary-color);">
+              <a href="{{ upload_url(mvt.document_path) }}" target="_blank" style="color: var(--secondary-color);">
                 📄 Voir
               </a>
             {% else %}

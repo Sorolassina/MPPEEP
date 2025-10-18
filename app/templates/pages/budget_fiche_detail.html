@@ -11,7 +11,7 @@
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
         {'name': 'Budget', 'url': url_for('budget_home')},
-        {'name': 'Fiches', 'url': '/api/v1/budget/fiches'},
+        {'name': 'Fiches', 'url': url_for('budget_fiches_hierarchique')},
         {'name': fiche.numero_fiche}
     ]
 ) }}
@@ -212,7 +212,7 @@
   <!-- Actions -->
   <div class="card">
     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-      <a href="/api/v1/budget/api/fiches/{{ fiche.id }}/export/pdf" target="_blank" class="btn btn-primary">
+      <a href="{{ url_for('api_exporter_fiche_pdf', fiche_id=fiche.id) }}" target="_blank" class="btn btn-primary">
         📄 Exporter en PDF
       </a>
       <button onclick="changerStatut()" class="btn btn-primary" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
@@ -367,7 +367,7 @@ async function handleLigneSubmit(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch('/api/v1/budget/api/fiches/{{ fiche.id }}/lignes', {
+    const response = await fetch("{{ url_for('api_ajouter_ligne_fiche', fiche_id=fiche.id) }}", {
       method: 'POST',
       body: formData
     });
@@ -397,7 +397,7 @@ async function handleUpload(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch('/api/v1/budget/api/fiches/{{ fiche.id }}/documents', {
+    const response = await fetch("{{ url_for('api_ajouter_document_fiche', fiche_id=fiche.id) }}", {
       method: 'POST',
       body: formData
     });
@@ -425,7 +425,7 @@ async function supprimerLigne(ligneId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/fiches/{{ fiche.id }}/lignes/${ligneId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_ligne_fiche', fiche_id=fiche.id, ligne_id=0) }}".replace('/0', `/${ligneId}`), {
       method: 'DELETE'
     });
     

@@ -284,8 +284,8 @@ async function submitFournisseur(event) {
     const id = formData.get('fournisseur_id');
     
     const url = id 
-        ? `/api/v1/stock/api/fournisseurs/${id}` 
-        : '/api/v1/stock/api/fournisseurs';
+        ? "{{ url_for('api_update_fournisseur', fournisseur_id=0) }}".replace('/0', `/${id}`)
+        : "{{ url_for('api_create_fournisseur') }}";
     const method = id ? 'PUT' : 'POST';
     
     try {

@@ -87,10 +87,9 @@ async function submitForm(event) {
     const formData = new FormData(event.target);
     const inventaireId = formData.get('inventaire_id');
     
-    const url = inventaireId 
-        ? `/api/v1/stock/api/inventaires/${inventaireId}` 
-        : '/api/v1/stock/api/inventaires';
-    const method = inventaireId ? 'PUT' : 'POST';
+    // Pour l'instant, uniquement création (pas de modification d'inventaire)
+    const url = "{{ url_for('api_create_inventaire') }}";
+    const method = 'POST';
     
     try {
         const response = await fetch(url, {

@@ -304,6 +304,52 @@ class RequestSizeMiddleware(BaseHTTPMiddleware):
         
         return await call_next(request)
 
+class ForwardProtoMiddleware(BaseHTTPMiddleware):
+    """
+    Forwards the protocol to the request
+    """
+    async def dispatch(self, request: Request, call_next):
+        proto = request.headers.get("X-Forwarded-Proto", "https")
+        if proto:
+            request.scope["scheme"] = proto
+        return await call_next(request)
+
+
+class CloudflareMiddleware(BaseHTTPMiddleware):
+    """
+    Capture et enrichit les requêtes avec les informations Cloudflare
+    
+    Headers Cloudflare capturés :
+    - CF-Connecting-IP : IP réelle du client
+    - CF-Ray : ID unique de la requête Cloudflare
+    - CF-IPCountry : Code pays du client (ISO 3166-1 alpha-2)
+    - CF-Visitor : Protocole utilisé (http/https)
+    
+    Les informations sont stockées dans request.state pour y accéder partout :
+    - request.state.cf_ray
+    - request.state.cf_country
+    - request.state.client_ip
+    """
+    
+    async def dispatch(self, request: Request, call_next):
+        # Capturer les headers Cloudflare
+        cf_ray = request.headers.get("CF-Ray", "")
+        cf_country = request.headers.get("CF-IPCountry", "")
+        cf_connecting_ip = request.headers.get("CF-Connecting-IP", "")
+        cf_visitor = request.headers.get("CF-Visitor", "")
+        
+        # Stocker dans request.state pour y accéder dans les endpoints
+        request.state.cf_ray = cf_ray
+        request.state.cf_country = cf_country
+        request.state.cf_connecting_ip = cf_connecting_ip
+        request.state.cf_visitor = cf_visitor
+        
+        # Log pour le monitoring (optionnel, peut être désactivé en prod)
+        if cf_ray:
+            logger.debug(f"☁️  Cloudflare Ray: {cf_ray} | Country: {cf_country} | IP: {cf_connecting_ip}")
+        
+        return await call_next(request)
+
 
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """
@@ -350,7 +396,7 @@ def setup_middlewares(app, settings):
     # ==========================================
     
     # 1. Redirection HTTPS en production
-    if settings.ENABLE_HTTPS_REDIRECT and not settings.DEBUG:
+    if settings.should_enable_https_redirect:
         app.add_middleware(HTTPSRedirectMiddleware)
         logger.info("🔒 HTTPS Redirect activé")
     
@@ -409,23 +455,33 @@ def setup_middlewares(app, settings):
         logger.info("🎫 Request ID activé")
     
     # 10. Compression GZip
-    if settings.ENABLE_GZIP:
+    if settings.should_enable_gzip:
         app.add_middleware(GZipMiddleware, minimum_size=1000)
         logger.info("📦 GZip activé")
     
     # 11. Contrôle du cache
-    if settings.ENABLE_CACHE_CONTROL:
+    if settings.should_enable_cache_control:
         app.add_middleware(CacheControlMiddleware)
         logger.info("💾 Cache Control activé")
     
     # 12. En-têtes de sécurité
-    if settings.ENABLE_SECURITY_HEADERS:
+    if settings.should_enable_security_headers:
         app.add_middleware(SecurityHeadersMiddleware)
         logger.info("🔒 Security Headers activés")
     
     # 13. Politique de sécurité du contenu (CSP)
-    if settings.ENABLE_CSP:
+    if settings.should_enable_csp:
         app.add_middleware(CSPMiddleware)
         logger.info("🛡️ CSP activé")
+
+    # 14. Forward Proto (derrière proxy/Cloudflare)
+    if settings.should_enable_forward_proto:
+        app.add_middleware(ForwardProtoMiddleware)
+        logger.info("🔗 Forward Proto activé")
+    
+    # 15. Cloudflare (capture des headers CF-*)
+    if settings.should_enable_cloudflare:
+        app.add_middleware(CloudflareMiddleware)
+        logger.info("☁️  Cloudflare Middleware activé")
     
     logger.info("✅ Configuration middlewares terminée")

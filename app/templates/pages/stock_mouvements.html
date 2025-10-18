@@ -119,7 +119,7 @@
             <td>{{ mvt.user_id }}</td>
             <td style="text-align: center;">
               {% if mvt.document_path %}
-                <a href="/uploads/{{ mvt.document_path }}" target="_blank" 
+                <a href="{{ upload_url(mvt.document_path) }}" target="_blank" 
                    title="{{ mvt.document_filename }}"
                    style="color: var(--success-color); font-size: 1.2rem; text-decoration: none;">
                   📎
@@ -183,7 +183,7 @@ async function procederInversion(mouvementId) {
   
   try {
     // Récupérer les détails du mouvement à inverser
-    const response = await fetch(`/api/v1/stock/api/mouvements/${mouvementId}`);
+    const response = await fetch("{{ url_for('api_get_mouvement', mouvement_id=0) }}".replace('/0', `/${mouvementId}`));
     const result = await response.json();
     
     if (result.success) {
@@ -212,7 +212,7 @@ async function procederInversion(mouvementId) {
       formData.append('observations', `🔄 Mouvement d'inversion du mouvement #${mouvementId}`);
       
       // Enregistrer le mouvement inverse
-      const createResponse = await fetch('/api/v1/stock/api/mouvements', {
+      const createResponse = await fetch("{{ url_for('api_create_mouvement') }}", {
         method: 'POST',
         body: formData
       });

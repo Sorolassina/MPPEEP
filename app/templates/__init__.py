@@ -5,6 +5,9 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from datetime import datetime
 from app.core.path_config import path_config
+from app.core.config import settings
+from app.utils.helpers import get_client_ip,endpoint
+from fastapi import Request
 
 # Configuration du répertoire des templates
 TEMPLATES_DIR = Path(__file__).parent
@@ -99,8 +102,8 @@ def static_url(file_path: str) -> str:
     """
     Génère l'URL pour un fichier statique
     
-    Usage dans template: {{ static_url('images/logo.png') }}
-    Résultat: /static/images/logo.jpg
+    Usage dans template: {{ static_url('images/logo.webp') }}
+    Résultat: /static/images/logo.webp
     """
     return path_config.get_file_url("static", file_path)
 
@@ -187,6 +190,54 @@ def profile_picture_url(user_or_picture: any, add_cache_buster: bool = True) -> 
         image_url += f"?v={user_id}_{timestamp}"
     
     return image_url
+
+def get_logo_url() -> str:
+    """
+    Retourne l'URL du logo de l'entreprise depuis system_settings
+    Détecte automatiquement l'extension du logo (.webp, .png, .jpg, .svg)
+    
+    Usage dans template: {{ get_logo_url() }}
+    Résultat: /static/images/logo.webp (ou autre extension détectée)
+    
+    Fallback : Cherche logo.* avec n'importe quelle extension
+    """
+    from app.services.system_settings_service import SystemSettingsService
+    from app.db.session import get_session
+    from pathlib import Path
+    
+    try:
+        db = next(get_session())
+        settings_dict = SystemSettingsService.get_settings_as_dict(db)
+        logo_path = settings_dict.get('logo_path', 'images/logo.webp')
+        
+        # Si le logo_path commence déjà par /static/ ou /uploads/, le retourner tel quel
+        if logo_path.startswith('/static/') or logo_path.startswith('/uploads/'):
+            return logo_path
+        
+        # Vérifier si le fichier existe physiquement
+        from app.core.path_config import path_config
+        full_path = path_config.STATIC_DIR / logo_path
+        
+        if full_path.exists():
+            return static_url(logo_path)
+        
+        # Si n'existe pas, chercher logo.* avec n'importe quelle extension
+        logo_dir = full_path.parent
+        logo_name = full_path.stem  # 'logo' sans extension
+        
+        if logo_dir.exists():
+            # Extensions courantes
+            for ext in ['.webp', '.png', '.jpg', '.jpeg', '.svg', '.gif']:
+                logo_file = logo_dir / f"{logo_name}{ext}"
+                if logo_file.exists():
+                    relative_path = str(logo_file.relative_to(path_config.STATIC_DIR)).replace('\\', '/')
+                    return static_url(relative_path)
+        
+        # Fallback par défaut
+        return static_url('images/logo_default.png')
+    except Exception as e:
+        # Fallback par défaut en cas d'erreur
+        return static_url('images/logo_default.png')
 
 def user_initials(user_or_name: any) -> str:
     """
@@ -394,19 +445,35 @@ def get_template_context(request, **kwargs):
     
     return context
 
+def static_versioned_url(url: str) -> str:
+    """
+    Ajoute un paramètre de version (cache busting) à une URL
+    
+    Usage: {{ static_versioned_url('/static/css/style.css') }}
+    Résultat: /static/css/style.css?v=abc123
+    """
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}v={settings.ASSET_VERSION}"
+
 # ==========================================
 # ENREGISTREMENT DES GLOBALS
 # ==========================================
 
 templates.env.globals.update(
     now=get_current_time,
+    root_path=settings.get_root_path,  # Dynamique selon DEBUG/ENV
+    endpoint=endpoint,
+    get_client_ip=get_client_ip,  # Fonction (pas appelée)
+    version=settings.ASSET_VERSION,
     current_year=get_current_year,
     datetime=datetime,
-    static_url=static_url,
+    static_url=static_url,  # URL statique de base
+    static_versioned_url=static_versioned_url,  # URL avec cache busting
     media_url=media_url,
     upload_url=upload_url,
     profile_picture_url=profile_picture_url,  # Helper pour images de profil avec fallback
     user_initials=user_initials,  # Helper pour générer les initiales
+    get_logo_url=get_logo_url,  # Helper pour récupérer le logo de l'entreprise
     path_config=path_config,  # Accès complet à path_config si nécessaire
 )
 

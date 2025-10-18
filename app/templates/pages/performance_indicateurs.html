@@ -445,9 +445,9 @@
 const API_URLS = {
     list: "{{ url_for('get_indicateurs_api') }}",
     create: "{{ url_for('create_indicateur_api') }}",
-    detail: (id) => `/api/v1/performance/api/indicateurs/${id}`,
-    update: (id) => `/api/v1/performance/api/indicateurs/${id}`,
-    delete: (id) => `/api/v1/performance/api/indicateurs/${id}`
+    detail: (id) => "{{ url_for('get_indicateur_api', indicateur_id=0) }}".replace('/0', `/${id}`),
+    update: (id) => "{{ url_for('update_indicateur_api', indicateur_id=0) }}".replace('/0', `/${id}`),
+    delete: (id) => "{{ url_for('delete_indicateur_api', indicateur_id=0) }}".replace('/0', `/${id}`)
 };
 
 let currentIndicateurs = [];
@@ -491,7 +491,7 @@ async function loadIndicateurs() {
 // Charger la liste des utilisateurs
 async function loadUsers() {
     try {
-        const response = await fetch('/api/v1/users/');
+        const response = await fetch("{{ url_for('list_users') }}");
         allUsers = await response.json();
         
         // Ne pas peupler le select ici, attendre la sélection du service
@@ -541,7 +541,7 @@ async function filterUsersByService() {
 // Charger la liste des services
 async function loadServices() {
     try {
-        const response = await fetch('/api/v1/personnel/api/services');
+        const response = await fetch("{{ url_for('get_services_api') }}");
         const services = await response.json();
         allServices = services; // Stocker pour le filtrage
         

@@ -76,10 +76,18 @@ class PathConfig:
         
         Example:
             path_config.get_file_url("static", "images/logo.png")
-            → "/static/images/logo.png"
+            → "/static/images/logo.png" (en dev)
+            → "/mppeep/static/images/logo.png" (en prod)
         """
+        from app.core.config import settings
+        
         mount_path = self.get_mount_path(mount_name)
         clean_path = file_path.lstrip('/')
+        
+        # Ajouter ROOT_PATH si défini
+        root = settings.get_root_path
+        if root:
+            return f"{root}{mount_path}/{clean_path}"
         return f"{mount_path}/{clean_path}"
     
     def get_physical_path(self, mount_name: str, file_path: str) -> Path:

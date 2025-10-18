@@ -579,7 +579,7 @@ async function generateReport() {
         if (dateFin) formData.append('date_fin', dateFin);
         
         // Appeler l'API pour générer le rapport
-        const response = await fetch('/api/v1/performance/api/rapports/generate', {
+        const response = await fetch('{{ url_for("generate_report_api") }}', {
             method: 'POST',
             body: formData
         });
@@ -618,7 +618,7 @@ async function loadReports() {
     const container = document.getElementById('reports-list');
     
     try {
-        const response = await fetch('/api/v1/performance/api/rapports/historique');
+        const response = await fetch('{{ url_for("get_rapports_historique") }}');
         const data = await response.json();
         
         if (!data.success || !data.rapports || data.rapports.length === 0) {
@@ -787,7 +787,7 @@ async function deleteReport(reportId) {
     try {
         showGlobalLoading('Suppression du rapport...', 'Veuillez patienter');
         
-        const response = await fetch(`/api/v1/performance/api/rapports/${reportId}`, {
+        const response = await fetch(`{{ url_for("delete_rapport_api", rapport_id=0) }}`.replace('/0', `/${reportId}`), {
             method: 'DELETE'
         });
         

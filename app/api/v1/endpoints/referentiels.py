@@ -12,7 +12,8 @@ from datetime import datetime
 from app.db.session import get_session
 from app.api.v1.endpoints.auth import get_current_user
 from app.models.user import User
-from app.models.personnel import Programme, Direction, Service, GradeComplet
+from app.models.personnel import Programme, Direction, GradeComplet
+from app.models.rh import ServiceDept
 from app.core.enums import GradeCategory
 from app.templates import templates, get_template_context
 from app.core.logging_config import get_logger
@@ -35,23 +36,55 @@ def referentiels_home(
     Page principale de gestion des référentiels
     """
     # Compter les référentiels
-    nb_programmes = session.exec(select(Programme)).all()
-    nb_directions = session.exec(select(Direction)).all()
-    nb_services = session.exec(select(Service)).all()
-    nb_grades = session.exec(select(GradeComplet)).all()
+    programmes_raw = session.exec(select(Programme)).all()
+    directions_raw = session.exec(select(Direction)).all()
+    services_raw = session.exec(select(ServiceDept)).all()
+    grades_raw = session.exec(select(GradeComplet)).all()
+    
+    # Créer les dictionnaires de référence
+    programmes_dict = {p.id: p for p in programmes_raw}
+    directions_dict = {d.id: d for d in directions_raw}
+    
+    # Enrichir les directions avec programme_libelle
+    directions_enriched = []
+    for d in directions_raw:
+        direction_dict = {
+            "id": d.id,
+            "code": d.code,
+            "libelle": d.libelle,
+            "description": d.description or "",
+            "actif": d.actif,
+            "programme_id": d.programme_id,
+            "programme_libelle": programmes_dict[d.programme_id].libelle if d.programme_id and d.programme_id in programmes_dict else ""
+        }
+        directions_enriched.append(direction_dict)
+    
+    # Enrichir les services avec direction_libelle
+    services_enriched = []
+    for s in services_raw:
+        service_dict = {
+            "id": s.id,
+            "code": s.code,
+            "libelle": s.libelle,
+            "description": s.description or "",
+            "actif": s.actif,
+            "direction_id": s.direction_id,
+            "direction_libelle": directions_dict[s.direction_id].libelle if s.direction_id and s.direction_id in directions_dict else ""
+        }
+        services_enriched.append(service_dict)
     
     return templates.TemplateResponse(
         "pages/referentiels.html",
         get_template_context(
             request,
-            nb_programmes=len(nb_programmes),
-            nb_directions=len(nb_directions),
-            nb_services=len(nb_services),
-            nb_grades=len(nb_grades),
-            programmes=nb_programmes,
-            directions=nb_directions,
-            services=nb_services,
-            grades=nb_grades,
+            nb_programmes=len(programmes_raw),
+            nb_directions=len(directions_raw),
+            nb_services=len(services_raw),
+            nb_grades=len(grades_raw),
+            programmes=programmes_raw,
+            directions=directions_enriched,  # ← Directions enrichies avec programme_libelle
+            services=services_enriched,  # ← Services enrichis avec direction_libelle
+            grades=grades_raw,
             current_user=current_user
         )
     )
@@ -61,8 +94,8 @@ def referentiels_home(
 # API - PROGRAMMES
 # ============================================
 
-@router.get("/api/programmes")
-def api_list_programmes(session: Session = Depends(get_session)):
+@router.get("/api/programmes", name="api_list_programmes_ref")
+def api_list_programmes_ref(session: Session = Depends(get_session)):
     """Liste tous les programmes"""
     programmes = session.exec(select(Programme).order_by(Programme.code)).all()
     return [
@@ -77,7 +110,7 @@ def api_list_programmes(session: Session = Depends(get_session)):
     ]
 
 
-@router.post("/api/programmes")
+@router.post("/api/programmes", name="api_create_programme")
 def api_create_programme(
     code: str = Form(...),
     libelle: str = Form(...),
@@ -100,7 +133,7 @@ def api_create_programme(
     return {"ok": True, "id": programme.id, "message": "Programme créé avec succès"}
 
 
-@router.put("/api/programmes/{programme_id}")
+@router.put("/api/programmes/{programme_id}", name="api_update_programme")
 def api_update_programme(
     programme_id: int,
     code: str = Form(...),
@@ -134,7 +167,7 @@ def api_update_programme(
     return {"ok": True, "message": "Programme modifié avec succès"}
 
 
-@router.post("/api/programmes/{programme_id}/reactivate")
+@router.post("/api/programmes/{programme_id}/reactivate", name="api_reactivate_programme")
 def api_reactivate_programme(
     programme_id: int,
     session: Session = Depends(get_session),
@@ -154,7 +187,7 @@ def api_reactivate_programme(
     return {"ok": True, "message": "Programme réactivé avec succès"}
 
 
-@router.delete("/api/programmes/{programme_id}")
+@router.delete("/api/programmes/{programme_id}", name="api_delete_programme")
 def api_delete_programme(
     programme_id: int,
     hard_delete: bool = False,
@@ -186,27 +219,39 @@ def api_delete_programme(
 # API - DIRECTIONS
 # ============================================
 
-@router.get("/api/directions")
-def api_list_directions(session: Session = Depends(get_session)):
+@router.get("/api/directions", name="api_list_directions_ref")
+def api_list_directions_ref(session: Session = Depends(get_session)):
     """Liste toutes les directions"""
     directions = session.exec(select(Direction).order_by(Direction.code)).all()
     programmes = {p.id: p for p in session.exec(select(Programme)).all()}
     
-    return [
-        {
+    result = []
+    for d in directions:
+        programme_libelle = ""  # Chaîne vide au lieu de None
+        if d.programme_id and d.programme_id in programmes:
+            programme_libelle = programmes[d.programme_id].libelle
+        
+        result.append({
             "id": d.id,
             "code": d.code,
             "libelle": d.libelle,
-            "description": d.description,
+            "description": d.description or "",
             "actif": d.actif,
             "programme_id": d.programme_id,
-            "programme_libelle": programmes[d.programme_id].libelle if d.programme_id and d.programme_id in programmes else None
+            "programme_libelle": programme_libelle
+        })
+    
+    return JSONResponse(
+        content=result,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
         }
-        for d in directions
-    ]
+    )
 
 
-@router.post("/api/directions")
+@router.post("/api/directions", name="api_create_direction")
 def api_create_direction(
     code: str = Form(...),
     libelle: str = Form(...),
@@ -229,7 +274,7 @@ def api_create_direction(
     return {"ok": True, "id": direction.id, "message": "Direction créée avec succès"}
 
 
-@router.put("/api/directions/{direction_id}")
+@router.put("/api/directions/{direction_id}", name="api_update_direction")
 def api_update_direction(
     direction_id: int,
     code: str = Form(...),
@@ -264,7 +309,7 @@ def api_update_direction(
     return {"ok": True, "message": "Direction modifiée avec succès"}
 
 
-@router.post("/api/directions/{direction_id}/reactivate")
+@router.post("/api/directions/{direction_id}/reactivate", name="api_reactivate_direction")
 def api_reactivate_direction(
     direction_id: int,
     session: Session = Depends(get_session),
@@ -284,7 +329,7 @@ def api_reactivate_direction(
     return {"ok": True, "message": "Direction réactivée avec succès"}
 
 
-@router.delete("/api/directions/{direction_id}")
+@router.delete("/api/directions/{direction_id}", name="api_delete_direction")
 def api_delete_direction(
     direction_id: int,
     hard_delete: bool = False,
@@ -314,27 +359,40 @@ def api_delete_direction(
 # API - SERVICES
 # ============================================
 
-@router.get("/api/services")
-def api_list_services(session: Session = Depends(get_session)):
-    """Liste tous les services"""
-    services = session.exec(select(Service).order_by(Service.code)).all()
+@router.get("/api/services", name="api_list_services_ref")
+def api_list_services_ref(session: Session = Depends(get_session)):
+    """Liste tous les services avec leurs directions"""
+    services = session.exec(select(ServiceDept).order_by(ServiceDept.code)).all()
     directions = {d.id: d for d in session.exec(select(Direction)).all()}
     
-    return [
-        {
+    result = []
+    for s in services:
+        direction_libelle = ""  # Chaîne vide au lieu de None pour forcer l'inclusion dans le JSON
+        if s.direction_id and s.direction_id in directions:
+            direction_libelle = directions[s.direction_id].libelle
+        
+        result.append({
             "id": s.id,
             "code": s.code,
             "libelle": s.libelle,
-            "description": s.description,
+            "description": s.description or "",
             "actif": s.actif,
             "direction_id": s.direction_id,
-            "direction_libelle": directions[s.direction_id].libelle if s.direction_id and s.direction_id in directions else None
+            "direction_libelle": direction_libelle
+        })
+    
+    # Retourner avec headers no-cache pour forcer le rafraîchissement
+    return JSONResponse(
+        content=result,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
         }
-        for s in services
-    ]
+    )
 
 
-@router.post("/api/services")
+@router.post("/api/services", name="api_create_service")
 def api_create_service(
     code: str = Form(...),
     libelle: str = Form(...),
@@ -344,11 +402,17 @@ def api_create_service(
     current_user: User = Depends(get_current_user)
 ):
     """Créer un nouveau service"""
-    existing = session.exec(select(Service).where(Service.code == code)).first()
+    existing = session.exec(select(ServiceDept).where(ServiceDept.code == code)).first()
     if existing:
         raise HTTPException(400, f"Le code '{code}' existe déjà")
     
-    service = Service(code=code, libelle=libelle, description=description, direction_id=direction_id)
+    service = ServiceDept(
+        code=code, 
+        libelle=libelle, 
+        description=description, 
+        direction_id=direction_id,
+        actif=True
+    )
     session.add(service)
     session.commit()
     session.refresh(service)
@@ -357,7 +421,7 @@ def api_create_service(
     return {"ok": True, "id": service.id, "message": "Service créé avec succès"}
 
 
-@router.put("/api/services/{service_id}")
+@router.put("/api/services/{service_id}", name="api_update_service")
 def api_update_service(
     service_id: int,
     code: str = Form(...),
@@ -369,12 +433,12 @@ def api_update_service(
     current_user: User = Depends(get_current_user)
 ):
     """Modifier un service"""
-    service = session.get(Service, service_id)
+    service = session.get(ServiceDept, service_id)
     if not service:
         raise HTTPException(404, "Service non trouvé")
     
     if code != service.code:
-        existing = session.exec(select(Service).where(Service.code == code)).first()
+        existing = session.exec(select(ServiceDept).where(ServiceDept.code == code)).first()
         if existing:
             raise HTTPException(400, f"Le code '{code}' existe déjà")
     
@@ -383,7 +447,6 @@ def api_update_service(
     service.description = description
     service.direction_id = direction_id
     service.actif = actif
-    service.updated_at = datetime.utcnow()
     
     session.add(service)
     session.commit()
@@ -392,19 +455,18 @@ def api_update_service(
     return {"ok": True, "message": "Service modifié avec succès"}
 
 
-@router.post("/api/services/{service_id}/reactivate")
+@router.post("/api/services/{service_id}/reactivate", name="api_reactivate_service")
 def api_reactivate_service(
     service_id: int,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     """Réactiver un service désactivé"""
-    service = session.get(Service, service_id)
+    service = session.get(ServiceDept, service_id)
     if not service:
         raise HTTPException(404, "Service non trouvé")
     
     service.actif = True
-    service.updated_at = datetime.utcnow()
     session.add(service)
     session.commit()
     
@@ -412,7 +474,7 @@ def api_reactivate_service(
     return {"ok": True, "message": "Service réactivé avec succès"}
 
 
-@router.delete("/api/services/{service_id}")
+@router.delete("/api/services/{service_id}", name="api_delete_service")
 def api_delete_service(
     service_id: int,
     hard_delete: bool = False,
@@ -420,7 +482,7 @@ def api_delete_service(
     current_user: User = Depends(get_current_user)
 ):
     """Supprimer un service (soft delete par défaut, hard delete si hard_delete=true)"""
-    service = session.get(Service, service_id)
+    service = session.get(ServiceDept, service_id)
     if not service:
         raise HTTPException(404, "Service non trouvé")
     
@@ -431,7 +493,6 @@ def api_delete_service(
         return {"ok": True, "message": "Service supprimé définitivement"}
     else:
         service.actif = False
-        service.updated_at = datetime.utcnow()
         session.add(service)
         session.commit()
         logger.info(f"✅ Service désactivé : {service.code} par {current_user.email}")
@@ -442,8 +503,8 @@ def api_delete_service(
 # API - GRADES
 # ============================================
 
-@router.get("/api/grades")
-def api_list_grades(session: Session = Depends(get_session)):
+@router.get("/api/grades", name="api_list_grades_ref")
+def api_list_grades_ref(session: Session = Depends(get_session)):
     """Liste tous les grades"""
     grades = session.exec(select(GradeComplet).order_by(GradeComplet.code)).all()
     
@@ -452,8 +513,7 @@ def api_list_grades(session: Session = Depends(get_session)):
             "id": g.id,
             "code": g.code,
             "libelle": g.libelle,
-            "categorie": g.categorie.name,  # Retourne "A", "B", "C", "D" au lieu de la valeur complète
-            "categorie_libelle": g.categorie.value,  # Valeur complète pour affichage
+            "categorie": str(g.categorie),  # Convertir en string
             "echelon_min": g.echelon_min,
             "echelon_max": g.echelon_max,
             "actif": g.actif
@@ -462,7 +522,7 @@ def api_list_grades(session: Session = Depends(get_session)):
     ]
 
 
-@router.post("/api/grades")
+@router.post("/api/grades", name="api_create_grade")
 def api_create_grade(
     code: str = Form(...),
     libelle: str = Form(...),
@@ -498,7 +558,7 @@ def api_create_grade(
     return {"ok": True, "id": grade.id, "message": "Grade créé avec succès"}
 
 
-@router.put("/api/grades/{grade_id}")
+@router.put("/api/grades/{grade_id}", name="api_update_grade")
 def api_update_grade(
     grade_id: int,
     code: str = Form(...),
@@ -541,7 +601,7 @@ def api_update_grade(
     return {"ok": True, "message": "Grade modifié avec succès"}
 
 
-@router.post("/api/grades/{grade_id}/reactivate")
+@router.post("/api/grades/{grade_id}/reactivate", name="api_reactivate_grade")
 def api_reactivate_grade(
     grade_id: int,
     session: Session = Depends(get_session),
@@ -561,7 +621,7 @@ def api_reactivate_grade(
     return {"ok": True, "message": "Grade réactivé avec succès"}
 
 
-@router.delete("/api/grades/{grade_id}")
+@router.delete("/api/grades/{grade_id}", name="api_delete_grade")
 def api_delete_grade(
     grade_id: int,
     hard_delete: bool = False,

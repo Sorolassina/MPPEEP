@@ -170,7 +170,27 @@ class RHService:
 
     @staticmethod
     def transition(session: Session, request_id: int, to_state: WorkflowState, acted_by_user_id: int,
-                   acted_by_role: str, comment: Optional[str] = None) -> HRRequest:
+                   acted_by_role: str, comment: Optional[str] = None, skip_hierarchy_check: bool = False) -> HRRequest:
+        """
+        Effectue une transition dans le workflow d'une demande RH
+        
+        Args:
+            session: Session SQLModel
+            request_id: ID de la demande
+            to_state: État cible
+            acted_by_user_id: ID de l'utilisateur qui effectue la transition
+            acted_by_role: Rôle de l'utilisateur (pour historique)
+            comment: Commentaire optionnel
+            skip_hierarchy_check: Si True, ne vérifie pas la hiérarchie (pour admin/tests)
+        
+        Returns:
+            La demande mise à jour
+        
+        Raises:
+            ValueError: Si la transition est interdite
+        """
+        from app.services.hierarchy_service import HierarchyService
+        
         req = session.get(HRRequest, request_id)
         if not req:
             raise ValueError("Demande introuvable")
@@ -178,6 +198,22 @@ class RHService:
         allowed = [s.to_state for s in RHService.next_states_for(session, req.type, req.current_state)]
         if to_state not in allowed:
             raise ValueError(f"Transition interdite: {req.current_state} -> {to_state}")
+
+        # ✅ NOUVEAU : Vérifier que l'utilisateur a le droit de faire cette transition
+        if not skip_hierarchy_check:
+            can_validate = HierarchyService.can_user_validate(
+                session, acted_by_user_id, request_id, to_state
+            )
+            
+            if not can_validate:
+                expected_validator = HierarchyService.get_expected_validator(
+                    session, request_id, to_state
+                )
+                expected_name = f"{expected_validator.nom} {expected_validator.prenom}" if expected_validator else "inconnu"
+                raise ValueError(
+                    f"Vous n'êtes pas autorisé à effectuer cette validation. "
+                    f"Cette action doit être effectuée par : {expected_name}"
+                )
 
         # maj current assignee selon Step configuré
         step = session.exec(

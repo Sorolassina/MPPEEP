@@ -714,7 +714,7 @@ def delete_indicateur_api(
 # ROUTES GÉNÉRATION DE RAPPORTS
 # ============================================
 
-@router.post("/api/rapports/generate")
+@router.post("/api/rapports/generate", name="generate_report_api")
 def generate_report_api(
     report_type: str = Form(...),
     period: str = Form(...),
@@ -808,7 +808,7 @@ def generate_report_api(
         return {"success": False, "error": f"Erreur lors de la génération du rapport: {str(e)}"}
 
 
-@router.get("/api/rapports/historique")
+@router.get("/api/rapports/historique", name="get_rapports_historique")
 def get_rapports_historique(
     db: Session = Depends(get_session),
     current_user = Depends(require_roles("admin", "user"))
@@ -854,7 +854,7 @@ def get_rapports_historique(
         return {"success": False, "error": f"Erreur lors de la récupération de l'historique: {str(e)}"}
 
 
-@router.delete("/api/rapports/{rapport_id}")
+@router.delete("/api/rapports/{rapport_id}", name="delete_rapport_api")
 def delete_rapport_api(
     rapport_id: int,
     db: Session = Depends(get_session),

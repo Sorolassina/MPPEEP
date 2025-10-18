@@ -32,15 +32,27 @@ class SystemSettingsService:
         settings = db_session.get(SystemSettings, 1)
         
         if not settings:
-            # Créer les paramètres par défaut en utilisant la config
+            # Créer les paramètres par défaut complets
             settings = SystemSettings(
                 id=1,
-                company_name=app_settings.APP_NAME  # Utilise la valeur de la config
+                company_name=app_settings.APP_NAME,
+                company_description="Système de gestion intégré",
+                company_email="contact@mppeep.com",
+                company_phone="+225 00 00 00 00 00",
+                company_address="Abidjan, Côte d'Ivoire",
+                logo_path="images/logo_default.png",  # Détection auto via get_logo_url()
+                primary_color="#f77902",      # Orange
+                secondary_color="#038c25",    # Vert
+                accent_color="#fcc603",       # Jaune
+                footer_text=f"© 2025 {app_settings.APP_NAME}. Tous droits réservés."
             )
             db_session.add(settings)
             db_session.commit()
             db_session.refresh(settings)
-            logger.info(f"✅ Paramètres système créés avec valeurs par défaut (company_name: {app_settings.APP_NAME})")
+            logger.info(f"✅ Paramètres système créés avec valeurs par défaut complètes")
+            logger.info(f"   📛 Entreprise: {settings.company_name}")
+            logger.info(f"   🎨 Couleurs: Primary={settings.primary_color}, Secondary={settings.secondary_color}")
+            logger.info(f"   🖼️  Logo: {settings.logo_path}")
         
         return settings
     

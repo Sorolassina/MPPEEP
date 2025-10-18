@@ -68,7 +68,7 @@
             </tr>
           </thead>
           <tbody id="programmes-tbody">
-            <!-- Rempli dynamiquement -->
+            <tr><td colspan="5" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -93,7 +93,7 @@
             </tr>
           </thead>
           <tbody id="directions-tbody">
-            <!-- Rempli dynamiquement -->
+            <tr><td colspan="5" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -118,7 +118,7 @@
             </tr>
           </thead>
           <tbody id="services-tbody">
-            <!-- Rempli dynamiquement -->
+            <tr><td colspan="5" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -144,7 +144,7 @@
             </tr>
           </thead>
           <tbody id="grades-tbody">
-            <!-- Rempli dynamiquement -->
+            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -309,6 +309,29 @@
         width: 100%;
     }
 }
+
+/* Action buttons spacing */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-buttons .btn {
+  min-width: 40px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Élargir la colonne Actions */
+.data-table th:last-child,
+.data-table td:last-child {
+  min-width: 200px;
+  text-align: center;
+}
 </style>
 {% endblock %}
 
@@ -341,11 +364,47 @@ function switchTab(tabName) {
 // ============================================
 // CHARGEMENT DES DONNÉES
 // ============================================
+
+// Fonction helper pour recharger les données d'une table
+async function reloadTableData(type) {
+  switch(type) {
+    case 'programme':
+      await loadProgrammes();
+      break;
+    case 'direction':
+      await loadDirections();
+      break;
+    case 'service':
+      await loadServices();
+      break;
+    case 'grade':
+      await loadGrades();
+      break;
+  }
+}
+
 async function loadProgrammes() {
-  const response = await fetch('/api/v1/referentiels/api/programmes');
+  const response = await fetch("{{ url_for('api_list_programmes_ref') }}");
   const programmes = await response.json();
   
   const tbody = document.getElementById('programmes-tbody');
+  
+  // Si aucun programme, afficher le message vide
+  if (programmes.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-state">
+        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--gray-600);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucun programme enregistré</div>
+          <div style="font-size: 0.9rem; color: var(--gray-500);">
+            Cliquez sur "➕ Nouveau Programme" pour créer votre premier programme budgétaire
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
   tbody.innerHTML = programmes.map(p => `
     <tr>
       <td><strong>${p.code}</strong></td>
@@ -357,13 +416,22 @@ async function loadProgrammes() {
         </span>
       </td>
       <td>
-        <div class="action-icons">
-          <span class="action-icon edit" onclick="editProgramme(${p.id})" title="Modifier">✏️</span>
-          ${p.actif 
-            ? `<span class="action-icon deactivate" onclick="deactivateProgramme(${p.id})" title="Désactiver (réversible)">🔒</span>`
-            : `<span class="action-icon reactivate" onclick="reactivateProgramme(${p.id})" title="Réactiver">🔓</span>`
-          }
-          <span class="action-icon delete" onclick="deleteProgramme(${p.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
+        <div class="action-buttons">
+          <button class="btn btn-sm btn-primary" onclick="openModal('programme', ${p.id})" title="Modifier">
+            ✏️
+          </button>
+          ${!p.actif ? `
+            <button class="btn btn-sm btn-success" onclick="reactivateItem('programme', ${p.id})" title="Réactiver">
+              ⏸️
+            </button>
+          ` : `
+            <button class="btn btn-sm btn-warning" onclick="deactivateItem('programme', ${p.id})" title="Désactiver">
+              ↩️
+            </button>
+          `}
+          <button class="btn btn-sm btn-danger" onclick="deleteItem('programme', ${p.id})" title="Supprimer définitivement">
+            🗑️
+          </button>
         </div>
       </td>
     </tr>
@@ -371,73 +439,148 @@ async function loadProgrammes() {
 }
 
 async function loadDirections() {
-  const response = await fetch('/api/v1/referentiels/api/directions');
+  const response = await fetch("{{ url_for('api_list_directions_ref') }}");
   const directions = await response.json();
   
   const tbody = document.getElementById('directions-tbody');
+  
+  // Si aucune direction, afficher le message vide
+  if (directions.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-state">
+        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--gray-600);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
+          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucune direction enregistrée</div>
+          <div style="font-size: 0.9rem; color: var(--gray-500);">
+            Cliquez sur "➕ Nouvelle Direction" pour créer votre première direction
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
   tbody.innerHTML = directions.map(d => `
-    <tr>
-      <td><strong>${d.code}</strong></td>
-      <td>${d.libelle}</td>
-      <td>${d.programme_libelle || '-'}</td>
-      <td>
-        <span class="badge ${d.actif ? 'badge-success' : 'badge-danger'}">
-          ${d.actif ? 'Actif' : 'Inactif'}
-        </span>
-      </td>
-      <td>
-        <div class="action-icons">
-          <span class="action-icon edit" onclick="editDirection(${d.id})" title="Modifier">✏️</span>
-          ${d.actif 
-            ? `<span class="action-icon deactivate" onclick="deactivateDirection(${d.id})" title="Désactiver (réversible)">🔒</span>`
-            : `<span class="action-icon reactivate" onclick="reactivateDirection(${d.id})" title="Réactiver">🔓</span>`
-          }
-          <span class="action-icon delete" onclick="deleteDirection(${d.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
-        </div>
-      </td>
-    </tr>
+      <tr>
+        <td><strong>${d.code}</strong></td>
+        <td>${d.libelle}</td>
+        <td>${d.programme_libelle || '-'}</td>
+        <td>
+          <span class="badge ${d.actif ? 'badge-success' : 'badge-danger'}">
+            ${d.actif ? 'Actif' : 'Inactif'}
+          </span>
+        </td>
+        <td>
+          <div class="action-buttons">
+            <button class="btn btn-sm btn-primary" onclick="openModal('direction', ${d.id})" title="Modifier">
+              ✏️
+            </button>
+            ${!d.actif ? `
+              <button class="btn btn-sm btn-success" onclick="reactivateItem('direction', ${d.id})" title="Réactiver">
+                ⏸️
+              </button>
+            ` : `
+              <button class="btn btn-sm btn-warning" onclick="deactivateItem('direction', ${d.id})" title="Désactiver">
+                ↩️
+              </button>
+            `}
+            <button class="btn btn-sm btn-danger" onclick="deleteItem('direction', ${d.id})" title="Supprimer définitivement">
+              🗑️
+            </button>
+          </div>
+        </td>
+      </tr>
   `).join('');
 }
 
 async function loadServices() {
-  const response = await fetch('/api/v1/referentiels/api/services');
+  const response = await fetch("{{ url_for('api_list_services_ref') }}" + "?_=" + Date.now(), {
+    cache: 'no-cache',
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  });
   const services = await response.json();
   
   const tbody = document.getElementById('services-tbody');
+  
+  // Si aucun service, afficher le message vide
+  if (services.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-state">
+        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--gray-600);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucun service enregistré</div>
+          <div style="font-size: 0.9rem; color: var(--gray-500);">
+            Cliquez sur "➕ Nouveau Service" pour créer votre premier service
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
   tbody.innerHTML = services.map(s => `
-    <tr>
-      <td><strong>${s.code}</strong></td>
-      <td>${s.libelle}</td>
-      <td>${s.direction_libelle || '-'}</td>
-      <td>
-        <span class="badge ${s.actif ? 'badge-success' : 'badge-danger'}">
-          ${s.actif ? 'Actif' : 'Inactif'}
-        </span>
-      </td>
-      <td>
-        <div class="action-icons">
-          <span class="action-icon edit" onclick="editService(${s.id})" title="Modifier">✏️</span>
-          ${s.actif 
-            ? `<span class="action-icon deactivate" onclick="deactivateService(${s.id})" title="Désactiver (réversible)">🔒</span>`
-            : `<span class="action-icon reactivate" onclick="reactivateService(${s.id})" title="Réactiver">🔓</span>`
-          }
-          <span class="action-icon delete" onclick="deleteService(${s.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
-        </div>
+      <tr>
+        <td><strong>${s.code}</strong></td>
+        <td>${s.libelle}</td>
+        <td>${s.direction_libelle || '-'}</td>
+        <td>
+          <span class="badge ${s.actif ? 'badge-success' : 'badge-danger'}">
+            ${s.actif ? 'Actif' : 'Inactif'}
+          </span>
+        </td>
+        <td>
+          <div class="action-buttons">
+            <button class="btn btn-sm btn-primary" onclick="openModal('service', ${s.id})" title="Modifier">
+              ✏️
+            </button>
+            ${!s.actif ? `
+              <button class="btn btn-sm btn-success" onclick="reactivateItem('service', ${s.id})" title="Réactiver">
+                ⏸️
+              </button>
+            ` : `
+              <button class="btn btn-sm btn-warning" onclick="deactivateItem('service', ${s.id})" title="Désactiver">
+                ↩️
+              </button>
+            `}
+            <button class="btn btn-sm btn-danger" onclick="deleteItem('service', ${s.id})" title="Supprimer définitivement">
+              🗑️
+            </button>
+          </div>
       </td>
     </tr>
   `).join('');
 }
 
 async function loadGrades() {
-  const response = await fetch('/api/v1/referentiels/api/grades');
+  const response = await fetch("{{ url_for('api_list_grades_ref') }}");
   const grades = await response.json();
   
   const tbody = document.getElementById('grades-tbody');
+  
+  // Si aucun grade, afficher le message vide
+  if (grades.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-state">
+        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--gray-600);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🎓</div>
+          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucun grade enregistré</div>
+          <div style="font-size: 0.9rem; color: var(--gray-500);">
+            Cliquez sur "➕ Nouveau Grade" pour créer votre premier grade de la fonction publique
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
   tbody.innerHTML = grades.map(g => `
     <tr>
       <td><strong>${g.code}</strong></td>
       <td>${g.libelle}</td>
-      <td><span class="badge badge-info">${g.categorie_libelle || g.categorie}</span></td>
+      <td><span class="badge badge-info">${g.categorie}</span></td>
       <td>${g.echelon_min} - ${g.echelon_max}</td>
       <td>
         <span class="badge ${g.actif ? 'badge-success' : 'badge-danger'}">
@@ -445,13 +588,22 @@ async function loadGrades() {
         </span>
       </td>
       <td>
-        <div class="action-icons">
-          <span class="action-icon edit" onclick="editGrade(${g.id})" title="Modifier">✏️</span>
-          ${g.actif 
-            ? `<span class="action-icon deactivate" onclick="deactivateGrade(${g.id})" title="Désactiver (réversible)">🔒</span>`
-            : `<span class="action-icon reactivate" onclick="reactivateGrade(${g.id})" title="Réactiver">🔓</span>`
-          }
-          <span class="action-icon delete" onclick="deleteGrade(${g.id})" title="⚠️ Supprimer définitivement (irréversible)">🗑️</span>
+        <div class="action-buttons">
+          <button class="btn btn-sm btn-primary" onclick="openModal('grade', ${g.id})" title="Modifier">
+            ✏️
+          </button>
+          ${!g.actif ? `
+            <button class="btn btn-sm btn-success" onclick="reactivateItem('grade', ${g.id})" title="Réactiver">
+              ↩️
+            </button>
+          ` : `
+            <button class="btn btn-sm btn-warning" onclick="deactivateItem('grade', ${g.id})" title="Désactiver">
+              ⏸️
+            </button>
+          `}
+          <button class="btn btn-sm btn-danger" onclick="deleteItem('grade', ${g.id})" title="Supprimer définitivement">
+            🗑️
+          </button>
         </div>
       </td>
     </tr>
@@ -615,9 +767,41 @@ async function handleSubmit(event) {
   showGlobalLoading('Enregistrement...', 'Veuillez patienter');
   
   const formData = new FormData(event.target);
-  const url = editingId 
-    ? `/api/v1/referentiels/api/${currentType}s/${editingId}`
-    : `/api/v1/referentiels/api/${currentType}s`;
+  // Construire l'URL avec url_for selon le type
+  let url;
+  if (editingId && editingId !== null && editingId !== 'null') {
+    // Modification
+    switch(currentType) {
+      case 'programme':
+        url = "{{ url_for('api_update_programme', programme_id=0) }}".replace('/0', `/${editingId}`);
+        break;
+      case 'direction':
+        url = "{{ url_for('api_update_direction', direction_id=0) }}".replace('/0', `/${editingId}`);
+        break;
+      case 'service':
+        url = "{{ url_for('api_update_service', service_id=0) }}".replace('/0', `/${editingId}`);
+        break;
+      case 'grade':
+        url = "{{ url_for('api_update_grade', grade_id=0) }}".replace('/0', `/${editingId}`);
+        break;
+    }
+  } else {
+    // Création
+    switch(currentType) {
+      case 'programme':
+        url = "{{ url_for('api_create_programme') }}";
+        break;
+      case 'direction':
+        url = "{{ url_for('api_create_direction') }}";
+        break;
+      case 'service':
+        url = "{{ url_for('api_create_service') }}";
+        break;
+      case 'grade':
+        url = "{{ url_for('api_create_grade') }}";
+        break;
+    }
+  }
   
   try {
     const response = await fetch(url, {
@@ -629,8 +813,26 @@ async function handleSubmit(event) {
     
     if (response.ok && result.ok) {
       closeModal();
-      showGlobalLoading('✅ Enregistré', 'Actualisation de la page...');
-      setTimeout(() => location.reload(), 500);
+      showGlobalLoading('✅ Enregistré', 'Actualisation des données...');
+      
+      // Recharger uniquement les données de la table concernée
+      switch(currentType) {
+        case 'programme':
+          await loadProgrammes();
+          break;
+        case 'direction':
+          await loadDirections();
+          break;
+        case 'service':
+          await loadServices();
+          break;
+        case 'grade':
+          await loadGrades();
+          break;
+      }
+      
+      hideGlobalLoading();
+      showSuccess(result.message || 'Enregistré avec succès');
     } else {
       hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de l\'enregistrement');
@@ -687,16 +889,38 @@ async function reactivateGrade(id) {
 async function reactivateItem(type, id) {
   showGlobalLoading('Réactivation...', 'Veuillez patienter');
   
+  // Construire l'URL avec url_for selon le type
+  let url;
+  switch(type) {
+    case 'programme':
+      url = "{{ url_for('api_reactivate_programme', programme_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'direction':
+      url = "{{ url_for('api_reactivate_direction', direction_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'service':
+      url = "{{ url_for('api_reactivate_service', service_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'grade':
+      url = "{{ url_for('api_reactivate_grade', grade_id=0) }}".replace('/0', `/${id}`);
+      break;
+  }
+  
   try {
-    const response = await fetch(`/api/v1/referentiels/api/${type}s/${id}/reactivate`, {
+    const response = await fetch(url, {
       method: 'POST'
     });
     
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showGlobalLoading('✅ Réactivé', 'Actualisation de la page...');
-      setTimeout(() => location.reload(), 500);
+      showGlobalLoading('✅ Réactivé', 'Actualisation des données...');
+      
+      // Recharger uniquement les données de la table concernée
+      await reloadTableData(type);
+      
+      hideGlobalLoading();
+      showSuccess(result.message || 'Réactivé avec succès');
     } else {
       hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la réactivation');
@@ -734,16 +958,38 @@ async function deactivateGrade(id) {
 async function deactivateItem(type, id) {
   showGlobalLoading('Désactivation...', 'Veuillez patienter');
   
+  // Construire l'URL avec url_for selon le type
+  let url;
+  switch(type) {
+    case 'programme':
+      url = "{{ url_for('api_delete_programme', programme_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'direction':
+      url = "{{ url_for('api_delete_direction', direction_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'service':
+      url = "{{ url_for('api_delete_service', service_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'grade':
+      url = "{{ url_for('api_delete_grade', grade_id=0) }}".replace('/0', `/${id}`);
+      break;
+  }
+  
   try {
-    const response = await fetch(`/api/v1/referentiels/api/${type}s/${id}`, {
+    const response = await fetch(url, {
       method: 'DELETE'  // Soft delete par défaut (hard_delete=false)
     });
     
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showGlobalLoading('✅ Désactivé', 'Actualisation de la page...');
-      setTimeout(() => location.reload(), 500);
+      showGlobalLoading('✅ Désactivé', 'Actualisation des données...');
+      
+      // Recharger uniquement les données de la table concernée
+      await reloadTableData(type);
+      
+      hideGlobalLoading();
+      showSuccess(result.message || 'Désactivé avec succès');
     } else {
       hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la désactivation');
@@ -781,16 +1027,38 @@ async function deleteGrade(id) {
 async function deleteItem(type, id) {
   showGlobalLoading('Suppression...', 'Suppression définitive en cours');
   
+  // Construire l'URL avec url_for selon le type (avec hard_delete=true)
+  let url;
+  switch(type) {
+    case 'programme':
+      url = "{{ url_for('api_delete_programme', programme_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
+      break;
+    case 'direction':
+      url = "{{ url_for('api_delete_direction', direction_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
+      break;
+    case 'service':
+      url = "{{ url_for('api_delete_service', service_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
+      break;
+    case 'grade':
+      url = "{{ url_for('api_delete_grade', grade_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
+      break;
+  }
+  
   try {
-    const response = await fetch(`/api/v1/referentiels/api/${type}s/${id}?hard_delete=true`, {
+    const response = await fetch(url, {
       method: 'DELETE'  // Hard delete avec paramètre
     });
     
     const result = await response.json();
     
     if (response.ok && result.ok) {
-      showGlobalLoading('✅ Supprimé', 'Actualisation de la page...');
-      setTimeout(() => location.reload(), 500);
+      showGlobalLoading('✅ Supprimé', 'Actualisation des données...');
+      
+      // Recharger uniquement les données de la table concernée
+      await reloadTableData(type);
+      
+      hideGlobalLoading();
+      showSuccess(result.message || 'Supprimé avec succès');
     } else {
       hideGlobalLoading();
       await handleFetchError(response, 'Erreur lors de la suppression');

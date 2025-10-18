@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from app.api.v1 import api_router
 from app.core.config import settings
@@ -12,7 +12,15 @@ setup_logging()
 logger = get_logger("mppeep.main")   # ou __name__
 
 # 2) App FastAPI
-app = FastAPI(title=settings.APP_NAME)
+root_path = settings.get_root_path  # Dynamique selon DEBUG/ENV
+app = FastAPI(
+    title=settings.APP_NAME, 
+    root_path=root_path, 
+    version=settings.ASSET_VERSION,
+    openapi_url=f"{root_path}/openapi.json" if root_path else "/openapi.json",
+    docs_url=f"{root_path}/docs" if root_path else "/docs",
+    redoc_url=f"{root_path}/redoc" if root_path else "/redoc",
+)
 
 # 3) Middlewares
 setup_middlewares(app, settings)
@@ -32,7 +40,7 @@ async def startup_event():
         
         # Initialisation du système RH
         logger.info("👥 Initialisation du système RH...")
-        from app.core.rh_workflow_seed import ensure_workflow_steps
+        from app.core.logique_metier.rh_workflow import ensure_workflow_steps
         from app.db.session import get_session
         session = next(get_session())
         try:
@@ -63,7 +71,19 @@ app.include_router(api_router, prefix="/api/v1")
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """Redirige vers le favicon dans le dossier static"""
-    return RedirectResponse(url="/static/favicon.ico")
+    from app.core.path_config import path_config
+    favicon_url = path_config.get_file_url("static", "favicon.ico")
+    return RedirectResponse(url=favicon_url)
+
+@app.get("/version", response_class=JSONResponse, name="version")
+def get_version():
+    return JSONResponse({
+        "version": app.version,
+        "root_path": app.root_path,
+        "app_name": app.title,
+        "environment": settings.ENV,
+        "debug": settings.DEBUG
+    })
 
 @app.get("/", name="read_root")
 def read_root(request: Request):
@@ -119,7 +139,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=9000,
         reload=True,
         log_config=None,   # ⬅️ laisse ta config régner
         # log_level="info"  # facultatif : n’influe pas ta config Python

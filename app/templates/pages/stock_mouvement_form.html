@@ -269,7 +269,7 @@ async function submitForm(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch('/api/v1/stock/api/mouvements', {
+    const response = await fetch("{{ url_for('api_create_mouvement') }}", {
       method: 'POST',
       body: formData
     });

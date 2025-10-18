@@ -288,7 +288,7 @@ function filtrerFiches() {
   const programmeId = document.getElementById('filter-programme').value;
   
   // Construire l'URL avec les paramètres
-  let url = `/api/v1/budget/fiches/hierarchique?annee=${annee}`;
+  let url = "{{ url_for('budget_fiches_hierarchique') }}" + `?annee=${annee}`;
   if (programmeId !== 'tous') {
     url += `&programme_id=${programmeId}`;
   }
@@ -302,14 +302,14 @@ function filtrerFiches() {
 function reinitialiserFiltres() {
   showGlobalLoading('Réinitialisation...', 'Chargement de toutes les fiches');
   setTimeout(() => {
-    window.location.href = '/api/v1/budget/fiches/hierarchique?annee=toutes';
+    window.location.href = "{{ url_for('budget_fiches_hierarchique') }}" + '?annee=toutes';
   }, 300);
 }
 
 function voirFiche(ficheId) {
   showGlobalLoading('Chargement...', 'Ouverture de la fiche');
   setTimeout(() => {
-    window.location.href = `/api/v1/budget/fiches/${ficheId}/structure`;
+    window.location.href = "{{ url_for('budget_fiche_structure', fiche_id=0) }}".replace('/0', `/${ficheId}`);
   }, 300);
 }
 
@@ -318,7 +318,7 @@ function exporterExcel(ficheId) {
   
   // Créer un lien temporaire pour le téléchargement
   const link = document.createElement('a');
-  link.href = `/api/v1/budget/api/fiches/${ficheId}/export/excel`;
+  link.href = "{{ url_for('api_exporter_fiche_excel', fiche_id=0) }}".replace('/0', `/${ficheId}`);
   link.download = '';
   document.body.appendChild(link);
   link.click();
@@ -335,7 +335,7 @@ function exporterPDF(ficheId) {
   
   // Créer un lien temporaire pour le téléchargement
   const link = document.createElement('a');
-  link.href = `/api/v1/budget/api/fiches/${ficheId}/export/pdf`;
+  link.href = "{{ url_for('api_exporter_fiche_pdf', fiche_id=0) }}".replace('/0', `/${ficheId}`);
   link.download = '';
   document.body.appendChild(link);
   link.click();
@@ -359,7 +359,7 @@ async function gererDocumentsFiche(ficheId) {
 
 async function chargerDocumentsFiche(ficheId) {
   try {
-    const response = await fetch(`/api/v1/budget/api/fiches/${ficheId}/documents`);
+    const response = await fetch("{{ url_for('api_get_documents_fiche', fiche_id=0) }}".replace('/0', `/${ficheId}`));
     const result = await response.json();
     
     const listeDiv = document.getElementById('listeDocumentsFiche');
@@ -399,7 +399,7 @@ async function handleUploadDocumentFiche(event) {
   showGlobalLoading('Upload...', 'Upload du document en cours');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/fiches/${ficheId}/documents`, {
+    const response = await fetch("{{ url_for('api_ajouter_document_fiche', fiche_id=0) }}".replace('/0', `/${ficheId}`), {
       method: 'POST',
       body: formData
     });
@@ -424,7 +424,7 @@ async function handleUploadDocumentFiche(event) {
 }
 
 function telechargerDocument(ficheId, documentId) {
-  window.open(`/api/v1/budget/api/fiches/${ficheId}/documents/${documentId}/download`, '_blank');
+  window.open("{{ url_for('api_telecharger_document_fiche', fiche_id=0, document_id=0) }}".replace('/0/documents/0', `/${ficheId}/documents/${documentId}`), '_blank');
 }
 
 async function supprimerDocumentFiche(ficheId, documentId) {
@@ -433,7 +433,7 @@ async function supprimerDocumentFiche(ficheId, documentId) {
   showGlobalLoading('Suppression...', 'Suppression du document');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/fiches/${ficheId}/documents/${documentId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_document_fiche', fiche_id=0, document_id=0) }}".replace('/0/documents/0', `/${ficheId}/documents/${documentId}`), {
       method: 'DELETE'
     });
     
@@ -460,7 +460,7 @@ async function supprimerFiche(ficheId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/fiches/${ficheId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_fiche', fiche_id=0) }}".replace('/0', `/${ficheId}`), {
       method: 'DELETE'
     });
     
@@ -495,7 +495,7 @@ function telechargerTemplate() {
   
   // Créer un lien temporaire pour le téléchargement
   const link = document.createElement('a');
-  link.href = `/api/v1/budget/api/telecharger-template-fiche?annee=${annee}`;
+  link.href = "{{ url_for('api_telecharger_template_fiche') }}" + `?annee=${annee}`;
   link.download = `Modele_Fiche_Technique_${annee}.xlsx`;
   document.body.appendChild(link);
   link.click();
@@ -513,7 +513,7 @@ async function handleChargerFiche(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch('/api/v1/budget/api/charger-fiche', {
+    const response = await fetch("{{ url_for('api_charger_fiche') }}", {
       method: 'POST',
       body: formData
     });

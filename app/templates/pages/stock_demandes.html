@@ -118,7 +118,7 @@
             </td>
             <td style="text-align: center;">
               {% if demande.document_path %}
-                <a href="/uploads/{{ demande.document_path }}" target="_blank" 
+                <a href="{{ upload_url(demande.document_path) }}" target="_blank" 
                    title="{{ demande.document_filename }}"
                    style="color: var(--success-color); font-size: 1.2rem; text-decoration: none;">
                   📎

@@ -82,7 +82,7 @@
     actions=[
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False},
         {'label': '📝 Nouvelle demande', 'url': url_for('rh_new_demande'), 'primary': False},
-        {'label': '👥 Personnel', 'url': '/api/v1/personnel/', 'primary': False},
+        {'label': '👥 Personnel', 'url': url_for('personnel_home'), 'primary': False},
         {'label': '📊 Besoins agents', 'url': url_for('besoins_home'), 'primary': True}
     ]
 ) }}

@@ -128,7 +128,7 @@ def rapports(
 
 # ===== CRUD UTILISATEURS =====
 
-@router.post("/users/create")
+@router.post("/users/create", name="create_user_api")
 async def create_user(
     email: str = Form(...),
     full_name: str = Form(...),
@@ -194,7 +194,7 @@ async def create_user(
         )
 
 
-@router.post("/users/{user_id}/update")
+@router.post("/users/{user_id}/update", name="update_user_api")
 async def update_user(
     user_id: int,
     email: str = Form(...),
@@ -264,7 +264,7 @@ async def update_user(
         )
 
 
-@router.post("/users/{user_id}/delete")
+@router.post("/users/{user_id}/delete", name="delete_user_api")
 async def delete_user(
     user_id: int,
     session: Session = Depends(get_session),
@@ -320,7 +320,7 @@ async def delete_user(
         )
 
 
-@router.get("/users/{user_id}/get")
+@router.get("/users/{user_id}/get", name="get_user_api")
 async def get_user(
     user_id: int,
     session: Session = Depends(get_session),
@@ -356,7 +356,7 @@ async def get_user(
         )
 
 
-@router.post("/users/{user_id}/upload-photo")
+@router.post("/users/{user_id}/upload-photo", name="upload_user_photo_api")
 async def upload_user_photo(
     user_id: int,
     request: Request,
@@ -444,11 +444,14 @@ async def upload_user_photo(
         
         logger.info(f"📸 Photo de profil uploadée pour {user.email} par {current_user.email}")
         
+        # Générer l'URL avec ROOT_PATH si nécessaire
+        photo_url = path_config.get_file_url("uploads", relative_path)
+        
         return JSONResponse(
             content={
                 "success": True,
                 "message": "Photo de profil uploadée avec succès",
-                "photo_url": f"/uploads/{relative_path}"
+                "photo_url": photo_url
             }
         )
     except Exception as e:
@@ -462,7 +465,7 @@ async def upload_user_photo(
 
 # ===== GESTION PARAMÈTRES SYSTÈME =====
 
-@router.post("/settings/update")
+@router.post("/settings/update", name="update_settings_api")
 async def update_system_settings(
     company_name: str = Form(...),
     company_description: Optional[str] = Form(None),
@@ -532,7 +535,7 @@ async def update_system_settings(
         )
 
 
-@router.post("/settings/upload-logo")
+@router.post("/settings/upload-logo", name="upload_logo_api")
 async def upload_logo(
     request: Request,
     session: Session = Depends(get_session),
@@ -607,11 +610,14 @@ async def upload_logo(
         
         logger.info(f"📁 Logo uploadé: {new_filename} par {current_user.email}")
         
+        # Générer l'URL avec ROOT_PATH si nécessaire
+        logo_url = path_config.get_file_url("static", logo_relative_path)
+        
         return JSONResponse(
             content={
                 "success": True,
                 "message": "Logo uploadé avec succès",
-                "logo_url": f"/static/{logo_relative_path}"
+                "logo_url": logo_url
             }
         )
     except Exception as e:

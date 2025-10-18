@@ -1,10 +1,9 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}Accueil</body>
+{% block title %}
+Accueil
 {% endblock %}
 
-{% block page_title %}Accueil</body>
-{% endblock %}
 
 {% block content %}
 <body class="form-page-premium">
@@ -48,6 +47,10 @@
             <a href="{{ url_for('parametres_systeme') }}" class="action-button">
                 <span class="action-icon">⚙️</span>
                 <span class="action-text">Paramètres</span>
+            </a>
+            <a href="{{ url_for('workflow_config_home') }}" class="action-button">
+                <span class="action-icon">🔄</span>
+                <span class="action-text">Workflows</span>
             </a>
             <a href="{{ url_for('referentiels_home') }}" class="action-button">
                 <span class="action-icon">📚</span>

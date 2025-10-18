@@ -183,12 +183,12 @@
     title='➕ Nouvel Agent' if mode == 'create' else '✏️ Modifier Agent',
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
-        {'name': 'RH', 'url': '/api/v1/rh/'},
-        {'name': 'Personnel', 'url': '/api/v1/personnel/'},
+        {'name': 'RH', 'url': url_for('rh_home')},
+        {'name': 'Personnel', 'url': url_for('personnel_home')},
         {'name': 'Nouveau' if mode == 'create' else 'Modifier'}
     ],
     actions=[
-        {'label': '← Retour Personnel', 'url': '/api/v1/personnel/', 'primary': False}
+        {'label': '← Retour Personnel', 'url': url_for('personnel_home'), 'primary': False}
     ]
 ) }}
 
@@ -202,7 +202,7 @@
   <!-- Formulaire -->
   <div class="form-container">
 
-    <form method="POST" action="{{ '/api/v1/personnel/api/agents/' + (agent.id|string) if mode == 'edit' else '/api/v1/personnel/api/agents' }}" enctype="multipart/form-data" id="agentForm" data-mode="{{ mode }}" {% if mode == 'edit' %}data-agent-id="{{ agent.id }}"{% endif %}>
+    <form method="POST" action="{{ url_for('api_update_agent', agent_id=agent.id) if mode == 'edit' else url_for('api_create_agent') }}" enctype="multipart/form-data" id="agentForm" data-mode="{{ mode }}" {% if mode == 'edit' %}data-agent-id="{{ agent.id }}"{% endif %}>
       
       <!-- IDENTIFICATION -->
       <div class="form-section">
@@ -518,7 +518,7 @@
 
       <!-- ACTIONS -->
       <div class="form-actions">
-        <a href="/api/v1/personnel/" class="btn btn-secondary">Annuler</a>
+        <a href="{{ url_for('personnel_home') }}" class="btn btn-secondary">Annuler</a>
         <button type="submit" class="btn btn-primary">
           {{ '➕ Créer l\'agent' if mode == 'create' else '💾 Enregistrer' }}
         </button>
@@ -637,8 +637,8 @@ document.querySelector('form').addEventListener('submit', async function(e) {
   
   try {
     const url = mode === 'edit' 
-      ? `/api/v1/personnel/api/agents/${agentId}` 
-      : '/api/v1/personnel/api/agents';
+      ? "{{ url_for('api_update_agent', agent_id=0) }}".replace('/0', `/${agentId}`)
+      : "{{ url_for('api_create_agent') }}";
     
     const method = mode === 'edit' ? 'PUT' : 'POST';
     
@@ -657,7 +657,7 @@ document.querySelector('form').addEventListener('submit', async function(e) {
       const targetAgentId = mode === 'edit' ? agentId : result.agent_id;
       setTimeout(() => {
         showGlobalLoading('Redirection...', 'Ouverture de la fiche agent');
-        window.location.href = `/api/v1/personnel/${targetAgentId}`;
+        window.location.href = "{{ url_for('personnel_detail', agent_id=0) }}".replace('/0', `/${targetAgentId}`);
       }, 1000);
     } else {
       await handleFetchError(response, mode === 'edit' ? 'Impossible de modifier l\'agent' : 'Impossible de créer l\'agent');

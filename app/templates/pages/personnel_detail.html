@@ -146,13 +146,13 @@
     title='👤 ' + agent.prenom + ' ' + agent.nom + ' - ' + agent.matricule,
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
-        {'name': 'RH', 'url': '/api/v1/rh/'},
-        {'name': 'Personnel', 'url': '/api/v1/personnel/'},
+        {'name': 'RH', 'url': url_for('rh_home')},
+        {'name': 'Personnel', 'url': url_for('personnel_home')},
         {'name': agent.matricule}
     ],
     actions=[
-        {'label': '← Retour Personnel', 'url': '/api/v1/personnel/', 'primary': False},
-        {'label': '✏️ Modifier', 'url': '/api/v1/personnel/' + agent.id|string + '/edit', 'primary': True}
+        {'label': '← Retour Personnel', 'url': url_for('personnel_home'), 'primary': False},
+        {'label': '✏️ Modifier', 'url': url_for('personnel_edit', agent_id=agent.id), 'primary': True}
     ]
 ) }}
 
@@ -438,7 +438,7 @@
   <!-- Actions -->
   <div class="info-section">
     <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-      <a href="/api/v1/personnel/{{ agent.id }}/edit" class="btn btn-primary">
+      <a href="{{ url_for('personnel_edit', agent_id=agent.id) }}" class="btn btn-primary">
         ✏️ Modifier
       </a>
       <button onclick="confirmerDesactivation()" class="btn btn-primary" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
@@ -477,7 +477,7 @@ function confirmerDesactivation() {
   if (confirm(`Voulez-vous vraiment ${action} cet agent ?`)) {
     showGlobalLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}...`, 'Veuillez patienter');
     
-    fetch(`/api/v1/personnel/api/agents/{{ agent.id }}`, {
+    fetch("{{ url_for('delete_agent_api', agent_id=agent.id) }}", {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'

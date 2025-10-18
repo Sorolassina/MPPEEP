@@ -481,7 +481,7 @@ function telechargerTemplateSigobe() {
   
   // Créer un lien temporaire pour le téléchargement
   const link = document.createElement('a');
-  link.href = '/api/v1/budget/api/telecharger-template-sigobe';
+  link.href = "{{ url_for('api_telecharger_template_sigobe') }}";
   link.download = 'Modele_SIGOBE.xlsx';
   document.body.appendChild(link);
   link.click();
@@ -517,7 +517,7 @@ async function handleUpload(event) {
   
   try {
     // Étape 1 : Prévisualisation
-    const response = await fetch('/api/v1/budget/api/sigobe/preview', {
+    const response = await fetch("{{ url_for('api_preview_sigobe') }}", {
       method: 'POST',
       body: formData
     });
@@ -682,7 +682,7 @@ async function confirmerImport() {
   const formData = new FormData(document.getElementById('formUpload'));
   
   try {
-    const response = await fetch('/api/v1/budget/api/sigobe/upload', {
+    const response = await fetch("{{ url_for('api_upload_sigobe') }}", {
       method: 'POST',
       body: formData
     });
@@ -711,7 +711,7 @@ async function supprimerChargement(id) {
   showGlobalLoading('Suppression...', 'Suppression du chargement et de ses données');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/sigobe/${id}`, {
+    const response = await fetch("{{ url_for('api_delete_sigobe_chargement', chargement_id=0) }}".replace('/0', `/${id}`), {
       method: 'DELETE'
     });
     
@@ -734,7 +734,7 @@ async function supprimerChargement(id) {
 function voirTable(chargementId) {
   showGlobalLoading('Chargement...', 'Ouverture de la table SIGOBE');
   setTimeout(() => {
-    window.location.href = `/api/v1/budget/sigobe/${chargementId}/table`;
+    window.location.href = "{{ url_for('budget_sigobe_table', chargement_id=0) }}".replace('/0', `/${chargementId}`);
   }, 300);
 }
 
@@ -743,7 +743,7 @@ function exporterExcel(chargementId) {
   
   // Créer un lien temporaire pour le téléchargement
   const link = document.createElement('a');
-  link.href = `/api/v1/budget/api/sigobe/${chargementId}/export/excel`;
+  link.href = "{{ url_for('api_export_sigobe_excel', chargement_id=0) }}".replace('/0', `/${chargementId}`);
   link.download = '';
   document.body.appendChild(link);
   link.click();
@@ -783,7 +783,7 @@ function voirKPIs(chargementId) {
   
   // Redirection après un court délai
   setTimeout(() => {
-    window.location.href = url;
+    window.location.href = url;  // URL déjà générée avec url_for dans le HTML
   }, 300);
 }
 </script>

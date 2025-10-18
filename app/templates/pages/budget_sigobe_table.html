@@ -491,7 +491,7 @@ function reinitialiserFiltres() {
 function editerLigne(ligneId) {
   showGlobalLoading('Chargement...', 'Récupération des données');
   
-  fetch(`/api/v1/budget/api/sigobe/executions/${ligneId}`)
+  fetch("{{ url_for('api_get_sigobe_execution', execution_id=0) }}".replace('/0', `/${ligneId}`))
     .then(response => response.json())
     .then(result => {
       hideGlobalLoading();
@@ -530,7 +530,7 @@ async function handleEditerLigne(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour de la ligne');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/sigobe/executions/${ligneId}`, {
+    const response = await fetch("{{ url_for('api_update_sigobe_execution', execution_id=0) }}".replace('/0', `/${ligneId}`), {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -568,7 +568,7 @@ async function supprimerLigne(ligneId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/sigobe/executions/${ligneId}`, {
+    const response = await fetch("{{ url_for('api_delete_sigobe_execution', execution_id=0) }}".replace('/0', `/${ligneId}`), {
       method: 'DELETE'
     });
     

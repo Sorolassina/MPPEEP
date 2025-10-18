@@ -29,7 +29,7 @@ try:
     print("   ✅ RHService importé correctement")
     
     print("\n4️⃣  Test import workflow seed...")
-    from app.core.rh_workflow_seed import ensure_workflow_steps
+    from app.core.logique_metier.rh_workflow import ensure_workflow_steps
     print("   ✅ ensure_workflow_steps importé correctement")
     
     print("\n5️⃣  Test import endpoints...")

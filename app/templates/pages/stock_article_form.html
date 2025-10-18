@@ -189,8 +189,8 @@ async function submitForm(event) {
   
   // Déterminer l'URL et la méthode selon création ou modification
   const url = articleId 
-    ? `/api/v1/stock/api/articles/${articleId}` 
-    : '/api/v1/stock/api/articles';
+    ? "{{ url_for('api_update_article', article_id=0) }}".replace('/0', `/${articleId}`)
+    : "{{ url_for('api_create_article') }}";
   const method = articleId ? 'PUT' : 'POST';
   
   try {

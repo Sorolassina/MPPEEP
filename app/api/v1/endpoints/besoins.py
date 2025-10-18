@@ -158,7 +158,7 @@ def besoins_consolidation(
 # API - CRUD BESOINS
 # ============================================
 
-@router.get("/api/besoins")
+@router.get("/api/besoins", name="list_besoins_api")
 def api_list_besoins(
     annee: Optional[int] = None,
     service_id: Optional[int] = None,
@@ -204,7 +204,7 @@ def api_list_besoins(
     ]
 
 
-@router.post("/api/besoins")
+@router.post("/api/besoins", name="create_besoin_api")
 def api_create_besoin(
     annee: int = Form(...),
     periode: Optional[str] = Form(None),
@@ -270,7 +270,7 @@ def api_create_besoin(
     return {"ok": True, "id": besoin.id, "message": "Besoin créé avec succès"}
 
 
-@router.put("/api/besoins/{besoin_id}")
+@router.put("/api/besoins/{besoin_id}", name="update_besoin_api")
 def api_update_besoin(
     besoin_id: int,
     nombre_obtenu: Optional[int] = Form(None),
@@ -344,7 +344,7 @@ def api_update_besoin(
     return {"ok": True, "message": "Besoin mis à jour avec succès"}
 
 
-@router.delete("/api/besoins/{besoin_id}")
+@router.delete("/api/besoins/{besoin_id}", name="delete_besoin_api")
 def api_delete_besoin(
     besoin_id: int,
     session: Session = Depends(get_session),
@@ -381,7 +381,7 @@ def api_delete_besoin(
 # API - CONSOLIDATION
 # ============================================
 
-@router.post("/api/consolidation/generer")
+@router.post("/api/consolidation/generer", name="generer_consolidation_api")
 def api_generer_consolidation(
     annee: int = Form(...),
     niveau: str = Form(...),  # "Direction" ou "Programme"
@@ -461,7 +461,7 @@ def api_generer_consolidation(
     return {"ok": True, "id": consolidation.id, "message": "Consolidation générée avec succès"}
 
 
-@router.get("/api/consolidation/{consolidation_id}/export")
+@router.get("/api/consolidation/{consolidation_id}/export", name="export_consolidation_api")
 def api_export_consolidation(
     consolidation_id: int,
     session: Session = Depends(get_session)
@@ -513,7 +513,7 @@ def api_export_consolidation(
     }
 
 
-@router.get("/api/statistiques")
+@router.get("/api/statistiques", name="statistiques_besoins_api")
 def api_statistiques_besoins(
     annee: Optional[int] = None,
     session: Session = Depends(get_session)

@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Session, create_engine
-from app.core.rh_workflow_seed import ensure_workflow_steps
+from app.core.logique_metier.rh_workflow import ensure_workflow_steps
 from app.core.config import settings
 
 # Utilise la propriété database_url qui bascule automatiquement selon l'environnement

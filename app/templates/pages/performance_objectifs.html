@@ -464,9 +464,9 @@
 const API_URLS = {
     list: "{{ url_for('get_objectifs_api') }}",
     create: "{{ url_for('create_objectif_api') }}",
-    detail: (id) => `/api/v1/performance/api/objectifs/${id}`,
-    update: (id) => `/api/v1/performance/api/objectifs/${id}`,
-    delete: (id) => `/api/v1/performance/api/objectifs/${id}`,
+    detail: (id) => "{{ url_for('get_objectif_api', objectif_id=0) }}".replace('/0', `/${id}`),
+    update: (id) => "{{ url_for('update_objectif_api', objectif_id=0) }}".replace('/0', `/${id}`),
+    delete: (id) => "{{ url_for('delete_objectif_api', objectif_id=0) }}".replace('/0', `/${id}`),
     kpis: "{{ url_for('get_objectifs_kpis_api') }}"
 };
 
@@ -510,7 +510,7 @@ async function loadObjectives() {
 // Charger la liste des utilisateurs
 async function loadUsers() {
     try {
-        const response = await fetch('/api/v1/users/');
+        const response = await fetch("{{ url_for('list_users') }}");
         allUsers = await response.json();
         
         // Ne pas peupler le select ici, attendre la sélection du service
@@ -536,7 +536,7 @@ async function filterUsersByService() {
     
     try {
         // Charger les utilisateurs du service sélectionné
-        const response = await fetch(`/api/v1/users/by-service/${selectedServiceId}`);
+        const response = await fetch("{{ url_for('get_users_by_service', service_id=0) }}".replace('/0', `/${selectedServiceId}`));
         const users = await response.json();
         
         userSelect.innerHTML = '<option value="">Sélectionner un responsable...</option>';
@@ -561,7 +561,7 @@ async function filterUsersByService() {
 let allServices = []; // Stocker tous les services avec leurs IDs
 async function loadServices() {
     try {
-        const response = await fetch('/api/v1/personnel/api/services');
+        const response = await fetch("{{ url_for('get_services_api') }}");
         const services = await response.json();
         allServices = services; // Stocker pour le filtrage
         

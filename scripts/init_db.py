@@ -261,26 +261,31 @@ def initialize_database():
     if not create_database_if_not_exists():
         logger.error("❌ Échec de la création/vérification de la base de données")
         return False
-    
+    logger.info("✅ Base de données créée avec succès")
     # Étape 1: Créer les tables
     if not create_tables():
         logger.error("❌ Échec de l'initialisation des tables")
         return False
-    
+    logger.info("✅ Tables créées avec succès")
     # Étape 2: Initialiser les paramètres système
     if not initialize_system_settings():
         logger.error("❌ Échec de l'initialisation des paramètres système")
         return False
-    
-    # Étape 3: Initialiser les données de référence du personnel
-    if not initialize_personnel_data():
-        logger.error("❌ Échec de l'initialisation des données de référence")
-        return False
+    logger.info("✅ Paramètres système initialisés avec succès")
+    # Étape 3: Initialiser les données de référence du personnel (DÉSACTIVÉ - géré par l'utilisateur)
+    # if not initialize_personnel_data():
+    #     logger.error("❌ Échec de l'initialisation des données de référence")
+    #     return False
+    logger.info("ℹ️  Initialisation des référentiels désactivée - À créer via l'interface")
     
     # Étape 4: Créer l'admin si besoin
     if not create_admin_user():
         logger.error("❌ Échec de la création de l'utilisateur admin")
         return False
+    logger.info("✅ Utilisateur admin créé avec succès")
+    
+    # Étape 5: Les workflows sont à configurer via l'interface (pas d'initialisation auto)
+    logger.info("ℹ️  Configuration des workflows désactivée - À créer via l'interface /admin/workflow-config")
     
     logger.info("✅ Initialisation terminée avec succès!")
     logger.info("="*60 + "\n")

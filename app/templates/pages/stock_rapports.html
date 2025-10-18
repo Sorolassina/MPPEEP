@@ -363,7 +363,7 @@ function changerOnglet(onglet, element) {
 
 async function chargerValorisation() {
     try {
-        const response = await fetch('/api/v1/stock/api/rapports/valorisation');
+        const response = await fetch("{{ url_for('api_rapport_valorisation') }}");
         const data = await response.json();
         
         if (data.success) {
@@ -409,7 +409,7 @@ async function chargerValorisation() {
 async function chargerMouvements() {
     const mois = document.getElementById('filtreMois').value;
     try {
-        const response = await fetch(`/api/v1/stock/api/rapports/mouvements?mois=${mois}`);
+        const response = await fetch("{{ url_for('api_rapport_mouvements') }}" + `?mois=${mois}`);
         const data = await response.json();
         
         if (data.success) {
@@ -446,7 +446,7 @@ async function chargerMouvements() {
 
 async function chargerFournisseurs() {
     try {
-        const response = await fetch('/api/v1/stock/api/rapports/fournisseurs');
+        const response = await fetch("{{ url_for('api_rapport_fournisseurs') }}");
         const data = await response.json();
         
         if (data.success) {
@@ -467,7 +467,7 @@ async function chargerFournisseurs() {
 
 async function chargerAlertes() {
     try {
-        const response = await fetch('/api/v1/stock/api/alertes');
+        const response = await fetch("{{ url_for('api_get_stock_alertes') }}");
         const data = await response.json();
         
         if (data.success) {
@@ -481,7 +481,7 @@ async function chargerAlertes() {
                         <td>${a.designation}</td>
                         <td><strong style="color: var(--danger-color);">${a.stock || 0}</strong></td>
                         <td>${a.stock_min || a.quantite_min || 0}</td>
-                        <td><a href="/api/v1/stock/mouvements/new" class="btn btn-sm btn-primary">Approvisionner</a></td>
+                        <td><a href="{{ url_for('stock_mouvement_new') }}" class="btn btn-sm btn-primary">Approvisionner</a></td>
                     </tr>
                 `).join('');
             } else {
@@ -498,7 +498,7 @@ async function chargerAlertes() {
                         <td>${a.designation}</td>
                         <td><strong style="color: var(--warning-color);">${a.stock || a.quantite_stock || 0}</strong></td>
                         <td>${a.stock_min || a.quantite_min || 0}</td>
-                        <td><a href="/api/v1/stock/mouvements/new" class="btn btn-sm btn-primary">Approvisionner</a></td>
+                        <td><a href="{{ url_for('stock_mouvement_new') }}" class="btn btn-sm btn-primary">Approvisionner</a></td>
                     </tr>
                 `).join('');
             } else {

@@ -1160,7 +1160,7 @@ document.addEventListener('click', function(event) {
 function editerFiche(ficheId) {
   showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
   setTimeout(() => {
-    window.location.href = `/api/v1/budget/fiches/${ficheId}/edit`;
+    window.location.href = "{{ url_for('budget_fiche_form', fiche_id=0) }}".replace('/0', `/${ficheId}`);
   }, 300);
 }
 
@@ -1168,7 +1168,7 @@ function exporterPDF(ficheId) {
   showGlobalLoading('Génération de la fiche en cours...', 'Création du document PDF');
   
   // Télécharger directement le fichier PDF
-  fetch(`/api/v1/budget/api/fiches/${ficheId}/export/pdf`)
+  fetch("{{ url_for('api_exporter_fiche_pdf', fiche_id=0) }}".replace('/0', `/${ficheId}`))
     .then(response => {
       if (!response.ok) throw new Error('Erreur lors de la génération');
       
@@ -1226,7 +1226,7 @@ async function chargerDocumentsLigne(ligneId) {
   container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 2rem;">Chargement...</p>';
   
   try {
-    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}/documents`);
+    const response = await fetch("{{ url_for('api_get_documents_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`));
     const result = await response.json();
     
     if (response.ok && result.ok) {
@@ -1265,7 +1265,7 @@ async function handleAjouterDocuments(event) {
   showGlobalLoading('Upload...', 'Envoi des documents');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}/documents`, {
+    const response = await fetch("{{ url_for('api_ajouter_document_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`), {
       method: 'POST',
       body: formData
     });
@@ -1295,7 +1295,7 @@ async function supprimerDocument(ligneId, documentId) {
   showGlobalLoading('Suppression...', 'Suppression du document');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}/documents/${documentId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_document_ligne', ligne_id=0, document_id=0) }}".replace('/0/documents/0', `/${ligneId}/documents/${documentId}`), {
       method: 'DELETE'
     });
     
@@ -1357,7 +1357,7 @@ async function handleAjouterAction(event) {
   showGlobalLoading('Création...', 'Création de l\'action');
   
   try {
-    const response = await fetch('/api/v1/budget/api/actions', {
+    const response = await fetch("{{ url_for('api_creer_action') }}", {
       method: 'POST',
       body: formData
     });
@@ -1390,7 +1390,7 @@ async function handleAjouterService(event) {
   showGlobalLoading('Création...', 'Création du service');
   
   try {
-    const response = await fetch('/api/v1/budget/api/services', {
+    const response = await fetch("{{ url_for('api_creer_service') }}", {
       method: 'POST',
       body: formData
     });
@@ -1423,7 +1423,7 @@ async function handleAjouterActivite(event) {
   showGlobalLoading('Création...', 'Création de l\'activité');
   
   try {
-    const response = await fetch('/api/v1/budget/api/activites', {
+    const response = await fetch("{{ url_for('api_creer_activite') }}", {
       method: 'POST',
       body: formData
     });
@@ -1456,7 +1456,7 @@ async function handleAjouterLigne(event) {
   showGlobalLoading('Création...', 'Création de la ligne budgétaire et upload des documents');
   
   try {
-    const response = await fetch('/api/v1/budget/api/lignes', {
+    const response = await fetch("{{ url_for('api_creer_ligne') }}", {
       method: 'POST',
       body: formData
     });
@@ -1494,7 +1494,7 @@ async function handleChangerStatut(event) {
   showGlobalLoading('Changement de statut...', 'Mise à jour de la fiche technique');
   
   try {
-    const response = await fetch('/api/v1/budget/api/fiches/{{ fiche.id }}/statut', {
+    const response = await fetch("{{ url_for('api_modifier_statut_fiche', fiche_id=fiche.id) }}", {
       method: 'PUT',
       body: formData
     });
@@ -1599,7 +1599,7 @@ async function handleEditerAction(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour de l\'action');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/actions/${actionId}`, {
+    const response = await fetch("{{ url_for('api_modifier_action', action_id=0) }}".replace('/0', `/${actionId}`), {
       method: 'PUT',
       body: formData
     });
@@ -1630,7 +1630,7 @@ async function handleEditerService(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour du service');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/services/${serviceId}`, {
+    const response = await fetch("{{ url_for('api_modifier_service', service_id=0) }}".replace('/0', `/${serviceId}`), {
       method: 'PUT',
       body: formData
     });
@@ -1661,7 +1661,7 @@ async function handleEditerActivite(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour de l\'activité');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/activites/${activiteId}`, {
+    const response = await fetch("{{ url_for('api_modifier_activite', activite_id=0) }}".replace('/0', `/${activiteId}`), {
       method: 'PUT',
       body: formData
     });
@@ -1692,7 +1692,7 @@ async function handleEditerLigne(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour de la ligne budgétaire');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}`, {
+    const response = await fetch("{{ url_for('api_modifier_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`), {
       method: 'PUT',
       body: formData
     });
@@ -1721,7 +1721,7 @@ async function supprimerAction(actionId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/actions/${actionId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_action', action_id=0) }}".replace('/0', `/${actionId}`), {
       method: 'DELETE'
     });
     
@@ -1753,7 +1753,7 @@ async function supprimerService(serviceId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/services/${serviceId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_service', service_id=0) }}".replace('/0', `/${serviceId}`), {
       method: 'DELETE'
     });
     
@@ -1785,7 +1785,7 @@ async function supprimerActivite(activiteId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/activites/${activiteId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_activite', activite_id=0) }}".replace('/0', `/${activiteId}`), {
       method: 'DELETE'
     });
     
@@ -1817,7 +1817,7 @@ async function supprimerLigne(ligneId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/budget/api/lignes/${ligneId}`, {
+    const response = await fetch("{{ url_for('api_supprimer_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`), {
       method: 'DELETE'
     });
     

@@ -334,7 +334,7 @@ async function saveSettings(event) {
     showLoading('Sauvegarde...', 'Enregistrement des paramètres en cours');
     
     try {
-        const response = await fetch('/api/v1/admin/settings/update', {
+        const response = await fetch("{{ url_for('update_settings_api') }}", {
             method: 'POST',
             body: formData
         });
@@ -375,7 +375,7 @@ async function uploadLogo(input) {
     showLoading('Upload...', `Téléchargement de ${file.name} en cours`);
     
     try {
-        const response = await fetch('/api/v1/admin/settings/upload-logo', {
+        const response = await fetch("{{ url_for('upload_logo_api') }}", {
             method: 'POST',
             body: formData
         });

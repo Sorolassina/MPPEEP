@@ -7,6 +7,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Optional
 from fastapi import Request
+from app.core.config import settings
 
 
 def generate_random_string(length: int = 32, include_special: bool = False) -> str:
@@ -90,10 +91,26 @@ def slugify(text: str) -> str:
     
     return text
 
+"""
+Retourne l'URL complète de l'endpoint
+"""
+def endpoint(path: str) -> str:
+    if not path.startswith("/"):
+        path = f"/{path}"
+    
+    root = settings.get_root_path.rstrip('/')
+    return f"{root}{path}" if root else path
+
 
 def get_client_ip(request: Request) -> str:
     """
-    Récupère l'IP du client en tenant compte des proxies
+    Récupère l'IP du client en tenant compte des proxies (Cloudflare, Nginx, etc.)
+    
+    Ordre de priorité :
+    1. CF-Connecting-IP (Cloudflare - IP réelle du client)
+    2. X-Forwarded-For (Proxies standards)
+    3. X-Real-IP (Nginx)
+    4. request.client.host (Connexion directe)
     
     Args:
         request: Requête FastAPI
@@ -107,17 +124,23 @@ def get_client_ip(request: Request) -> str:
             ip = get_client_ip(request)
             logger.info(f"Requête depuis {ip}")
     """
-    # Vérifier les headers de proxy
+    # 1. Cloudflare - IP réelle du client
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip.strip()
+    
+    # 2. Headers de proxy standards
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         # Prendre la première IP (client réel)
         return forwarded.split(",")[0].strip()
     
+    # 3. Nginx et autres proxies
     real_ip = request.headers.get("X-Real-IP")
     if real_ip:
-        return real_ip
+        return real_ip.strip()
     
-    # Fallback sur l'IP directe
+    # 4. Fallback sur l'IP directe
     return request.client.host if request.client else "unknown"
 
 

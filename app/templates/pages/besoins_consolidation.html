@@ -210,12 +210,12 @@
     title='📋 Consolidation des Besoins',
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
-        {'name': 'RH', 'url': '/api/v1/rh/'},
-        {'name': 'Besoins', 'url': '/api/v1/besoins/'},
+        {'name': 'RH', 'url': url_for('rh_home')},
+        {'name': 'Besoins', 'url': url_for('besoins_home')},
         {'name': 'Consolidation'}
     ],
     actions=[
-        {'label': '← Retour Besoins', 'url': '/api/v1/besoins/', 'primary': False}
+        {'label': '← Retour Besoins', 'url': url_for('besoins_home'), 'primary': False}
     ]
 ) }}
 
@@ -370,7 +370,7 @@ async function genererConsolidation(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch('/api/v1/besoins/api/consolidation/generer', {
+    const response = await fetch("{{ url_for('generer_consolidation_api') }}", {
       method: 'POST',
       body: formData
     });
@@ -396,7 +396,7 @@ async function exporterConsolidation(consolidationId) {
   showGlobalLoading('Export...', 'Préparation des données');
   
   try {
-    const response = await fetch(`/api/v1/besoins/api/consolidation/${consolidationId}/export`);
+    const response = await fetch("{{ url_for('export_consolidation_api', consolidation_id=0) }}".replace('/0', `/${consolidationId}`));
     const data = await response.json();
     
     // Créer un JSON téléchargeable
@@ -420,7 +420,7 @@ async function voirDetailConsolidation(consolidationId) {
   showGlobalLoading('Chargement...', 'Récupération des détails');
   
   try {
-    const response = await fetch(`/api/v1/besoins/api/consolidation/${consolidationId}/export`);
+    const response = await fetch("{{ url_for('export_consolidation_api', consolidation_id=0) }}".replace('/0', `/${consolidationId}`));
     const data = await response.json();
     
     // Afficher les détails (à implémenter - modal ou nouvelle page)

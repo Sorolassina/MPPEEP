@@ -1307,7 +1307,7 @@ function filtrerDashboard() {
   
   showGlobalLoading('Filtrage...', 'Actualisation du dashboard');
   
-  let url = `/api/v1/budget/?annee=${annee}`;
+  let url = "{{ url_for('budget_home') }}" + `?annee=${annee}`;
   if (trimestre) url += `&trimestre=${trimestre}`;
   if (programme) url += `&programme_id=${programme}`;
   if (nature) url += `&nature=${nature}`;

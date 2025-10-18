@@ -15,7 +15,7 @@ from app.core.logging_config import setup_logging, get_logger
 from app.models.rh import (
     Grade, ServiceDept, Agent, HRRequest, WorkflowStep, WorkflowHistory
 )
-from app.core.rh_workflow_seed import ensure_workflow_steps
+from app.core.logique_metier.rh_workflow import ensure_workflow_steps
 
 # Initialiser le logging
 setup_logging()

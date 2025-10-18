@@ -108,12 +108,12 @@
     title='👥 Gestion du Personnel',
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
-        {'name': 'RH', 'url': '/api/v1/rh/'},
+        {'name': 'RH', 'url': url_for('rh_home')},
         {'name': 'Personnel'}
     ],
     actions=[
-        {'label': '← Retour RH', 'url': '/api/v1/rh/', 'primary': False},
-        {'label': '➕ Nouvel Agent', 'url': '/api/v1/personnel/nouveau', 'primary': True}
+        {'label': '← Retour RH', 'url': url_for('rh_home'), 'primary': False},
+        {'label': '➕ Nouvel Agent', 'url': url_for('personnel_nouveau'), 'primary': True}
     ]
 ) }}
 
@@ -185,10 +185,10 @@
             </td>
             <td>
               <div class="action-icons">
-                <a href="/api/v1/personnel/{{ agent.id }}" class="action-icon" title="Détails">
+                <a href="{{ url_for('personnel_detail', agent_id=agent.id) }}" class="action-icon" title="Détails">
                   👁️
                 </a>
-                <a href="/api/v1/personnel/{{ agent.id }}/edit" class="action-icon" title="Modifier">
+                <a href="{{ url_for('personnel_edit', agent_id=agent.id) }}" class="action-icon" title="Modifier">
                   ✏️
                 </a>
                 <span class="action-icon" onclick="supprimerAgent({{ agent.id }})" title="Supprimer">
@@ -247,7 +247,7 @@ searchInput.addEventListener('input', async function() {
   }
   
   try {
-    const response = await fetch(`/api/v1/personnel/api/agents?search=${encodeURIComponent(searchTerm)}`);
+    const response = await fetch("{{ url_for('list_agents_api') }}" + `?search=${encodeURIComponent(searchTerm)}`);
     const agents = await response.json();
     
     if (agents.length === 0) {
@@ -275,8 +275,8 @@ searchInput.addEventListener('input', async function() {
           </td>
           <td>
             <div class="action-icons">
-              <a href="/api/v1/personnel/${agent.id}" class="action-icon" title="Détails">👁️</a>
-              <a href="/api/v1/personnel/${agent.id}/edit" class="action-icon" title="Modifier">✏️</a>
+              <a href="${'{{ url_for("personnel_detail", agent_id=0) }}'.replace('/0', `/${agent.id}`)}" class="action-icon" title="Détails">👁️</a>
+              <a href="${'{{ url_for("personnel_edit", agent_id=0) }}'.replace('/0', `/${agent.id}`)}" class="action-icon" title="Modifier">✏️</a>
               <span class="action-icon" onclick="supprimerAgent(${agent.id})" title="Supprimer">🗑️</span>
             </div>
           </td>
@@ -297,7 +297,7 @@ async function supprimerAgent(agentId) {
   showGlobalLoading('Désactivation en cours...', 'Veuillez patienter');
   
   try {
-    const res = await fetch(`/api/v1/personnel/api/agents/${agentId}`, {
+    const res = await fetch("{{ url_for('delete_agent_api', agent_id=0) }}".replace('/0', `/${agentId}`), {
       method: 'DELETE',
       headers: {'Accept': 'application/json'}
     });

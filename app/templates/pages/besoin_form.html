@@ -21,12 +21,12 @@
     title='➕ Exprimer un Besoin en Agents',
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
-        {'name': 'RH', 'url': '/api/v1/rh/'},
-        {'name': 'Besoins', 'url': '/api/v1/besoins/'},
+        {'name': 'RH', 'url': url_for('rh_home')},
+        {'name': 'Besoins', 'url': url_for('besoins_home')},
         {'name': 'Nouveau'}
     ],
     actions=[
-        {'label': '← Retour Besoins', 'url': '/api/v1/besoins/', 'primary': False}
+        {'label': '← Retour Besoins', 'url': url_for('besoins_home'), 'primary': False}
     ]
 ) }}
 
@@ -163,7 +163,7 @@
 
       <!-- Actions -->
       <div class="form-actions">
-        <button type="button" class="btn-secondary" onclick="window.location.href='/api/v1/besoins/';">
+        <button type="button" class="btn-secondary" onclick="window.location.href='{{ url_for('besoins_home') }}';">
           Annuler
         </button>
         <button type="submit" class="btn-primary">
@@ -245,7 +245,7 @@ async function handleSubmit(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch('/api/v1/besoins/api/besoins', {
+    const response = await fetch("{{ url_for('create_besoin_api') }}", {
       method: 'POST',
       body: formData
     });
@@ -256,7 +256,7 @@ async function handleSubmit(event) {
       showSuccess('Besoin exprimé avec succès !');
       setTimeout(() => {
         showGlobalLoading('Redirection...', 'Retour à la liste');
-        window.location.href = '/api/v1/besoins/';
+        window.location.href = "{{ url_for('besoins_home') }}";
       }, 1000);
     } else {
       await handleFetchError(response, 'Erreur lors de la création du besoin');

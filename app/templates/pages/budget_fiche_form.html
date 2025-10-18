@@ -20,7 +20,7 @@
 
   <!-- Formulaire -->
   <div class="card" style="padding: 2.5rem;">
-    <form id="ficheForm" onsubmit="handleSubmit(event)" action="{% if mode == 'edit' %}/api/v1/budget/api/fiches/{{ fiche.id }}{% else %}/api/v1/budget/api/fiches{% endif %}" method="POST">
+    <form id="ficheForm" onsubmit="handleSubmit(event)" method="POST">
       
       <!-- IDENTIFICATION -->
       <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 15px; border-left: 5px solid var(--secondary-color);">
@@ -143,7 +143,7 @@
 
       <!-- Actions -->
       <div style="display: flex; gap: 1rem; justify-content: flex-end; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
-        <a href="/api/v1/budget/fiches" class="btn" style="padding: 1rem 2rem; border: 2px solid #dee2e6; border-radius: 50px; text-decoration: none; color: #6c757d; font-weight: 600;">
+        <a href="{{ url_for('budget_fiches_hierarchique') }}" class="btn" style="padding: 1rem 2rem; border: 2px solid #dee2e6; border-radius: 50px; text-decoration: none; color: #6c757d; font-weight: 600;">
           Annuler
         </a>
         <button type="submit" class="btn btn-primary">
@@ -198,7 +198,7 @@ async function handleSubmit(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch('/api/v1/budget/api/fiches', {
+    const response = await fetch("{{ url_for('api_creer_fiche_vide') }}", {
       method: 'POST',
       body: formData
     });
@@ -209,7 +209,7 @@ async function handleSubmit(event) {
       showSuccess(`Fiche technique créée : ${result.numero}`);
       setTimeout(() => {
         showGlobalLoading('Redirection...', 'Ouverture de la fiche');
-        window.location.href = `/api/v1/budget/fiches/${result.id}`;
+        window.location.href = "{{ url_for('budget_fiche_detail', fiche_id=0) }}".replace('/0', `/${result.id}`);
       }, 1000);
     } else {
       hideGlobalLoading();

@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadKPIs() {
   try {
-    const response = await fetch('/api/v1/stock/api/kpis');
+    const response = await fetch("{{ url_for('api_get_stock_kpis') }}");
     const result = await response.json();
     
     if (result.success) {
@@ -279,7 +279,7 @@ async function loadKPIs() {
 
 async function loadAlertes() {
   try {
-    const response = await fetch('/api/v1/stock/api/alertes');
+    const response = await fetch("{{ url_for('api_get_stock_alertes') }}");
     const result = await response.json();
     
     if (result.success) {
@@ -331,7 +331,7 @@ async function loadAlertes() {
 // Graphique des mouvements
 async function loadChartMouvements() {
   try {
-    const response = await fetch('/api/v1/stock/api/stats/mouvements-mois');
+    const response = await fetch("{{ url_for('api_get_stats_mouvements_mois') }}");
     const result = await response.json();
     
     if (result.success) {
@@ -410,7 +410,7 @@ async function loadChartMouvements() {
 // Graphique des articles par catégorie
 async function loadChartCategories() {
   try {
-    const response = await fetch('/api/v1/stock/api/stats/articles-categorie');
+    const response = await fetch("{{ url_for('api_get_stats_articles_categorie') }}");
     const result = await response.json();
     
     if (result.success && result.data.length > 0) {

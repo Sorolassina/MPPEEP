@@ -297,9 +297,9 @@ def budget_fiches(
     """Redirection vers la version hiérarchique des fiches"""
     # Rediriger vers la nouvelle version hiérarchique
     if annee:
-        return RedirectResponse(url=f"/api/v1/budget/fiches/hierarchique?annee={annee}", status_code=303)
+        return RedirectResponse(url=str(request.url_for("budget_fiches_hierarchique")) + f"?annee={annee}", status_code=303)
     else:
-        return RedirectResponse(url="/api/v1/budget/fiches/hierarchique?annee=toutes", status_code=303)
+        return RedirectResponse(url=str(request.url_for("budget_fiches_hierarchique")) + "?annee=toutes", status_code=303)
 
 
 @router.get("/fiches/hierarchique", response_class=HTMLResponse, name="budget_fiches_hierarchique")
@@ -393,11 +393,12 @@ def budget_fiche_nouveau(
 
 @router.get("/fiches/{fiche_id}/edit", response_class=HTMLResponse, name="budget_fiche_edit")
 def budget_fiche_edit(
+    request: Request,
     fiche_id: int,
 ):
     """Redirection vers la structure hiérarchique pour modifier les lignes"""
     # Une fiche technique ne se modifie pas directement, on modifie ses lignes via la structure
-    return RedirectResponse(url=f"/api/v1/budget/fiches/{fiche_id}/structure", status_code=303)
+    return RedirectResponse(url=str(request.url_for("budget_fiche_structure", fiche_id=fiche_id)), status_code=303)
 
 
 @router.get("/fiches/{fiche_id}", response_class=HTMLResponse, name="budget_fiche_detail")
@@ -462,7 +463,7 @@ def budget_fiche_detail(
 # API - CRUD FICHES TECHNIQUES
 # ============================================
 
-@router.post("/api/fiches")
+@router.post("/api/fiches", name="api_creer_fiche_vide")
 async def api_create_fiche(
     annee_budget: int = Form(...),
     programme_id: int = Form(...),
@@ -745,8 +746,10 @@ async def api_upload_document(
     if not fiche:
         raise HTTPException(404, "Fiche non trouvée")
     
-    # Créer le dossier
-    docs_dir = Path(f"app/static/uploads/budget/fiches/{fiche_id}")
+    # Créer le dossier avec path_config
+    from app.core.path_config import path_config
+    relative_path = f"budget/fiches/{fiche_id}/{fichier.filename}"
+    docs_dir = path_config.UPLOADS_DIR / "budget" / "fiches" / str(fiche_id)
     docs_dir.mkdir(parents=True, exist_ok=True)
     
     # Sauvegarder le fichier
@@ -756,12 +759,13 @@ async def api_upload_document(
     with open(file_path, 'wb') as f:
         f.write(content)
     
-    # Enregistrer en BDD
+    # Enregistrer en BDD avec URL générée correctement
+    file_url = path_config.get_file_url("uploads", relative_path)
     doc = DocumentBudget(
         fiche_technique_id=fiche_id,
         type_document=description or "Document général",
         nom_fichier=fichier.filename,
-        file_path=f"/static/uploads/budget/fiches/{fiche_id}/{fichier.filename}",
+        file_path=file_url,
         taille_octets=len(content),
         uploaded_by_user_id=current_user.id
     )
@@ -3408,6 +3412,8 @@ def api_get_documents_ligne(
         .order_by(DocumentLigneBudgetaire.uploaded_at.desc())
     ).all()
     
+    from app.core.path_config import path_config
+    
     return {
         "ok": True,
         "documents": [
@@ -3417,7 +3423,7 @@ def api_get_documents_ligne(
                 "nom_stocke": doc.nom_fichier_stocke,
                 "type": doc.type_fichier,
                 "taille": doc.taille_octets,
-                "url": f"/uploads/budget/lignes/{ligne_id}/{doc.nom_fichier_stocke}",
+                "url": path_config.get_file_url("uploads", f"budget/lignes/{ligne_id}/{doc.nom_fichier_stocke}"),
                 "uploaded_at": doc.uploaded_at.isoformat()
             }
             for doc in documents
@@ -4153,7 +4159,9 @@ async def api_sigobe_upload(
             periode_libelle = f"Annuel {annee}"
         
         # Sauvegarder le fichier physiquement (SEULEMENT si parsing OK)
-        upload_dir = Path(f"app/static/uploads/sigobe/{annee}")
+        from app.core.path_config import path_config
+        relative_path = f"sigobe/{annee}/{fichier.filename}"
+        upload_dir = path_config.UPLOADS_DIR / "sigobe" / str(annee)
         upload_dir.mkdir(parents=True, exist_ok=True)
         
         file_path = upload_dir / fichier.filename
@@ -4162,6 +4170,9 @@ async def api_sigobe_upload(
         
         logger.info(f"📁 Fichier sauvegardé : {file_path}")
         
+        # Générer l'URL avec ROOT_PATH
+        file_url = path_config.get_file_url("uploads", relative_path)
+        
         # 10. Créer l'enregistrement de chargement
         chargement = SigobeChargement(
             annee=annee,
@@ -4169,7 +4180,7 @@ async def api_sigobe_upload(
             periode_libelle=periode_libelle,
             nom_fichier=fichier.filename,
             taille_octets=len(content),
-            chemin_fichier=f"/uploads/sigobe/{annee}/{fichier.filename}",
+            chemin_fichier=file_url,
             uploaded_by_user_id=current_user.id,
             statut="En cours"
         )

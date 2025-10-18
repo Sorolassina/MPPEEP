@@ -41,7 +41,7 @@ class SystemSettings(SQLModel, table=True):
     company_address: Optional[str] = Field(default=None)
     
     # Apparence
-    logo_path: Optional[str] = Field(default="images/logo.jpg")
+    logo_path: Optional[str] = Field(default="images/logo.webp")
     primary_color: str = Field(default="#ffd300")
     secondary_color: str = Field(default="#036c1d")
     accent_color: str = Field(default="#e63600")

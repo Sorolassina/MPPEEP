@@ -22,17 +22,33 @@
 
     <!-- Statistiques rapides -->
     <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-value">{{ users|length }}</div>
-            <div class="stat-label">Utilisateurs</div>
+        <div class="stat-card white">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <div class="stat-label">Total Utilisateurs</div>
+                <div class="stat-value">{{ users|length }}</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ users|selectattr('is_active')|list|length }}</div>
-            <div class="stat-label">Actifs</div>
+        <div class="stat-card white">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <div class="stat-label">Comptes Actifs</div>
+                <div class="stat-value">{{ users|selectattr('is_active')|list|length }}</div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ users|selectattr('type_user', 'equalto', 'admin')|list|length }}</div>
-            <div class="stat-label">Admins</div>
+        <div class="stat-card white">
+            <div class="stat-icon">👑</div>
+            <div class="stat-content">
+                <div class="stat-label">Administrateurs</div>
+                <div class="stat-value">{{ users|selectattr('type_user', 'equalto', 'admin')|list|length }}</div>
+            </div>
+        </div>
+        <div class="stat-card white">
+            <div class="stat-icon">🔧</div>
+            <div class="stat-content">
+                <div class="stat-label">Modérateurs</div>
+                <div class="stat-value">{{ users|selectattr('type_user', 'equalto', 'moderator')|list|length }}</div>
+            </div>
         </div>
     </div>
 
@@ -109,10 +125,10 @@
 </div>
 
 <!-- Modal Créer Utilisateur -->
-<div id="createModal" class="modal">
+<div id="createModal" class="modal" >
     <div class="modal-content">
         <div class="modal-header">
-            <h3>➕ Créer un Utilisateur</h3>
+            <h3 style="color: var(--white-color);">➕ Créer un Utilisateur</h3>
             <span class="modal-close" onclick="closeModals()">&times;</span>
         </div>
         <form id="createUserForm" onsubmit="createUser(event)">
@@ -155,7 +171,7 @@
 <div id="photoModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>📸 Photo de Profil</h3>
+            <h3 style="color: var(--white-color);>📸 Photo de Profil</h3>
             <span class="modal-close" onclick="closeModals()">&times;</span>
         </div>
         <div class="photo-upload-container">
@@ -181,7 +197,7 @@
 <div id="editModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>✏️ Modifier l'Utilisateur</h3>
+            <h3 style="color: var(--white-color);">✏️ Modifier l'Utilisateur</h3>
             <span class="modal-close" onclick="closeModals()">&times;</span>
         </div>
         <form id="editUserForm" onsubmit="updateUser(event)">
@@ -313,7 +329,7 @@ async function openEditModal(userId) {
     showLoading('Chargement...', 'Récupération des données utilisateur');
     
     try {
-        const response = await fetch(`/api/v1/admin/users/${userId}/get`);
+        const response = await fetch("{{ url_for('get_user_api', user_id=0) }}".replace('/0', `/${userId}`));
         const data = await response.json();
         
         hideLoading();
@@ -347,7 +363,7 @@ async function openPhotoModal(userId, userName) {
     showLoading('Chargement...', 'Récupération des données utilisateur');
     
     try {
-        const response = await fetch(`/api/v1/admin/users/${userId}/get`);
+        const response = await fetch("{{ url_for('get_user_api', user_id=0) }}".replace('/0', `/${userId}`));
         const data = await response.json();
         
         hideLoading();
@@ -399,7 +415,7 @@ async function uploadUserPhoto(input) {
     showLoading('Upload...', `Téléchargement de ${file.name} en cours`);
     
     try {
-        const response = await fetch(`/api/v1/admin/users/${userId}/upload-photo`, {
+        const response = await fetch("{{ url_for('upload_user_photo_api', user_id=0) }}".replace('/0', `/${userId}`), {
             method: 'POST',
             body: formData
         });
@@ -438,7 +454,7 @@ async function createUser(event) {
     showLoading('Création...', 'Création de l\'utilisateur en cours');
     
     try {
-        const response = await fetch('/api/v1/admin/users/create', {
+        const response = await fetch("{{ url_for('create_user_api') }}", {
             method: 'POST',
             body: formData
         });

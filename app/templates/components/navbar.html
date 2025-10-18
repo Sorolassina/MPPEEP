@@ -105,7 +105,7 @@
         <!-- Brand -->
         <div class="navbar-brand">
           <a href="{{ url_for('read_root') }}">
-            <img src="{{ static_url(system_settings.logo_path or 'images/logo.jpg') }}" alt="Logo" class="navbar-logo">
+            <img src="{{ get_logo_url() }}" alt="Logo" class="navbar-logo">
             <span>{{ system_settings.company_name or app_name }}</span>
           </a>
         </div>

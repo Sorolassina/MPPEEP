@@ -9,7 +9,7 @@ from app.services.activity_service import ActivityService
 
 router = APIRouter()
 
-@router.post("/", response_model=dict)
+@router.post("/", response_model=dict, name="create_user_users_api")
 def create_user(
     payload: UserCreate, 
     session=Depends(get_session), 
@@ -35,7 +35,7 @@ def create_user(
     
     return {"id": user.id, "email": user.email}
 
-@router.get("/", response_model=list[dict])
+@router.get("/", response_model=list[dict], name="list_users")
 def list_users(
     session: Session = Depends(get_session),
     current_user=Depends(require_roles("admin"))
@@ -43,7 +43,7 @@ def list_users(
     results = session.exec(select(User)).all()
     return [{"id": u.id, "email": u.email, "full_name": u.full_name} for u in results]
 
-@router.get("/by-service/{service_id}", response_model=list[dict])
+@router.get("/by-service/{service_id}", response_model=list[dict], name="get_users_by_service")
 def list_users_by_service(
     service_id: int,
     session: Session = Depends(get_session),

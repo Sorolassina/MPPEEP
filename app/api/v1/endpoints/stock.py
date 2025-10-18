@@ -148,7 +148,7 @@ def stock_article_detail(
     article = session.get(Article, article_id)
     if not article:
         # Rediriger vers la liste des articles au lieu d'afficher une erreur JSON
-        return RedirectResponse(url="/api/v1/stock/articles", status_code=303)
+        return RedirectResponse(url=str(request.url_for("stock_articles")), status_code=303)
     
     # Récupérer la catégorie
     categorie = session.get(CategorieArticle, article.categorie_id) if article.categorie_id else None
@@ -179,7 +179,7 @@ def stock_article_edit(
     article = session.get(Article, article_id)
     if not article:
         # Rediriger vers la liste des articles au lieu d'afficher une erreur JSON
-        return RedirectResponse(url="/api/v1/stock/articles", status_code=303)
+        return RedirectResponse(url=str(request.url_for("stock_articles")), status_code=303)
     
     categories = session.exec(
         select(CategorieArticle).order_by(CategorieArticle.libelle)
@@ -306,7 +306,7 @@ def stock_inventaire_detail(
     
     inventaire = session.get(Inventaire, inventaire_id)
     if not inventaire:
-        return RedirectResponse(url="/api/v1/stock/inventaires", status_code=303)
+        return RedirectResponse(url=str(request.url_for("stock_inventaires")), status_code=303)
     
     # Récupérer le responsable
     from app.models import User
@@ -365,7 +365,7 @@ def stock_inventaire_detail(
 # API JSON - KPIs & STATS
 # ============================================
 
-@router.get("/api/kpis", response_class=JSONResponse)
+@router.get("/api/kpis", response_class=JSONResponse, name="api_get_stock_kpis")
 def api_kpis(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -379,7 +379,7 @@ def api_kpis(
         return {"success": False, "error": str(e)}
 
 
-@router.get("/api/alertes", response_class=JSONResponse)
+@router.get("/api/alertes", response_class=JSONResponse, name="api_get_stock_alertes")
 def api_alertes(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -397,7 +397,7 @@ def api_alertes(
 # API JSON - ARTICLES
 # ============================================
 
-@router.get("/api/articles", response_class=JSONResponse)
+@router.get("/api/articles", response_class=JSONResponse, name="api_list_articles")
 def api_list_articles(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -433,7 +433,7 @@ def api_list_articles(
         return {"success": False, "error": str(e)}
 
 
-@router.post("/api/articles", response_class=JSONResponse)
+@router.post("/api/articles", response_class=JSONResponse, name="api_create_article")
 def api_create_article(
     code: str = Form(...),
     designation: str = Form(...),
@@ -487,8 +487,8 @@ def api_create_article(
         return {"success": False, "error": "Erreur lors de la création de l'article"}
 
 
-@router.put("/api/articles/{article_id}", response_class=JSONResponse)
-@router.patch("/api/articles/{article_id}", response_class=JSONResponse)
+@router.put("/api/articles/{article_id}", response_class=JSONResponse, name="api_update_article_put")
+@router.patch("/api/articles/{article_id}", response_class=JSONResponse, name="api_update_article")
 def api_update_article(
     article_id: int,
     designation: Optional[str] = Form(None),
@@ -557,7 +557,7 @@ def api_update_article(
         return {"success": False, "error": "Erreur lors de la mise à jour"}
 
 
-@router.delete("/api/articles/{article_id}", response_class=JSONResponse)
+@router.delete("/api/articles/{article_id}", response_class=JSONResponse, name="api_delete_article")
 def api_delete_article(
     article_id: int,
     session: Session = Depends(get_session),
@@ -615,7 +615,7 @@ def api_delete_article(
 # API JSON - MOUVEMENTS
 # ============================================
 
-@router.post("/api/mouvements", response_class=JSONResponse)
+@router.post("/api/mouvements", response_class=JSONResponse, name="api_create_mouvement")
 async def api_create_mouvement(
     article_id: int = Form(...),
     type_mouvement: str = Form(...),
@@ -719,7 +719,7 @@ async def api_create_mouvement(
         return {"success": False, "error": "Erreur lors de l'enregistrement du mouvement"}
 
 
-@router.get("/api/mouvements/{mouvement_id}", response_class=JSONResponse)
+@router.get("/api/mouvements/{mouvement_id}", response_class=JSONResponse, name="api_get_mouvement")
 async def api_get_mouvement(
     mouvement_id: int,
     session: Session = Depends(get_session),
@@ -756,7 +756,7 @@ async def api_get_mouvement(
         return {"success": False, "error": "Erreur lors de la récupération du mouvement"}
 
 
-@router.delete("/api/mouvements/{mouvement_id}", response_class=JSONResponse)
+@router.delete("/api/mouvements/{mouvement_id}", response_class=JSONResponse, name="api_delete_mouvement")
 async def api_delete_mouvement(
     mouvement_id: int,
     session: Session = Depends(get_session),
@@ -826,7 +826,7 @@ async def api_delete_mouvement(
 # API JSON - DEMANDES
 # ============================================
 
-@router.post("/api/demandes", response_class=JSONResponse)
+@router.post("/api/demandes", response_class=JSONResponse, name="api_create_demande")
 async def api_create_demande(
     type_demande: str = Form(...),
     article_id: int = Form(...),
@@ -905,7 +905,7 @@ async def api_create_demande(
         return {"success": False, "error": "Erreur lors de la création de la demande"}
 
 
-@router.post("/api/demandes/{demande_id}/valider", response_class=JSONResponse)
+@router.post("/api/demandes/{demande_id}/valider", response_class=JSONResponse, name="api_valider_demande")
 def api_valider_demande(
     demande_id: int,
     accepte: bool = Form(...),
@@ -952,7 +952,7 @@ def api_valider_demande(
 # API JSON - DONNÉES GRAPHIQUES
 # ============================================
 
-@router.get("/api/stats/mouvements-mois", response_class=JSONResponse)
+@router.get("/api/stats/mouvements-mois", response_class=JSONResponse, name="api_get_stats_mouvements_mois")
 def api_stats_mouvements_mois(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -1004,7 +1004,7 @@ def api_stats_mouvements_mois(
         return {"success": False, "error": str(e)}
 
 
-@router.get("/api/stats/articles-categorie", response_class=JSONResponse)
+@router.get("/api/stats/articles-categorie", response_class=JSONResponse, name="api_get_stats_articles_categorie")
 def api_stats_articles_categorie(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -1035,7 +1035,7 @@ def api_stats_articles_categorie(
 # API JSON - GESTION DES CATÉGORIES
 # ============================================
 
-@router.get("/api/categories", response_class=JSONResponse)
+@router.get("/api/categories", response_class=JSONResponse, name="api_list_categories")
 def api_list_categories(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -1063,7 +1063,7 @@ def api_list_categories(
         return {"success": False, "error": str(e)}
 
 
-@router.post("/api/categories", response_class=JSONResponse)
+@router.post("/api/categories", response_class=JSONResponse, name="api_create_categorie")
 def api_create_categorie(
     code: str = Form(...),
     libelle: str = Form(...),
@@ -1103,7 +1103,7 @@ def api_create_categorie(
         return {"success": False, "error": "Erreur lors de la création"}
 
 
-@router.get("/api/generer-code/{categorie_id}", response_class=JSONResponse)
+@router.get("/api/generer-code/{categorie_id}", response_class=JSONResponse, name="api_generer_code_article")
 def api_generer_code_article(
     categorie_id: int,
     session: Session = Depends(get_session),
@@ -1144,7 +1144,7 @@ def api_generer_code_article(
 # API FOURNISSEURS
 # ============================================
 
-@router.post("/api/fournisseurs", response_class=JSONResponse)
+@router.post("/api/fournisseurs", response_class=JSONResponse, name="api_create_fournisseur")
 def api_create_fournisseur(
     code: str = Form(...),
     nom: str = Form(...),
@@ -1201,7 +1201,7 @@ def api_create_fournisseur(
         return {"success": False, "error": "Erreur lors de la création du fournisseur"}
 
 
-@router.get("/api/fournisseurs/{fournisseur_id}", response_class=JSONResponse)
+@router.get("/api/fournisseurs/{fournisseur_id}", response_class=JSONResponse, name="api_get_fournisseur")
 def api_get_fournisseur(
     fournisseur_id: int,
     session: Session = Depends(get_session),
@@ -1227,7 +1227,7 @@ def api_get_fournisseur(
     }
 
 
-@router.put("/api/fournisseurs/{fournisseur_id}", response_class=JSONResponse)
+@router.put("/api/fournisseurs/{fournisseur_id}", response_class=JSONResponse, name="api_update_fournisseur")
 def api_update_fournisseur(
     fournisseur_id: int,
     code: Optional[str] = Form(None),
@@ -1292,7 +1292,7 @@ def api_update_fournisseur(
         return {"success": False, "error": "Erreur lors de la mise à jour"}
 
 
-@router.delete("/api/fournisseurs/{fournisseur_id}", response_class=JSONResponse)
+@router.delete("/api/fournisseurs/{fournisseur_id}", response_class=JSONResponse, name="api_delete_fournisseur")
 def api_delete_fournisseur(
     fournisseur_id: int,
     session: Session = Depends(get_session),
@@ -1354,7 +1354,7 @@ def api_delete_fournisseur(
 # API RAPPORTS
 # ============================================
 
-@router.get("/api/rapports/valorisation", response_class=JSONResponse)
+@router.get("/api/rapports/valorisation", response_class=JSONResponse, name="api_rapport_valorisation")
 def api_rapport_valorisation(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -1405,7 +1405,7 @@ def api_rapport_valorisation(
         return {"success": False, "error": "Erreur lors de la génération du rapport"}
 
 
-@router.get("/api/rapports/mouvements", response_class=JSONResponse)
+@router.get("/api/rapports/mouvements", response_class=JSONResponse, name="api_rapport_mouvements")
 def api_rapport_mouvements(
     mois: int = 6,
     session: Session = Depends(get_session),
@@ -1471,7 +1471,7 @@ def api_rapport_mouvements(
         return {"success": False, "error": "Erreur lors de la génération du rapport"}
 
 
-@router.get("/api/rapports/fournisseurs", response_class=JSONResponse)
+@router.get("/api/rapports/fournisseurs", response_class=JSONResponse, name="api_rapport_fournisseurs")
 def api_rapport_fournisseurs(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -1512,7 +1512,7 @@ def api_rapport_fournisseurs(
 # API INVENTAIRES
 # ============================================
 
-@router.post("/api/inventaires", response_class=JSONResponse)
+@router.post("/api/inventaires", response_class=JSONResponse, name="api_create_inventaire")
 def api_create_inventaire(
     numero: str = Form(...),
     libelle: str = Form(...),
@@ -1573,7 +1573,7 @@ def api_create_inventaire(
         return {"success": False, "error": "Erreur lors de la création de l'inventaire"}
 
 
-@router.post("/api/inventaires/{inventaire_id}/lignes", response_class=JSONResponse)
+@router.post("/api/inventaires/{inventaire_id}/lignes", response_class=JSONResponse, name="api_add_lignes_inventaire")
 async def api_add_lignes_inventaire(
     inventaire_id: int,
     request: Request,
@@ -1633,7 +1633,7 @@ async def api_add_lignes_inventaire(
         return {"success": False, "error": "Erreur lors de l'ajout des articles"}
 
 
-@router.get("/api/inventaires/lignes/{ligne_id}", response_class=JSONResponse)
+@router.get("/api/inventaires/lignes/{ligne_id}", response_class=JSONResponse, name="api_get_ligne_inventaire")
 def api_get_ligne_inventaire(
     ligne_id: int,
     session: Session = Depends(get_session),
@@ -1660,7 +1660,7 @@ def api_get_ligne_inventaire(
     }
 
 
-@router.post("/api/inventaires/lignes/{ligne_id}/compter", response_class=JSONResponse)
+@router.post("/api/inventaires/lignes/{ligne_id}/compter", response_class=JSONResponse, name="api_compter_ligne_inventaire")
 def api_compter_ligne_inventaire(
     ligne_id: int,
     quantite_physique: float = Form(...),
@@ -1699,7 +1699,7 @@ def api_compter_ligne_inventaire(
         return {"success": False, "error": "Erreur lors de l'enregistrement du comptage"}
 
 
-@router.delete("/api/inventaires/lignes/{ligne_id}", response_class=JSONResponse)
+@router.delete("/api/inventaires/lignes/{ligne_id}", response_class=JSONResponse, name="api_delete_ligne_inventaire")
 def api_delete_ligne_inventaire(
     ligne_id: int,
     session: Session = Depends(get_session),
@@ -1728,7 +1728,7 @@ def api_delete_ligne_inventaire(
         return {"success": False, "error": "Erreur lors de la suppression"}
 
 
-@router.post("/api/inventaires/{inventaire_id}/cloturer", response_class=JSONResponse)
+@router.post("/api/inventaires/{inventaire_id}/cloturer", response_class=JSONResponse, name="api_cloturer_inventaire")
 def api_cloturer_inventaire(
     inventaire_id: int,
     session: Session = Depends(get_session),

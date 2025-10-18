@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from sqlmodel import select
 from app.db.session import get_session
 from app.models.rh import WorkflowStep
-from app.core.rh_workflow_seed import ensure_workflow_steps
+from app.core.logique_metier.rh_workflow import ensure_workflow_steps
 
 print("=" * 60)
 print("🔄 Réinitialisation des Workflow Steps RH")

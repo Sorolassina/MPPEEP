@@ -772,14 +772,14 @@ document.addEventListener('keydown', function(e) {
   if (e.altKey && e.key === 'r') {
     e.preventDefault();
     showGlobalLoading('Navigation...', 'Ouverture du module RH');
-    window.location.href = '/api/v1/rh/';
+    window.location.href = "{{ url_for('rh_home') }}";
   }
   
   // Alt + P : Personnel
   if (e.altKey && e.key === 'p') {
     e.preventDefault();
     showGlobalLoading('Navigation...', 'Ouverture du module Personnel');
-    window.location.href = '/api/v1/personnel/';
+    window.location.href = "{{ url_for('personnel_home') }}";
   }
   
   // Échap : Fermer modals

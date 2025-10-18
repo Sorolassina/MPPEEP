@@ -580,12 +580,12 @@
     title='📊 Suivi des Besoins en Agents',
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
-        {'name': 'RH', 'url': '/api/v1/rh/'},
+        {'name': 'RH', 'url': url_for('rh_home')},
         {'name': 'Besoins en Agents'}
     ],
     actions=[
-        {'label': '← Retour RH', 'url': '/api/v1/rh/', 'primary': False},
-        {'label': '➕ Nouveau Besoin', 'url': '/api/v1/besoins/nouveau', 'primary': True}
+        {'label': '← Retour RH', 'url': url_for('rh_home'), 'primary': False},
+        {'label': '➕ Nouveau Besoin', 'url': url_for('besoin_nouveau'), 'primary': True}
     ]
 ) }}
 
@@ -646,7 +646,7 @@
       </div>
       
       <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <a href="/api/v1/besoins/consolidation" class="btn btn-secondary">
+        <a href="{{ url_for('besoins_consolidation') }}" class="btn btn-secondary">
           📋 Vue Consolidée
         </a>
       </div>
@@ -832,7 +832,7 @@ async function filtrerBesoins() {
   showGlobalLoading('Filtrage...', 'Recherche des besoins');
   
   try {
-    let url = `/api/v1/besoins/api/besoins?annee=${annee}`;
+    let url = "{{ url_for('list_besoins_api') }}" + `?annee=${annee}`;
     if (statut) url += `&statut=${encodeURIComponent(statut)}`;
     
     const response = await fetch(url);
@@ -900,7 +900,7 @@ async function voirDetail(besoinId) {
   showGlobalLoading('Chargement...', 'Récupération des détails');
   
   try {
-    const response = await fetch(`/api/v1/besoins/api/besoins`);
+    const response = await fetch("{{ url_for('list_besoins_api') }}");
     const besoins = await response.json();
     const besoin = besoins.find(b => b.id === besoinId);
     

@@ -231,7 +231,7 @@ def personnel_detail(
 # API ENDPOINTS - CRUD AGENTS
 # ==========================================
 
-@router.get("/api/agents", response_model=List[dict])
+@router.get("/api/agents", response_model=List[dict], name="list_agents_api")
 def api_list_agents(
     session: Session = Depends(get_session),
     skip: int = Query(0, ge=0),
@@ -272,7 +272,7 @@ def api_list_agents(
     ]
 
 
-@router.post("/api/agents")
+@router.post("/api/agents", name="api_create_agent")
 async def api_create_agent(
     matricule: str = Form(...),
     nom: str = Form(...),
@@ -369,8 +369,9 @@ async def api_create_agent(
         # Gérer l'upload de photo
         photo_path = None
         if photo and photo.filename:
-            # Créer le dossier pour les photos si nécessaire
-            photos_dir = Path("app/static/uploads/photos/agents")
+            # Créer le dossier pour les photos avec path_config
+            from app.core.path_config import path_config
+            photos_dir = path_config.UPLOADS_DIR / "photos" / "agents"
             photos_dir.mkdir(parents=True, exist_ok=True)
             
             # Générer un nom de fichier unique
@@ -383,8 +384,9 @@ async def api_create_agent(
             with open(file_path, 'wb') as f:
                 f.write(content)
             
-            # Enregistrer le chemin relatif pour la base de données
-            photo_path = f"/static/uploads/photos/agents/{unique_filename}"
+            # Générer l'URL avec ROOT_PATH
+            relative_path = f"photos/agents/{unique_filename}"
+            photo_path = path_config.get_file_url("uploads", relative_path)
             agent_data["photo_path"] = photo_path
         
         # Créer l'agent
@@ -416,7 +418,7 @@ async def api_create_agent(
         raise HTTPException(500, f"Erreur: {str(e)}")
 
 
-@router.get("/api/agents/{agent_id}")
+@router.get("/api/agents/{agent_id}", name="get_agent_api")
 def api_get_agent(
     agent_id: int,
     session: Session = Depends(get_session)
@@ -429,7 +431,7 @@ def api_get_agent(
     return agent
 
 
-@router.put("/api/agents/{agent_id}")
+@router.put("/api/agents/{agent_id}", name="api_update_agent")
 async def api_update_agent(
     agent_id: int,
     matricule: Optional[str] = Form(None),
@@ -522,14 +524,18 @@ async def api_update_agent(
         
         # Gérer la nouvelle photo
         if photo and photo.filename:
+            from app.core.path_config import path_config
+            
             # Supprimer l'ancienne photo si elle existe
             if agent.photo_path:
-                old_file = Path(f"app{agent.photo_path}")
+                # Extraire le chemin relatif de l'URL
+                old_path = agent.photo_path.replace("/uploads/", "").replace(f"{settings.get_root_path}/uploads/", "")
+                old_file = path_config.UPLOADS_DIR / old_path
                 if old_file.exists():
                     old_file.unlink()
             
             # Sauvegarder la nouvelle photo
-            photos_dir = Path("app/static/uploads/photos/agents")
+            photos_dir = path_config.UPLOADS_DIR / "photos" / "agents"
             photos_dir.mkdir(parents=True, exist_ok=True)
             
             file_extension = photo.filename.split('.')[-1]
@@ -540,7 +546,9 @@ async def api_update_agent(
             with open(file_path, 'wb') as f:
                 f.write(content)
             
-            agent.photo_path = f"/static/uploads/photos/agents/{unique_filename}"
+            # Générer l'URL avec ROOT_PATH
+            relative_path = f"photos/agents/{unique_filename}"
+            agent.photo_path = path_config.get_file_url("uploads", relative_path)
         
         agent.updated_by = current_user.id
         
@@ -569,7 +577,7 @@ async def api_update_agent(
         raise HTTPException(500, f"Erreur: {str(e)}")
 
 
-@router.delete("/api/agents/{agent_id}")
+@router.delete("/api/agents/{agent_id}", name="delete_agent_api")
 def api_delete_agent(
     agent_id: int,
     session: Session = Depends(get_session),
@@ -608,7 +616,7 @@ def api_delete_agent(
 # API ENDPOINTS - STRUCTURE (Programme/Direction/Service)
 # ==========================================
 
-@router.get("/api/programmes", response_model=List[dict])
+@router.get("/api/programmes", response_model=List[dict], name="list_programmes_api")
 def api_list_programmes(session: Session = Depends(get_session)):
     """Liste des programmes"""
     programmes = session.exec(
@@ -618,7 +626,7 @@ def api_list_programmes(session: Session = Depends(get_session)):
     return [{"id": p.id, "code": p.code, "libelle": p.libelle} for p in programmes]
 
 
-@router.get("/api/directions", response_model=List[dict])
+@router.get("/api/directions", response_model=List[dict], name="list_directions_api")
 def api_list_directions(
     session: Session = Depends(get_session),
     programme_id: Optional[int] = Query(None)
@@ -636,7 +644,7 @@ def api_list_directions(
     return [{"id": d.id, "code": d.code, "libelle": d.libelle, "programme_id": d.programme_id} for d in directions]
 
 
-@router.get("/api/services", response_model=List[dict])
+@router.get("/api/services", response_model=List[dict], name="get_services_api")
 def api_list_services(
     session: Session = Depends(get_session),
     direction_id: Optional[int] = Query(None)
@@ -658,7 +666,7 @@ def api_list_services(
 # API ENDPOINTS - GRADES
 # ==========================================
 
-@router.get("/api/grades", response_model=List[dict])
+@router.get("/api/grades", response_model=List[dict], name="list_grades_api")
 def api_list_grades(
     session: Session = Depends(get_session),
     categorie: Optional[str] = Query(None)
@@ -688,7 +696,7 @@ def api_list_grades(
 # API ENDPOINTS - DOCUMENTS
 # ==========================================
 
-@router.post("/api/agents/{agent_id}/documents")
+@router.post("/api/agents/{agent_id}/documents", name="upload_document_agent_api")
 async def api_upload_document(
     agent_id: int,
     type_document: TypeDocument = Form(...),
@@ -746,7 +754,7 @@ async def api_upload_document(
         raise HTTPException(500, f"Erreur: {str(e)}")
 
 
-@router.delete("/api/documents/{document_id}")
+@router.delete("/api/documents/{document_id}", name="delete_document_agent_api")
 def api_delete_document(
     document_id: int,
     session: Session = Depends(get_session),
