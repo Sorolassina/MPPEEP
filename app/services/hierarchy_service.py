@@ -1,212 +1,77 @@
 """
-Service de gestion de la hiérarchie organisationnelle
-Détermine les validateurs (N+1, N+2, RH, DAF) pour chaque agent
+Service de gestion des workflows basés sur les rôles personnalisés
+Nouvelle version : 100% personnalisable via la configuration
 """
 from typing import Optional, Dict, List
 from sqlmodel import Session, select
-from app.models.personnel import AgentComplet, Service, Direction
-from app.models.rh import HRRequest, WorkflowStep
-from app.core.enums import RequestType, WorkflowState
+from app.models.personnel import AgentComplet
+from app.models.rh import HRRequest
+from app.core.enums import WorkflowState
 
 
 class HierarchyService:
-    """Service pour déterminer la hiérarchie et les circuits de validation"""
-    
-    # Types de demandes qui DOIVENT passer par le RH
-    RH_REQUIRED_TYPES = [
-        RequestType.CONGE,
-        RequestType.FORMATION,
-        RequestType.BESOIN_ACTE,
-    ]
-    
-    # Types de demandes qui s'arrêtent au Sous-directeur
-    SHORT_CIRCUIT_TYPES = [
-        RequestType.PERMISSION,
-    ]
-    
-    @staticmethod
-    def get_hierarchy(session: Session, agent_id: int) -> Dict[str, Optional[AgentComplet]]:
-        """
-        Détermine la hiérarchie complète d'un agent
-        
-        Returns:
-            {
-                'agent': AgentComplet,
-                'position': str,  # "Agent", "Chef de service", "Sous-directeur", "DAF"
-                'n_plus_1': AgentComplet | None,
-                'n_plus_2': AgentComplet | None,
-                'rh': AgentComplet | None,
-                'daf': AgentComplet | None,
-            }
-        """
-        agent = session.get(AgentComplet, agent_id)
-        if not agent:
-            return {}
-        
-        hierarchy = {
-            'agent': agent,
-            'position': 'Agent',  # Par défaut
-            'n_plus_1': None,
-            'n_plus_2': None,
-            'rh': None,
-            'daf': None,
-        }
-        
-        # Déterminer la position de l'agent
-        fonction = (agent.fonction or "").lower()
-        
-        # ═══════════════════════════════════════════════════════════
-        # CAS 1 : Agent simple
-        # ═══════════════════════════════════════════════════════════
-        if ("agent" in fonction or not fonction) and "chef" not in fonction and "directeur" not in fonction and "daf" not in fonction:
-            hierarchy['position'] = "Agent"
-            
-            # N+1 = Chef de service
-            if agent.service_id:
-                service = session.get(Service, agent.service_id)
-                if service and service.chef_service_id:
-                    hierarchy['n_plus_1'] = session.get(AgentComplet, service.chef_service_id)
-            
-            # N+2 = Sous-directeur (directeur de la direction)
-            if agent.direction_id:
-                direction = session.get(Direction, agent.direction_id)
-                if direction and direction.directeur_id:
-                    hierarchy['n_plus_2'] = session.get(AgentComplet, direction.directeur_id)
-        
-        # ═══════════════════════════════════════════════════════════
-        # CAS 2 : Chef de service
-        # ═══════════════════════════════════════════════════════════
-        elif "chef" in fonction and "service" in fonction:
-            hierarchy['position'] = "Chef de service"
-            
-            # N+1 = Sous-directeur
-            if agent.direction_id:
-                direction = session.get(Direction, agent.direction_id)
-                if direction and direction.directeur_id:
-                    hierarchy['n_plus_1'] = session.get(AgentComplet, direction.directeur_id)
-            
-            # N+2 = DAF
-            hierarchy['n_plus_2'] = HierarchyService._get_daf(session)
-        
-        # ═══════════════════════════════════════════════════════════
-        # CAS 3 : Sous-directeur
-        # ═══════════════════════════════════════════════════════════
-        elif "sous-directeur" in fonction or ("directeur" in fonction and "sous" in fonction):
-            hierarchy['position'] = "Sous-directeur"
-            
-            # N+1 = DAF
-            hierarchy['n_plus_1'] = HierarchyService._get_daf(session)
-            hierarchy['n_plus_2'] = None  # Pas de N+2 pour un sous-directeur
-        
-        # ═══════════════════════════════════════════════════════════
-        # CAS 4 : DAF
-        # ═══════════════════════════════════════════════════════════
-        elif "daf" in fonction:
-            hierarchy['position'] = "DAF"
-            hierarchy['n_plus_1'] = None  # Le DAF n'a pas de N+1 dans ce système
-            hierarchy['n_plus_2'] = None
-        
-        # ═══════════════════════════════════════════════════════════
-        # RH : Sous-directeur RH (si différent de l'agent)
-        # ═══════════════════════════════════════════════════════════
-        rh_agent = HierarchyService._get_rh(session)
-        if rh_agent and rh_agent.id != agent_id:
-            hierarchy['rh'] = rh_agent
-        
-        # ═══════════════════════════════════════════════════════════
-        # DAF : Toujours le même
-        # ═══════════════════════════════════════════════════════════
-        hierarchy['daf'] = HierarchyService._get_daf(session)
-        
-        return hierarchy
-    
-    @staticmethod
-    def _get_daf(session: Session) -> Optional[AgentComplet]:
-        """Récupère le DAF (Direction Administrative et Financière)"""
-        daf = session.exec(
-            select(AgentComplet)
-            .where(AgentComplet.fonction.ilike("%DAF%"))
-            .where(AgentComplet.actif == True)
-        ).first()
-        return daf
-    
-    @staticmethod
-    def _get_rh(session: Session) -> Optional[AgentComplet]:
-        """Récupère le Sous-directeur RH"""
-        # Chercher la direction RH
-        rh_direction = session.exec(
-            select(Direction)
-            .where(Direction.code.ilike("%RH%"))
-            .where(Direction.actif == True)
-        ).first()
-        
-        if rh_direction and rh_direction.directeur_id:
-            return session.get(AgentComplet, rh_direction.directeur_id)
-        
-        return None
+    """Service pour gérer les circuits de validation basés sur les rôles personnalisés"""
     
     @staticmethod
     def get_workflow_circuit(
         session: Session, 
-        agent_id: int, 
-        request_type: RequestType
+        request_id: int
     ) -> List[WorkflowState]:
         """
-        Détermine le circuit de validation pour un agent et un type de demande
+        Récupère le circuit de validation complet pour une demande
+        Basé sur le template configuré pour le type de demande
+        
+        Args:
+            request_id: ID de la demande
         
         Returns:
             Liste des états dans l'ordre: [DRAFT, SUBMITTED, VALIDATION_N1, ...]
         """
-        hierarchy = HierarchyService.get_hierarchy(session, agent_id)
-        position = hierarchy.get('position', 'Agent')
+        from app.models.workflow_config import RequestTypeCustom, WorkflowTemplateStep
         
+        request = session.get(HRRequest, request_id)
+        if not request:
+            return [WorkflowState.DRAFT, WorkflowState.ARCHIVED]
+        
+        # 1. Récupérer le template du type de demande
+        request_type_custom = session.exec(
+            select(RequestTypeCustom)
+            .where(RequestTypeCustom.code == request.type)
+            .where(RequestTypeCustom.actif == True)
+        ).first()
+        
+        if not request_type_custom:
+            # Pas de template configuré → circuit minimal
+            return [WorkflowState.DRAFT, WorkflowState.SUBMITTED, WorkflowState.ARCHIVED]
+        
+        # 2. Récupérer les étapes du template
+        steps = session.exec(
+            select(WorkflowTemplateStep)
+            .where(WorkflowTemplateStep.template_id == request_type_custom.workflow_template_id)
+            .order_by(WorkflowTemplateStep.order_index)
+        ).all()
+        
+        # 3. Construire le circuit en utilisant les états disponibles
         circuit = [WorkflowState.DRAFT, WorkflowState.SUBMITTED]
         
-        # ═══════════════════════════════════════════════════════════
-        # Circuit selon la position de l'agent
-        # ═══════════════════════════════════════════════════════════
+        # Mapper les étapes aux états WorkflowState disponibles
+        # Utilisation de N+1, N+2, N+3, N+4, N+5, N+6 (jusqu'à 6 niveaux)
+        available_states = [
+            WorkflowState.VALIDATION_N1,
+            WorkflowState.VALIDATION_N2,
+            WorkflowState.VALIDATION_N3,
+            WorkflowState.VALIDATION_N4,
+            WorkflowState.VALIDATION_N5,
+            WorkflowState.VALIDATION_N6,
+        ]
         
-        if position == "DAF":
-            # Le DAF n'a pas de circuit de validation (auto-validation)
-            circuit.append(WorkflowState.ARCHIVED)
-            return circuit
+        # Ajouter autant d'états que d'étapes configurées (max 6)
+        for i, step in enumerate(steps):
+            if i < len(available_states):
+                circuit.append(available_states[i])
         
-        if position == "Sous-directeur":
-            # Sous-directeur → DAF direct (ou RH selon type)
-            if request_type in HierarchyService.RH_REQUIRED_TYPES and hierarchy.get('rh'):
-                circuit.append(WorkflowState.VALIDATION_RH)
-            circuit.append(WorkflowState.SIGNATURE_DAF)
-            circuit.append(WorkflowState.ARCHIVED)
-            return circuit
-        
-        # Pour Agent et Chef de service
-        if hierarchy.get('n_plus_1'):
-            circuit.append(WorkflowState.VALIDATION_N1)
-        
-        if hierarchy.get('n_plus_2'):
-            circuit.append(WorkflowState.VALIDATION_N2)
-        
-        # ═══════════════════════════════════════════════════════════
-        # Ajout de RH et DAF selon le type
-        # ═══════════════════════════════════════════════════════════
-        
-        if request_type in HierarchyService.SHORT_CIRCUIT_TYPES:
-            # PERMISSION : s'arrête au Sous-directeur (N+2)
-            circuit.append(WorkflowState.ARCHIVED)
-        
-        elif request_type in HierarchyService.RH_REQUIRED_TYPES:
-            # Types RH : passe par RH puis DAF
-            if hierarchy.get('rh'):
-                circuit.append(WorkflowState.VALIDATION_RH)
-            if hierarchy.get('daf'):
-                circuit.append(WorkflowState.SIGNATURE_DAF)
-            circuit.append(WorkflowState.ARCHIVED)
-        
-        else:
-            # Autres types : DAF direct (pas de RH)
-            if hierarchy.get('daf'):
-                circuit.append(WorkflowState.SIGNATURE_DAF)
-            circuit.append(WorkflowState.ARCHIVED)
+        # Toujours ajouter "Archivé" à la fin
+        circuit.append(WorkflowState.ARCHIVED)
         
         return circuit
     
@@ -218,42 +83,100 @@ class HierarchyService:
     ) -> Optional[AgentComplet]:
         """
         Détermine quel agent DOIT valider une demande pour passer à un état donné
+        Basé uniquement sur les rôles personnalisés configurés dans le template
+        
+        Args:
+            request_id: ID de la demande
+            to_state: État cible
         
         Returns:
-            L'agent qui doit valider, ou None si pas de validateur spécifique
+            L'agent qui doit valider, ou None si pas de validateur
         """
+        from app.models.workflow_config import RequestTypeCustom, WorkflowTemplateStep, CustomRole, CustomRoleAssignment
+        
         request = session.get(HRRequest, request_id)
         if not request:
             return None
         
-        hierarchy = HierarchyService.get_hierarchy(session, request.agent_id)
-        
-        # Mapping état → validateur
+        # Cas spécial : SUBMITTED → c'est le demandeur
         if to_state == WorkflowState.SUBMITTED:
-            # L'agent lui-même soumet
-            return hierarchy.get('agent')
+            return session.get(AgentComplet, request.agent_id)
         
-        elif to_state == WorkflowState.VALIDATION_N1:
-            # Le N+1 valide
-            return hierarchy.get('n_plus_1')
-        
-        elif to_state == WorkflowState.VALIDATION_N2:
-            # Le N+2 valide
-            return hierarchy.get('n_plus_2')
-        
-        elif to_state == WorkflowState.VALIDATION_RH:
-            # Le RH valide
-            return hierarchy.get('rh')
-        
-        elif to_state == WorkflowState.SIGNATURE_DAF:
-            # Le DAF signe
-            return hierarchy.get('daf')
-        
-        elif to_state == WorkflowState.ARCHIVED:
-            # Archivage automatique (ou par le dernier validateur)
+        # Cas spécial : ARCHIVED → pas de validateur
+        if to_state == WorkflowState.ARCHIVED:
             return None
         
-        return None
+        # 1. Récupérer le template du type de demande
+        request_type_custom = session.exec(
+            select(RequestTypeCustom)
+            .where(RequestTypeCustom.code == request.type)
+            .where(RequestTypeCustom.actif == True)
+        ).first()
+        
+        if not request_type_custom:
+            return None
+        
+        # 2. Récupérer les étapes du template
+        steps = session.exec(
+            select(WorkflowTemplateStep)
+            .where(WorkflowTemplateStep.template_id == request_type_custom.workflow_template_id)
+            .order_by(WorkflowTemplateStep.order_index)
+        ).all()
+        
+        if not steps:
+            return None
+        
+        # 3. Mapper l'état à un index d'étape
+        step_index = HierarchyService._get_step_index_for_state(to_state)
+        
+        if step_index is None or step_index >= len(steps):
+            return None
+        
+        step = steps[step_index]
+        
+        # 4. Récupérer l'agent ayant le rôle de cette étape
+        custom_role = session.exec(
+            select(CustomRole)
+            .where(CustomRole.code == step.custom_role_name)
+            .where(CustomRole.actif == True)
+        ).first()
+        
+        if not custom_role:
+            return None
+        
+        # 5. Trouver l'agent ayant ce rôle
+        assignment = session.exec(
+            select(CustomRoleAssignment)
+            .where(CustomRoleAssignment.custom_role_id == custom_role.id)
+            .where(CustomRoleAssignment.actif == True)
+        ).first()
+        
+        if not assignment:
+            return None
+        
+        return session.get(AgentComplet, assignment.agent_id)
+    
+    @staticmethod
+    def _get_step_index_for_state(state: WorkflowState) -> Optional[int]:
+        """
+        Mappe un état de workflow à un index d'étape dans le template
+        
+        VALIDATION_N1 → Étape 1 (index 0)
+        VALIDATION_N2 → Étape 2 (index 1)
+        VALIDATION_N3 → Étape 3 (index 2)
+        VALIDATION_N4 → Étape 4 (index 3)
+        VALIDATION_N5 → Étape 5 (index 4)
+        VALIDATION_N6 → Étape 6 (index 5)
+        """
+        state_to_index = {
+            WorkflowState.VALIDATION_N1: 0,
+            WorkflowState.VALIDATION_N2: 1,
+            WorkflowState.VALIDATION_N3: 2,
+            WorkflowState.VALIDATION_N4: 3,
+            WorkflowState.VALIDATION_N5: 4,
+            WorkflowState.VALIDATION_N6: 5,
+        }
+        return state_to_index.get(state)
     
     @staticmethod
     def can_user_validate(
@@ -264,6 +187,7 @@ class HierarchyService:
     ) -> bool:
         """
         Vérifie si un utilisateur peut valider une demande pour passer à un état donné
+        Compare l'utilisateur connecté avec l'agent ayant le rôle de l'étape
         
         Args:
             user_id: ID de l'utilisateur qui tente la validation
@@ -273,7 +197,7 @@ class HierarchyService:
         Returns:
             True si l'utilisateur peut valider, False sinon
         """
-        # Récupérer l'agent lié à l'utilisateur
+        # 1. Récupérer l'agent lié à l'utilisateur connecté
         user_agent = session.exec(
             select(AgentComplet)
             .where(AgentComplet.user_id == user_id)
@@ -283,16 +207,16 @@ class HierarchyService:
         if not user_agent:
             return False
         
-        # Récupérer le validateur attendu
+        # 2. Récupérer le validateur attendu pour cette étape
         expected_validator = HierarchyService.get_expected_validator(
             session, request_id, to_state
         )
         
         if not expected_validator:
-            # Pas de validateur spécifique requis (ex: archivage automatique)
+            # Pas de validateur spécifique (ex: archivage automatique)
             return True
         
-        # Vérifier que l'agent de l'utilisateur est le validateur attendu
+        # 3. Vérifier que l'agent de l'utilisateur correspond au validateur attendu
         return user_agent.id == expected_validator.id
     
     @staticmethod
@@ -302,11 +226,17 @@ class HierarchyService:
     ) -> List[HRRequest]:
         """
         Récupère les demandes en attente de validation par un utilisateur
+        Basé sur les rôles personnalisés attribués à l'utilisateur
+        
+        Args:
+            user_id: ID de l'utilisateur
         
         Returns:
             Liste des demandes que l'utilisateur doit valider
         """
-        # Récupérer l'agent lié à l'utilisateur
+        from app.models.workflow_config import CustomRoleAssignment, CustomRole
+        
+        # 1. Récupérer l'agent lié à l'utilisateur
         user_agent = session.exec(
             select(AgentComplet)
             .where(AgentComplet.user_id == user_id)
@@ -316,55 +246,60 @@ class HierarchyService:
         if not user_agent:
             return []
         
-        # Récupérer toutes les demandes non archivées
+        # 2. Récupérer tous les rôles de l'utilisateur
+        user_role_assignments = session.exec(
+            select(CustomRoleAssignment)
+            .where(CustomRoleAssignment.agent_id == user_agent.id)
+            .where(CustomRoleAssignment.actif == True)
+        ).all()
+        
+        user_role_codes = []
+        for assignment in user_role_assignments:
+            role = session.get(CustomRole, assignment.custom_role_id)
+            if role and role.actif:
+                user_role_codes.append(role.code)
+        
+        # 3. Récupérer toutes les demandes non terminées
         all_requests = session.exec(
             select(HRRequest)
             .where(HRRequest.current_state != WorkflowState.ARCHIVED)
             .where(HRRequest.current_state != WorkflowState.REJECTED)
+            .where(HRRequest.current_state != WorkflowState.DRAFT)
         ).all()
         
         pending_requests = []
         
+        # 4. Pour chaque demande, vérifier si l'utilisateur doit la valider
         for request in all_requests:
-            # Déterminer le prochain état possible
-            circuit = HierarchyService.get_workflow_circuit(
-                session, request.agent_id, request.type
-            )
+            # Déterminer le prochain état
+            circuit = HierarchyService.get_workflow_circuit(session, request.id)
             
-            # Trouver l'état actuel dans le circuit
             try:
                 current_index = circuit.index(request.current_state)
                 if current_index < len(circuit) - 1:
                     next_state = circuit[current_index + 1]
                     
-                    # Vérifier si l'utilisateur peut valider cette transition
-                    expected_validator = HierarchyService.get_expected_validator(
-                        session, request.id, next_state
-                    )
-                    
-                    if expected_validator and expected_validator.id == user_agent.id:
+                    # Vérifier si l'utilisateur peut valider
+                    if HierarchyService.can_user_validate(session, user_id, request.id, next_state):
                         pending_requests.append(request)
             except ValueError:
-                # État actuel pas dans le circuit (ne devrait pas arriver)
                 continue
         
         return pending_requests
     
     @staticmethod
-    def get_user_hierarchy_info(session: Session, user_id: int) -> Dict:
+    def get_user_roles(session: Session, user_id: int) -> List[Dict]:
         """
-        Récupère les informations hiérarchiques d'un utilisateur
-        Utile pour afficher son rôle et ses subordonnés
+        Récupère tous les rôles personnalisés d'un utilisateur
+        
+        Args:
+            user_id: ID de l'utilisateur
         
         Returns:
-            {
-                'agent': AgentComplet,
-                'position': str,
-                'subordinates': List[AgentComplet],  # Pour chefs et sous-directeurs
-                'is_rh': bool,
-                'is_daf': bool,
-            }
+            Liste des rôles avec leurs informations
         """
+        from app.models.workflow_config import CustomRoleAssignment, CustomRole
+        
         user_agent = session.exec(
             select(AgentComplet)
             .where(AgentComplet.user_id == user_id)
@@ -372,54 +307,172 @@ class HierarchyService:
         ).first()
         
         if not user_agent:
+            return []
+        
+        assignments = session.exec(
+            select(CustomRoleAssignment)
+            .where(CustomRoleAssignment.agent_id == user_agent.id)
+            .where(CustomRoleAssignment.actif == True)
+        ).all()
+        
+        roles_info = []
+        for assignment in assignments:
+            role = session.get(CustomRole, assignment.custom_role_id)
+            if role and role.actif:
+                roles_info.append({
+                    'code': role.code,
+                    'libelle': role.libelle,
+                    'description': role.description,
+                    'date_debut': assignment.date_debut,
+                    'date_fin': assignment.date_fin
+                })
+        
+        return roles_info
+    
+    @staticmethod
+    def get_agents_with_role(session: Session, role_code: str) -> List[AgentComplet]:
+        """
+        Récupère tous les agents ayant un rôle personnalisé spécifique
+        
+        Args:
+            role_code: Code du rôle (ex: 'RESP_BUDGET')
+        
+        Returns:
+            Liste des agents ayant ce rôle
+        """
+        from app.models.workflow_config import CustomRole, CustomRoleAssignment
+        
+        custom_role = session.exec(
+            select(CustomRole)
+            .where(CustomRole.code == role_code)
+            .where(CustomRole.actif == True)
+        ).first()
+        
+        if not custom_role:
+            return []
+        
+        assignments = session.exec(
+            select(CustomRoleAssignment)
+            .where(CustomRoleAssignment.custom_role_id == custom_role.id)
+            .where(CustomRoleAssignment.actif == True)
+            ).all()
+        
+        agents = []
+        for assignment in assignments:
+            agent = session.get(AgentComplet, assignment.agent_id)
+            if agent and agent.actif:
+                agents.append(agent)
+        
+        return agents
+    
+    @staticmethod
+    def get_next_validator_name(session: Session, request_id: int) -> Optional[str]:
+        """
+        Récupère le nom du prochain validateur pour une demande
+        
+        Args:
+            request_id: ID de la demande
+        
+        Returns:
+            Nom complet du prochain validateur ou None
+        """
+        request = session.get(HRRequest, request_id)
+        if not request:
+            return None
+        
+        # Récupérer le circuit
+        circuit = HierarchyService.get_workflow_circuit(session, request_id)
+        
+        try:
+            current_index = circuit.index(request.current_state)
+            if current_index < len(circuit) - 1:
+                next_state = circuit[current_index + 1]
+                
+                validator = HierarchyService.get_expected_validator(
+                    session, request_id, next_state
+                )
+                
+                if validator:
+                    return f"{validator.prenom} {validator.nom}"
+        except ValueError:
+            pass
+        
+        return None
+    
+    @staticmethod
+    def get_workflow_info(session: Session, request_id: int) -> Dict:
+        """
+        Récupère toutes les informations du workflow d'une demande
+        
+        Args:
+            request_id: ID de la demande
+        
+        Returns:
+            Dictionnaire avec circuit, étapes, validateurs, etc.
+        """
+        from app.models.workflow_config import RequestTypeCustom, WorkflowTemplateStep, WorkflowTemplate
+        
+        request = session.get(HRRequest, request_id)
+        if not request:
             return {}
         
-        hierarchy = HierarchyService.get_hierarchy(session, user_agent.id)
+        # Récupérer le template
+        request_type_custom = session.exec(
+            select(RequestTypeCustom)
+            .where(RequestTypeCustom.code == request.type)
+            .where(RequestTypeCustom.actif == True)
+        ).first()
         
-        info = {
-            'agent': user_agent,
-            'position': hierarchy.get('position', 'Agent'),
-            'subordinates': [],
-            'is_rh': False,
-            'is_daf': False,
+        if not request_type_custom:
+            return {
+                'circuit': [],
+                'current_step': None,
+                'next_validator': None,
+                'template': None
+            }
+        
+        template = session.get(WorkflowTemplate, request_type_custom.workflow_template_id)
+        
+        steps = session.exec(
+            select(WorkflowTemplateStep)
+            .where(WorkflowTemplateStep.template_id == request_type_custom.workflow_template_id)
+            .order_by(WorkflowTemplateStep.order_index)
+            ).all()
+        
+        # Mapper les états aux étapes
+        # Les états disponibles dans l'ordre (jusqu'à 6 niveaux)
+        available_states = [
+            WorkflowState.VALIDATION_N1,
+            WorkflowState.VALIDATION_N2,
+            WorkflowState.VALIDATION_N3,
+            WorkflowState.VALIDATION_N4,
+            WorkflowState.VALIDATION_N5,
+            WorkflowState.VALIDATION_N6,
+        ]
+        
+        # Construire un dictionnaire : état → info de l'étape
+        steps_dict = {}
+        for i, step in enumerate(steps):
+            if i < len(available_states):
+                state = available_states[i]
+                
+                # Récupérer le validateur assigné
+                validator = None
+                if step.custom_role_name:
+                    agents = HierarchyService.get_agents_with_role(session, step.custom_role_name)
+                    if agents:
+                        validator = agents[0]
+                
+                steps_dict[state.value] = {
+                    'role_name': step.custom_role_name or 'Non défini',
+                    'validator_name': f"{validator.prenom} {validator.nom}" if validator else None,
+                    'order_index': step.order_index
+                }
+        
+        return {
+            'template_name': template.nom if template else None,
+            'circuit': HierarchyService.get_workflow_circuit(session, request_id),
+            'steps': steps_dict,
+            'current_state': request.current_state
         }
-        
-        # Déterminer si l'utilisateur est RH ou DAF
-        rh = HierarchyService._get_rh(session)
-        daf = HierarchyService._get_daf(session)
-        
-        if rh and user_agent.id == rh.id:
-            info['is_rh'] = True
-        
-        if daf and user_agent.id == daf.id:
-            info['is_daf'] = True
-        
-        # Récupérer les subordonnés selon la position
-        if info['position'] == "Chef de service" and user_agent.service_id:
-            # Tous les agents du service (sauf lui-même)
-            info['subordinates'] = session.exec(
-                select(AgentComplet)
-                .where(AgentComplet.service_id == user_agent.service_id)
-                .where(AgentComplet.id != user_agent.id)
-                .where(AgentComplet.actif == True)
-            ).all()
-        
-        elif info['position'] == "Sous-directeur" and user_agent.direction_id:
-            # Tous les agents de la direction (sauf lui-même)
-            info['subordinates'] = session.exec(
-                select(AgentComplet)
-                .where(AgentComplet.direction_id == user_agent.direction_id)
-                .where(AgentComplet.id != user_agent.id)
-                .where(AgentComplet.actif == True)
-            ).all()
-        
-        elif info['is_daf']:
-            # Le DAF voit tout le monde
-            info['subordinates'] = session.exec(
-                select(AgentComplet)
-                .where(AgentComplet.id != user_agent.id)
-                .where(AgentComplet.actif == True)
-            ).all()
-        
-        return info
 

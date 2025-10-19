@@ -62,13 +62,14 @@
             <tr>
               <th>Code</th>
               <th>Libellé</th>
+              <th>Responsable</th>
               <th>Description</th>
               <th>Statut</th>
               <th style="text-align: center;">Actions</th>
             </tr>
           </thead>
           <tbody id="programmes-tbody">
-            <tr><td colspan="5" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -88,12 +89,13 @@
               <th>Code</th>
               <th>Libellé</th>
               <th>Programme</th>
+              <th>Directeur</th>
               <th>Statut</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="directions-tbody">
-            <tr><td colspan="5" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -113,12 +115,13 @@
               <th>Code</th>
               <th>Libellé</th>
               <th>Direction</th>
+              <th>Chef de Service</th>
               <th>Statut</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="services-tbody">
-            <tr><td colspan="5" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -339,14 +342,28 @@
 <script>
 let currentType = '';
 let editingId = null;
+let agents = []; // Liste des agents pour les responsables
 
 // Charger les données au démarrage
 document.addEventListener('DOMContentLoaded', function() {
+  loadAgents(); // Charger la liste des agents
   loadProgrammes();
   loadDirections();
   loadServices();
   loadGrades();
 });
+
+// ============================================
+// CHARGER LA LISTE DES AGENTS
+// ============================================
+async function loadAgents() {
+  try {
+    const response = await fetch('{{ url_for("list_agents_api") }}?limit=200&actif=true');
+    agents = await response.json();
+  } catch (error) {
+    console.error('Erreur chargement agents:', error);
+  }
+}
 
 // ============================================
 // GESTION DES ONGLETS
@@ -393,7 +410,7 @@ async function loadProgrammes() {
   if (programmes.length === 0) {
     tbody.innerHTML = `
       <tr class="empty-state">
-        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--gray-600);">
+        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--gray-600);">
           <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
           <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucun programme enregistré</div>
           <div style="font-size: 0.9rem; color: var(--gray-500);">
@@ -409,6 +426,7 @@ async function loadProgrammes() {
     <tr>
       <td><strong>${p.code}</strong></td>
       <td>${p.libelle}</td>
+      <td>${p.responsable_nom || '<span style="color: var(--gray-400);">-</span>'}</td>
       <td>${p.description || '-'}</td>
       <td>
         <span class="badge ${p.actif ? 'badge-success' : 'badge-danger'}">
@@ -465,6 +483,7 @@ async function loadDirections() {
         <td><strong>${d.code}</strong></td>
         <td>${d.libelle}</td>
         <td>${d.programme_libelle || '-'}</td>
+        <td>${d.directeur_nom || '-'}</td>
         <td>
           <span class="badge ${d.actif ? 'badge-success' : 'badge-danger'}">
             ${d.actif ? 'Actif' : 'Inactif'}
@@ -526,6 +545,7 @@ async function loadServices() {
         <td><strong>${s.code}</strong></td>
         <td>${s.libelle}</td>
         <td>${s.direction_libelle || '-'}</td>
+        <td>${s.chef_service_nom || '-'}</td>
         <td>
           <span class="badge ${s.actif ? 'badge-success' : 'badge-danger'}">
             ${s.actif ? 'Actif' : 'Inactif'}
@@ -635,15 +655,22 @@ function openModal(type, id = null) {
     formContent.innerHTML = `
       <div class="form-group">
         <label>Code *</label>
-        <input type="text" name="code" id="field-code" required placeholder="Ex: P01">
+        <input type="text" name="code" id="field-code" required placeholder="Ex: P01" class="form-control">
       </div>
       <div class="form-group">
         <label>Libellé *</label>
-        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Pilotage">
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Pilotage" class="form-control">
       </div>
       <div class="form-group">
         <label>Description</label>
-        <textarea name="description" id="field-description" rows="3"></textarea>
+        <textarea name="description" id="field-description" rows="3" class="form-control"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Responsable du Programme</label>
+        <select name="responsable_id" id="field-responsable_id" class="form-control">
+          <option value="">-- Aucun responsable --</option>
+          ${agents.map(a => `<option value="${a.id}">${a.nom} ${a.prenom} (${a.matricule})</option>`).join('')}
+        </select>
       </div>
       ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
     `;
@@ -651,15 +678,15 @@ function openModal(type, id = null) {
     formContent.innerHTML = `
       <div class="form-group">
         <label>Code *</label>
-        <input type="text" name="code" id="field-code" required placeholder="Ex: DAF">
+        <input type="text" name="code" id="field-code" required placeholder="Ex: DAF" class="form-control">
       </div>
       <div class="form-group">
         <label>Libellé *</label>
-        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Direction Administrative">
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Direction Administrative" class="form-control">
       </div>
       <div class="form-group">
         <label>Programme</label>
-        <select name="programme_id" id="field-programme_id">
+        <select name="programme_id" id="field-programme_id" class="form-control">
           <option value="">-- Aucun --</option>
           {% for prog in programmes %}
           <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
@@ -667,8 +694,15 @@ function openModal(type, id = null) {
         </select>
       </div>
       <div class="form-group">
+        <label>Directeur</label>
+        <select name="directeur_id" id="field-directeur_id" class="form-control">
+          <option value="">-- Aucun directeur --</option>
+          ${agents.map(a => `<option value="${a.id}">${a.nom} ${a.prenom} (${a.matricule})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
         <label>Description</label>
-        <textarea name="description" id="field-description" rows="3"></textarea>
+        <textarea name="description" id="field-description" rows="3" class="form-control"></textarea>
       </div>
       ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
     `;
@@ -676,15 +710,15 @@ function openModal(type, id = null) {
     formContent.innerHTML = `
       <div class="form-group">
         <label>Code *</label>
-        <input type="text" name="code" id="field-code" required placeholder="Ex: SCPT">
+        <input type="text" name="code" id="field-code" required placeholder="Ex: SCPT" class="form-control">
       </div>
       <div class="form-group">
         <label>Libellé *</label>
-        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Service Comptabilité">
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Service Comptabilité" class="form-control">
       </div>
       <div class="form-group">
         <label>Direction</label>
-        <select name="direction_id" id="field-direction_id">
+        <select name="direction_id" id="field-direction_id" class="form-control">
           <option value="">-- Aucune --</option>
           {% for dir in directions %}
           <option value="{{ dir.id }}">{{ dir.code }} - {{ dir.libelle }}</option>
@@ -692,8 +726,15 @@ function openModal(type, id = null) {
         </select>
       </div>
       <div class="form-group">
+        <label>Chef de Service</label>
+        <select name="chef_service_id" id="field-chef_service_id" class="form-control">
+          <option value="">-- Aucun chef de service --</option>
+          ${agents.map(a => `<option value="${a.id}">${a.nom} ${a.prenom} (${a.matricule})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
         <label>Description</label>
-        <textarea name="description" id="field-description" rows="3"></textarea>
+        <textarea name="description" id="field-description" rows="3" class="form-control"></textarea>
       </div>
       ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
     `;

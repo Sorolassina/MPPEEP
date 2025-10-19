@@ -1,1893 +1,3404 @@
 {% extends "layouts/base.html" %}
+
 {% from 'components/page_header.html' import page_header %}
+
+
 
 {% block title %}Configuration des Workflows - {{ app_name }}{% endblock %}
 
+
+
 {% block styles %}
+
 <style>
+
 /* Configuration Workflows Styles */
+
 .workflow-config-container {
+
     padding: 2rem;
+
     max-width: 1400px;
+
     margin: 0 auto;
+
 }
+
+
 
 /* Tabs */
+
 .tabs {
+
     display: flex;
+
     gap: 0.5rem;
+
     margin-bottom: 2rem;
+
     border-bottom: 2px solid #e0e0e0;
+
 }
+
+
 
 .tab-button {
+
     padding: 1rem 1.5rem;
+
     background: none;
+
     border: none;
+
     border-bottom: 3px solid transparent;
+
     cursor: pointer;
+
     font-size: 1rem;
+
     font-weight: 600;
+
     color: #666;
+
     transition: all 0.3s;
+
 }
+
+
 
 .tab-button:hover {
+
     color: var(--primary-color);
+
 }
+
+
 
 .tab-button.active {
+
     color: var(--primary-color);
+
     border-bottom-color: var(--primary-color);
+
 }
+
+
 
 .tab-content {
+
     display: none;
+
 }
+
+
 
 .tab-content.active {
+
     display: block;
+
 }
+
+
 
 /* Templates Grid */
+
 .templates-grid {
+
     display: grid;
+
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+
     gap: 1.5rem;
+
     margin-top: 1.5rem;
+
 }
+
+
 
 .template-card {
+
     background: white;
+
     border-radius: 12px;
+
     padding: 1.5rem;
+
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+
     transition: all 0.3s;
+
     border-left: 4px solid var(--primary-color);
+
 }
+
+
 
 .template-card:hover {
+
     transform: translateY(-2px);
+
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+
 }
+
+
 
 .template-card.system {
+
     border-left-color: #28a745;
+
     background: #f8fff9;
+
 }
+
+
 
 .template-header {
+
     display: flex;
+
     align-items: center;
+
     gap: 1rem;
+
     margin-bottom: 1rem;
+
 }
+
+
 
 .template-icon {
+
     font-size: 2rem;
+
 }
+
+
 
 .template-info h4 {
+
     margin: 0;
+
     color: #333;
+
     font-size: 1.1rem;
+
 }
+
+
 
 .template-info .badge {
+
     display: inline-block;
+
     padding: 0.25rem 0.5rem;
+
     border-radius: 12px;
+
     font-size: 0.75rem;
+
     font-weight: 600;
+
     margin-top: 0.25rem;
+
 }
+
+
 
 .badge-system {
+
     background: #d4edda;
+
     color: #155724;
+
 }
+
+
 
 .badge-custom {
+
     background: #d1ecf1;
+
     color: #0c5460;
+
 }
+
+
 
 .template-description {
+
     color: #666;
+
     font-size: 0.9rem;
+
     margin-bottom: 1rem;
+
 }
+
+
 
 .template-stats {
+
     display: flex;
+
     gap: 1rem;
+
     font-size: 0.85rem;
+
     color: #999;
+
     margin-bottom: 1rem;
+
 }
+
+
 
 .template-actions {
+
     display: flex;
+
     gap: 0.5rem;
+
     flex-wrap: wrap;
+
     justify-content: flex-start;
+
     align-items: center;
+
 }
+
+
 
 .btn-sm {
+
     padding: 0.4rem 0.75rem;
+
     font-size: 0.75rem;
+
     border-radius: 5px;
+
     border: none;
+
     cursor: pointer;
+
     transition: all 0.3s;
+
     font-weight: 500;
+
     height: 30px;
+
     display: inline-flex;
+
     align-items: center;
+
     justify-content: center;
+
     gap: 0.25rem;
+
     white-space: nowrap;
+
 }
+
+
 
 .btn-preview {
+
     background: #17a2b8;
+
     color: white;
+
 }
+
+
 
 .btn-preview:hover {
+
     background: #138496;
+
 }
+
+
 
 .btn-edit {
+
     background: #ffc107;
+
     color: #333;
+
 }
+
+
 
 .btn-edit:hover {
+
     background: #e0a800;
+
 }
+
+
 
 .btn-delete {
+
     background: #dc3545;
+
     color: white;
+
 }
+
+
 
 .btn-delete:hover {
+
     background: #c82333;
+
 }
+
+
 
 /* Request Types */
+
 .request-types-container {
+
     display: grid;
+
     gap: 1rem;
+
 }
+
+
 
 .category-section {
+
     margin-bottom: 2rem;
+
 }
+
+
 
 .category-header {
+
     display: flex;
+
     align-items: center;
+
     gap: 0.5rem;
+
     padding: 1rem;
+
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+
     color: white;
+
     border-radius: 8px;
+
     margin-bottom: 1rem;
+
 }
+
+
 
 .request-types-list {
+
     display: grid;
+
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+
     gap: 1rem;
+
 }
+
+
 
 .request-type-card {
+
     background: white;
+
     border-radius: 8px;
+
     padding: 1rem;
+
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+
     display: flex;
+
     align-items: flex-start;
+
     gap: 1rem;
+
     transition: all 0.3s;
+
     min-height: 100px;
+
 }
+
+
 
 .request-type-card:hover {
+
     transform: translateY(-2px);
+
     box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+
 }
+
+
 
 .request-type-icon {
+
     font-size: 2rem;
+
     flex-shrink: 0;
+
 }
+
+
 
 .request-type-info {
+
     flex: 1;
+
     display: flex;
+
     flex-direction: column;
+
     gap: 0.5rem;
+
 }
+
+
 
 .request-type-info h5 {
+
     margin: 0;
+
     color: #333;
+
 }
+
+
 
 .request-type-info p {
+
     margin: 0;
+
     font-size: 0.85rem;
+
     color: #666;
+
 }
+
+
 
 .request-type-info .btn-sm {
+
     padding: 0.3rem 0.6rem;
+
     font-size: 0.7rem;
+
     height: auto;
+
     white-space: nowrap;
+
 }
+
+
 
 /* Custom Roles */
+
 .roles-grid {
+
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+
     gap: 1.5rem;
+
     margin-top: 1.5rem;
+
 }
+
+
 
 .role-card {
+
     background: white;
+
     border-radius: 12px;
+
     padding: 1.5rem;
+
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+
 }
+
+
 
 .role-header {
+
     display: flex;
+
     justify-content: space-between;
+
     align-items: start;
+
     margin-bottom: 1rem;
+
 }
+
+
 
 .role-header h4 {
+
     margin: 0;
+
     color: #333;
+
 }
+
+
 
 .role-agents {
+
     font-size: 0.9rem;
+
     color: #666;
+
     margin-top: 0.5rem;
+
 }
+
+
 
 /* Preview Modal */
+
 .workflow-preview {
+
     padding: 2rem;
+
 }
+
+
 
 .workflow-step {
+
     display: flex;
+
     align-items: center;
+
     padding: 1rem;
+
     background: #f8f9fa;
+
     border-radius: 8px;
+
     margin-bottom: 1rem;
+
     position: relative;
+
 }
+
+
 
 .workflow-step::after {
+
     content: '↓';
+
     position: absolute;
+
     bottom: -1.5rem;
+
     left: 50%;
+
     transform: translateX(-50%);
+
     font-size: 1.5rem;
+
     color: var(--primary-color);
+
 }
+
+
 
 .workflow-step:last-child::after {
+
     display: none;
+
 }
+
+
 
 .step-number {
+
     background: var(--primary-color);
+
     color: white;
+
     width: 2.5rem;
+
     height: 2.5rem;
+
     border-radius: 50%;
+
     display: flex;
+
     align-items: center;
+
     justify-content: center;
+
     font-weight: bold;
+
     margin-right: 1rem;
+
 }
+
+
 
 .step-info {
+
     flex: 1;
+
 }
+
+
 
 .step-role {
+
     font-weight: 600;
+
     color: #333;
+
 }
+
+
 
 .step-details {
+
     font-size: 0.85rem;
+
     color: #666;
+
     margin-top: 0.25rem;
+
 }
+
+
 
 /* Empty State */
+
 .empty-state {
+
     text-align: center;
+
     padding: 3rem;
+
     color: #999;
+
 }
+
+
 
 .empty-state-icon {
+
     font-size: 4rem;
+
     margin-bottom: 1rem;
+
 }
+
+
 
 /* Action Button */
+
 .action-btn {
+
     display: inline-flex;
+
     align-items: center;
+
     gap: 0.5rem;
+
     padding: 0.75rem 1.5rem;
+
     background: var(--primary-color);
+
     color: white;
+
     border: none;
+
     border-radius: 8px;
+
     cursor: pointer;
+
     font-size: 1rem;
+
     font-weight: 600;
+
     transition: all 0.3s;
+
 }
+
+
 
 .action-btn:hover {
+
     background: var(--secondary-color);
+
     transform: translateY(-2px);
+
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+
 }
+
+
 
 /* Form Groups */
+
 .form-row {
+
     display: grid;
+
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+
     gap: 1rem;
+
     margin-bottom: 1rem;
+
 }
+
+
 
 .form-group {
+
     margin-bottom: 1rem;
+
 }
+
+
 
 .form-group label {
+
     display: block;
+
     margin-bottom: 0.5rem;
+
     font-weight: 600;
+
     color: #333;
+
 }
+
+
 
 .form-control {
+
     width: 100%;
+
     padding: 0.75rem;
+
     border: 1px solid #ddd;
+
     border-radius: 6px;
+
     font-size: 1rem;
+
 }
+
+
 
 .form-control:focus {
+
     outline: none;
+
     border-color: var(--primary-color);
+
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+
 }
+
+
 
 select.form-control {
+
     cursor: pointer;
+
 }
+
+
 
 /* Steps Editor */
+
 .steps-editor {
+
     margin-top: 1.5rem;
+
 }
+
+
 
 .step-item {
+
     display: flex;
+
     align-items: center;
+
     gap: 1rem;
+
     padding: 1rem;
+
     background: #f8f9fa;
+
     border-radius: 8px;
+
     margin-bottom: 0.5rem;
+
 }
+
+
 
 .step-order {
+
     background: var(--primary-color);
+
     color: white;
+
     width: 2rem;
+
     height: 2rem;
+
     border-radius: 50%;
+
     display: flex;
+
     align-items: center;
+
     justify-content: center;
+
     font-weight: bold;
+
 }
+
+
 
 .step-item-content {
+
     flex: 1;
+
 }
+
+
 
 .step-item-actions {
+
     display: flex;
+
     gap: 0.5rem;
+
 }
+
+
 
 .btn-icon {
+
     width: 2rem;
+
     height: 2rem;
+
     border-radius: 50%;
+
     border: none;
+
     cursor: pointer;
+
     display: flex;
+
     align-items: center;
+
     justify-content: center;
+
     transition: all 0.3s;
+
 }
+
+
 
 .btn-icon:hover {
+
     transform: scale(1.1);
+
 }
+
+
 
 /* Direction Selection */
+
 .direction-option {
+
     cursor: pointer;
+
 }
+
+
 
 .direction-label {
+
     display: block;
+
     padding: 1.5rem;
+
     background: white;
+
     border: 2px solid #ddd;
+
     border-radius: 12px;
+
     text-align: center;
+
     transition: all 0.3s;
+
     cursor: pointer;
+
 }
+
+
 
 .direction-label:hover {
+
     border-color: var(--primary-color);
+
     background: #f0f8ff;
+
     transform: translateY(-2px);
+
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
 }
+
+
 
 .direction-option input[type="radio"]:checked + .direction-label {
+
     border-color: var(--primary-color);
+
     background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(52, 152, 219, 0.05));
+
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+
 }
+
+
 
 .direction-icon {
+
     font-size: 3rem;
+
     margin-bottom: 0.5rem;
+
 }
+
+
 
 .direction-title {
+
     font-size: 1.1rem;
+
     font-weight: 600;
+
     color: #333;
+
     margin-bottom: 0.25rem;
+
 }
+
+
 
 .direction-desc {
+
     font-size: 0.9rem;
+
     color: #666;
+
     margin-bottom: 0.5rem;
+
 }
+
+
 
 .direction-example {
+
     font-size: 0.8rem;
+
     color: #999;
+
     font-style: italic;
+
 }
+
+
 
 /* Icon Picker */
+
 .icon-btn {
+
     width: 50px;
+
     height: 50px;
+
     border: 2px solid #ddd;
+
     border-radius: 8px;
+
     background: white;
+
     cursor: pointer;
+
     font-size: 1.5rem;
+
     transition: all 0.3s;
+
     display: flex;
+
     align-items: center;
+
     justify-content: center;
+
 }
+
+
 
 .icon-btn:hover {
+
     border-color: var(--primary-color);
+
     background: #f0f8ff;
+
     transform: scale(1.1);
+
 }
+
+
 
 .icon-btn.selected {
+
     border-color: var(--primary-color);
+
     background: var(--primary-color);
+
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+
 }
+
+
 
 /* Delete Menu Dropdown */
+
 .delete-menu {
+
     position: absolute;
+
     top: 100%;
+
     right: 0;
+
     margin-top: 0.5rem;
+
     background: white;
+
     border: 1px solid #ddd;
+
     border-radius: 8px;
+
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+
     min-width: 200px;
+
     z-index: 1000;
+
 }
+
+
 
 .delete-menu-item {
+
     display: flex;
+
     flex-direction: column;
+
     align-items: flex-start;
+
     width: 100%;
+
     padding: 0.75rem 1rem;
+
     border: none;
+
     background: white;
+
     cursor: pointer;
+
     text-align: left;
+
     transition: background 0.2s;
+
     font-size: 0.9rem;
+
     border-bottom: 1px solid #f0f0f0;
+
 }
+
+
 
 .delete-menu-item:last-child {
+
     border-bottom: none;
+
 }
+
+
 
 .delete-menu-item:hover {
+
     background: #f8f9fa;
+
 }
+
+
 
 .delete-menu-item.danger:hover {
+
     background: #fff5f5;
+
     color: #dc3545;
+
 }
+
+
 
 .delete-menu-item small {
+
     font-size: 0.75rem;
+
     color: #999;
+
     margin-top: 0.25rem;
+
 }
+
+
 
 .delete-menu-item.danger small {
+
     color: #dc3545;
+
 }
+
+
 
 /* Workflow Steps Selector */
+
 .workflow-steps-selector {
+
     display: grid;
+
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+
     gap: 1rem;
+
 }
+
+
 
 .step-checkbox {
+
     position: relative;
+
 }
+
+
 
 .step-checkbox input[type="checkbox"] {
+
     position: absolute;
+
     opacity: 0;
+
     cursor: pointer;
+
 }
+
+
 
 .step-checkbox-label {
+
     display: flex;
+
     align-items: center;
+
     gap: 1rem;
+
     padding: 1rem;
+
     background: white;
+
     border: 2px solid #ddd;
+
     border-radius: 10px;
+
     cursor: pointer;
+
     transition: all 0.3s;
+
 }
+
+
 
 .step-checkbox-label:hover {
+
     border-color: var(--primary-color);
+
     background: #f8f9fa;
+
 }
+
+
 
 .step-checkbox input[type="checkbox"]:checked + .step-checkbox-label {
+
     border-color: var(--primary-color);
+
     background: linear-gradient(135deg, rgba(74, 144, 226, 0.05), rgba(52, 152, 219, 0.02));
+
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+
 }
+
+
 
 .step-checkbox-icon {
+
     font-size: 2rem;
+
     flex-shrink: 0;
+
 }
+
+
 
 .step-checkbox-content {
+
     flex: 1;
+
 }
+
+
 
 .step-checkbox-title {
+
     font-weight: 600;
+
     color: #333;
+
     margin-bottom: 0.25rem;
+
     font-size: 0.95rem;
+
 }
+
+
 
 .step-checkbox-desc {
+
     font-size: 0.8rem;
+
     color: #666;
+
 }
+
 </style>
+
 {% endblock %}
 
+
+
 {% block content %}
+
 {{ page_header(
+
     title='🔄 Configuration des Workflows',
+
     breadcrumbs=[
+
         {'name': 'Accueil', 'url': url_for('accueil')},
+
         {'name': 'Configuration Workflows'}
+
     ],
+
     actions=[
+
+        {'label': '❓ Aide', 'url': url_for('workflow_help'), 'primary': False},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
+
     ]
+
 ) }}
 
+
+
 <div class="workflow-config-container">
+
+    
     
     <!-- Tabs Navigation -->
+
     <div class="tabs">
+
         <button class="tab-button active" onclick="switchTab('templates')">
+
             📋 Templates de Workflows
+
         </button>
+
         <button class="tab-button" onclick="switchTab('request-types')">
+
             📝 Types de Demandes
+
         </button>
+
         <button class="tab-button" onclick="switchTab('custom-roles')">
+
             👥 Rôles Personnalisés
+
         </button>
+
     </div>
+
+
 
     <!-- Tab 1: Templates -->
+
     <div id="tab-templates" class="tab-content active">
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+
             <h3>📋 Templates de Workflows</h3>
+
             <div style="display: flex; gap: 0.5rem;">
-                <button class="action-btn" style="background: #28a745;" onclick="initializeSystemWorkflows()">
-                    🔄 Initialiser les Workflows Système
-                </button>
+
                 <button class="action-btn" onclick="openCreateTemplateModal()">
+
                     ➕ Créer un Template
+
                 </button>
+
             </div>
+
         </div>
+
+
 
         <div class="templates-grid" id="templates-container">
+
             <!-- Templates will be loaded here -->
+
         </div>
+
     </div>
+
+
 
     <!-- Tab 2: Request Types -->
+
     <div id="tab-request-types" class="tab-content">
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+
             <h3>📝 Types de Demandes</h3>
+
             <button class="action-btn" onclick="openCreateRequestTypeModal()">
+
                 ➕ Créer un Type de Demande
+
             </button>
+
         </div>
+
+
 
         <div class="request-types-container" id="request-types-container">
+
             <!-- Request types will be loaded here -->
+
         </div>
+
     </div>
 
+
+
     <!-- Tab 3: Custom Roles -->
+
     <div id="tab-custom-roles" class="tab-content">
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+
             <h3>👥 Rôles Personnalisés</h3>
+
             <button class="action-btn" onclick="openCreateRoleModal()">
+
                 ➕ Créer un Rôle
+
             </button>
+
         </div>
 
+
+
         <div class="roles-grid" id="roles-container">
+
             <!-- Roles will be loaded here -->
+
         </div>
+
+    </div>
+
+
+
+</div>
+
+
+
+<!-- Modal: Create/Edit Template -->
+
+<div id="modal-template" class="modal-lg">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h3 id="modal-template-title" style="color:var(--white-color)">Créer un Template</h3>
+
+            <button class="modal-close" onclick="closeModal('modal-template')">&times;</button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <form id="form-template" onsubmit="saveTemplate(event)">
+
+                <input type="hidden" id="template-id" name="id">
+
+                
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+
+                    <!-- Colonne gauche: Formulaire -->
+
+                    <div>
+
+                        <div class="form-row">
+
+                            <div class="form-group">
+
+                                <label>Code du Template *</label>
+
+                                <input type="text" class="form-control" id="template-code" name="code" required>
+
+                            </div>
+
+                            <div class="form-group">
+
+                                <label>Nom du Template *</label>
+
+                                <input type="text" class="form-control" id="template-nom" name="nom" required>
+
+                            </div>
+
+                        </div>
+
+
+
+                <div class="form-group">
+
+                    <label>Description</label>
+
+                    <textarea class="form-control" id="template-description" name="description" rows="3" readonly style="background: #f8f9fa; cursor: not-allowed;"></textarea>
+
+                    <small style="color: #999; font-size: 0.8rem;">
+
+                        💡 La description est générée automatiquement selon les niveaux sélectionnés
+
+                    </small>
+
+                </div>
+
+
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+
+                    <label>Direction du Workflow *</label>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+
+                        <div class="direction-option" onclick="selectDirection('ASCENDANT')">
+
+                            <input type="radio" name="direction" id="direction-ascendant" value="ASCENDANT" checked style="display: none;">
+
+                            <label for="direction-ascendant" class="direction-label">
+
+                                <div class="direction-icon">⬆️</div>
+
+                                <div class="direction-title">Ascendant</div>
+
+                                <div class="direction-desc">Agent → Hiérarchie</div>
+
+                                <div class="direction-example">Ex: Demande de congé</div>
+
+                            </label>
+
+                        </div>
+
+                        <div class="direction-option" onclick="selectDirection('DESCENDANT')">
+
+                            <input type="radio" name="direction" id="direction-descendant" value="DESCENDANT" style="display: none;">
+
+                            <label for="direction-descendant" class="direction-label">
+
+                                <div class="direction-icon">⬇️</div>
+
+                                <div class="direction-title">Descendant</div>
+
+                                <div class="direction-desc">Chef → Agent</div>
+
+                                <div class="direction-example">Ex: Instruction, Tâche</div>
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                
+                
+                <div class="form-row">
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+
+                        <label>Icône</label>
+
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+
+                            <input type="text" class="form-control" id="template-icone" name="icone" value="📄" maxlength="10" placeholder="📄" readonly style="width: 100px; text-align: center; font-size: 1.5rem; cursor: pointer;" onclick="toggleIconPicker()">
+
+                            <span style="color: #666; font-size: 0.9rem;">Cliquez pour choisir une icône</span>
+
+                        </div>
+
+                        <div id="icon-picker" style="display: none; padding: 1rem; background: #f8f9fa; border-radius: 8px; max-height: 200px; overflow-y: auto;">
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 0.5rem;">
+
+                                <!-- Icônes générales -->
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📄')">📄</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📋')">📋</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📝')">📝</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📑')">📑</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📊')">📊</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📈')">📈</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📉')">📉</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📆')">📆</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📅')">📅</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🗓️')">🗓️</button>
+
+                                <!-- RH & Personnel -->
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('👤')">👤</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('👥')">👥</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('👨‍💼')">👨‍💼</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('👩‍💼')">👩‍💼</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🧑‍💼')">🧑‍💼</button>
+
+                                <!-- Actions -->
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('✅')">✅</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('✔️')">✔️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('❌')">❌</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('⚠️')">⚠️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🔔')">🔔</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🔕')">🔕</button>
+
+                                <!-- Workflow -->
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🔄')">🔄</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🔁')">🔁</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('⬆️')">⬆️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('⬇️')">⬇️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('➡️')">➡️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('⬅️')">⬅️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🔀')">🔀</button>
+
+                                <!-- Objets -->
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('💼')">💼</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🎓')">🎓</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🏖️')">🏖️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('✈️')">✈️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🏥')">🏥</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('💰')">💰</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('💵')">💵</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🏦')">🏦</button>
+
+                                <!-- Matériel -->
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🖥️')">🖥️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('⌨️')">⌨️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🖨️')">🖨️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📱')">📱</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('💻')">💻</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🖱️')">🖱️</button>
+
+                                <!-- Autres -->
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('⚙️')">⚙️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🔧')">🔧</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🔨')">🔨</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🛠️')">🛠️</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📦')">📦</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📮')">📮</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('📬')">📬</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🎯')">🎯</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('🚀')">🚀</button>
+
+                                <button type="button" class="icon-btn" onclick="selectIcon('⭐')">⭐</button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>Couleur</label>
+
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+
+                            <input type="color" id="template-couleur" name="couleur" value="#3498db" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer;">
+
+                            <input type="text" class="form-control" id="template-couleur-text" value="#3498db" readonly style="flex: 1; background: #f8f9fa;">
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Étapes du Workflow -->
+
+                <div class="form-group" style="grid-column: 1 / -1; margin-top: 1rem;">
+
+                    <label style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: block;">
+
+                        📋 Circuit de Validation
+
+                    </label>
+
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+
+                        Ajoutez les rôles qui doivent intervenir dans ce workflow et définissez leur ordre
+
+                    </p>
+
+                    
+
+                    <div id="workflow-steps-builder" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <!-- Les étapes seront ajoutées dynamiquement ici -->
+                        <div id="steps-list" style="min-height: 100px;">
+                            <div style="text-align: center; color: #999; padding: 2rem;">
+                                👇 Ajoutez des rôles au circuit en cliquant sur les boutons ci-dessous
+                                </div>
+                        </div>
+                        </div>
+                        
+                    <!-- Rôles Personnalisés Disponibles -->
+                    <div id="custom-roles-buttons" style="margin-top: 1rem;">
+                        <h5 style="margin-bottom: 0.5rem; color: #333; font-size: 1rem; font-weight: 600;">
+                            👥 Rôles Disponibles
+                        </h5>
+                        <div id="custom-roles-add-buttons" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem;">
+                            <em style="color: #999;">Chargement des rôles...</em>
+                        </div>
+                    </div>
+
+                    
+                    
+                        <p style="color: #999; font-size: 0.85rem; margin-top: 0.5rem; font-style: italic;">
+
+                            💡 Les étapes non cochées seront sautées dans le circuit de validation
+
+                        </p>
+
+                    </div>
+
+                    </div>
+
+                    
+                    
+                    <!-- Colonne droite: Prévisualisation du Schéma -->
+
+                    <div>
+
+                        <div style="position: sticky; top: 1rem;">
+
+                            <h4 style="margin: 0 0 1rem 0; color: #333; font-size: 1rem;">
+
+                                📊 Aperçu du Circuit
+
+                            </h4>
+
+                            <div id="workflow-preview-live" style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; min-height: 300px;">
+
+                                <!-- La prévisualisation sera générée ici -->
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="modal-footer">
+
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-template')">Annuler</button>
+
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+
+                </div>
+
+            </form>
+
+        </div>
+
     </div>
 
 </div>
 
-<!-- Modal: Create/Edit Template -->
-<div id="modal-template" class="modal-lg">
+
+
+<!-- Modal: Preview Workflow -->
+
+<div id="modal-preview" class="modal-lg">
+
     <div class="modal-content">
+
         <div class="modal-header">
-            <h3 id="modal-template-title" style="color:var(--white-color)">Créer un Template</h3>
-            <button class="modal-close" onclick="closeModal('modal-template')">&times;</button>
+
+            <h3 style="color:var(--white-color)">👁️ Prévisualisation du Workflow</h3>
+
+            <button class="modal-close" onclick="closeModal('modal-preview')">&times;</button>
+
         </div>
+
         <div class="modal-body">
-            <form id="form-template" onsubmit="saveTemplate(event)">
-                <input type="hidden" id="template-id" name="id">
-                
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-                    <!-- Colonne gauche: Formulaire -->
-                    <div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Code du Template *</label>
-                                <input type="text" class="form-control" id="template-code" name="code" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Nom du Template *</label>
-                                <input type="text" class="form-control" id="template-nom" name="nom" required>
-                            </div>
-                        </div>
+
+            <div id="preview-container" class="workflow-preview">
+
+                <!-- Preview will be rendered here -->
+
+            </div>
+
+        </div>
+
+        <div class="modal-footer">
+
+            <button class="btn btn-secondary" onclick="closeModal('modal-preview')">Fermer</button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- Modal: Create Request Type -->
+
+<div id="modal-request-type" class="modal-lg">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h3 id="modal-request-type-title" style="color:var(--white-color)">Créer un Type de Demande</h3>
+
+            <button class="modal-close" onclick="closeModal('modal-request-type')">&times;</button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <form id="form-request-type" onsubmit="saveRequestType(event)">
+
+                <div class="form-row">
+
+                    <div class="form-group">
+
+                        <label>Code *</label>
+
+                        <input type="text" class="form-control" id="rt-code" name="code" required>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>Libellé *</label>
+
+                        <input type="text" class="form-control" id="rt-libelle" name="libelle" required>
+
+                    </div>
+
+                </div>
+
+
 
                 <div class="form-group">
+
                     <label>Description</label>
-                    <textarea class="form-control" id="template-description" name="description" rows="3" readonly style="background: #f8f9fa; cursor: not-allowed;"></textarea>
-                    <small style="color: #999; font-size: 0.8rem;">
-                        💡 La description est générée automatiquement selon les niveaux sélectionnés
+
+                    <textarea class="form-control" id="rt-description" name="description" rows="2"></textarea>
+
+                </div>
+
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+
+                        <label>Template de Workflow *</label>
+
+                        <select class="form-control" id="rt-template" name="workflow_template_id" required>
+
+                            <option value="">-- Sélectionner un template --</option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>Catégorie</label>
+
+                        <select class="form-control" id="rt-categorie" name="categorie">
+
+                            <option value="RH">RH</option>
+
+                            <option value="Logistique">Logistique</option>
+
+                            <option value="Administratif">Administratif</option>
+
+                            <option value="Budget">Budget</option>
+
+                            <option value="Autre">Autre</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+
+                        <label>
+
+                            <input type="checkbox" id="rt-doc-obligatoire" name="document_obligatoire">
+
+                            Document obligatoire
+
+                        </label>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>
+
+                            <input type="checkbox" id="rt-validation-rh" name="necessite_validation_rh">
+
+                            Validation RH obligatoire
+
+                        </label>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>
+
+                            <input type="checkbox" id="rt-validation-daf" name="necessite_validation_daf">
+
+                            Validation DAF obligatoire
+
+                        </label>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="modal-footer">
+
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-request-type')">Annuler</button>
+
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- Modal: Create Custom Role -->
+
+<div id="modal-role" class="modal-md">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h3 id="modal-role-title" style="color:var(--white-color)">➕ Nouveau Rôle Personnalisé</h3>
+
+            <button class="modal-close" onclick="closeModal('modal-role')">&times;</button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <form id="form-role" onsubmit="saveRole(event)">
+
+                <div class="form-group">
+
+                    <label>Code du Rôle *</label>
+
+                    <input type="text" class="form-control" id="role-code" name="code" required placeholder="Ex: SUPERVISEUR">
+
+                </div>
+
+
+
+                <div class="form-group">
+
+                    <label>Libellé *</label>
+
+                    <input type="text" class="form-control" id="role-libelle" name="libelle" required placeholder="Ex: Superviseur de projet">
+
+                </div>
+
+
+
+                <div class="form-group">
+
+                    <label>Description</label>
+
+                    <textarea class="form-control" id="role-description" name="description" rows="3" placeholder="Description du rôle et de ses responsabilités..."></textarea>
+
+                </div>
+
+
+
+                <div class="modal-footer">
+
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-role')">Annuler</button>
+
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Modal: Assign Role to Agent -->
+<div id="modal-assign-role" class="modal-md">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-assign-role-title" style="color:var(--white-color)">👤 Attribuer un Rôle à un Agent</h3>
+            <button class="modal-close" onclick="closeModal('modal-assign-role')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="form-assign-role" onsubmit="saveRoleAssignment(event)">
+                <div class="form-group">
+                    <label>Rôle *</label>
+                    <input type="text" class="form-control" id="assign-role-name" readonly style="background: #f8f9fa; font-weight: 600;">
+                </div>
+
+                <div class="form-group">
+                    <label>Agent *</label>
+                    <select class="form-control" id="assign-agent-id" name="agent_id" required>
+                        <option value="">-- Sélectionner un agent --</option>
+                    </select>
+                    <small style="color: #666; font-size: 0.85rem;">
+                        Sélectionnez l'agent qui recevra ce rôle
                     </small>
                 </div>
 
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Direction du Workflow *</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
-                        <div class="direction-option" onclick="selectDirection('ASCENDANT')">
-                            <input type="radio" name="direction" id="direction-ascendant" value="ASCENDANT" checked style="display: none;">
-                            <label for="direction-ascendant" class="direction-label">
-                                <div class="direction-icon">⬆️</div>
-                                <div class="direction-title">Ascendant</div>
-                                <div class="direction-desc">Agent → Hiérarchie</div>
-                                <div class="direction-example">Ex: Demande de congé</div>
-                            </label>
-                        </div>
-                        <div class="direction-option" onclick="selectDirection('DESCENDANT')">
-                            <input type="radio" name="direction" id="direction-descendant" value="DESCENDANT" style="display: none;">
-                            <label for="direction-descendant" class="direction-label">
-                                <div class="direction-icon">⬇️</div>
-                                <div class="direction-title">Descendant</div>
-                                <div class="direction-desc">Chef → Agent</div>
-                                <div class="direction-example">Ex: Instruction, Tâche</div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Icône</label>
-                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
-                            <input type="text" class="form-control" id="template-icone" name="icone" value="📄" maxlength="10" placeholder="📄" readonly style="width: 100px; text-align: center; font-size: 1.5rem; cursor: pointer;" onclick="toggleIconPicker()">
-                            <span style="color: #666; font-size: 0.9rem;">Cliquez pour choisir une icône</span>
-                        </div>
-                        <div id="icon-picker" style="display: none; padding: 1rem; background: #f8f9fa; border-radius: 8px; max-height: 200px; overflow-y: auto;">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 0.5rem;">
-                                <!-- Icônes générales -->
-                                <button type="button" class="icon-btn" onclick="selectIcon('📄')">📄</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📋')">📋</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📝')">📝</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📑')">📑</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📊')">📊</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📈')">📈</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📉')">📉</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📆')">📆</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📅')">📅</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🗓️')">🗓️</button>
-                                <!-- RH & Personnel -->
-                                <button type="button" class="icon-btn" onclick="selectIcon('👤')">👤</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('👥')">👥</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('👨‍💼')">👨‍💼</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('👩‍💼')">👩‍💼</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🧑‍💼')">🧑‍💼</button>
-                                <!-- Actions -->
-                                <button type="button" class="icon-btn" onclick="selectIcon('✅')">✅</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('✔️')">✔️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('❌')">❌</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('⚠️')">⚠️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🔔')">🔔</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🔕')">🔕</button>
-                                <!-- Workflow -->
-                                <button type="button" class="icon-btn" onclick="selectIcon('🔄')">🔄</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🔁')">🔁</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('⬆️')">⬆️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('⬇️')">⬇️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('➡️')">➡️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('⬅️')">⬅️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🔀')">🔀</button>
-                                <!-- Objets -->
-                                <button type="button" class="icon-btn" onclick="selectIcon('💼')">💼</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🎓')">🎓</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🏖️')">🏖️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('✈️')">✈️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🏥')">🏥</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('💰')">💰</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('💵')">💵</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🏦')">🏦</button>
-                                <!-- Matériel -->
-                                <button type="button" class="icon-btn" onclick="selectIcon('🖥️')">🖥️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('⌨️')">⌨️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🖨️')">🖨️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📱')">📱</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('💻')">💻</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🖱️')">🖱️</button>
-                                <!-- Autres -->
-                                <button type="button" class="icon-btn" onclick="selectIcon('⚙️')">⚙️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🔧')">🔧</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🔨')">🔨</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🛠️')">🛠️</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📦')">📦</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📮')">📮</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('📬')">📬</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🎯')">🎯</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('🚀')">🚀</button>
-                                <button type="button" class="icon-btn" onclick="selectIcon('⭐')">⭐</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Couleur</label>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="color" id="template-couleur" name="couleur" value="#3498db" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer;">
-                            <input type="text" class="form-control" id="template-couleur-text" value="#3498db" readonly style="flex: 1; background: #f8f9fa;">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Étapes du Workflow -->
-                <div class="form-group" style="grid-column: 1 / -1; margin-top: 1rem;">
-                    <label style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; display: block;">
-                        📋 Niveaux de Validation
-                    </label>
-                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                        Sélectionnez les niveaux qui doivent intervenir dans ce workflow (dans l'ordre)
-                    </p>
-                    
-                    <div class="workflow-steps-selector">
-                        <div class="step-checkbox">
-                            <input type="checkbox" id="step-n1" name="steps[]" value="N+1" checked onchange="updateWorkflowPreview()">
-                            <label for="step-n1" class="step-checkbox-label">
-                                <div class="step-checkbox-icon">1️⃣</div>
-                                <div class="step-checkbox-content">
-                                    <div class="step-checkbox-title">N+1 - Chef de Service</div>
-                                    <div class="step-checkbox-desc">Superviseur direct de l'agent</div>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="step-checkbox">
-                            <input type="checkbox" id="step-n2" name="steps[]" value="N+2" checked onchange="updateWorkflowPreview()">
-                            <label for="step-n2" class="step-checkbox-label">
-                                <div class="step-checkbox-icon">2️⃣</div>
-                                <div class="step-checkbox-content">
-                                    <div class="step-checkbox-title">N+2 - Sous-directeur</div>
-                                    <div class="step-checkbox-desc">Chef de département</div>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="step-checkbox">
-                            <input type="checkbox" id="step-rh" name="steps[]" value="RH" onchange="updateWorkflowPreview()">
-                            <label for="step-rh" class="step-checkbox-label">
-                                <div class="step-checkbox-icon">3️⃣</div>
-                                <div class="step-checkbox-content">
-                                    <div class="step-checkbox-title">RH - Ressources Humaines</div>
-                                    <div class="step-checkbox-desc">Validation RH (pour types RH uniquement)</div>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="step-checkbox">
-                            <input type="checkbox" id="step-daf" name="steps[]" value="DAF" onchange="updateWorkflowPreview()">
-                            <label for="step-daf" class="step-checkbox-label">
-                                <div class="step-checkbox-icon">4️⃣</div>
-                                <div class="step-checkbox-content">
-                                    <div class="step-checkbox-title">DAF - Direction Administrative</div>
-                                    <div class="step-checkbox-desc">Signature finale</div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                    
-                        <p style="color: #999; font-size: 0.85rem; margin-top: 0.5rem; font-style: italic;">
-                            💡 Les étapes non cochées seront sautées dans le circuit de validation
-                        </p>
-                    </div>
-                    </div>
-                    
-                    <!-- Colonne droite: Prévisualisation du Schéma -->
-                    <div>
-                        <div style="position: sticky; top: 1rem;">
-                            <h4 style="margin: 0 0 1rem 0; color: #333; font-size: 1rem;">
-                                📊 Aperçu du Circuit
-                            </h4>
-                            <div id="workflow-preview-live" style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; min-height: 300px;">
-                                <!-- La prévisualisation sera générée ici -->
-                            </div>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label>Date de fin (optionnelle)</label>
+                    <input type="date" class="form-control" id="assign-date-fin" name="date_fin">
+                    <small style="color: #666; font-size: 0.85rem;">
+                        Laissez vide pour une attribution permanente
+                    </small>
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-template')">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-assign-role')">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Attribuer</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal: Preview Workflow -->
-<div id="modal-preview" class="modal-lg">
+<!-- Modal: Manage Role Assignments -->
+<div id="modal-manage-assignments" class="modal-lg">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 style="color:var(--white-color)">👁️ Prévisualisation du Workflow</h3>
-            <button class="modal-close" onclick="closeModal('modal-preview')">&times;</button>
+            <h3 id="modal-manage-assignments-title" style="color:var(--white-color)">👥 Gérer les Attributions</h3>
+            <button class="modal-close" onclick="closeModal('modal-manage-assignments')">&times;</button>
         </div>
         <div class="modal-body">
-            <div id="preview-container" class="workflow-preview">
-                <!-- Preview will be rendered here -->
+            <div style="margin-bottom: 1rem;">
+                <strong>Rôle :</strong> <span id="manage-role-name"></span>
+            </div>
+            
+            <div id="assignments-list" style="max-height: 400px; overflow-y: auto;">
+                <!-- Liste des attributions -->
+            </div>
+            
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+                <button class="btn btn-primary" onclick="closeModalAndOpenAssign()">
+                    ➕ Ajouter une nouvelle attribution
+                </button>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('modal-preview')">Fermer</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal('modal-manage-assignments')">Fermer</button>
         </div>
     </div>
 </div>
 
-<!-- Modal: Create Request Type -->
-<div id="modal-request-type" class="modal-lg">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modal-request-type-title" style="color:var(--white-color)">Créer un Type de Demande</h3>
-            <button class="modal-close" onclick="closeModal('modal-request-type')">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="form-request-type" onsubmit="saveRequestType(event)">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Code *</label>
-                        <input type="text" class="form-control" id="rt-code" name="code" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Libellé *</label>
-                        <input type="text" class="form-control" id="rt-libelle" name="libelle" required>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea class="form-control" id="rt-description" name="description" rows="2"></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Template de Workflow *</label>
-                        <select class="form-control" id="rt-template" name="workflow_template_id" required>
-                            <option value="">-- Sélectionner un template --</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Catégorie</label>
-                        <select class="form-control" id="rt-categorie" name="categorie">
-                            <option value="RH">RH</option>
-                            <option value="Logistique">Logistique</option>
-                            <option value="Administratif">Administratif</option>
-                            <option value="Budget">Budget</option>
-                            <option value="Autre">Autre</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="rt-doc-obligatoire" name="document_obligatoire">
-                            Document obligatoire
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="rt-validation-rh" name="necessite_validation_rh">
-                            Validation RH obligatoire
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="rt-validation-daf" name="necessite_validation_daf">
-                            Validation DAF obligatoire
-                        </label>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-request-type')">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Create Custom Role -->
-<div id="modal-role" class="modal-md">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modal-role-title" style="color:var(--white-color)">➕ Nouveau Rôle Personnalisé</h3>
-            <button class="modal-close" onclick="closeModal('modal-role')">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="form-role" onsubmit="saveRole(event)">
-                <div class="form-group">
-                    <label>Code du Rôle *</label>
-                    <input type="text" class="form-control" id="role-code" name="code" required placeholder="Ex: SUPERVISEUR">
-                </div>
-
-                <div class="form-group">
-                    <label>Libellé *</label>
-                    <input type="text" class="form-control" id="role-libelle" name="libelle" required placeholder="Ex: Superviseur de projet">
-                </div>
-
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea class="form-control" id="role-description" name="description" rows="3" placeholder="Description du rôle et de ses responsabilités..."></textarea>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-role')">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
 
+
+
 {% block scripts %}
+
 <script>
+
 console.log('🔄 Chargement du script workflow_configuration.html...');
 
+
+
 // Global state
+
 let templates = [];
+
 let requestTypes = [];
+
 let customRoles = [];
 
+
+
 // Tab switching
+
 function switchTab(tabName) {
+
     // Hide all tabs
+
     document.querySelectorAll('.tab-content').forEach(tab => {
+
         tab.classList.remove('active');
+
     });
+
     document.querySelectorAll('.tab-button').forEach(btn => {
+
         btn.classList.remove('active');
+
     });
+
+    
     
     // Show selected tab
+
     document.getElementById(`tab-${tabName}`).classList.add('active');
+
     event.target.classList.add('active');
+
 }
+
+
 
 // Initialize
+
 document.addEventListener('DOMContentLoaded', function() {
+
     loadTemplates();
+
     loadRequestTypes();
+
     loadCustomRoles();
+
+    
     
     // Synchroniser le color picker avec le champ texte
+
     const colorPicker = document.getElementById('template-couleur');
+
     const colorText = document.getElementById('template-couleur-text');
+
+    
     
     if (colorPicker && colorText) {
+
         colorPicker.addEventListener('input', function(e) {
+
             colorText.value = e.target.value;
+
         });
+
     }
+
+    
     
     // Mettre à jour la prévisualisation quand on coche/décoche
+
     document.querySelectorAll('input[name="steps[]"]').forEach(checkbox => {
+
         checkbox.addEventListener('change', updateWorkflowPreview);
+
     });
+
+    
     
     // Prévisualisation initiale
+
     updateWorkflowPreview();
+
 });
 
-// ═══════════════════════════════════════════════════════════
-// TEMPLATES
+
+
 // ═══════════════════════════════════════════════════════════
 
+// TEMPLATES
+
+// ═══════════════════════════════════════════════════════════
+
+
+
 async function loadTemplates() {
+
     showGlobalLoading('Chargement des templates...', '');
+
+    
     
     try {
+
         const response = await fetch('{{ url_for("api_list_workflow_templates") }}');
+
         templates = await response.json();
+
+        
         
         renderTemplates();
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors du chargement des templates');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+
+
+function renderTemplates() {
+
+    const container = document.getElementById('templates-container');
+
+    
+    
+    if (templates.length === 0) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-state-icon">📋</div>
+
+                <p><strong>Aucun template pour le moment</strong></p>
+
+                <p>Créez votre premier template de workflow</p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+    
+    
+    container.innerHTML = templates.map(t => `
+
+        <div class="template-card">
+
+            <div class="template-header">
+
+                <div class="template-icon">${t.icone}</div>
+
+                <div class="template-info">
+
+                    <h4>${t.nom}</h4>
+
+                    <span class="badge badge-custom">${t.code}</span>
+
+                </div>
+
+            </div>
+
+            <p class="template-description">${t.description || 'Aucune description'}</p>
+
+            <div class="template-stats">
+
+                <span>📊 Direction: ${t.direction === 'ASCENDANT' ? '⬆️ Ascendant' : '⬇️ Descendant'}</span>
+
+                <span>🎨 ${t.couleur}</span>
+
+            </div>
+
+            <div class="template-actions">
+
+                <button class="btn-sm btn-preview" onclick="previewWorkflow(${t.id})">
+
+                    👁️ Prévisualiser
+
+                </button>
+
+                    <button class="btn-sm btn-edit" onclick="editTemplate(${t.id})">
+
+                        ✏️ Éditer
+
+                    </button>
+
+                    <div style="position: relative; display: inline-block;">
+
+                        <button class="btn-sm btn-delete" onclick="toggleDeleteMenu(${t.id}, event)">
+
+                        🗑️ Menu ▼
+
+                        </button>
+
+                        <div id="delete-menu-${t.id}" class="delete-menu" style="display: none;">
+
+                            <button onclick="deleteTemplate(${t.id})" class="delete-menu-item">
+
+                                🔴 Désactiver
+
+                                <small>Peut être réactivé</small>
+
+                            </button>
+
+                            <button onclick="deleteTemplatePermanent(${t.id})" class="delete-menu-item danger">
+
+                                🗑️ Supprimer définitivement
+
+                                <small>Action irréversible</small>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+            </div>
+
+        </div>
+
+    `).join('');
+
+}
+
+
+
+async function openCreateTemplateModal() {
+
+    console.log('📝 Ouverture du modal de création de template...');
+
+    
+    
+    const modal = document.getElementById('modal-template');
+
+    if (!modal) {
+
+        console.error('❌ Modal modal-template introuvable !');
+
+        alert('Erreur: Modal introuvable');
+
+        return;
+
+    }
+
+    
+    
+    document.getElementById('modal-template-title').textContent = 'Créer un Template';
+
+    document.getElementById('form-template').reset();
+
+    document.getElementById('template-id').value = '';
+
+    
+    
+    // Réinitialiser la sélection de direction
+
+    document.getElementById('direction-ascendant').checked = true;
+
+    
+
+    // Réinitialiser le builder
+    clearStepsBuilder();
+
+    // Charger les rôles personnalisés
+    await loadCustomRolesForTemplate();
+
+    
+    
+    showModal('modal-template');
+
+    
+    
+    console.log('✅ Modal ouvert');
+
+}
+
+let workflowStepsBuilder = [];
+
+async function loadCustomRolesForTemplate() {
+    const container = document.getElementById('custom-roles-add-buttons');
+    
+    if (!container) return;
+    
+    try {
+        const response = await fetch('{{ url_for("api_list_custom_roles") }}');
+        const roles = await response.json();
+        
+        if (roles.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 0.75rem; background: white; border-radius: 8px; text-align: center; color: #999; grid-column: 1 / -1;">
+                    <p style="margin: 0; font-size: 0.85rem;">Aucun rôle personnalisé disponible</p>
+                    <small>Créez d'abord des rôles dans l'onglet "Rôles Personnalisés"</small>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = roles.map(role => `
+            <button type="button" class="btn-sm btn-view" onclick="addStepToBuilder('CUSTOM', '${role.libelle}', '${role.code}')" style="padding: 0.75rem; white-space: normal;">
+                ➕ ${role.libelle}
+            </button>
+        `).join('');
+        
     } catch (error) {
         console.error('Erreur:', error);
-        showError('Erreur lors du chargement des templates');
-    } finally {
-        hideGlobalLoading();
+        container.innerHTML = `<em style="color: #e74c3c;">Erreur lors du chargement</em>`;
     }
 }
 
-function renderTemplates() {
-    const container = document.getElementById('templates-container');
+function addStepToBuilder(roleType, roleLabel, customRoleCode = null) {
+    const step = {
+        id: Date.now(), // ID unique pour manipulation
+        role_type: roleType,
+        role_label: roleLabel,
+        custom_role_name: customRoleCode,
+        order_index: workflowStepsBuilder.length + 1
+    };
     
-    if (templates.length === 0) {
+    workflowStepsBuilder.push(step);
+    renderStepsBuilder();
+    updateWorkflowPreview();
+}
+
+function renderStepsBuilder() {
+    const container = document.getElementById('steps-list');
+    
+    if (workflowStepsBuilder.length === 0) {
         container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📋</div>
-                <p><strong>Aucun template pour le moment</strong></p>
-                <p>Créez votre premier template de workflow</p>
+            <div style="text-align: center; color: #999; padding: 2rem;">
+                👇 Ajoutez des rôles au circuit en cliquant sur les boutons ci-dessous
             </div>
         `;
         return;
     }
     
-    container.innerHTML = templates.map(t => `
-        <div class="template-card ${t.est_systeme ? 'system' : ''}">
-            <div class="template-header">
-                <div class="template-icon">${t.icone}</div>
-                <div class="template-info">
-                    <h4>${t.nom}</h4>
-                    <span class="badge ${t.est_systeme ? 'badge-system' : 'badge-custom'}">
-                        ${t.est_systeme ? 'Système' : 'Personnalisé'}
-                    </span>
-                </div>
+    container.innerHTML = workflowStepsBuilder.map((step, index) => `
+        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="background: #3498db; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">
+                ${index + 1}
             </div>
-            <p class="template-description">${t.description || 'Aucune description'}</p>
-            <div class="template-stats">
-                <span>📊 Direction: ${t.direction === 'ASCENDANT' ? '⬆️ Ascendant' : '⬇️ Descendant'}</span>
-                <span>🎨 ${t.couleur}</span>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; color: #333;">${step.role_label}</div>
+                <div style="font-size: 0.85rem; color: #666;">${step.role_type}${step.custom_role_name ? ' (' + step.custom_role_name + ')' : ''}</div>
             </div>
-            <div class="template-actions">
-                <button class="btn-sm btn-preview" onclick="previewWorkflow(${t.id})">
-                    👁️ Prévisualiser
-                </button>
-                ${!t.est_systeme ? `
-                    <button class="btn-sm btn-edit" onclick="editTemplate(${t.id})">
-                        ✏️ Éditer
-                    </button>
-                    <div style="position: relative; display: inline-block;">
-                        <button class="btn-sm btn-delete" onclick="toggleDeleteMenu(${t.id}, event)">
-                            🗑️ Supprimer ▼
-                        </button>
-                        <div id="delete-menu-${t.id}" class="delete-menu" style="display: none;">
-                            <button onclick="deleteTemplate(${t.id})" class="delete-menu-item">
-                                🔴 Désactiver
-                                <small>Peut être réactivé</small>
-                            </button>
-                            <button onclick="deleteTemplatePermanent(${t.id})" class="delete-menu-item danger">
-                                🗑️ Supprimer définitivement
-                                <small>Action irréversible</small>
-                            </button>
-                        </div>
-                    </div>
-                ` : ''}
+            <div style="display: flex; gap: 0.25rem; flex-shrink: 0;">
+                ${index > 0 ? `<button type="button" class="btn-sm" onclick="moveStepUp(${step.id})" title="Monter" style="padding: 0.4rem 0.6rem;">⬆️</button>` : ''}
+                ${index < workflowStepsBuilder.length - 1 ? `<button type="button" class="btn-sm" onclick="moveStepDown(${step.id})" title="Descendre" style="padding: 0.4rem 0.6rem;">⬇️</button>` : ''}
+                <button type="button" class="btn-sm btn-delete" onclick="removeStepFromBuilder(${step.id})" title="Retirer" style="padding: 0.4rem 0.6rem;">✖️</button>
             </div>
         </div>
     `).join('');
 }
 
-function openCreateTemplateModal() {
-    console.log('📝 Ouverture du modal de création de template...');
-    
-    const modal = document.getElementById('modal-template');
-    if (!modal) {
-        console.error('❌ Modal modal-template introuvable !');
-        alert('Erreur: Modal introuvable');
-        return;
+function moveStepUp(stepId) {
+    const index = workflowStepsBuilder.findIndex(s => s.id === stepId);
+    if (index > 0) {
+        [workflowStepsBuilder[index], workflowStepsBuilder[index - 1]] = [workflowStepsBuilder[index - 1], workflowStepsBuilder[index]];
+        updateStepIndices();
+        renderStepsBuilder();
+        updateWorkflowPreview();
     }
-    
-    document.getElementById('modal-template-title').textContent = 'Créer un Template';
-    document.getElementById('form-template').reset();
-    document.getElementById('template-id').value = '';
-    
-    // Réinitialiser la sélection de direction
-    document.getElementById('direction-ascendant').checked = true;
-    
-    showModal('modal-template');
-    
-    console.log('✅ Modal ouvert');
 }
 
+function moveStepDown(stepId) {
+    const index = workflowStepsBuilder.findIndex(s => s.id === stepId);
+    if (index < workflowStepsBuilder.length - 1) {
+        [workflowStepsBuilder[index], workflowStepsBuilder[index + 1]] = [workflowStepsBuilder[index + 1], workflowStepsBuilder[index]];
+        updateStepIndices();
+        renderStepsBuilder();
+        updateWorkflowPreview();
+    }
+}
+
+function removeStepFromBuilder(stepId) {
+    workflowStepsBuilder = workflowStepsBuilder.filter(s => s.id !== stepId);
+    updateStepIndices();
+    renderStepsBuilder();
+    updateWorkflowPreview();
+}
+
+function updateStepIndices() {
+    workflowStepsBuilder.forEach((step, index) => {
+        step.order_index = index + 1;
+    });
+}
+
+function clearStepsBuilder() {
+    workflowStepsBuilder = [];
+    renderStepsBuilder();
+    updateWorkflowPreview();
+}
+
+
+
 async function editTemplate(templateId) {
+
     console.log('✏️ Édition du template:', templateId);
+
+    
     
     showGlobalLoading('Chargement du template...', '');
+
+    
     
     try {
+
         // Trouver le template dans la liste
+
         const template = templates.find(t => t.id === templateId);
+
+        
         
         if (!template) {
+
             showError('Template introuvable');
+
             hideGlobalLoading();
+
             return;
+
         }
+
+        
         
         // Charger les étapes du template
+
         const stepsResponse = await fetch(`{{ url_for("api_get_template_steps", template_id=0) }}`.replace('/0', `/${templateId}`));
+
         const steps = await stepsResponse.json();
+
+        
         
         // Remplir le formulaire
+
         document.getElementById('modal-template-title').textContent = 'Éditer le Template';
+
         document.getElementById('template-id').value = template.id;
+
         document.getElementById('template-code').value = template.code;
+
         document.getElementById('template-nom').value = template.nom;
+
         document.getElementById('template-description').value = template.description || '';
+
         document.getElementById('template-icone').value = template.icone;
+
         document.getElementById('template-couleur').value = template.couleur;
+
         document.getElementById('template-couleur-text').value = template.couleur;
+
+        
         
         // Sélectionner la direction
+
         if (template.direction === 'ASCENDANT') {
+
             document.getElementById('direction-ascendant').checked = true;
+
         } else {
+
             document.getElementById('direction-descendant').checked = true;
+
         }
+
         
-        // Décocher toutes les étapes d'abord
-        document.querySelectorAll('input[name="steps[]"]').forEach(cb => cb.checked = false);
-        
-        // Cocher les étapes du template
-        steps.forEach(step => {
-            const checkbox = document.querySelector(`input[name="steps[]"][value="${step.role_type}"]`);
-            if (checkbox) {
-                checkbox.checked = true;
+
+        // Charger les rôles personnalisés
+        await loadCustomRolesForTemplate();
+
+        // Réinitialiser le builder
+        workflowStepsBuilder = [];
+
+        // Charger les étapes du template dans le builder
+        steps.forEach((step, index) => {
+            let roleLabel = step.role_type;
+            
+            // Définir le label selon le type de rôle
+            if (step.role_type === 'N+1') roleLabel = 'N+1 - Chef de Service';
+            else if (step.role_type === 'N+2') roleLabel = 'N+2 - Sous-directeur';
+            else if (step.role_type === 'RH') roleLabel = 'RH - Ressources Humaines';
+            else if (step.role_type === 'DAF') roleLabel = 'DAF - Direction Admin';
+            else if (step.role_type === 'CUSTOM' && step.custom_role_name) {
+                roleLabel = step.custom_role_name;
             }
+            
+            workflowStepsBuilder.push({
+                id: Date.now() + index,
+                role_type: step.role_type,
+                role_label: roleLabel,
+                custom_role_name: step.custom_role_name,
+                order_index: step.order_index
+            });
         });
+
         
-        // Mettre à jour la prévisualisation
+
+        // Rendre le builder et mettre à jour la prévisualisation
+        renderStepsBuilder();
         updateWorkflowPreview();
+
+        
         
         // Ouvrir le modal
+
         showModal('modal-template');
+
+        
         
         console.log('✅ Modal d\'édition ouvert');
         
+        
+
     } catch (error) {
+
         console.error('Erreur:', error);
+
         showError('Erreur lors du chargement du template');
+
     } finally {
+
         hideGlobalLoading();
+
     }
+
 }
+
+
 
 console.log('✅ Fonction editTemplate définie');
 
+
+
 async function saveTemplate(event) {
+
     event.preventDefault();
+
+    
     
     const formData = new FormData(event.target);
+
     const data = Object.fromEntries(formData.entries());
     
-    // Récupérer les étapes sélectionnées
-    const selectedSteps = [];
-    document.querySelectorAll('input[name="steps[]"]:checked').forEach((checkbox, index) => {
-        selectedSteps.push({
-            role_type: checkbox.value,
-            order_index: index + 1
-        });
-    });
     
-    // Ajouter les étapes aux données
-    data.steps = selectedSteps;
-    
-    // Vérifier si c'est une création ou une modification
-    const templateId = document.getElementById('template-id').value;
-    const isEdit = templateId && templateId !== '';
-    
-    showGlobalLoading(isEdit ? 'Modification...' : 'Création...', '');
-    
-    try {
-        let url, method;
-        
-        if (isEdit) {
-            // Modification
-            url = `{{ url_for("api_update_workflow_template", template_id=0) }}`.replace('/0', `/${templateId}`);
-            method = 'PUT';
-        } else {
-            // Création
-            url = '{{ url_for("api_create_workflow_template") }}';
-            method = 'POST';
-        }
-        
-        const response = await fetch(url, {
-            method: method,
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess(isEdit ? 'Template modifié avec succès !' : 'Template créé avec succès !');
-            closeModal('modal-template');
-            loadTemplates();
-        } else {
-            showError(result.detail || (isEdit ? 'Erreur lors de la modification' : 'Erreur lors de la création'));
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de l\'enregistrement');
-    } finally {
-        hideGlobalLoading();
-    }
-}
 
-async function previewWorkflow(templateId) {
-    showGlobalLoading('Génération de l\'aperçu...', '');
-    
-    try {
-        const response = await fetch(`{{ url_for("api_preview_workflow_template", template_id=0) }}`.replace('/0', `/${templateId}`));
-        const preview = await response.json();
-        
-        renderPreview(preview);
-        showModal('modal-preview');
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de la génération de l\'aperçu');
-    } finally {
-        hideGlobalLoading();
-    }
-}
+    // Récupérer les étapes du builder
+    const selectedSteps = workflowStepsBuilder.map(step => ({
+        role_type: step.role_type,
+        custom_role_name: step.custom_role_name,
+        order_index: step.order_index
+    }));
 
-function renderPreview(preview) {
-    const container = document.getElementById('preview-container');
     
-    if (!preview.circuit) {
-        container.innerHTML = '<p>Aucune donnée d\'aperçu disponible</p>';
+
+    // Validation : au moins une étape
+    if (selectedSteps.length === 0) {
+        showError('Veuillez ajouter au moins un rôle au circuit de validation');
         return;
     }
     
-    container.innerHTML = `
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <h4>${preview.template.icone} ${preview.template.nom}</h4>
-            <p>${preview.template.description}</p>
-        </div>
-        ${preview.circuit.map((step, index) => `
-            <div class="workflow-step">
-                <div class="step-number">${index + 1}</div>
-                <div class="step-info">
-                    <div class="step-role">${step.libelle}</div>
-                    <div class="step-details">
-                        ${step.obligatoire !== undefined ? (step.obligatoire ? '⚠️ Obligatoire' : '✓ Optionnel') : ''}
-                        ${step.peut_rejeter !== undefined ? (step.peut_rejeter ? ' • Peut rejeter' : ' • Validation uniquement') : ''}
-                        ${step.delai_jours ? ` • Délai: ${step.delai_jours} jours` : ''}
-                    </div>
-                </div>
-            </div>
-        `).join('')}
-    `;
+    // Ajouter les étapes aux données
+
+    data.steps = selectedSteps;
+
+    
+    
+    // Vérifier si c'est une création ou une modification
+
+    const templateId = document.getElementById('template-id').value;
+
+    const isEdit = templateId && templateId !== '';
+
+    
+    
+    showGlobalLoading(isEdit ? 'Modification...' : 'Création...', '');
+
+    
+    
+    try {
+
+        let url, method;
+
+        
+        
+        if (isEdit) {
+
+            // Modification
+
+            url = `{{ url_for("api_update_workflow_template", template_id=0) }}`.replace('/0', `/${templateId}`);
+
+            method = 'PUT';
+
+        } else {
+
+            // Création
+
+            url = '{{ url_for("api_create_workflow_template") }}';
+
+            method = 'POST';
+
+        }
+
+        
+        
+        const response = await fetch(url, {
+
+            method: method,
+
+            headers: {'Content-Type': 'application/json'},
+
+            body: JSON.stringify(data)
+
+        });
+
+        
+        
+        const result = await response.json();
+
+        
+        
+        if (response.ok) {
+
+            showSuccess(isEdit ? 'Template modifié avec succès !' : 'Template créé avec succès !');
+
+            closeModal('modal-template');
+
+            loadTemplates();
+
+        } else {
+
+            showError(result.detail || (isEdit ? 'Erreur lors de la modification' : 'Erreur lors de la création'));
+
+        }
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de l\'enregistrement');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
 }
 
+
+
+async function previewWorkflow(templateId) {
+
+    showGlobalLoading('Génération de l\'aperçu...', '');
+
+    
+    
+    try {
+
+        const response = await fetch(`{{ url_for("api_preview_workflow_template", template_id=0) }}`.replace('/0', `/${templateId}`));
+
+        const preview = await response.json();
+
+        
+        
+        renderPreview(preview);
+
+        showModal('modal-preview');
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de la génération de l\'aperçu');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+
+
+function renderPreview(preview) {
+
+    const container = document.getElementById('preview-container');
+
+    
+    
+    if (!preview.circuit) {
+
+        container.innerHTML = '<p>Aucune donnée d\'aperçu disponible</p>';
+
+        return;
+
+    }
+
+    
+    
+    container.innerHTML = `
+
+        <div style="text-align: center; margin-bottom: 2rem;">
+
+            <h4>${preview.template.icone} ${preview.template.nom}</h4>
+
+            <p>${preview.template.description}</p>
+
+        </div>
+
+        ${preview.circuit.map((step, index) => `
+
+            <div class="workflow-step">
+
+                <div class="step-number">${index + 1}</div>
+
+                <div class="step-info">
+
+                    <div class="step-role">${step.libelle}</div>
+
+                    <div class="step-details">
+
+                        ${step.obligatoire !== undefined ? (step.obligatoire ? '⚠️ Obligatoire' : '✓ Optionnel') : ''}
+
+                        ${step.peut_rejeter !== undefined ? (step.peut_rejeter ? ' • Peut rejeter' : ' • Validation uniquement') : ''}
+
+                        ${step.delai_jours ? ` • Délai: ${step.delai_jours} jours` : ''}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `).join('')}
+
+    `;
+
+}
+
+
+
 function toggleDeleteMenu(templateId, event) {
+
+    event.stopPropagation();
+
+    
+    
+    // Fermer tous les autres menus
+
+    document.querySelectorAll('.delete-menu').forEach(menu => {
+
+        if (menu.id !== `delete-menu-${templateId}`) {
+
+            menu.style.display = 'none';
+
+        }
+
+    });
+
+    
+    
+    // Toggle le menu actuel
+
+    const menu = document.getElementById(`delete-menu-${templateId}`);
+
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+
+}
+
+
+
+// Fermer le menu si on clique ailleurs
+
+document.addEventListener('click', function() {
+
+    document.querySelectorAll('.delete-menu').forEach(menu => {
+
+        menu.style.display = 'none';
+
+    });
+
+});
+
+
+
+async function deleteTemplate(templateId) {
+
+    if (!confirm('⚠️ Désactiver ce template ?\n\nLe template sera désactivé (soft delete).\nIl ne sera plus utilisable pour de nouveaux types de demandes.\n\nLes types existants continueront de fonctionner.')) {
+
+        return;
+
+    }
+
+    
+    
+    showGlobalLoading('Désactivation du template...', 'Veuillez patienter');
+
+    
+    
+    try {
+
+        const response = await fetch(`{{ url_for("api_delete_workflow_template", template_id=0) }}`.replace('/0', `/${templateId}`), {
+
+            method: 'DELETE'
+
+        });
+
+        
+        
+        if (response.ok) {
+
+            showSuccess('Template désactivé avec succès');
+
+            loadTemplates();
+
+        } else {
+
+            const result = await response.json();
+
+            showError(result.detail || 'Erreur lors de la désactivation');
+
+        }
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de la désactivation');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+
+
+async function deleteTemplatePermanent(templateId) {
+
+    if (!confirm('🚨 ATTENTION - SUPPRESSION DÉFINITIVE\n\nCette action est IRRÉVERSIBLE !\n\nLe template et toutes ses étapes seront supprimés définitivement de la base de données.\n\nÊtes-vous ABSOLUMENT sûr ?')) {
+
+        return;
+
+    }
+
+    
+    
+    showGlobalLoading('Suppression définitive...', 'Cette action est irréversible');
+
+    
+    
+    try {
+
+        const response = await fetch(`{{ url_for("api_delete_workflow_template_permanent", template_id=0) }}`.replace('/0', `/${templateId}`), {
+
+            method: 'DELETE'
+
+        });
+
+        
+        
+        if (response.ok) {
+
+            showSuccess('Template supprimé définitivement', 'Suppression réussie');
+
+            loadTemplates();
+
+        } else {
+
+            const result = await response.json();
+
+            showError(result.detail || 'Erreur lors de la suppression');
+
+        }
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de la suppression');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+
+// REQUEST TYPES
+
+// ═══════════════════════════════════════════════════════════
+
+
+
+async function loadRequestTypes() {
+
+    try {
+
+        const response = await fetch('{{ url_for("api_list_request_types") }}');
+
+        requestTypes = await response.json();
+
+        
+        
+        renderRequestTypes();
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+    }
+
+}
+
+
+
+function renderRequestTypes() {
+
+    const container = document.getElementById('request-types-container');
+
+    
+    
+    if (requestTypes.length === 0) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-state-icon">📝</div>
+
+                <p><strong>Aucun type de demande personnalisé</strong></p>
+
+                <p>Créez votre premier type de demande</p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+    
+    
+    // Grouper par catégorie
+
+    const byCategory = requestTypes.reduce((acc, rt) => {
+
+        const cat = rt.categorie || 'Autre';
+
+        if (!acc[cat]) acc[cat] = [];
+
+        acc[cat].push(rt);
+
+        return acc;
+
+    }, {});
+
+    
+    
+    container.innerHTML = Object.keys(byCategory).map(category => `
+
+        <div class="category-section">
+
+            <div class="category-header">
+
+                <h4>${category}</h4>
+
+                <span>(${byCategory[category].length})</span>
+
+            </div>
+
+            <div class="request-types-list">
+
+                ${byCategory[category].map(rt => `
+
+                    <div class="request-type-card">
+
+                        <div class="request-type-icon">${rt.icone || '📄'}</div>
+
+                        <div class="request-type-info">
+
+                            <h5>${rt.libelle}</h5>
+
+                            <p style="font-size: 0.8rem; color: #666; margin: 0.25rem 0;">${rt.description || 'Aucune description'}</p>
+
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: nowrap; align-items: center;">
+
+                                <button class="btn-sm btn-preview" onclick="viewRequestType(${rt.id})">
+
+                                    👁️ Voir
+
+                                </button>
+
+                                    <button class="btn-sm btn-edit" onclick="editRequestType(${rt.id})">
+
+                                        ✏️ Éditer
+
+                                    </button>
+
+                                <div style="position: relative; display: inline-block;">
+                                    <button class="btn-sm btn-delete" onclick="toggleDeleteMenuRequestType(${rt.id}, event)">
+                                        🗑️ Menu ▼
+                                    </button>
+                                    <div id="delete-menu-rt-${rt.id}" class="delete-menu" style="display: none;">
+                                        <button onclick="deleteRequestType(${rt.id})" class="delete-menu-item">
+                                        🔴 Désactiver
+                                            <small>Peut être réactivé</small>
+                                    </button>
+                                        <button onclick="deleteRequestTypePermanent(${rt.id})" class="delete-menu-item danger">
+                                            🗑️ Supprimer définitivement
+                                            <small>Action irréversible</small>
+                                        </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                        </div>
+
+                    </div>
+
+                `).join('')}
+
+            </div>
+
+        </div>
+
+    `).join('');
+
+}
+
+
+
+async function openCreateRequestTypeModal() {
+
+    // Charger les templates pour le select
+
+    if (templates.length === 0) {
+
+        await loadTemplates();
+
+    }
+
+    
+    
+    const selectTemplate = document.getElementById('rt-template');
+
+    selectTemplate.innerHTML = '<option value="">-- Sélectionner un template --</option>' +
+
+        templates.filter(t => t.actif).map(t => `
+
+            <option value="${t.id}">${t.icone} ${t.nom}</option>
+
+        `).join('');
+    
+    
+
+    // Réinitialiser le formulaire et le titre
+
+    const form = document.getElementById('form-request-type');
+
+    form.reset();
+
+    delete form.dataset.requestTypeId;
+
+    document.getElementById('modal-request-type-title').textContent = '➕ Nouveau Type de Demande';
+
+    
+    
+    showModal('modal-request-type');
+
+}
+
+
+
+async function saveRequestType(event) {
+
+    event.preventDefault();
+
+    
+    
+    const formData = new FormData(event.target);
+
+    const requestTypeId = event.target.dataset.requestTypeId;
+
+    const isEdit = !!requestTypeId;
+
+    
+    
+    const data = {
+
+        code: formData.get('code'),
+
+        libelle: formData.get('libelle'),
+
+        description: formData.get('description'),
+
+        workflow_template_id: parseInt(formData.get('workflow_template_id')),
+
+        categorie: formData.get('categorie'),
+
+        document_obligatoire: formData.get('document_obligatoire') === 'on',
+
+        necessite_validation_rh: formData.get('necessite_validation_rh') === 'on',
+
+        necessite_validation_daf: formData.get('necessite_validation_daf') === 'on'
+
+    };
+
+    
+    
+    showGlobalLoading(isEdit ? 'Modification...' : 'Création...', '');
+
+    
+    
+    try {
+
+        let url, method;
+
+        
+        
+        if (isEdit) {
+
+            // Mode édition - PUT
+
+            url = '{{ url_for("api_update_request_type", request_type_id=0) }}'.replace('/0', `/${requestTypeId}`);
+
+            method = 'PUT';
+
+        } else {
+
+            // Mode création - POST
+
+            url = '{{ url_for("api_create_request_type") }}';
+
+            method = 'POST';
+
+        }
+
+        
+        
+        const response = await fetch(url, {
+
+            method: method,
+
+            headers: {'Content-Type': 'application/json'},
+
+            body: JSON.stringify(data)
+
+        });
+
+        
+        
+        const result = await response.json();
+
+        
+        
+        if (response.ok) {
+
+            showSuccess(isEdit ? 'Type de demande modifié avec succès !' : 'Type de demande créé avec succès !');
+
+            closeModal('modal-request-type');
+
+            
+            
+            // Réinitialiser le formulaire
+
+            delete event.target.dataset.requestTypeId;
+
+            
+            
+            loadRequestTypes();
+
+        } else {
+
+            showError(result.detail || `Erreur lors de ${isEdit ? 'la modification' : 'la création'}`);
+
+        }
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de l\'enregistrement');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+function toggleDeleteMenuRequestType(requestTypeId, event) {
     event.stopPropagation();
     
     // Fermer tous les autres menus
     document.querySelectorAll('.delete-menu').forEach(menu => {
-        if (menu.id !== `delete-menu-${templateId}`) {
+        if (menu.id !== `delete-menu-rt-${requestTypeId}`) {
             menu.style.display = 'none';
         }
     });
     
     // Toggle le menu actuel
-    const menu = document.getElementById(`delete-menu-${templateId}`);
+    const menu = document.getElementById(`delete-menu-rt-${requestTypeId}`);
     menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 
-// Fermer le menu si on clique ailleurs
-document.addEventListener('click', function() {
-    document.querySelectorAll('.delete-menu').forEach(menu => {
-        menu.style.display = 'none';
-    });
-});
-
-async function deleteTemplate(templateId) {
-    if (!confirm('⚠️ Désactiver ce template ?\n\nLe template sera désactivé (soft delete).\nIl ne sera plus utilisable pour de nouveaux types de demandes.\n\nLes types existants continueront de fonctionner.')) {
-        return;
-    }
-    
-    showGlobalLoading('Désactivation du template...', 'Veuillez patienter');
-    
-    try {
-        const response = await fetch(`{{ url_for("api_delete_workflow_template", template_id=0) }}`.replace('/0', `/${templateId}`), {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            showSuccess('Template désactivé avec succès');
-            loadTemplates();
-        } else {
-            const result = await response.json();
-            showError(result.detail || 'Erreur lors de la désactivation');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de la désactivation');
-    } finally {
-        hideGlobalLoading();
-    }
-}
-
-async function deleteTemplatePermanent(templateId) {
-    if (!confirm('🚨 ATTENTION - SUPPRESSION DÉFINITIVE\n\nCette action est IRRÉVERSIBLE !\n\nLe template et toutes ses étapes seront supprimés définitivement de la base de données.\n\nÊtes-vous ABSOLUMENT sûr ?')) {
-        return;
-    }
-    
-    showGlobalLoading('Suppression définitive...', 'Cette action est irréversible');
-    
-    try {
-        const response = await fetch(`{{ url_for("api_delete_workflow_template_permanent", template_id=0) }}`.replace('/0', `/${templateId}`), {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            showSuccess('Template supprimé définitivement', 'Suppression réussie');
-            loadTemplates();
-        } else {
-            const result = await response.json();
-            showError(result.detail || 'Erreur lors de la suppression');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de la suppression');
-    } finally {
-        hideGlobalLoading();
-    }
-}
-
-async function initializeSystemWorkflows() {
-    if (!confirm('Initialiser les 3 workflows système de base ?\n\n- Circuit Long (avec RH)\n- Circuit Moyen (sans RH)\n- Tâche Descendante\n\nCette opération est idempotente (peut être exécutée plusieurs fois sans doublon).')) {
-        return;
-    }
-    
-    showGlobalLoading('Initialisation des workflows système...', 'Veuillez patienter');
-    
-    try {
-        const response = await fetch('{{ url_for("api_initialize_system_workflows") }}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'}
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess('Workflows système initialisés avec succès !');
-            loadTemplates();
-        } else {
-            showError(result.detail || 'Erreur lors de l\'initialisation');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de l\'initialisation');
-    } finally {
-        hideGlobalLoading();
-    }
-}
-
-// ═══════════════════════════════════════════════════════════
-// REQUEST TYPES
-// ═══════════════════════════════════════════════════════════
-
-async function loadRequestTypes() {
-    try {
-        const response = await fetch('{{ url_for("api_list_request_types") }}');
-        requestTypes = await response.json();
-        
-        renderRequestTypes();
-    } catch (error) {
-        console.error('Erreur:', error);
-    }
-}
-
-function renderRequestTypes() {
-    const container = document.getElementById('request-types-container');
-    
-    if (requestTypes.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📝</div>
-                <p><strong>Aucun type de demande personnalisé</strong></p>
-                <p>Créez votre premier type de demande</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Grouper par catégorie
-    const byCategory = requestTypes.reduce((acc, rt) => {
-        const cat = rt.categorie || 'Autre';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(rt);
-        return acc;
-    }, {});
-    
-    container.innerHTML = Object.keys(byCategory).map(category => `
-        <div class="category-section">
-            <div class="category-header">
-                <h4>${category}</h4>
-                <span>(${byCategory[category].length})</span>
-            </div>
-            <div class="request-types-list">
-                ${byCategory[category].map(rt => `
-                    <div class="request-type-card">
-                        <div class="request-type-icon">${rt.icone || '📄'}</div>
-                        <div class="request-type-info">
-                            <h5>${rt.libelle}</h5>
-                            <p style="font-size: 0.8rem; color: #666; margin: 0.25rem 0;">${rt.description || 'Aucune description'}</p>
-                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                                <button class="btn-sm btn-preview" onclick="viewRequestType(${rt.id})">
-                                    👁️ Voir
-                                </button>
-                                ${!rt.est_systeme ? `
-                                    <button class="btn-sm btn-edit" onclick="editRequestType(${rt.id})">
-                                        ✏️ Éditer
-                                    </button>
-                                    <button class="btn-sm btn-delete" onclick="deleteRequestType(${rt.id})">
-                                        🔴 Désactiver
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `).join('');
-}
-
-async function openCreateRequestTypeModal() {
-    // Charger les templates pour le select
-    if (templates.length === 0) {
-        await loadTemplates();
-    }
-    
-    const selectTemplate = document.getElementById('rt-template');
-    selectTemplate.innerHTML = '<option value="">-- Sélectionner un template --</option>' +
-        templates.filter(t => t.actif).map(t => `
-            <option value="${t.id}">${t.icone} ${t.nom}</option>
-        `).join('');
-    
-    // Réinitialiser le formulaire et le titre
-    const form = document.getElementById('form-request-type');
-    form.reset();
-    delete form.dataset.requestTypeId;
-    document.getElementById('modal-request-type-title').textContent = '➕ Nouveau Type de Demande';
-    
-    showModal('modal-request-type');
-}
-
-async function saveRequestType(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const requestTypeId = event.target.dataset.requestTypeId;
-    const isEdit = !!requestTypeId;
-    
-    const data = {
-        code: formData.get('code'),
-        libelle: formData.get('libelle'),
-        description: formData.get('description'),
-        workflow_template_id: parseInt(formData.get('workflow_template_id')),
-        categorie: formData.get('categorie'),
-        document_obligatoire: formData.get('document_obligatoire') === 'on',
-        necessite_validation_rh: formData.get('necessite_validation_rh') === 'on',
-        necessite_validation_daf: formData.get('necessite_validation_daf') === 'on'
-    };
-    
-    showGlobalLoading(isEdit ? 'Modification...' : 'Création...', '');
-    
-    try {
-        let url, method;
-        
-        if (isEdit) {
-            // Mode édition - PUT
-            url = '{{ url_for("api_update_request_type", request_type_id=0) }}'.replace('/0', `/${requestTypeId}`);
-            method = 'PUT';
-        } else {
-            // Mode création - POST
-            url = '{{ url_for("api_create_request_type") }}';
-            method = 'POST';
-        }
-        
-        const response = await fetch(url, {
-            method: method,
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess(isEdit ? 'Type de demande modifié avec succès !' : 'Type de demande créé avec succès !');
-            closeModal('modal-request-type');
-            
-            // Réinitialiser le formulaire
-            delete event.target.dataset.requestTypeId;
-            
-            loadRequestTypes();
-        } else {
-            showError(result.detail || `Erreur lors de ${isEdit ? 'la modification' : 'la création'}`);
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de l\'enregistrement');
-    } finally {
-        hideGlobalLoading();
-    }
-}
-
-// ═══════════════════════════════════════════════════════════
-// CUSTOM ROLES
-// ═══════════════════════════════════════════════════════════
-
-async function loadCustomRoles() {
-    showGlobalLoading('Chargement des rôles...', '');
-    
-    try {
-        const response = await fetch('{{ url_for("api_list_custom_roles") }}');
-        const data = await response.json();
-        
-        customRoles = data;
-        renderCustomRoles();
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors du chargement des rôles');
-    } finally {
-        hideGlobalLoading();
-    }
-}
-
-function renderCustomRoles() {
-    const container = document.getElementById('roles-container');
-    
-    if (customRoles.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">👥</div>
-                <p><strong>Aucun rôle personnalisé</strong></p>
-                <p>Créez votre premier rôle personnalisé</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = customRoles.map(role => `
-        <div class="template-card" style="min-height: 150px;">
-            <div class="template-header">
-                <h4>${role.libelle}</h4>
-                <span class="badge badge-success">${role.code}</span>
-            </div>
-            <p style="font-size: 0.85rem; color: #666; margin: 0.5rem 0;">${role.description || 'Aucune description'}</p>
-            <div class="template-footer" style="display: flex; gap: 0.5rem; margin-top: auto;">
-                <button class="btn-sm btn-edit" onclick="editCustomRole(${role.id})">
-                    ✏️ Éditer
-                </button>
-                <button class="btn-sm btn-delete" onclick="deleteCustomRole(${role.id})">
-                    🔴 Désactiver
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function openCreateRoleModal() {
-    const form = document.getElementById('form-role');
-    form.reset();
-    delete form.dataset.roleId;
-    document.getElementById('modal-role-title').textContent = '➕ Nouveau Rôle Personnalisé';
-    showModal('modal-role');
-}
-
-async function saveRole(event) {
-    event.preventDefault();
-    
-    const formData = new FormData(event.target);
-    const roleId = event.target.dataset.roleId;
-    const isEdit = !!roleId;
-    
-    const data = {
-        code: formData.get('code'),
-        libelle: formData.get('libelle'),
-        description: formData.get('description')
-    };
-    
-    showGlobalLoading(isEdit ? 'Modification...' : 'Création...', '');
-    
-    try {
-        let url, method;
-        
-        if (isEdit) {
-            // Mode édition - PUT
-            url = '{{ url_for("api_update_custom_role", role_id=0) }}'.replace('/0', `/${roleId}`);
-            method = 'PUT';
-        } else {
-            // Mode création - POST
-            url = '{{ url_for("api_create_custom_role") }}';
-            method = 'POST';
-        }
-        
-        const response = await fetch(url, {
-            method: method,
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess(isEdit ? 'Rôle modifié avec succès !' : 'Rôle créé avec succès !');
-            closeModal('modal-role');
-            
-            // Réinitialiser le formulaire
-            delete event.target.dataset.roleId;
-            
-            loadCustomRoles();
-        } else {
-            showError(result.detail || `Erreur lors de ${isEdit ? 'la modification' : 'la création'}`);
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de l\'enregistrement');
-    } finally {
-        hideGlobalLoading();
-    }
-}
-
-function editCustomRole(roleId) {
-    const role = customRoles.find(r => r.id === roleId);
-    if (!role) {
-        showError('Rôle introuvable');
-        return;
-    }
-    
-    // Remplir le modal
-    document.getElementById('modal-role-title').textContent = '✏️ Éditer le Rôle';
-    document.getElementById('role-code').value = role.code;
-    document.getElementById('role-libelle').value = role.libelle;
-    document.getElementById('role-description').value = role.description || '';
-    
-    // Stocker l'ID pour la modification
-    document.getElementById('form-role').dataset.roleId = role.id;
-    
-    // Ouvrir le modal
-    showModal('modal-role');
-}
-
-async function deleteCustomRole(roleId) {
-    if (!confirm('⚠️ Désactiver ce rôle ?\n\nLe rôle sera désactivé et ne sera plus disponible.\n\nLes attributions existantes continueront de fonctionner.')) {
-        return;
-    }
-    
-    showGlobalLoading('Désactivation...', '');
-    
-    try {
-        const url = '{{ url_for("api_delete_custom_role", role_id=0) }}'.replace('/0', `/${roleId}`);
-        
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: {'Content-Type': 'application/json'}
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showSuccess('Rôle désactivé avec succès !');
-            loadCustomRoles();
-        } else {
-            showError(result.detail || 'Erreur lors de la désactivation');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        showError('Erreur lors de la désactivation');
-    } finally {
-        hideGlobalLoading();
-    }
-}
-
-function viewRequestType(requestTypeId) {
-    const rt = requestTypes.find(r => r.id === requestTypeId);
-    if (!rt) {
-        showError('Type de demande introuvable');
-        return;
-    }
-    
-    // Afficher les détails dans un toast ou modal
-    const details = `
-Type: ${rt.libelle}
-Code: ${rt.code}
-Catégorie: ${rt.categorie}
-Template: ID ${rt.workflow_template_id}
-Document obligatoire: ${rt.document_obligatoire ? 'Oui' : 'Non'}
-Validation RH: ${rt.necessite_validation_rh ? 'Oui' : 'Non'}
-Validation DAF: ${rt.necessite_validation_daf ? 'Oui' : 'Non'}
-    `;
-    
-    alert(details.trim());
-}
-
-async function editRequestType(requestTypeId) {
-    const rt = requestTypes.find(r => r.id === requestTypeId);
-    if (!rt) {
-        showError('Type de demande introuvable');
-        return;
-    }
-    
-    // Charger les templates si besoin
-    if (templates.length === 0) {
-        await loadTemplates();
-    }
-    
-    // Peupler le select des templates
-    const selectTemplate = document.getElementById('rt-template');
-    selectTemplate.innerHTML = '<option value="">-- Sélectionner un template --</option>' +
-        templates.filter(t => t.actif).map(t => 
-            `<option value="${t.id}">${t.nom} (${t.direction === 'ASCENDANT' ? '⬆️' : '⬇️'})</option>`
-        ).join('');
-    
-    // Remplir le modal
-    document.getElementById('modal-request-type-title').textContent = '✏️ Éditer le Type de Demande';
-    document.getElementById('rt-code').value = rt.code;
-    document.getElementById('rt-libelle').value = rt.libelle;
-    document.getElementById('rt-description').value = rt.description || '';
-    document.getElementById('rt-template').value = rt.workflow_template_id;
-    document.getElementById('rt-categorie').value = rt.categorie;
-    document.getElementById('rt-doc-obligatoire').checked = rt.document_obligatoire;
-    document.getElementById('rt-validation-rh').checked = rt.necessite_validation_rh;
-    document.getElementById('rt-validation-daf').checked = rt.necessite_validation_daf;
-    
-    // Stocker l'ID pour la modification
-    document.getElementById('form-request-type').dataset.requestTypeId = rt.id;
-    
-    // Ouvrir le modal
-    showModal('modal-request-type');
-}
-
 async function deleteRequestType(requestTypeId) {
-    if (!confirm('⚠️ Désactiver ce type de demande ?\n\nLe type sera désactivé et ne sera plus disponible pour de nouvelles demandes.\n\nLes demandes existantes de ce type continueront de fonctionner.')) {
+    if (!confirm('⚠️ Désactiver ce type de demande ?\n\nLe type sera désactivé et ne sera plus disponible.\n\nLes demandes existantes ne seront pas affectées.')) {
         return;
     }
     
@@ -1917,178 +3428,1185 @@ async function deleteRequestType(requestTypeId) {
     }
 }
 
+async function deleteRequestTypePermanent(requestTypeId) {
+    if (!confirm('🚨 ATTENTION - SUPPRESSION DÉFINITIVE\n\nCette action est IRRÉVERSIBLE !\n\nLe type de demande sera supprimé définitivement de la base de données.\n\nÊtes-vous ABSOLUMENT sûr ?')) {
+        return;
+    }
+    
+    showGlobalLoading('Suppression définitive...', 'Cette action est irréversible');
+    
+    try {
+        const url = '{{ url_for("api_delete_request_type", request_type_id=0) }}'.replace('/0', `/${requestTypeId}`);
+        
+        const response = await fetch(url + '?permanent=true', {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showSuccess('Type de demande supprimé définitivement', 'Suppression réussie');
+            loadRequestTypes();
+        } else {
+            showError(result.detail || 'Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la suppression');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+
+
 // ═══════════════════════════════════════════════════════════
+
+// CUSTOM ROLES
+
+// ═══════════════════════════════════════════════════════════
+
+
+
+async function loadCustomRoles() {
+
+    showGlobalLoading('Chargement des rôles...', '');
+
+    
+    
+    try {
+
+        const response = await fetch('{{ url_for("api_list_custom_roles") }}');
+
+        const data = await response.json();
+
+        
+        
+        customRoles = data;
+
+        renderCustomRoles();
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors du chargement des rôles');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+
+
+function renderCustomRoles() {
+
+    const container = document.getElementById('roles-container');
+
+    
+    
+    if (customRoles.length === 0) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-state-icon">👥</div>
+
+                <p><strong>Aucun rôle personnalisé</strong></p>
+
+                <p>Créez votre premier rôle personnalisé</p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+    
+    
+    container.innerHTML = customRoles.map(role => `
+
+        <div class="template-card" style="min-height: 150px;">
+
+            <div class="template-header">
+
+                <h4>${role.libelle}</h4>
+
+                <span class="badge badge-success">${role.code}</span>
+
+            </div>
+
+            <p style="font-size: 0.85rem; color: #666; margin: 0.5rem 0;">${role.description || 'Aucune description'}</p>
+
+            <div id="assignments-preview-${role.id}" style="margin: 0.5rem 0; font-size: 0.85rem; color: #666;">
+                <em>Chargement des attributions...</em>
+            </div>
+            <div class="template-footer" style="display: flex; gap: 0.3rem; margin-top: auto; flex-wrap: nowrap; align-items: center; padding: 0.5rem 0;">
+                <button class="btn-sm btn-view" onclick="viewRoleAssignments(${role.id})" title="Voir et gérer les attributions" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                    👥 Gérer
+                </button>
+                <button class="btn-sm btn-primary" onclick="openAssignRoleModal(${role.id})" title="Attribuer ce rôle à un agent" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                    ➕ Attribution
+                </button>
+                <button class="btn-sm btn-edit" onclick="editCustomRole(${role.id})" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                    ✏️ Modifier
+                </button>
+                <div style="position: relative; display: inline-block;">
+                    <button class="btn-sm btn-delete" onclick="toggleDeleteMenuRole(${role.id}, event)" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                        🗑️ Menu ▼
+                    </button>
+                    <div id="delete-menu-role-${role.id}" class="delete-menu" style="display: none;">
+                        <button onclick="deleteCustomRole(${role.id})" class="delete-menu-item">
+                    🔴 Désactiver
+                            <small>Peut être réactivé</small>
+                        </button>
+                        <button onclick="deleteCustomRolePermanent(${role.id})" class="delete-menu-item danger">
+                            🗑️ Supprimer définitivement
+                            <small>Action irréversible</small>
+                </button>
+            </div>
+        </div>
+            </div>
+
+        </div>
+
+    `).join('');
+
+    
+    // Charger les attributions pour chaque rôle
+    customRoles.forEach(role => {
+        loadRoleAssignmentsPreview(role.id);
+    });
+}
+
+
+
+function openCreateRoleModal() {
+
+    const form = document.getElementById('form-role');
+
+    form.reset();
+
+    delete form.dataset.roleId;
+
+    document.getElementById('modal-role-title').textContent = '➕ Nouveau Rôle Personnalisé';
+
+    showModal('modal-role');
+
+}
+
+
+
+async function saveRole(event) {
+
+    event.preventDefault();
+
+    
+    
+    const formData = new FormData(event.target);
+
+    const roleId = event.target.dataset.roleId;
+
+    const isEdit = !!roleId;
+
+    
+    
+    const data = {
+
+        code: formData.get('code'),
+
+        libelle: formData.get('libelle'),
+
+        description: formData.get('description')
+
+    };
+
+    
+    
+    showGlobalLoading(isEdit ? 'Modification...' : 'Création...', '');
+
+    
+    
+    try {
+
+        let url, method;
+
+        
+        
+        if (isEdit) {
+
+            // Mode édition - PUT
+
+            url = '{{ url_for("api_update_custom_role", role_id=0) }}'.replace('/0', `/${roleId}`);
+
+            method = 'PUT';
+
+        } else {
+
+            // Mode création - POST
+
+            url = '{{ url_for("api_create_custom_role") }}';
+
+            method = 'POST';
+
+        }
+
+        
+        
+        const response = await fetch(url, {
+
+            method: method,
+
+            headers: {'Content-Type': 'application/json'},
+
+            body: JSON.stringify(data)
+
+        });
+
+        
+        
+        const result = await response.json();
+
+        
+        
+        if (response.ok) {
+
+            showSuccess(isEdit ? 'Rôle modifié avec succès !' : 'Rôle créé avec succès !');
+
+            closeModal('modal-role');
+
+            
+            
+            // Réinitialiser le formulaire
+
+            delete event.target.dataset.roleId;
+
+            
+            
+            loadCustomRoles();
+
+        } else {
+
+            showError(result.detail || `Erreur lors de ${isEdit ? 'la modification' : 'la création'}`);
+
+        }
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de l\'enregistrement');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+
+
+function editCustomRole(roleId) {
+
+    const role = customRoles.find(r => r.id === roleId);
+
+    if (!role) {
+
+        showError('Rôle introuvable');
+
+        return;
+
+    }
+
+    
+    
+    // Remplir le modal
+
+    document.getElementById('modal-role-title').textContent = '✏️ Éditer le Rôle';
+
+    document.getElementById('role-code').value = role.code;
+
+    document.getElementById('role-libelle').value = role.libelle;
+
+    document.getElementById('role-description').value = role.description || '';
+
+    
+    
+    // Stocker l'ID pour la modification
+
+    document.getElementById('form-role').dataset.roleId = role.id;
+
+    
+    
+    // Ouvrir le modal
+
+    showModal('modal-role');
+
+}
+
+
+
+async function deleteCustomRole(roleId) {
+
+    if (!confirm('⚠️ Désactiver ce rôle ?\n\nLe rôle sera désactivé et ne sera plus disponible.\n\nLes attributions existantes continueront de fonctionner.')) {
+
+        return;
+
+    }
+
+    
+    
+    showGlobalLoading('Désactivation...', '');
+
+    
+    
+    try {
+
+        const url = '{{ url_for("api_delete_custom_role", role_id=0) }}'.replace('/0', `/${roleId}`);
+
+        
+        
+        const response = await fetch(url, {
+
+            method: 'DELETE',
+
+            headers: {'Content-Type': 'application/json'}
+
+        });
+
+        
+        
+        const result = await response.json();
+
+        
+        
+        if (response.ok) {
+
+            showSuccess('Rôle désactivé avec succès !');
+
+            loadCustomRoles();
+
+        } else {
+
+            showError(result.detail || 'Erreur lors de la désactivation');
+
+        }
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de la désactivation');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+function toggleDeleteMenuRole(roleId, event) {
+    event.stopPropagation();
+    
+    // Fermer tous les autres menus
+    document.querySelectorAll('.delete-menu').forEach(menu => {
+        if (menu.id !== `delete-menu-role-${roleId}`) {
+            menu.style.display = 'none';
+        }
+    });
+    
+    // Toggle le menu actuel
+    const menu = document.getElementById(`delete-menu-role-${roleId}`);
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+async function deleteCustomRolePermanent(roleId) {
+    if (!confirm('🚨 ATTENTION - SUPPRESSION DÉFINITIVE\n\nCette action est IRRÉVERSIBLE !\n\nLe rôle et toutes ses attributions seront supprimés définitivement de la base de données.\n\nÊtes-vous ABSOLUMENT sûr ?')) {
+        return;
+    }
+    
+    showGlobalLoading('Suppression définitive...', 'Cette action est irréversible');
+    
+    try {
+        const url = '{{ url_for("api_delete_custom_role", role_id=0) }}'.replace('/0', `/${roleId}`);
+        
+        const response = await fetch(url + '?permanent=true', {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showSuccess('Rôle supprimé définitivement', 'Suppression réussie');
+            loadCustomRoles();
+        } else {
+            showError(result.detail || 'Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la suppression');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ATTRIBUTION DE RÔLES
+// ═══════════════════════════════════════════════════════════
+
+let currentManageRoleId = null;
+
+async function loadRoleAssignmentsPreview(roleId) {
+    try {
+        const url = `{{ url_for("api_get_role_assignments", role_id=0) }}`.replace('/0', `/${roleId}`);
+        const response = await fetch(url);
+        const assignments = await response.json();
+        
+        const preview = document.getElementById(`assignments-preview-${roleId}`);
+        if (!preview) return;
+        
+        if (assignments.length === 0) {
+            preview.innerHTML = '<em style="color: #999;">Aucune attribution active</em>';
+        } else if (assignments.length === 1) {
+            const assign = assignments[0];
+            preview.innerHTML = `<span style="color: #28a745;">✓ Attribué à <strong>${assign.agent_prenom} ${assign.agent_nom}</strong></span>`;
+        } else {
+            preview.innerHTML = `<span style="color: #28a745;">✓ ${assignments.length} attributions actives</span>`;
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        const preview = document.getElementById(`assignments-preview-${roleId}`);
+        if (preview) {
+            preview.innerHTML = '<em style="color: #999;">-</em>';
+        }
+    }
+}
+
+async function viewRoleAssignments(roleId) {
+    const role = customRoles.find(r => r.id === roleId);
+    if (!role) {
+        showError('Rôle introuvable');
+        return;
+    }
+    
+    currentManageRoleId = roleId;
+    document.getElementById('manage-role-name').textContent = `${role.libelle} (${role.code})`;
+    
+    showGlobalLoading('Chargement des attributions...', '');
+    
+    try {
+        const url = `{{ url_for("api_get_role_assignments", role_id=0) }}`.replace('/0', `/${roleId}`);
+        const response = await fetch(url);
+        const assignments = await response.json();
+        
+        const listContainer = document.getElementById('assignments-list');
+        
+        if (assignments.length === 0) {
+            listContainer.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #999;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                    <p><strong>Aucune attribution active</strong></p>
+                    <p>Ce rôle n'est attribué à aucun agent pour le moment.</p>
+                </div>
+            `;
+        } else {
+            listContainer.innerHTML = assignments.map(assign => `
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: #333;">
+                            ${assign.agent_prenom} ${assign.agent_nom}
+                        </div>
+                        ${assign.agent_fonction ? `<div style="font-size: 0.85rem; color: #666;">${assign.agent_fonction}</div>` : ''}
+                        <div style="font-size: 0.85rem; color: #999; margin-top: 0.25rem;">
+                            Depuis le ${new Date(assign.date_debut).toLocaleDateString('fr-FR')}
+                            ${assign.date_fin ? ` - Jusqu'au ${new Date(assign.date_fin).toLocaleDateString('fr-FR')}` : ''}
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn-sm btn-delete" onclick="revokeAssignment(${assign.assignment_id}, '${assign.agent_prenom} ${assign.agent_nom}')" title="Révoquer cette attribution">
+                            ✖️ Révoquer
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        showModal('modal-manage-assignments');
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors du chargement des attributions');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+async function revokeAssignment(assignmentId, agentName) {
+    if (!confirm(`⚠️ Révoquer l'attribution à ${agentName} ?\n\nL'agent ne pourra plus valider les demandes associées à ce rôle.`)) {
+        return;
+    }
+    
+    showGlobalLoading('Révocation...', '');
+    
+    try {
+        const url = `{{ url_for("api_revoke_role_assignment", assignment_id=0) }}`.replace('/0', `/${assignmentId}`);
+        
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showSuccess('✅ Attribution révoquée avec succès !');
+            
+            // Recharger la liste dans le modal
+            if (currentManageRoleId) {
+                await viewRoleAssignments(currentManageRoleId);
+                await loadRoleAssignmentsPreview(currentManageRoleId);
+            }
+        } else {
+            showError(result.detail || 'Erreur lors de la révocation');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la révocation');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+function closeModalAndOpenAssign() {
+    closeModal('modal-manage-assignments');
+    if (currentManageRoleId) {
+        openAssignRoleModal(currentManageRoleId);
+    }
+}
+
+async function openAssignRoleModal(roleId) {
+    const role = customRoles.find(r => r.id === roleId);
+    if (!role) {
+        showError('Rôle introuvable');
+        return;
+    }
+    
+    // Afficher le nom du rôle
+    document.getElementById('assign-role-name').value = `${role.libelle} (${role.code})`;
+    
+    // Stocker l'ID du rôle
+    document.getElementById('form-assign-role').dataset.roleId = role.id;
+    
+    // Réinitialiser le formulaire
+    document.getElementById('assign-agent-id').value = '';
+    document.getElementById('assign-date-fin').value = '';
+    
+    // Charger la liste des agents
+    await loadAgentsForAssignment();
+    
+    // Ouvrir le modal
+    showModal('modal-assign-role');
+}
+
+async function loadAgentsForAssignment() {
+    showGlobalLoading('Chargement des agents...', '');
+    
+    try {
+        // Utiliser l'API existante pour récupérer les agents
+        // Charger tous les agents (limite élevée pour être sûr)
+        const response = await fetch('/api/v1/personnel/api/agents?limit=500');
+        const data = await response.json();
+        
+        const selectAgent = document.getElementById('assign-agent-id');
+        selectAgent.innerHTML = '<option value="">-- Sélectionner un agent --</option>';
+        
+        // Trier par nom
+        const agents = Array.isArray(data) ? data : (data.agents || []);
+        
+        if (agents.length === 0) {
+            selectAgent.innerHTML = '<option value="">❌ Aucun agent trouvé</option>';
+            return;
+        }
+        
+        agents.sort((a, b) => {
+            const nomA = `${a.nom} ${a.prenom}`.toLowerCase();
+            const nomB = `${b.nom} ${b.prenom}`.toLowerCase();
+            return nomA.localeCompare(nomB);
+        });
+        
+        agents.forEach(agent => {
+            const option = document.createElement('option');
+            option.value = agent.id;
+            
+            // Construire le texte de l'option
+            let optionText = `${agent.nom} ${agent.prenom}`;
+            if (agent.fonction) {
+                optionText += ` - ${agent.fonction}`;
+            }
+            
+            // Ajouter un indicateur pour les agents inactifs
+            if (agent.actif === false) {
+                optionText += ' [INACTIF]';
+                option.style.color = '#999';
+            }
+            
+            option.textContent = optionText;
+            selectAgent.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors du chargement des agents');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+async function saveRoleAssignment(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const roleId = form.dataset.roleId;
+    const formData = new FormData(form);
+    
+    const data = {
+        agent_id: parseInt(formData.get('agent_id')),
+        date_fin: formData.get('date_fin') || null
+    };
+    
+    showGlobalLoading('Attribution en cours...', '');
+    
+    try {
+        const url = '{{ url_for("api_assign_custom_role", role_id=0) }}'.replace('/0', `/${roleId}`);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showSuccess('✅ Rôle attribué avec succès à l\'agent !');
+            closeModal('modal-assign-role');
+            
+            // Réinitialiser le formulaire
+            form.reset();
+            delete form.dataset.roleId;
+            
+            // Recharger l'aperçu des attributions
+            if (roleId) {
+                await loadRoleAssignmentsPreview(roleId);
+            }
+        } else {
+            showError(result.detail || 'Erreur lors de l\'attribution');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de l\'attribution du rôle');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+
+function viewRequestType(requestTypeId) {
+
+    const rt = requestTypes.find(r => r.id === requestTypeId);
+
+    if (!rt) {
+
+        showError('Type de demande introuvable');
+
+        return;
+
+    }
+
+    
+    
+    // Afficher les détails dans un toast ou modal
+
+    const details = `
+
+Type: ${rt.libelle}
+
+Code: ${rt.code}
+
+Catégorie: ${rt.categorie}
+
+Template: ID ${rt.workflow_template_id}
+
+Document obligatoire: ${rt.document_obligatoire ? 'Oui' : 'Non'}
+
+Validation RH: ${rt.necessite_validation_rh ? 'Oui' : 'Non'}
+
+Validation DAF: ${rt.necessite_validation_daf ? 'Oui' : 'Non'}
+
+    `;
+
+    
+    
+    alert(details.trim());
+
+}
+
+
+
+async function editRequestType(requestTypeId) {
+
+    const rt = requestTypes.find(r => r.id === requestTypeId);
+
+    if (!rt) {
+
+        showError('Type de demande introuvable');
+
+        return;
+
+    }
+
+    
+    
+    // Charger les templates si besoin
+
+    if (templates.length === 0) {
+
+        await loadTemplates();
+
+    }
+
+    
+    
+    // Peupler le select des templates
+
+    const selectTemplate = document.getElementById('rt-template');
+
+    selectTemplate.innerHTML = '<option value="">-- Sélectionner un template --</option>' +
+
+        templates.filter(t => t.actif).map(t => 
+
+            `<option value="${t.id}">${t.nom} (${t.direction === 'ASCENDANT' ? '⬆️' : '⬇️'})</option>`
+
+        ).join('');
+    
+    
+
+    // Remplir le modal
+
+    document.getElementById('modal-request-type-title').textContent = '✏️ Éditer le Type de Demande';
+
+    document.getElementById('rt-code').value = rt.code;
+
+    document.getElementById('rt-libelle').value = rt.libelle;
+
+    document.getElementById('rt-description').value = rt.description || '';
+
+    document.getElementById('rt-template').value = rt.workflow_template_id;
+
+    document.getElementById('rt-categorie').value = rt.categorie;
+
+    document.getElementById('rt-doc-obligatoire').checked = rt.document_obligatoire;
+
+    document.getElementById('rt-validation-rh').checked = rt.necessite_validation_rh;
+
+    document.getElementById('rt-validation-daf').checked = rt.necessite_validation_daf;
+
+    
+    
+    // Stocker l'ID pour la modification
+
+    document.getElementById('form-request-type').dataset.requestTypeId = rt.id;
+
+    
+    
+    // Ouvrir le modal
+
+    showModal('modal-request-type');
+
+}
+
+
+
+async function deleteRequestType(requestTypeId) {
+
+    if (!confirm('⚠️ Désactiver ce type de demande ?\n\nLe type sera désactivé et ne sera plus disponible pour de nouvelles demandes.\n\nLes demandes existantes de ce type continueront de fonctionner.')) {
+
+        return;
+
+    }
+
+    
+    
+    showGlobalLoading('Désactivation...', '');
+
+    
+    
+    try {
+
+        const url = '{{ url_for("api_delete_request_type", request_type_id=0) }}'.replace('/0', `/${requestTypeId}`);
+
+        
+        
+        const response = await fetch(url, {
+
+            method: 'DELETE',
+
+            headers: {'Content-Type': 'application/json'}
+
+        });
+
+        
+        
+        const result = await response.json();
+
+        
+        
+        if (response.ok) {
+
+            showSuccess('Type de demande désactivé avec succès !');
+
+            loadRequestTypes();
+
+        } else {
+
+            showError(result.detail || 'Erreur lors de la désactivation');
+
+        }
+
+    } catch (error) {
+
+        console.error('Erreur:', error);
+
+        showError('Erreur lors de la désactivation');
+
+    } finally {
+
+        hideGlobalLoading();
+
+    }
+
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+
 // UTILITIES
+
 // ═══════════════════════════════════════════════════════════
+
+
 
 function showModal(modalId) {
+
     document.getElementById(modalId).classList.add('show');
+
 }
 
+
+
 function closeModal(modalId) {
+
     document.getElementById(modalId).classList.remove('show');
+
 }
+
+
 
 // Note: showSuccess() et showError() sont déjà définis dans toast_notifications.html (inclus dans base.html)
 
+
+
 // ═══════════════════════════════════════════════════════════
+
 // ICON PICKER
+
 // ═══════════════════════════════════════════════════════════
+
+
 
 function toggleIconPicker() {
+
     const picker = document.getElementById('icon-picker');
+
     if (picker.style.display === 'none') {
+
         picker.style.display = 'block';
+
     } else {
+
         picker.style.display = 'none';
+
     }
+
 }
+
+
 
 function selectIcon(icon) {
+
     const iconInput = document.getElementById('template-icone');
+
     iconInput.value = icon;
+
+    
     
     // Fermer le picker
+
     document.getElementById('icon-picker').style.display = 'none';
+
+    
     
     // Mettre en surbrillance l'icône sélectionnée
+
     document.querySelectorAll('.icon-btn').forEach(btn => {
+
         btn.classList.remove('selected');
+
         if (btn.textContent === icon) {
+
             btn.classList.add('selected');
+
         }
+
     });
+
 }
+
+
 
 function selectDirection(direction) {
+
     // Cocher le radio button correspondant
+
     if (direction === 'ASCENDANT') {
+
         document.getElementById('direction-ascendant').checked = true;
+
         document.getElementById('direction-descendant').checked = false;
+
     } else {
+
         document.getElementById('direction-ascendant').checked = false;
+
         document.getElementById('direction-descendant').checked = true;
+
     }
+
     updateWorkflowPreview();
+
 }
 
+
+
 // ═══════════════════════════════════════════════════════════
+
 // PREVIEW EN TEMPS RÉEL
+
 // ═══════════════════════════════════════════════════════════
+
+
 
 function updateWorkflowPreview() {
+
     const previewContainer = document.getElementById('workflow-preview-live');
+
     if (!previewContainer) return;
     
-    // Récupérer les étapes cochées
-    const selectedSteps = [];
-    const stepLabels = {
-        'N+1': 'N+1',
-        'N+2': 'N+2',
-        'RH': 'RH',
-        'DAF': 'DAF'
-    };
     
-    const stepLabelsLong = {
-        'N+1': 'N+1 - Chef Service',
-        'N+2': 'N+2 - Sous-directeur',
-        'RH': 'RH - Ressources Humaines',
-        'DAF': 'DAF - Direction Admin'
-    };
+
+    // Utiliser les étapes du builder
+    const selectedSteps = workflowStepsBuilder.map(step => ({
+        value: step.role_type,
+        label: step.role_label
+    }));
+
     
-    document.querySelectorAll('input[name="steps[]"]:checked').forEach(checkbox => {
-        selectedSteps.push({
-            value: checkbox.value,
-            label: stepLabelsLong[checkbox.value] || checkbox.value
-        });
-    });
     
     // ═══════════════════════════════════════════════════════════
+
     // GÉNÉRER LA DESCRIPTION AUTOMATIQUEMENT
+
     // ═══════════════════════════════════════════════════════════
+
+    
     
     let description = 'Circuit : Agent → ';
+
+    
     
     if (selectedSteps.length > 0) {
-        description += selectedSteps.map(s => stepLabels[s.value]).join(' → ');
+
+        description += selectedSteps.map(s => s.label).join(' → ');
+
     } else {
+
         description += 'Archivage direct';
+
     }
+
+    
     
     description += ' → Archivé';
+
+    
     
     // Mettre à jour le champ description
+
     const descriptionField = document.getElementById('template-description');
+
     if (descriptionField) {
+
         descriptionField.value = description;
+
     }
+
+    
     
     // Générer le schéma
+
     let html = '<div style="text-align: center;">';
+
+    
     
     // Étape initiale
+
     html += `
+
         <div style="padding: 0.75rem; background: white; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #6c757d;">
+
             <div style="font-weight: 600; font-size: 0.85rem; color: #333;">📝 DEMANDEUR</div>
+
             <div style="font-size: 0.75rem; color: #666;">Création de la demande</div>
+
         </div>
+
     `;
+
+    
     
     // Flèche
+
     if (selectedSteps.length > 0) {
+
         html += '<div style="text-align: center; margin: 0.25rem 0; color: var(--primary-color); font-size: 1.5rem;">↓</div>';
+
     }
+
+    
     
     // Étapes sélectionnées
+
     selectedSteps.forEach((step, index) => {
+
         const colors = {
+
             'N+1': '#3498db',
+
             'N+2': '#2ecc71',
+
             'RH': '#f39c12',
+
             'DAF': '#e74c3c'
+
         };
+
+        
         
         html += `
+
             <div style="padding: 0.75rem; background: white; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid ${colors[step.value] || '#6c757d'};">
+
                 <div style="font-weight: 600; font-size: 0.85rem; color: #333;">${index + 1}. ${step.label}</div>
+
                 <div style="font-size: 0.75rem; color: #666;">Validation niveau ${index + 1}</div>
+
             </div>
+
         `;
+
+        
         
         // Flèche sauf pour le dernier
+
         if (index < selectedSteps.length - 1) {
+
             html += '<div style="text-align: center; margin: 0.25rem 0; color: var(--primary-color); font-size: 1.5rem;">↓</div>';
+
         }
+
     });
+
+    
     
     // Étape finale
+
     if (selectedSteps.length > 0) {
+
         html += '<div style="text-align: center; margin: 0.25rem 0; color: var(--primary-color); font-size: 1.5rem;">↓</div>';
+
     }
+
+    
     
     html += `
+
         <div style="padding: 0.75rem; background: white; border-radius: 8px; border-left: 4px solid #28a745;">
+
             <div style="font-weight: 600; font-size: 0.85rem; color: #333;">✅ ARCHIVÉ</div>
+
             <div style="font-size: 0.75rem; color: #666;">Demande terminée</div>
+
         </div>
+
     `;
+
+    
     
     // Message si aucune étape
+
     if (selectedSteps.length === 0) {
+
         html += `
+
             <div style="padding: 1rem; background: #fff3cd; border-radius: 8px; color: #856404; margin-top: 1rem;">
+
                 <strong>⚠️ Aucune étape sélectionnée</strong>
+
                 <div style="font-size: 0.8rem; margin-top: 0.25rem;">
+
                     La demande passera directement à l'archivage
+
                 </div>
+
             </div>
+
         `;
+
     }
+
+    
     
     html += '</div>';
+
+    
     
     previewContainer.innerHTML = html;
+
 }
+
 </script>
+
 {% endblock %}
+
+
 

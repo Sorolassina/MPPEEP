@@ -1,0 +1,910 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Aide - Configuration Workflows{% endblock %}
+
+{% block styles %}
+<style>
+.help-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.help-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.help-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.help-section h3 {
+    color: #333;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.schema-box {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    overflow-x: auto;
+}
+
+.step-box {
+    background: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.step-number {
+    display: inline-block;
+    background: var(--primary-color);
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+.exemple-box {
+    background: #e7f3ff;
+    border-left: 4px solid #0066cc;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+}
+
+.warning-box {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+}
+
+.success-box {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+}
+
+.flow-diagram {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.flow-step {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin: 0.5rem;
+    font-weight: 600;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.flow-arrow {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin: 0 0.5rem;
+}
+
+.code-inline {
+    background: #f4f4f4;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #e83e8c;
+}
+
+.table-help {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.table-help th,
+.table-help td {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    text-align: left;
+}
+
+.table-help th {
+    background: var(--primary-color);
+    color: white;
+    font-weight: 600;
+}
+
+.table-help tr:nth-child(even) {
+    background: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ page_header(
+    title='❓ Aide - Configuration des Workflows',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Configuration Workflows', 'url': url_for('workflow_config_home')},
+        {'name': 'Aide'}
+    ],
+    actions=[
+        {'label': '← Retour Configuration', 'url': url_for('workflow_config_home'), 'primary': True}
+    ]
+) }}
+
+<div class="help-container">
+    
+    <!-- Section 1 : Vue d'ensemble -->
+    <div class="help-section">
+        <h2>🎯 Qu'est-ce qu'un Workflow Personnalisé ?</h2>
+        
+        <p style="font-size: 1.1rem; line-height: 1.8;">
+            Un <strong>workflow personnalisé</strong> est un circuit de validation configurable qui définit <strong>qui doit valider quoi</strong> dans votre organisation.
+        </p>
+        
+        <div class="success-box">
+            <strong>✅ Avantage principal :</strong> Vous créez des circuits qui correspondent exactement à vos processus métier réels, sans être limité par une hiérarchie organisationnelle fixe.
+        </div>
+        
+        <h3>Les 3 Composants Essentiels</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
+            <div class="step-box">
+                <div class="step-number">1</div>
+                <strong>Rôles Personnalisés</strong>
+                <p style="margin: 0.5rem 0; color: #666;">
+                    Des fonctions que vous définissez (ex: Responsable Budget, Expert IT, Contrôleur)
+                </p>
+            </div>
+            
+            <div class="step-box">
+                <div class="step-number">2</div>
+                <strong>Templates de Workflow</strong>
+                <p style="margin: 0.5rem 0; color: #666;">
+                    Des circuits réutilisables composés de plusieurs rôles dans un ordre précis
+                </p>
+            </div>
+            
+            <div class="step-box">
+                <div class="step-number">3</div>
+                <strong>Types de Demandes</strong>
+                <p style="margin: 0.5rem 0; color: #666;">
+                    Des formulaires associés à un template (ex: Demande de Matériel → Circuit Simple)
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section 2 : Exemple Complet -->
+    <div class="help-section">
+        <h2>📝 Exemple Complet : Validation d'un Achat</h2>
+        
+        <div class="exemple-box">
+            <strong>Scénario :</strong> Vous voulez créer un circuit pour valider les demandes d'achat de matériel informatique.
+        </div>
+        
+        <h3>Étape 1 : Créer les Rôles</h3>
+        
+        <p>Allez dans l'onglet <strong>👥 Rôles Personnalisés</strong> et créez :</p>
+        
+        <table class="table-help">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Libellé</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code class="code-inline">EXPERT_IT</code></td>
+                    <td>Expert Informatique</td>
+                    <td>Vérifie la faisabilité technique</td>
+                </tr>
+                <tr>
+                    <td><code class="code-inline">RESP_BUDGET</code></td>
+                    <td>Responsable Budget</td>
+                    <td>Vérifie la disponibilité budgétaire</td>
+                </tr>
+                <tr>
+                    <td><code class="code-inline">DIRECTEUR_GENERAL</code></td>
+                    <td>Directeur Général</td>
+                    <td>Approbation finale</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h3>Étape 2 : Attribuer les Rôles aux Agents</h3>
+        
+        <p>Pour chaque rôle créé, cliquez sur <strong>➕ Attribuer</strong> et sélectionnez l'agent :</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0;">
+            <div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">👨‍💻</div>
+                <strong>Jean KOUASSI</strong>
+                <div style="color: #666; font-size: 0.9rem;">← EXPERT_IT</div>
+            </div>
+            <div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">💰</div>
+                <strong>Marie DIALLO</strong>
+                <div style="color: #666; font-size: 0.9rem;">← RESP_BUDGET</div>
+            </div>
+            <div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">👔</div>
+                <strong>Paul BAMBA</strong>
+                <div style="color: #666; font-size: 0.9rem;">← DIRECTEUR_GENERAL</div>
+            </div>
+        </div>
+        
+        <h3>Étape 3 : Créer le Template</h3>
+        
+        <p>Allez dans l'onglet <strong>📋 Templates de Workflows</strong> et cliquez <strong>➕ Créer un Template</strong> :</p>
+        
+        <div class="schema-box">
+Code : CIRCUIT_ACHAT_IT
+Nom : Circuit d'Achat Matériel IT
+Direction : Ascendant (Agent → Hiérarchie)
+
+📋 Circuit de Validation :
+
+┌────────────────────────────────────────────────┐
+│  1  Expert Informatique      [⬇️] [✖️]         │
+├────────────────────────────────────────────────┤
+│  2  Responsable Budget       [⬆️] [⬇️] [✖️]    │
+├────────────────────────────────────────────────┤
+│  3  Directeur Général        [⬆️] [✖️]         │
+└────────────────────────────────────────────────┘
+
+👥 Rôles Disponibles :
+[➕ Expert Informatique] [➕ Responsable Budget] [➕ Directeur Général]
+        </div>
+        
+        <h3>Étape 4 : Créer le Type de Demande</h3>
+        
+        <p>Allez dans l'onglet <strong>📝 Types de Demandes</strong> et créez :</p>
+        
+        <div class="schema-box">
+Code : DEMANDE_MATERIEL_IT
+Libellé : Demande de Matériel Informatique
+Template : Circuit d'Achat Matériel IT
+Catégorie : Informatique
+        </div>
+        
+        <h3>Résultat Final</h3>
+        
+        <div class="flow-diagram">
+            <div class="flow-step">Sophie<br><small>Demandeur</small></div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">Jean<br><small>Expert IT</small></div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">Marie<br><small>Resp Budget</small></div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">Paul<br><small>DG</small></div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step" style="background: #28a745;">✅<br><small>Archivé</small></div>
+        </div>
+    </div>
+    
+    <!-- Section 3 : Fonctionnement Technique -->
+    <div class="help-section">
+        <h2>⚙️ Comment Ça Fonctionne ?</h2>
+        
+        <h3>1. Création d'une Demande</h3>
+        
+        <div class="schema-box">
+Sophie (Agent) → RH → Nouvelle Demande
+                ↓
+          Choisit "Demande de Matériel IT"
+                ↓
+          Remplit le formulaire
+                ↓
+          Soumet la demande
+                ↓
+        État : SUBMITTED
+        Assigné à : Expert IT (Jean KOUASSI)
+        </div>
+        
+        <h3>2. Comment le Système Sait Qui Doit Valider ?</h3>
+        
+        <div class="step-box" style="margin: 1rem 0;">
+            <div class="step-number">1</div>
+            <strong>Le système récupère le template</strong>
+            <p style="margin: 0.5rem 0 0 3rem; color: #666;">
+                Type DEMANDE_MATERIEL_IT → Template CIRCUIT_ACHAT_IT
+            </p>
+        </div>
+        
+        <div class="step-box" style="margin: 1rem 0;">
+            <div class="step-number">2</div>
+            <strong>Le système lit les étapes du template</strong>
+            <p style="margin: 0.5rem 0 0 3rem; color: #666;">
+                Étape 1 : EXPERT_IT<br>
+                Étape 2 : RESP_BUDGET<br>
+                Étape 3 : DIRECTEUR_GENERAL
+            </p>
+        </div>
+        
+        <div class="step-box" style="margin: 1rem 0;">
+            <div class="step-number">3</div>
+            <strong>Le système cherche qui a le rôle EXPERT_IT</strong>
+            <p style="margin: 0.5rem 0 0 3rem; color: #666;">
+                Rôle EXPERT_IT → Attribué à Jean KOUASSI (ID: 15)
+            </p>
+        </div>
+        
+        <div class="step-box" style="margin: 1rem 0;">
+            <div class="step-number">4</div>
+            <strong>La demande est assignée à Jean</strong>
+            <p style="margin: 0.5rem 0 0 3rem; color: #666;">
+                Jean voit la demande dans son dashboard<br>
+                Seul Jean peut valider cette étape
+            </p>
+        </div>
+        
+        <h3>3. Contrôle d'Accès</h3>
+        
+        <div class="warning-box">
+            <strong>⚠️ Sécurité :</strong> Seul l'agent ayant le rôle de l'étape actuelle peut valider.
+            Si quelqu'un d'autre essaie → <strong>REFUS</strong> avec message d'erreur.
+        </div>
+        
+        <div class="schema-box">
+Exemple : Marie essaie de valider à la place de Jean
+
+Marie clique "Valider"
+        ↓
+Système vérifie :
+  - Agent de Marie : ID 8
+  - Agent attendu (EXPERT_IT) : ID 15 (Jean)
+  - 8 ≠ 15 → ❌ REFUS
+        ↓
+Message affiché :
+"❌ Vous n'êtes pas autorisé.
+ Cette action doit être effectuée par : Jean KOUASSI"
+        </div>
+    </div>
+    
+    <!-- Section 4 : Guide Pas à Pas -->
+    <div class="help-section">
+        <h2>🚀 Guide Pas à Pas : Créer Votre Premier Workflow</h2>
+        
+        <h3>Scénario : Circuit de Validation Simple</h3>
+        
+        <p>Objectif : <em>Toute demande passe par le Chef de Service puis le Directeur</em></p>
+        
+        <div style="background: #f8f9fa; padding: 2rem; border-radius: 8px; margin: 1.5rem 0;">
+            
+            <h4 style="color: var(--primary-color); margin-top: 0;">📌 Étape 1 : Créer les Rôles</h4>
+            
+            <ol style="line-height: 2;">
+                <li>Cliquez sur l'onglet <strong>👥 Rôles Personnalisés</strong></li>
+                <li>Cliquez sur <strong>➕ Créer un Rôle</strong></li>
+                <li>Remplissez :
+                    <ul>
+                        <li>Code : <code class="code-inline">CHEF_SERVICE</code></li>
+                        <li>Libellé : <code class="code-inline">Chef de Service</code></li>
+                        <li>Description : <code class="code-inline">Valide les demandes de son service</code></li>
+                    </ul>
+                </li>
+                <li>Cliquez <strong>Enregistrer</strong></li>
+                <li>Répétez pour créer le rôle <code class="code-inline">DIRECTEUR</code></li>
+            </ol>
+            
+            <h4 style="color: var(--primary-color);">📌 Étape 2 : Attribuer les Rôles</h4>
+            
+            <ol style="line-height: 2;">
+                <li>Sur la carte du rôle <strong>CHEF_SERVICE</strong>, cliquez <strong>➕ Attribuer</strong></li>
+                <li>Sélectionnez l'agent dans la liste (ex: Jean KOUASSI)</li>
+                <li>Cliquez <strong>Attribuer</strong></li>
+                <li>Vous verrez : <span style="color: #28a745;">✓ Attribué à Jean KOUASSI</span></li>
+                <li>Répétez pour <strong>DIRECTEUR</strong> → Attribuez à Marie DIALLO</li>
+            </ol>
+            
+            <h4 style="color: var(--primary-color);">📌 Étape 3 : Créer le Template</h4>
+            
+            <ol style="line-height: 2;">
+                <li>Cliquez sur l'onglet <strong>📋 Templates de Workflows</strong></li>
+                <li>Cliquez <strong>➕ Créer un Template</strong></li>
+                <li>Remplissez :
+                    <ul>
+                        <li>Code : <code class="code-inline">CIRCUIT_SIMPLE</code></li>
+                        <li>Nom : <code class="code-inline">Circuit Simple 2 Niveaux</code></li>
+                        <li>Direction : <strong>⬆️ Ascendant</strong></li>
+                    </ul>
+                </li>
+                <li>Dans <strong>👥 Rôles Disponibles</strong>, cliquez :
+                    <ul>
+                        <li>D'abord : <strong>➕ Chef de Service</strong> (devient étape 1)</li>
+                        <li>Ensuite : <strong>➕ Directeur</strong> (devient étape 2)</li>
+                    </ul>
+                </li>
+                <li>Vous verrez le circuit se construire :
+                    <div class="schema-box" style="margin-top: 0.5rem;">
+┌────────────────────────────────────────┐
+│  1  Chef de Service    [⬇️] [✖️]       │
+├────────────────────────────────────────┤
+│  2  Directeur          [⬆️] [✖️]       │
+└────────────────────────────────────────┘
+                    </div>
+                </li>
+                <li>Cliquez <strong>Enregistrer</strong></li>
+            </ol>
+            
+            <h4 style="color: var(--primary-color);">📌 Étape 4 : Créer le Type de Demande</h4>
+            
+            <ol style="line-height: 2;">
+                <li>Cliquez sur l'onglet <strong>📝 Types de Demandes</strong></li>
+                <li>Cliquez <strong>➕ Créer un Type de Demande</strong></li>
+                <li>Remplissez :
+                    <ul>
+                        <li>Code : <code class="code-inline">DEMANDE_FOURNITURE</code></li>
+                        <li>Libellé : <code class="code-inline">Demande de Fourniture</code></li>
+                        <li>Template : Sélectionnez <strong>Circuit Simple 2 Niveaux</strong></li>
+                        <li>Catégorie : <code class="code-inline">Logistique</code></li>
+                    </ul>
+                </li>
+                <li>Cliquez <strong>Enregistrer</strong></li>
+            </ol>
+            
+            <div class="success-box" style="margin-top: 1.5rem;">
+                <strong>🎉 C'est terminé !</strong><br>
+                Le type de demande est maintenant disponible pour tous les utilisateurs.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section 5 : Utilisation -->
+    <div class="help-section">
+        <h2>🎮 Utilisation par les Agents</h2>
+        
+        <h3>Créer une Demande</h3>
+        
+        <div class="flow-diagram" style="text-align: left;">
+            <div style="display: grid; grid-template-columns: 50px 1fr; gap: 1rem; align-items: start;">
+                <div style="text-align: center;">
+                    <div class="step-number">1</div>
+                </div>
+                <div>
+                    Sophie va dans <strong>RH → Nouvelle Demande</strong>
+                </div>
+                
+                <div style="text-align: center;">
+                    <div class="step-number">2</div>
+                </div>
+                <div>
+                    Elle choisit le type <strong>Demande de Fourniture</strong>
+                </div>
+                
+                <div style="text-align: center;">
+                    <div class="step-number">3</div>
+                </div>
+                <div>
+                    Elle remplit le formulaire et clique <strong>Soumettre</strong>
+                </div>
+                
+                <div style="text-align: center;">
+                    <div class="step-number">4</div>
+                </div>
+                <div>
+                    La demande est automatiquement assignée à <strong>Jean KOUASSI</strong> (Chef de Service)
+                </div>
+            </div>
+        </div>
+        
+        <h3>Validation</h3>
+        
+        <div class="schema-box">
+Jean se connecte
+    ↓
+Dashboard RH → "Demandes en attente"
+    ↓
+Voit la demande de Sophie
+    ↓
+Clique "Valider"
+    ↓
+✅ Demande passe à Marie (Directeur)
+    ↓
+Marie se connecte
+    ↓
+Voit la demande dans son dashboard
+    ↓
+Clique "Valider"
+    ↓
+✅ Demande ARCHIVÉE (terminée)
+        </div>
+    </div>
+    
+    <!-- Section 6 : Fonctionnalités Avancées -->
+    <div class="help-section">
+        <h2>🎨 Fonctionnalités Avancées</h2>
+        
+        <h3>Réorganiser l'Ordre des Étapes</h3>
+        
+        <p>Dans le builder de circuit, utilisez les boutons :</p>
+        
+        <ul style="line-height: 2;">
+            <li><strong>⬆️</strong> : Remonter l'étape (elle sera validée plus tôt)</li>
+            <li><strong>⬇️</strong> : Descendre l'étape (elle sera validée plus tard)</li>
+            <li><strong>✖️</strong> : Retirer l'étape du circuit</li>
+        </ul>
+        
+        <div class="exemple-box">
+            <strong>Exemple :</strong> Vous voulez que le Directeur valide AVANT le Responsable Budget ?<br>
+            → Cliquez sur ⬆️ à côté de "Directeur" pour le faire monter en position 1
+        </div>
+        
+        <h3>Attribution Temporaire (Intérim)</h3>
+        
+        <p>Lors de l'attribution d'un rôle, vous pouvez définir une <strong>date de fin</strong> :</p>
+        
+        <div class="schema-box">
+Scénario : Marie est en congé, Paul la remplace
+
+1. Aller sur le rôle RESP_BUDGET
+2. Cliquer "👥 Gérer"
+3. Cliquer "✖️ Révoquer" à côté de Marie
+4. Cliquer "➕ Ajouter une nouvelle attribution"
+5. Sélectionner Paul
+6. Date de fin : 2025-12-31
+7. Valider
+
+Résultat :
+- Paul a le rôle jusqu'au 31/12/2025
+- Après cette date, le rôle n'est plus attribué
+        </div>
+        
+        <h3>Plusieurs Agents pour un Même Rôle</h3>
+        
+        <p>Vous pouvez attribuer le même rôle à plusieurs agents :</p>
+        
+        <div class="exemple-box">
+            <strong>Cas d'usage :</strong> Comité de validation<br><br>
+            
+            Créer le rôle <code class="code-inline">MEMBRE_COMITE</code><br>
+            Attribuer à 3 personnes différentes<br>
+            Créer un template avec 3 étapes du même rôle<br><br>
+            
+            <strong>Résultat :</strong> Les 3 membres doivent valider successivement
+        </div>
+        
+        <h3>Gérer les Modifications</h3>
+        
+        <table class="table-help">
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Comment</th>
+                    <th>Effet</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Changer l'agent d'un rôle</strong></td>
+                    <td>Gérer → Révoquer → Attribuer à un autre</td>
+                    <td>Les nouvelles demandes iront au nouvel agent</td>
+                </tr>
+                <tr>
+                    <td><strong>Modifier un template</strong></td>
+                    <td>Cliquer ✏️ Éditer</td>
+                    <td>Ajouter/retirer des étapes, changer l'ordre</td>
+                </tr>
+                <tr>
+                    <td><strong>Désactiver un type</strong></td>
+                    <td>🗑️ Menu → Désactiver</td>
+                    <td>Plus disponible pour nouvelles demandes</td>
+                </tr>
+                <tr>
+                    <td><strong>Supprimer définitivement</strong></td>
+                    <td>🗑️ Menu → Supprimer définitivement</td>
+                    <td>Effacé de la base (irréversible)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Section 7 : Exemples de Circuits -->
+    <div class="help-section">
+        <h2>📊 Exemples de Circuits Courants</h2>
+        
+        <div style="display: grid; gap: 1.5rem;">
+            
+            <div style="border: 2px solid #3498db; border-radius: 8px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: #3498db;">🔹 Circuit Express (1 Niveau)</h4>
+                <p><strong>Usage :</strong> Demandes simples et rapides</p>
+                <div class="schema-box">
+Rôles : SUPERVISEUR
+Template : [SUPERVISEUR]
+Type : DEMANDE_PERMISSION
+
+Circuit : Agent → Superviseur → Archivé
+                </div>
+            </div>
+            
+            <div style="border: 2px solid #28a745; border-radius: 8px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: #28a745;">🔹 Circuit Standard (2-3 Niveaux)</h4>
+                <p><strong>Usage :</strong> Demandes courantes</p>
+                <div class="schema-box">
+Rôles : CHEF_SERVICE, SOUS_DIRECTEUR, DIRECTEUR
+Template : [CHEF_SERVICE, SOUS_DIRECTEUR, DIRECTEUR]
+Type : DEMANDE_MATERIEL
+
+Circuit : Agent → Chef → Sous-dir → Directeur → Archivé
+                </div>
+            </div>
+            
+            <div style="border: 2px solid #e74c3c; border-radius: 8px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: #e74c3c;">🔹 Circuit Expertise (Validation Technique)</h4>
+                <p><strong>Usage :</strong> Demandes nécessitant un avis technique</p>
+                <div class="schema-box">
+Rôles : EXPERT_TECHNIQUE, RESP_BUDGET, DIRECTEUR
+Template : [EXPERT_TECHNIQUE, RESP_BUDGET, DIRECTEUR]
+Type : DEMANDE_PROJET
+
+Circuit : Agent → Expert → Resp Budget → Directeur → Archivé
+                </div>
+            </div>
+            
+            <div style="border: 2px solid #9b59b6; border-radius: 8px; padding: 1.5rem;">
+                <h4 style="margin-top: 0; color: #9b59b6;">🔹 Circuit Comité (Validation Collégiale)</h4>
+                <p><strong>Usage :</strong> Décisions importantes</p>
+                <div class="schema-box">
+Rôles : MEMBRE_1, MEMBRE_2, MEMBRE_3, PRESIDENT
+Template : [MEMBRE_1, MEMBRE_2, MEMBRE_3, PRESIDENT]
+Type : DEMANDE_SENSIBLE
+
+Circuit : Agent → Membre 1 → Membre 2 → Membre 3 → Président → Archivé
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section 8 : Dépannage -->
+    <div class="help-section">
+        <h2>🔧 Dépannage Courant</h2>
+        
+        <h3>❌ Problème : "Le rôle n'est attribué à aucun agent"</h3>
+        <div class="warning-box">
+            <strong>Cause :</strong> Vous avez créé un rôle mais ne l'avez pas attribué à un agent.<br><br>
+            <strong>Solution :</strong>
+            <ol>
+                <li>Allez dans "Rôles Personnalisés"</li>
+                <li>Trouvez le rôle concerné</li>
+                <li>Cliquez "➕ Attribuer"</li>
+                <li>Sélectionnez un agent</li>
+            </ol>
+        </div>
+        
+        <h3>❌ Problème : "Vous n'êtes pas autorisé à valider"</h3>
+        <div class="warning-box">
+            <strong>Cause :</strong> Vous essayez de valider une demande qui n'est pas assignée à votre rôle.<br><br>
+            <strong>Solution :</strong> Seul l'agent ayant le rôle de l'étape actuelle peut valider. Vérifiez les attributions.
+        </div>
+        
+        <h3>❌ Problème : "Mon nouvel agent ne s'affiche pas"</h3>
+        <div class="warning-box">
+            <strong>Cause :</strong> Le modal ne recharge pas automatiquement la liste.<br><br>
+            <strong>Solution :</strong> Fermez et rouvrez le modal d'attribution.
+        </div>
+        
+        <h3>❌ Problème : "Le template ne contient pas d'étapes"</h3>
+        <div class="warning-box">
+            <strong>Cause :</strong> Vous avez créé un template sans ajouter de rôles.<br><br>
+            <strong>Solution :</strong> Éditez le template et ajoutez au moins un rôle au circuit.
+        </div>
+    </div>
+    
+    <!-- Section 9 : Schéma Complet -->
+    <div class="help-section">
+        <h2>🗺️ Schéma Complet du Système</h2>
+        
+        <div class="schema-box" style="font-size: 0.9rem;">
+┌─────────────────────────────────────────────────────────────┐
+│ 1. CONFIGURATION (Admin)                                     │
+└───────────────────────┬─────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Créer Rôles Personnalisés         │
+        │ - EXPERT_IT                       │
+        │ - RESP_BUDGET                     │
+        │ - DIRECTEUR                       │
+        └───────────────┬───────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Attribuer Rôles aux Agents        │
+        │ - EXPERT_IT → Jean                │
+        │ - RESP_BUDGET → Marie             │
+        │ - DIRECTEUR → Paul                │
+        └───────────────┬───────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Créer Template                    │
+        │ Circuit : EXPERT_IT →             │
+        │          RESP_BUDGET →            │
+        │          DIRECTEUR                │
+        └───────────────┬───────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Créer Type de Demande             │
+        │ DEMANDE_IT → Template créé        │
+        └───────────────┬───────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 2. UTILISATION (Agent)                                       │
+└───────────────────────┬─────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Sophie crée une DEMANDE_IT        │
+        │ État : SUBMITTED                  │
+        └───────────────┬───────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 3. SYSTÈME (Automatique)                                     │
+└───────────────────────┬─────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ HierarchyService détermine :      │
+        │ - Template de DEMANDE_IT          │
+        │ - Étape 1 = EXPERT_IT             │
+        │ - Qui a EXPERT_IT ? Jean          │
+        │ → Assigne à Jean                  │
+        └───────────────┬───────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 4. VALIDATION (Jean)                                         │
+└───────────────────────┬─────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Jean voit la demande              │
+        │ Clique "Valider"                  │
+        │ → Passe à Marie (RESP_BUDGET)     │
+        └───────────────┬───────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Marie valide                      │
+        │ → Passe à Paul (DIRECTEUR)        │
+        └───────────────┬───────────────────┘
+                        ↓
+        ┌───────────────────────────────────┐
+        │ Paul valide                       │
+        │ → ARCHIVÉ ✅                      │
+        └───────────────────────────────────┘
+        </div>
+    </div>
+    
+    <!-- Section 10 : Bonnes Pratiques -->
+    <div class="help-section">
+        <h2>💡 Bonnes Pratiques</h2>
+        
+        <div style="display: grid; gap: 1rem;">
+            <div class="success-box">
+                <strong>✅ Nommer clairement les rôles</strong><br>
+                Utilisez des noms explicites : <code class="code-inline">RESP_BUDGET</code> plutôt que <code class="code-inline">ROLE_1</code>
+            </div>
+            
+            <div class="success-box">
+                <strong>✅ Commencer simple</strong><br>
+                Créez d'abord des circuits courts (1-2 étapes) pour tester, puis complexifiez
+            </div>
+            
+            <div class="success-box">
+                <strong>✅ Documenter vos templates</strong><br>
+                Utilisez le champ "Description" pour expliquer quand utiliser chaque template
+            </div>
+            
+            <div class="success-box">
+                <strong>✅ Tester avant de déployer</strong><br>
+                Créez une demande de test et suivez tout le circuit pour vérifier
+            </div>
+            
+            <div class="success-box">
+                <strong>✅ Vérifier les attributions</strong><br>
+                Utilisez "👥 Gérer" pour voir qui a quels rôles
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section 11 : FAQ -->
+    <div class="help-section">
+        <h2>❓ Questions Fréquentes</h2>
+        
+        <div style="margin: 1.5rem 0;">
+            <h4 style="color: #333;">Q : Puis-je créer autant de rôles que je veux ?</h4>
+            <p style="margin-left: 1.5rem; color: #666;">
+                <strong>R :</strong> Oui ! Il n'y a aucune limitation. Créez autant de rôles que nécessaire pour vos processus.
+            </p>
+        </div>
+        
+        <div style="margin: 1.5rem 0;">
+            <h4 style="color: #333;">Q : Un agent peut-il avoir plusieurs rôles ?</h4>
+            <p style="margin-left: 1.5rem; color: #666;">
+                <strong>R :</strong> Oui ! Un même agent peut avoir plusieurs rôles différents (ex: EXPERT_IT + RESP_BUDGET).
+            </p>
+        </div>
+        
+        <div style="margin: 1.5rem 0;">
+            <h4 style="color: #333;">Q : Combien d'étapes maximum dans un circuit ?</h4>
+            <p style="margin-left: 1.5rem; color: #666;">
+                <strong>R :</strong> Actuellement 4 étapes maximum (VALIDATION_N1, N2, RH, SIGNATURE_DAF). Techniquement extensible si besoin.
+            </p>
+        </div>
+        
+        <div style="margin: 1.5rem 0;">
+            <h4 style="color: #333;">Q : Que se passe-t-il si un rôle n'est pas attribué ?</h4>
+            <p style="margin-left: 1.5rem; color: #666;">
+                <strong>R :</strong> La demande restera bloquée à cette étape. Assurez-vous que tous les rôles utilisés dans vos templates sont attribués.
+            </p>
+        </div>
+        
+        <div style="margin: 1.5rem 0;">
+            <h4 style="color: #333;">Q : Puis-je modifier un template déjà utilisé ?</h4>
+            <p style="margin-left: 1.5rem; color: #666;">
+                <strong>R :</strong> Oui, mais attention : les demandes en cours continueront avec l'ancien circuit. Seules les nouvelles demandes utiliseront le circuit modifié.
+            </p>
+        </div>
+        
+        <div style="margin: 1.5rem 0;">
+            <h4 style="color: #333;">Q : Comment savoir qui doit valider une demande ?</h4>
+            <p style="margin-left: 1.5rem; color: #666;">
+                <strong>R :</strong> Chaque utilisateur voit dans son dashboard RH les demandes qu'il doit valider. Le système filtre automatiquement selon les rôles attribués.
+            </p>
+        </div>
+    </div>
+    
+    <!-- Section 12 : Pour Aller Plus Loin -->
+    <div class="help-section">
+        <h2>📚 Pour Aller Plus Loin</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+                <h4 style="margin-top: 0;">📖 Documentation Technique</h4>
+                <p style="color: #666;">Consultez le fichier :</p>
+                <code class="code-inline">WORKFLOWS_PERSONNALISES_ARCHITECTURE.md</code>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+                <h4 style="margin-top: 0;">🎓 Guide d'Attribution</h4>
+                <p style="color: #666;">Pour comprendre les attributions :</p>
+                <code class="code-inline">GUIDE_ATTRIBUTION_ROLES.md</code>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px;">
+                <h4 style="margin-top: 0;">💬 Support</h4>
+                <p style="color: #666;">Besoin d'aide supplémentaire ?</p>
+                <p>Consultez les logs dans <code class="code-inline">logs/app.log</code></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bouton retour -->
+    <div style="text-align: center; margin: 2rem 0;">
+        <a href="{{ url_for('workflow_config_home') }}" class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem; text-decoration: none;">
+            ← Retour à la Configuration
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}
+

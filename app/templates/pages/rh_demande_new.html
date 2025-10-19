@@ -157,11 +157,27 @@
           <label for="type" class="required">Type de demande</label>
           <select name="type" id="type" required>
             <option value="">-- Sélectionnez un type --</option>
-            <option value="Congé">🏖️ Congé</option>
-            <option value="Permission">⏰ Permission</option>
-            <option value="Formation">📚 Formation</option>
-            <option value="Besoin d'acte administratif">📄 Besoin d'acte administratif</option>
+            
+            {% if types_by_category %}
+              {% for categorie, types in types_by_category.items() %}
+                <optgroup label="📁 {{ categorie }}">
+                  {% for rt in types %}
+                    <option value="{{ rt.code }}">{{ rt.icone or '📄' }} {{ rt.libelle }}</option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+            {% else %}
+              <option value="" disabled style="color: #999;">Aucun type de demande configuré</option>
+              <option value="" disabled style="color: #666;">→ Configurez d'abord des types dans "Configuration Workflows"</option>
+            {% endif %}
           </select>
+          
+          {% if not types_by_category %}
+            <small style="color: #e74c3c; display: block; margin-top: 0.5rem;">
+              ⚠️ Aucun type de demande n'est configuré. 
+              <a href="{{ url_for('workflow_config_home') }}" target="_blank" style="color: #0066cc;">Configurez-en ici</a>
+            </small>
+          {% endif %}
         </div>
 
         <div class="form-group-premium" style="grid-column: 1 / -1;">

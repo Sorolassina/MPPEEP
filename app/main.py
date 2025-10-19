@@ -38,18 +38,20 @@ async def startup_event():
         initialize_database()
         logger.info("✅ Initialisation de la base terminée avec succès")
         
-        # Initialisation du système RH
-        logger.info("👥 Initialisation du système RH...")
-        from app.core.logique_metier.rh_workflow import ensure_workflow_steps
-        from app.db.session import get_session
-        session = next(get_session())
-        try:
-            ensure_workflow_steps(session)
-            logger.info("✅ Système RH initialisé avec succès")
-        except Exception as rh_error:
-            logger.warning(f"⚠️  Erreur initialisation RH: {rh_error}")
-        finally:
-            session.close()
+        # Initialisation du système RH (désactivé - utiliser workflows personnalisés)
+        # logger.info("👥 Initialisation du système RH...")
+        # from app.core.logique_metier.rh_workflow import ensure_workflow_steps
+        # from app.db.session import get_session
+        # session = next(get_session())
+        # try:
+        #     ensure_workflow_steps(session)
+        #     logger.info("✅ Système RH initialisé avec succès")
+        # except Exception as rh_error:
+        #     logger.warning(f"⚠️  Erreur initialisation RH: {rh_error}")
+        # finally:
+        #     session.close()
+        
+        logger.info("✅ Système RH : Workflows personnalisés activés")
          
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'initialisation: {e}", exc_info=True)

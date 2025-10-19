@@ -70,6 +70,24 @@ def workflow_config_home(
     )
 
 
+@router.get("/aide", response_class=HTMLResponse, name="workflow_help")
+def workflow_help(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    """
+    Page d'aide pour comprendre le système de workflows
+    """
+    # Vérifier que l'utilisateur est admin
+    if current_user.type_user != "admin":
+        raise HTTPException(403, "Accès réservé aux administrateurs")
+    
+    return templates.TemplateResponse(
+        "pages/workflow_aide.html",
+        get_template_context(request)
+    )
+
+
 # ═══════════════════════════════════════════════════════════
 # API - TEMPLATES
 # ═══════════════════════════════════════════════════════════
@@ -107,6 +125,7 @@ async def create_workflow_template(
                 template_id=template.id,
                 role_type=WorkflowRoleType(step_data.get('role_type')),
                 order_index=step_data.get('order_index'),
+                custom_role_name=step_data.get('custom_role_name'),
                 obligatoire=True,
                 peut_rejeter=True,
                 user_id=current_user.id
@@ -228,9 +247,6 @@ async def update_workflow_template(
         if not template:
             raise ValueError("Template introuvable")
         
-        if template.est_systeme:
-            raise ValueError("Impossible de modifier un template système")
-        
         # Mettre à jour les champs
         template.nom = data.get('nom', template.nom)
         template.description = data.get('description', template.description)
@@ -256,6 +272,7 @@ async def update_workflow_template(
                 template_id=template_id,
                 role_type=WorkflowRoleType(step_data.get('role_type')),
                 order_index=step_data.get('order_index'),
+                custom_role_name=step_data.get('custom_role_name'),
                 obligatoire=True,
                 peut_rejeter=True
             )
@@ -413,10 +430,6 @@ async def update_request_type(
         if not request_type:
             raise HTTPException(404, "Type de demande introuvable")
         
-        # Ne pas permettre de modifier les types système
-        if request_type.est_systeme:
-            raise HTTPException(403, "Les types système ne peuvent pas être modifiés")
-        
         # Mettre à jour les champs
         if 'code' in data:
             request_type.code = data['code']
@@ -464,10 +477,6 @@ async def delete_request_type(
         request_type = session.get(RequestTypeCustom, request_type_id)
         if not request_type:
             raise HTTPException(404, "Type de demande introuvable")
-        
-        # Ne pas permettre de supprimer les types système
-        if request_type.est_systeme:
-            raise HTTPException(403, "Les types système ne peuvent pas être supprimés")
         
         if permanent:
             # Suppression définitive
@@ -623,6 +632,46 @@ async def delete_custom_role(
         raise HTTPException(500, f"Erreur lors de la suppression : {str(e)}")
 
 
+@router.get("/api/custom-roles/{role_id}/assignments", name="api_get_role_assignments")
+def get_role_assignments(
+    role_id: int,
+    session: Session = Depends(get_session),
+    current_user=Depends(get_current_user)
+):
+    """Liste toutes les attributions actives d'un rôle"""
+    if current_user.type_user != "admin":
+        raise HTTPException(403, "Accès réservé aux administrateurs")
+    
+    try:
+        from app.models.workflow_config import CustomRoleAssignment
+        from app.models.personnel import AgentComplet
+        
+        assignments = session.exec(
+            select(CustomRoleAssignment)
+            .where(CustomRoleAssignment.custom_role_id == role_id)
+            .where(CustomRoleAssignment.actif == True)
+        ).all()
+        
+        result = []
+        for assign in assignments:
+            agent = session.get(AgentComplet, assign.agent_id)
+            if agent:
+                result.append({
+                    "assignment_id": assign.id,
+                    "agent_id": agent.id,
+                    "agent_nom": agent.nom,
+                    "agent_prenom": agent.prenom,
+                    "agent_fonction": agent.fonction,
+                    "date_debut": assign.date_debut.isoformat() if assign.date_debut else None,
+                    "date_fin": assign.date_fin.isoformat() if assign.date_fin else None
+                })
+        
+        return result
+    
+    except Exception as e:
+        raise HTTPException(500, f"Erreur lors de la récupération : {str(e)}")
+
+
 @router.post("/api/custom-roles/{role_id}/assign", name="api_assign_custom_role")
 async def assign_custom_role(
     role_id: int,
@@ -651,6 +700,35 @@ async def assign_custom_role(
         raise HTTPException(400, str(e))
     except Exception as e:
         raise HTTPException(500, f"Erreur lors de l'attribution : {str(e)}")
+
+
+@router.delete("/api/custom-roles/assignments/{assignment_id}", name="api_revoke_role_assignment")
+async def revoke_role_assignment(
+    assignment_id: int,
+    session: Session = Depends(get_session),
+    current_user=Depends(get_current_user)
+):
+    """Révoque une attribution de rôle (désactive)"""
+    if current_user.type_user != "admin":
+        raise HTTPException(403, "Accès réservé aux administrateurs")
+    
+    try:
+        from app.models.workflow_config import CustomRoleAssignment
+        
+        assignment = session.get(CustomRoleAssignment, assignment_id)
+        if not assignment:
+            raise HTTPException(404, "Attribution introuvable")
+        
+        assignment.actif = False
+        session.add(assignment)
+        session.commit()
+        
+        return {"ok": True, "message": "Attribution révoquée avec succès"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Erreur lors de la révocation : {str(e)}")
 
 
 # ═══════════════════════════════════════════════════════════

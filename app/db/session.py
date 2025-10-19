@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Session, create_engine
-from app.core.logique_metier.rh_workflow import ensure_workflow_steps
+# from app.core.logique_metier.rh_workflow import ensure_workflow_steps  # ← Ancien système désactivé
 from app.core.config import settings
 
 # Utilise la propriété database_url qui bascule automatiquement selon l'environnement
@@ -10,7 +10,7 @@ def init_db() -> None:
 
 def get_session():
     with Session(engine) as session:
-        ensure_workflow_steps(session)
+        # ensure_workflow_steps(session)  # ← Ancien système désactivé - Utiliser les workflows personnalisés
         yield session
 
 

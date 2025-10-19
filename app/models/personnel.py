@@ -26,6 +26,10 @@ class Programme(SQLModel, table=True):
     libelle: str = Field(max_length=200)
     description: Optional[str] = None
     actif: bool = True
+    
+    # Responsable du programme (optionnel)
+    responsable_id: Optional[int] = Field(default=None, foreign_key="agent_complet.id")
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

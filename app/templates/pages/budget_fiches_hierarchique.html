@@ -318,7 +318,7 @@ function exporterExcel(ficheId) {
   
   // Créer un lien temporaire pour le téléchargement
   const link = document.createElement('a');
-  link.href = "{{ url_for('api_exporter_fiche_excel', fiche_id=0) }}".replace('/0', `/${ficheId}`);
+  link.href = "{{ url_for('api_export_fiche_excel', fiche_id=0) }}".replace('/0', `/${ficheId}`);
   link.download = '';
   document.body.appendChild(link);
   link.click();
@@ -335,7 +335,7 @@ function exporterPDF(ficheId) {
   
   // Créer un lien temporaire pour le téléchargement
   const link = document.createElement('a');
-  link.href = "{{ url_for('api_exporter_fiche_pdf', fiche_id=0) }}".replace('/0', `/${ficheId}`);
+  link.href = "{{ url_for('api_export_fiche_pdf', fiche_id=0) }}".replace('/0', `/${ficheId}`);
   link.download = '';
   document.body.appendChild(link);
   link.click();
@@ -399,7 +399,7 @@ async function handleUploadDocumentFiche(event) {
   showGlobalLoading('Upload...', 'Upload du document en cours');
   
   try {
-    const response = await fetch("{{ url_for('api_ajouter_document_fiche', fiche_id=0) }}".replace('/0', `/${ficheId}`), {
+    const response = await fetch("{{ url_for('api_upload_document', fiche_id=0) }}".replace('/0', `/${ficheId}`), {
       method: 'POST',
       body: formData
     });
@@ -424,7 +424,7 @@ async function handleUploadDocumentFiche(event) {
 }
 
 function telechargerDocument(ficheId, documentId) {
-  window.open("{{ url_for('api_telecharger_document_fiche', fiche_id=0, document_id=0) }}".replace('/0/documents/0', `/${ficheId}/documents/${documentId}`), '_blank');
+  window.open("{{ url_for('api_download_document_fiche', fiche_id=0, document_id=0) }}".replace('/0/documents/0', `/${ficheId}/documents/${documentId}`), '_blank');
 }
 
 async function supprimerDocumentFiche(ficheId, documentId) {
@@ -433,7 +433,7 @@ async function supprimerDocumentFiche(ficheId, documentId) {
   showGlobalLoading('Suppression...', 'Suppression du document');
   
   try {
-    const response = await fetch("{{ url_for('api_supprimer_document_fiche', fiche_id=0, document_id=0) }}".replace('/0/documents/0', `/${ficheId}/documents/${documentId}`), {
+    const response = await fetch("{{ url_for('api_delete_document_fiche', fiche_id=0, document_id=0) }}".replace('/0/documents/0', `/${ficheId}/documents/${documentId}`), {
       method: 'DELETE'
     });
     
@@ -460,7 +460,7 @@ async function supprimerFiche(ficheId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch("{{ url_for('api_supprimer_fiche', fiche_id=0) }}".replace('/0', `/${ficheId}`), {
+    const response = await fetch("{{ url_for('api_delete_fiche', fiche_id=0) }}".replace('/0', `/${ficheId}`), {
       method: 'DELETE'
     });
     

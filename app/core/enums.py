@@ -30,10 +30,12 @@ class ActeAdministratifType(str, Enum):
 class WorkflowState(str, Enum):
     DRAFT = "Brouillon"                      # brouillon (agent)
     SUBMITTED = "Soumis"                     # soumis
-    VALIDATION_N1 = "Validation N1"          # chef service / hiérarchie 1
-    VALIDATION_N2 = "Validation N2"          # chef direction / hiérarchie 2
-    VALIDATION_DRH = "Validation DRH"        # DRH
-    SIGNATURE_DAF = "Signature DAF"          # Directeur administratif et financier
+    VALIDATION_N1 = "Validation N+1"         # Validation niveau 1
+    VALIDATION_N2 = "Validation N+2"         # Validation niveau 2
+    VALIDATION_N3 = "Validation N+3"         # Validation niveau 3
+    VALIDATION_N4 = "Validation N+4"         # Validation niveau 4
+    VALIDATION_N5 = "Validation N+5"         # Validation niveau 5
+    VALIDATION_N6 = "Validation N+6"         # Validation niveau 6
     ARCHIVED = "Archivé"                     # Archivé (terminé)
     REJECTED = "Rejeté"                      # Rejeté
 

@@ -88,9 +88,6 @@ class WorkflowConfigService:
         if not template:
             raise ValueError("Template introuvable")
         
-        if template.est_systeme:
-            raise ValueError("Impossible de modifier un template système")
-        
         step = WorkflowTemplateStep(
             template_id=template_id,
             order_index=order_index,
@@ -132,9 +129,6 @@ class WorkflowConfigService:
         if not template:
             raise ValueError("Template introuvable")
         
-        if template.est_systeme:
-            raise ValueError("Impossible de supprimer un template système")
-        
         # Vérifier qu'aucun type de demande n'utilise ce template
         types_utilisant = session.exec(
             select(RequestTypeCustom)
@@ -163,9 +157,6 @@ class WorkflowConfigService:
         template = session.get(WorkflowTemplate, template_id)
         if not template:
             raise ValueError("Template introuvable")
-        
-        if template.est_systeme:
-            raise ValueError("Impossible de supprimer définitivement un template système")
         
         # Vérifier qu'aucun type de demande n'utilise ce template (actif OU inactif)
         types_utilisant = session.exec(

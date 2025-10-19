@@ -517,7 +517,7 @@ async function handleUpload(event) {
   
   try {
     // Étape 1 : Prévisualisation
-    const response = await fetch("{{ url_for('api_preview_sigobe') }}", {
+    const response = await fetch("{{ url_for('api_sigobe_preview') }}", {
       method: 'POST',
       body: formData
     });
@@ -682,7 +682,7 @@ async function confirmerImport() {
   const formData = new FormData(document.getElementById('formUpload'));
   
   try {
-    const response = await fetch("{{ url_for('api_upload_sigobe') }}", {
+    const response = await fetch("{{ url_for('api_sigobe_upload') }}", {
       method: 'POST',
       body: formData
     });
@@ -711,7 +711,7 @@ async function supprimerChargement(id) {
   showGlobalLoading('Suppression...', 'Suppression du chargement et de ses données');
   
   try {
-    const response = await fetch("{{ url_for('api_delete_sigobe_chargement', chargement_id=0) }}".replace('/0', `/${id}`), {
+    const response = await fetch("{{ url_for('api_delete_sigobe', chargement_id=0) }}".replace('/0', `/${id}`), {
       method: 'DELETE'
     });
     

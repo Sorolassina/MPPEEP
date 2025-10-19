@@ -127,26 +127,11 @@
       </div>
     </div>
     
-    <!-- Circuit - En attente par étape -->
+    <!-- Circuit - En attente par état (dynamique) -->
     <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #000000;">🔄 Circuit de Validation</h3>
-    <div class="kpis">
-      <div class="kpi">
-        <div class="label">⏳ Attente N+1</div>
-        <div class="val" id="kpi-attente-n1">—</div>
-      </div>
-      <div class="kpi">
-        <div class="label">⏳ Attente N+2</div>
-        <div class="val" id="kpi-attente-n2">—</div>
-      </div>
-      <div class="kpi">
-        <div class="label">⏳ Attente DRH</div>
-        <div class="val" id="kpi-attente-drh">—</div>
-      </div>
-      <div class="kpi">
-        <div class="label">⏳ Attente DAF</div>
-        <div class="val" id="kpi-attente-daf">—</div>
-      </div>
-      </div>
+    <div class="kpis" id="kpis-etats">
+      <!-- Sera peuplé dynamiquement -->
+    </div>
 
     </div>
 
@@ -196,7 +181,7 @@
         {% for d in demandes %}
         <tr>
           <td><strong>#{{ d.id }}</strong></td>
-          <td><span class="badge-type">{{ d.type.value }}</span></td>
+          <td><span class="badge-type">{{ d.type }}</span></td>
           <td>
             {{ d.objet }}
             {% if d.document_joint %}<span title="Document joint">📎</span>{% endif %}
@@ -290,11 +275,28 @@ async function getJSON(url){
     document.getElementById('kpi-demandes-archivees').textContent = k.demandes_archivees ?? 0;
     document.getElementById('kpi-taux-traitement').textContent = `${k.taux_traitement ?? 0}%`;
     
-    // Circuit - En attente par étape
-    document.getElementById('kpi-attente-n1').textContent = k.en_attente_n1 ?? 0;
-    document.getElementById('kpi-attente-n2').textContent = k.en_attente_n2 ?? 0;
-    document.getElementById('kpi-attente-drh').textContent = k.en_attente_drh ?? 0;
-    document.getElementById('kpi-attente-daf').textContent = k.en_attente_daf ?? 0;
+    // Circuit - En attente par état (dynamique)
+    const kpisEtatsContainer = document.getElementById('kpis-etats');
+    kpisEtatsContainer.innerHTML = ''; // Vider
+    
+    if (k.demandes_par_etat && Object.keys(k.demandes_par_etat).length > 0) {
+      // Filtrer pour ne garder que les états de validation en attente
+      const etatsValidation = ['Validation N+1', 'Validation N+2', 'Validation N+3', 'Validation N+4', 'Validation N+5', 'Validation N+6', 'Soumis'];
+      
+      Object.entries(k.demandes_par_etat).forEach(([etat, count]) => {
+        if (etatsValidation.includes(etat)) {
+          const kpiDiv = document.createElement('div');
+          kpiDiv.className = 'kpi';
+          kpiDiv.innerHTML = `
+            <div class="label">⏳ ${etat}</div>
+            <div class="val">${count}</div>
+          `;
+          kpisEtatsContainer.appendChild(kpiDiv);
+        }
+      });
+    } else {
+      kpisEtatsContainer.innerHTML = '<div style="color: #666; padding: 1rem;">Aucune demande en attente</div>';
+    }
 
   // Évolution
   const evo = await getJSON("{{ url_for('rh_home') }}api/evolution".replace(/\/$/, ""));

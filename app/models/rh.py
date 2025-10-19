@@ -58,7 +58,7 @@ class Agent(SQLModel, table=True):
 # --- Demandes (congés, permissions, formations, besoins d'acte) ---
 class HRRequestBase(SQLModel):
     """Base pour les demandes administratives"""
-    type: RequestType
+    type: str  # Code du type de demande (ex: 'DEMANDE_CONGE', 'DEMANDE_MATERIEL')
     objet: str
     motif: Optional[str] = None
     

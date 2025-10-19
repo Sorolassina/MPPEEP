@@ -269,11 +269,14 @@
 {% block content %}
 <body class="form-page-premium">
 {{ page_header(
-    title='📄 Demande #' + req.id|string + ' - ' + req.type.value,
+    title='📄 Demande #' + req.id|string + ' - ' + req.type,
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
         {'name': 'RH', 'url': url_for('rh_home')},
         {'name': 'Demande #' + req.id|string}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('rh_home'), 'primary': False}
     ]
 ) }}
 
@@ -285,7 +288,7 @@
     <div class="meta">
       <div class="meta-item">
         <span class="meta-label">Type de demande</span>
-        <span class="meta-value"><span class="badge">{{ req.type.value }}</span></span>
+        <span class="meta-value"><span class="badge">{{ req.type }}</span></span>
       </div>
       
       <div class="meta-item">
@@ -370,83 +373,116 @@
     </div>
   </div>
 
-  <!-- Circuit de validation complet -->
+  <!-- Circuit de validation complet (dynamique) -->
   <div class="card">
     <h3>🔄 Circuit de Validation Administratif</h3>
+    
+    {% if workflow_info and workflow_info.template_name %}
+    <p style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+      <strong>Template :</strong> {{ workflow_info.template_name }}
+    </p>
+    {% endif %}
+    
     <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
       Toutes les étapes du circuit sont <strong>obligatoires</strong>. La demande doit passer par l'ensemble du processus.
     </p>
     
     <div class="workflow-circuit">
-      <!-- Étape 1 : DRAFT -->
-      <div class="workflow-step {% if req.current_state == 'Brouillon' %}current{% elif req.current_state != 'Brouillon' %}completed{% else %}pending{% endif %}">
-        <span class="step-number">1</span>
-        <div class="step-info">
-          <div class="step-title">📝 Brouillon (DRAFT)</div>
-          <div class="step-role">Agent crée la demande</div>
+      {% if workflow_circuit %}
+        {# Trouver l'index de l'état actuel en comparant les valeurs (strings) #}
+        {% set current_index = -1 %}
+        {% for state in workflow_circuit %}
+          {% if state.value == req.current_state.value %}
+            {% set current_index = loop.index0 %}
+          {% endif %}
+        {% endfor %}
+        
+        {% for state in workflow_circuit %}
+          {% set loop_index = loop.index0 %}
+          {% set is_current = (req.current_state.value == state.value) %}
+          {% set is_completed = (loop_index < current_index) %}
+          {% set is_pending = (loop_index > current_index) %}
+          
+          <div class="workflow-step {% if is_current %}current{% elif is_completed %}completed{% else %}pending{% endif %}">
+            <span class="step-number">{{ loop.index }}</span>
+            <div class="step-info">
+              <div class="step-title">
+                {% if state.value == 'Brouillon' %}
+                  📝 Brouillon
+                {% elif state.value == 'Soumis' %}
+                  📤 Soumis
+                {% elif state.value == 'Archivé' %}
+                  📦 Archivé
+                {% elif state.value == 'Rejeté' %}
+                  ❌ Rejeté
+                {% elif workflow_info and workflow_info.steps and workflow_info.steps.get(state.value) %}
+                  👤 Validation : {{ workflow_info.steps.get(state.value).role_name }}
+                {% else %}
+                  👤 {{ state.value }}
+                {% endif %}
+              </div>
+              <div class="step-role">
+                {% if state.value == 'Brouillon' %}
+                  Agent crée la demande
+                {% elif state.value == 'Soumis' %}
+                  Demande soumise pour traitement
+                {% elif state.value == 'Archivé' %}
+                  Demande traitée et archivée
+                {% elif state.value == 'Rejeté' %}
+                  Demande rejetée
+                {% elif workflow_info and workflow_info.steps %}
+                  {% set step_info = workflow_info.steps.get(state.value) %}
+                  {% if step_info %}
+                    {% if step_info.validator_name %}
+                      Validateur : <strong>{{ step_info.validator_name }}</strong>
+                    {% else %}
+                      <span style="color: #dc3545;">⚠️ Aucun agent assigné à ce rôle</span>
+                    {% endif %}
+                  {% else %}
+                    {{ state.value }}
+                  {% endif %}
+                {% else %}
+                  {{ state.value }}
+                {% endif %}
+              </div>
+            </div>
+            <span class="step-icon"></span>
+          </div>
+        {% endfor %}
+        
+      {% else %}
+        <!-- Fallback : circuit minimal -->
+        <div class="workflow-step completed">
+          <span class="step-number">1</span>
+          <div class="step-info">
+            <div class="step-title">📝 Brouillon</div>
+            <div class="step-role">Agent crée la demande</div>
+          </div>
+          <span class="step-icon"></span>
         </div>
-        <span class="step-icon"></span>
-      </div>
-
-      <!-- Étape 2 : SUBMITTED -->
-      <div class="workflow-step {% if req.current_state == 'Soumis' %}current{% elif req.current_state not in ['Brouillon', 'Soumis'] %}completed{% else %}pending{% endif %}">
-        <span class="step-number">2</span>
-        <div class="step-info">
-          <div class="step-title">📤 Soumis (SUBMITTED)</div>
-          <div class="step-role">Demande soumise pour traitement</div>
+        
+        <div class="workflow-step current">
+          <span class="step-number">2</span>
+          <div class="step-info">
+            <div class="step-title">📤 Soumis</div>
+            <div class="step-role">Demande soumise</div>
+          </div>
+          <span class="step-icon"></span>
         </div>
-        <span class="step-icon"></span>
-      </div>
-
-      <!-- Étape 3 : VALIDATION_N1 -->
-      <div class="workflow-step {% if req.current_state == 'Validation N1' %}current{% elif req.current_state in ['Validation N2', 'Validation DRH', 'Signature DG', 'Signature DAF', 'Archivé'] %}completed{% else %}pending{% endif %}">
-        <span class="step-number">3</span>
-        <div class="step-info">
-          <div class="step-title">👤 Validation N+11</div>
-          <div class="step-role">Chef de service / Hiérarchie niveau 1</div>
+        
+        <div class="workflow-step pending">
+          <span class="step-number">3</span>
+          <div class="step-info">
+            <div class="step-title">📦 Archivé</div>
+            <div class="step-role">Demande archivée</div>
+          </div>
+          <span class="step-icon"></span>
         </div>
-        <span class="step-icon"></span>
-      </div>
-
-      <!-- Étape 4 : VALIDATION_N2 ⭐ OBLIGATOIRE -->
-      <div class="workflow-step {% if req.current_state == 'Validation N2' %}current{% elif req.current_state in ['Validation DRH', 'Signature DG', 'Signature DAF', 'Archivé'] %}completed{% else %}pending{% endif %}">
-        <span class="step-number">4</span>
-        <div class="step-info">
-          <div class="step-title">👥 Validation N+2 ⭐ OBLIGATOIRE</div>
-          <div class="step-role">Chef de direction / Hiérarchie niveau 2</div>
-        </div>
-        <span class="step-icon"></span>
-      </div>
-
-      <!-- Étape 5 : VALIDATION_DRH -->
-      <div class="workflow-step {% if req.current_state == 'Validation DRH' %}current{% elif req.current_state in ['Signature DG', 'Signature DAF', 'Archivé'] %}completed{% else %}pending{% endif %}">
-        <span class="step-number">5</span>
-        <div class="step-info">
-          <div class="step-title">🏢 Validation DRH</div>
-          <div class="step-role">Direction des Ressources Humaines</div>
-        </div>
-        <span class="step-icon"></span>
-      </div>
-
-      <!-- Étape 7 : SIGNATURE_DAF ⭐ OBLIGATOIRE -->
-      <div class="workflow-step {% if req.current_state == 'Signature DAF' %}current{% elif req.current_state == 'Archivé' %}completed{% else %}pending{% endif %}">
-        <span class="step-number">6</span>
-        <div class="step-info">
-          <div class="step-title">💼 Signature DAF ⭐ OBLIGATOIRE</div>
-          <div class="step-role">Directeur Administratif et Financier</div>
-        </div>
-        <span class="step-icon"></span>
-      </div>
-
-      <!-- Étape 8 : ARCHIVED -->
-      <div class="workflow-step {% if req.current_state == 'Archivé' %}completed{% else %}pending{% endif %}">
-        <span class="step-number">7</span>
-        <div class="step-info">
-          <div class="step-title">📦 Archivé</div>
-          <div class="step-role">Demande traitée et archivée</div>
-        </div>
-        <span class="step-icon"></span>
-      </div>
+        
+        <p style="color: #dc3545; margin-top: 1rem;">
+          ⚠️ Aucun template configuré pour ce type de demande.
+        </p>
+      {% endif %}
     </div>
 
     <!-- Actions possibles -->

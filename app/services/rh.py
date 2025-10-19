@@ -20,8 +20,9 @@ class RHService:
     # --- KPIs & Stats ---
     @staticmethod
     def kpis(session: Session) -> Dict[str, Any]:
-        total_agents = session.exec(select(func.count(Agent.id))).one()
-        actifs = session.exec(select(func.count(Agent.id)).where(Agent.actif == True)).one()
+        from app.models.personnel import AgentComplet
+        total_agents = session.exec(select(func.count(AgentComplet.id))).one()
+        actifs = session.exec(select(func.count(AgentComplet.id)).where(AgentComplet.actif == True)).one()
 
         # === STATISTIQUES DEMANDES ===
         
@@ -40,44 +41,68 @@ class RHService:
             select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.ARCHIVED)
         ).one()
         
-        # Demandes en attente par étape
-        en_attente_n1 = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.VALIDATION_N1)
+        # Demandes en attente par état (dynamique)
+        # Récupérer tous les états possibles et compter les demandes pour chacun
+        demandes_par_etat = {}
+        for state in WorkflowState:
+            count = session.exec(
+                select(func.count(HRRequest.id)).where(HRRequest.current_state == state)
+            ).one()
+            if count > 0:  # Ne garder que les états avec des demandes
+                demandes_par_etat[state.value] = count
+        
+        # Demandes par type (dynamique - depuis request_type_custom)
+        from app.models.workflow_config import RequestTypeCustom
+        
+        demandes_par_type = {}
+        request_types = session.exec(
+            select(RequestTypeCustom).where(RequestTypeCustom.actif == True)
+        ).all()
+        
+        for rt in request_types:
+            count = session.exec(
+                select(func.count(HRRequest.id)).where(HRRequest.type == rt.code)
+            ).one()
+            if count > 0:  # Ne garder que les types avec des demandes
+                demandes_par_type[rt.code] = {
+                    'count': count,
+                    'libelle': rt.libelle,
+                    'icone': rt.icone
+                }
+        
+        en_attente_n5 = session.exec(
+            select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.VALIDATION_N5)
         ).one()
         
-        en_attente_n2 = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.VALIDATION_N2)
+        en_attente_n6 = session.exec(
+            select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.VALIDATION_N6)
         ).one()
         
-        en_attente_drh = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.VALIDATION_DRH)
-        ).one()
-        
-        en_attente_daf = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.current_state == WorkflowState.SIGNATURE_DAF)
-        ).one()
-        
-        # Demandes par type
+        # Demandes par type (compatibilité avec anciens types)
         conges = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.type == RequestType.CONGE)
+            select(func.count(HRRequest.id)).where(HRRequest.type == 'CONGE')
         ).one()
         
         permissions = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.type == RequestType.PERMISSION)
+            select(func.count(HRRequest.id)).where(HRRequest.type == 'PERMISSION')
         ).one()
         
         formations = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.type == RequestType.FORMATION)
+            select(func.count(HRRequest.id)).where(HRRequest.type == 'FORMATION')
         ).one()
         
         besoins_actes = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.type == RequestType.BESOIN_ACTE)
+            select(func.count(HRRequest.id)).where(HRRequest.type == 'BESOIN_ACTE')
+        ).one()
+        
+        # Ajouter aussi les types personnalisés
+        d_acte_rh = session.exec(
+            select(func.count(HRRequest.id)).where(HRRequest.type == 'D-ACTE RH')
         ).one()
 
         # Satisfaction moyenne (sur besoins d'actes traités)
         sats = session.exec(
             select(func.avg(col(HRRequest.satisfaction_note))).where(
-                HRRequest.type == RequestType.BESOIN_ACTE,
                 HRRequest.satisfaction_note.is_not(None),
                 HRRequest.current_state == WorkflowState.ARCHIVED
             )
@@ -98,51 +123,55 @@ class RHService:
             "demandes_archivees": demandes_archivees,
             "taux_traitement": taux_traitement,
             
-            # Demandes en attente par étape du circuit
-            "en_attente_n1": en_attente_n1,
-            "en_attente_n2": en_attente_n2,
-            "en_attente_drh": en_attente_drh,
-            "en_attente_daf": en_attente_daf,
+            # Demandes par état (dynamique - tous les états)
+            "demandes_par_etat": demandes_par_etat,
             
-            # Demandes par type
+            # Demandes par type (dynamique - types personnalisés)
+            "demandes_par_type": demandes_par_type,
+            
+            # Types traditionnels (pour compatibilité)
             "conges": conges,
             "permissions": permissions,
             "formations": formations,
             "besoins_actes": besoins_actes,
+            "d_acte_rh": d_acte_rh,
             
-            # Satisfaction
-            "satisfaction_besoins_archives": satisfaction
+            # Satisfaction moyenne
+            "satisfaction_moyenne": satisfaction
         }
 
     @staticmethod
     def evolution_par_annee(session: Session) -> List[Dict[str, Any]]:
+        from app.models.personnel import AgentComplet
         # nombre d'agents recrutés par année
         rows = session.exec(
-            select(func.extract('year', Agent.date_recrutement).label("annee"),
-                   func.count(Agent.id))
-            .where(Agent.date_recrutement.is_not(None))
-            .group_by(func.extract('year', Agent.date_recrutement))
-            .order_by(func.extract('year', Agent.date_recrutement))
+            select(func.extract('year', AgentComplet.date_recrutement).label("annee"),
+                   func.count(AgentComplet.id))
+            .where(AgentComplet.date_recrutement.is_not(None))
+            .group_by(func.extract('year', AgentComplet.date_recrutement))
+            .order_by(func.extract('year', AgentComplet.date_recrutement))
         ).all()
         return [{"annee": int(a[0]), "effectif": int(a[1])} for a in rows]
 
     @staticmethod
     def repartition_par_grade(session: Session) -> List[Dict[str, Any]]:
+        from app.models.personnel import AgentComplet, GradeComplet
         rows = session.exec(
-            select(Grade.libelle, func.count(Agent.id))
-            .join(Agent, isouter=True)
-            .group_by(Grade.libelle)
-            .order_by(Grade.libelle)
+            select(GradeComplet.libelle, func.count(AgentComplet.id))
+            .join(AgentComplet, GradeComplet.id == AgentComplet.grade_id, isouter=True)
+            .group_by(GradeComplet.libelle)
+            .order_by(GradeComplet.libelle)
         ).all()
         return [{"grade": r[0], "nb": int(r[1])} for r in rows]
 
     @staticmethod
     def repartition_par_service(session: Session) -> List[Dict[str, Any]]:
+        from app.models.personnel import AgentComplet, Service
         rows = session.exec(
-            select(ServiceDept.libelle, func.count(Agent.id))
-            .join(Agent, isouter=True)
-            .group_by(ServiceDept.libelle)
-            .order_by(ServiceDept.libelle)
+            select(Service.libelle, func.count(AgentComplet.id))
+            .join(AgentComplet, Service.id == AgentComplet.service_id, isouter=True)
+            .group_by(Service.libelle)
+            .order_by(Service.libelle)
         ).all()
         return [{"service": r[0], "nb": int(r[1])} for r in rows]
 
@@ -150,10 +179,10 @@ class RHService:
     def satisfaction_besoins(session: Session) -> Dict[str, Any]:
         # ratio besoins "satisfaits" (archivés) vs "exprimés"
         exprimes = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.type == RequestType.BESOIN_ACTE)
+            select(func.count(HRRequest.id)).where(HRRequest.type == 'BESOIN_ACTE')
         ).one()
         satisfaits = session.exec(
-            select(func.count(HRRequest.id)).where(HRRequest.type == RequestType.BESOIN_ACTE,
+            select(func.count(HRRequest.id)).where(HRRequest.type == 'BESOIN_ACTE',
                                                    HRRequest.current_state == WorkflowState.ARCHIVED)
         ).one()
         taux = (satisfaits / exprimes * 100) if exprimes else 0
@@ -161,12 +190,35 @@ class RHService:
 
     # --- Workflow ---
     @staticmethod
-    def next_states_for(session: Session, req_type: RequestType, from_state: WorkflowState) -> List[WorkflowStep]:
-        return session.exec(
-            select(WorkflowStep)
-            .where(WorkflowStep.type == req_type, WorkflowStep.from_state == from_state)
-            .order_by(WorkflowStep.order_index)
-        ).all()
+    def next_states_for(session: Session, request_id: int) -> List[Dict]:
+        """
+        Retourne les prochains états possibles pour une demande
+        Basé sur le workflow personnalisé configuré
+        """
+        from app.services.hierarchy_service import HierarchyService
+        
+        request = session.get(HRRequest, request_id)
+        if not request:
+            return []
+        
+        # Récupérer le circuit complet
+        circuit = HierarchyService.get_workflow_circuit(session, request_id)
+        
+        try:
+            current_index = circuit.index(request.current_state)
+            if current_index < len(circuit) - 1:
+                next_state = circuit[current_index + 1]
+                
+                # Retourner sous forme compatible
+                return [{
+                    'to_state': next_state,
+                    'from_state': request.current_state,
+                    'type': request.type
+                }]
+        except ValueError:
+            return []
+        
+        return []
 
     @staticmethod
     def transition(session: Session, request_id: int, to_state: WorkflowState, acted_by_user_id: int,

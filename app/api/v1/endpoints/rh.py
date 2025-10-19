@@ -31,12 +31,22 @@ router = APIRouter()
 # ============================================
 
 @router.get("/", response_class=HTMLResponse, name="rh_home")
-def rh_home(request: Request, session: Session = Depends(get_session)):
+def rh_home(
+    request: Request, 
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """
     Page principale RH avec KPIs, graphiques et liste des demandes
+    Filtre les demandes selon les rôles personnalisés de l'utilisateur
     """
-    # Récupérer les 20 dernières demandes
-    demandes = session.exec(
+    from app.services.hierarchy_service import HierarchyService
+    
+    # Récupérer les demandes en attente de validation par l'utilisateur (nouvelle logique)
+    pending_requests = HierarchyService.get_pending_requests_for_user(session, current_user.id)
+    
+    # Récupérer aussi les 20 dernières demandes pour vue d'ensemble
+    all_demandes = session.exec(
         select(HRRequest)
         .order_by(HRRequest.created_at.desc())
         .limit(20)
@@ -44,21 +54,49 @@ def rh_home(request: Request, session: Session = Depends(get_session)):
     
     return templates.TemplateResponse(
         "pages/rh.html",
-        get_template_context(request, demandes=demandes, WorkflowState=WorkflowState)
+        get_template_context(
+            request, 
+            demandes=all_demandes,
+            pending_requests=pending_requests,
+            WorkflowState=WorkflowState
+        )
     )
 
 
 @router.get("/demandes/new", response_class=HTMLResponse, name="rh_new_demande")
-def rh_new_demande(request: Request):
+def rh_new_demande(
+    request: Request,
+    session: Session = Depends(get_session)
+):
     """
     Formulaire de création d'une nouvelle demande
+    Charge les types de demandes personnalisés depuis la configuration
     """
+    from app.models.workflow_config import RequestTypeCustom
+    
+    # Récupérer les types de demandes personnalisés actifs
+    request_types = session.exec(
+        select(RequestTypeCustom)
+        .where(RequestTypeCustom.actif == True)
+        .order_by(RequestTypeCustom.categorie, RequestTypeCustom.ordre_affichage)
+    ).all()
+    
+    # Grouper par catégorie pour un meilleur affichage
+    types_by_category = {}
+    for rt in request_types:
+        cat = rt.categorie or 'Autre'
+        if cat not in types_by_category:
+            types_by_category[cat] = []
+        types_by_category[cat].append(rt)
+    
     return templates.TemplateResponse(
         "pages/rh_demande_new.html",
         get_template_context(
             request,
-            RequestType=RequestType,
-            ActeAdministratifType=ActeAdministratifType
+            RequestType=RequestType,  # Garde pour compatibilité si utilisé ailleurs
+            ActeAdministratifType=ActeAdministratifType,
+            request_types_custom=request_types,
+            types_by_category=types_by_category
         )
     )
 
@@ -68,6 +106,8 @@ def rh_demande_detail(request: Request, request_id: int, session: Session = Depe
     """
     Détail d'une demande avec timeline et actions workflow
     """
+    from app.services.hierarchy_service import HierarchyService
+    
     req = session.get(HRRequest, request_id)
     if not req:
         raise HTTPException(404, "Demande introuvable")
@@ -79,8 +119,12 @@ def rh_demande_detail(request: Request, request_id: int, session: Session = Depe
         .order_by(WorkflowHistory.acted_at)
     ).all()
     
-    # Récupérer les prochaines étapes possibles
-    next_steps = RHService.next_states_for(session, req.type, req.current_state)
+    # Récupérer les prochaines étapes possibles (nouvelle logique)
+    next_steps = RHService.next_states_for(session, request_id)
+    
+    # Récupérer le circuit complet avec les validateurs
+    workflow_circuit = HierarchyService.get_workflow_circuit(session, request_id)
+    workflow_info = HierarchyService.get_workflow_info(session, request_id)
     
     return templates.TemplateResponse(
         "pages/rh_demande_detail.html",
@@ -89,6 +133,8 @@ def rh_demande_detail(request: Request, request_id: int, session: Session = Depe
             req=req,
             history=history,
             next_steps=next_steps,
+            workflow_circuit=workflow_circuit,
+            workflow_info=workflow_info,
             WorkflowState=WorkflowState
         )
     )
@@ -114,8 +160,20 @@ async def rh_create_demande(
     Gère l'upload de document et le type d'acte spécifique
     """
     try:
-        # Convertir le type en enum
-        request_type = RequestType(type)
+        from app.models.workflow_config import RequestTypeCustom
+        
+        # Vérifier que le type de demande existe et est actif
+        request_type_config = session.exec(
+            select(RequestTypeCustom)
+            .where(RequestTypeCustom.code == type)
+            .where(RequestTypeCustom.actif == True)
+        ).first()
+        
+        if not request_type_config:
+            raise HTTPException(400, f"Type de demande '{type}' introuvable ou inactif")
+        
+        # Utiliser directement le code (plus besoin d'enum)
+        request_type = type
         
         # Gérer l'upload de fichier
         document_path = None
@@ -187,13 +245,13 @@ async def rh_create_demande(
             user=current_user,
             action_type="create",
             target_type="demande_rh",
-            description=f"Création d'une demande RH - {req.type.value} : {objet}",
+            description=f"Création d'une demande RH - {req.type} : {objet}",
             target_id=req.id,
             icon="📝"
         )
         
-        # Récupérer les prochaines étapes
-        next_steps = RHService.next_states_for(session, req.type, req.current_state)
+        # Récupérer les prochaines étapes (nouvelle signature)
+        next_steps = RHService.next_states_for(session, req.id)
         
         # Rediriger vers la page de détail
         return templates.TemplateResponse(
@@ -473,7 +531,7 @@ def api_delete_demande(
         session.delete(entry)
     
     # Supprimer la demande
-    type_demande = req.type.value
+    type_demande = req.type
     objet_demande = req.objet
     session.delete(req)
     session.commit()

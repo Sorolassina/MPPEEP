@@ -235,7 +235,7 @@ def personnel_detail(
 def api_list_agents(
     session: Session = Depends(get_session),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=1000),
     search: Optional[str] = Query(None),
     actif: Optional[bool] = Query(None)
 ):
@@ -266,6 +266,7 @@ def api_list_agents(
             "nom": a.nom,
             "prenom": a.prenom,
             "email": a.email_professionnel,
+            "fonction": a.fonction,
             "actif": a.actif
         }
         for a in agents
@@ -412,6 +413,10 @@ async def api_create_agent(
         
         return {"ok": True, "agent_id": agent.id}
         
+    except HTTPException:
+        # Re-lancer les HTTPException (erreurs de validation) sans modification
+        session.rollback()
+        raise
     except Exception as e:
         session.rollback()
         logger.error(f"Erreur création agent: {e}")

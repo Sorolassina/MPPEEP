@@ -97,17 +97,29 @@ def referentiels_home(
 @router.get("/api/programmes", name="api_list_programmes_ref")
 def api_list_programmes_ref(session: Session = Depends(get_session)):
     """Liste tous les programmes"""
+    from app.models.personnel import AgentComplet
+    
     programmes = session.exec(select(Programme).order_by(Programme.code)).all()
-    return [
-        {
+    
+    result = []
+    for p in programmes:
+        responsable_nom = ""
+        if p.responsable_id:
+            responsable = session.get(AgentComplet, p.responsable_id)
+            if responsable:
+                responsable_nom = f"{responsable.nom} {responsable.prenom}"
+        
+        result.append({
             "id": p.id,
             "code": p.code,
             "libelle": p.libelle,
             "description": p.description,
+            "responsable_id": p.responsable_id,
+            "responsable_nom": responsable_nom,
             "actif": p.actif
-        }
-        for p in programmes
-    ]
+        })
+    
+    return result
 
 
 @router.post("/api/programmes", name="api_create_programme")
@@ -115,6 +127,7 @@ def api_create_programme(
     code: str = Form(...),
     libelle: str = Form(...),
     description: Optional[str] = Form(None),
+    responsable_id: Optional[int] = Form(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -124,7 +137,12 @@ def api_create_programme(
     if existing:
         raise HTTPException(400, f"Le code '{code}' existe déjà")
     
-    programme = Programme(code=code, libelle=libelle, description=description)
+    programme = Programme(
+        code=code, 
+        libelle=libelle, 
+        description=description,
+        responsable_id=responsable_id if responsable_id else None
+    )
     session.add(programme)
     session.commit()
     session.refresh(programme)
@@ -139,6 +157,7 @@ def api_update_programme(
     code: str = Form(...),
     libelle: str = Form(...),
     description: Optional[str] = Form(None),
+    responsable_id: Optional[int] = Form(None),
     actif: bool = Form(True),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -157,6 +176,7 @@ def api_update_programme(
     programme.code = code
     programme.libelle = libelle
     programme.description = description
+    programme.responsable_id = responsable_id if responsable_id else None
     programme.actif = actif
     programme.updated_at = datetime.utcnow()
     
@@ -222,6 +242,8 @@ def api_delete_programme(
 @router.get("/api/directions", name="api_list_directions_ref")
 def api_list_directions_ref(session: Session = Depends(get_session)):
     """Liste toutes les directions"""
+    from app.models.personnel import AgentComplet
+    
     directions = session.exec(select(Direction).order_by(Direction.code)).all()
     programmes = {p.id: p for p in session.exec(select(Programme)).all()}
     
@@ -231,6 +253,12 @@ def api_list_directions_ref(session: Session = Depends(get_session)):
         if d.programme_id and d.programme_id in programmes:
             programme_libelle = programmes[d.programme_id].libelle
         
+        directeur_nom = ""
+        if d.directeur_id:
+            directeur = session.get(AgentComplet, d.directeur_id)
+            if directeur:
+                directeur_nom = f"{directeur.nom} {directeur.prenom}"
+        
         result.append({
             "id": d.id,
             "code": d.code,
@@ -238,7 +266,9 @@ def api_list_directions_ref(session: Session = Depends(get_session)):
             "description": d.description or "",
             "actif": d.actif,
             "programme_id": d.programme_id,
-            "programme_libelle": programme_libelle
+            "programme_libelle": programme_libelle,
+            "directeur_id": d.directeur_id,
+            "directeur_nom": directeur_nom
         })
     
     return JSONResponse(
@@ -257,6 +287,7 @@ def api_create_direction(
     libelle: str = Form(...),
     description: Optional[str] = Form(None),
     programme_id: Optional[int] = Form(None),
+    directeur_id: Optional[int] = Form(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -265,7 +296,13 @@ def api_create_direction(
     if existing:
         raise HTTPException(400, f"Le code '{code}' existe déjà")
     
-    direction = Direction(code=code, libelle=libelle, description=description, programme_id=programme_id)
+    direction = Direction(
+        code=code, 
+        libelle=libelle, 
+        description=description, 
+        programme_id=programme_id,
+        directeur_id=directeur_id if directeur_id else None
+    )
     session.add(direction)
     session.commit()
     session.refresh(direction)
@@ -281,6 +318,7 @@ def api_update_direction(
     libelle: str = Form(...),
     description: Optional[str] = Form(None),
     programme_id: Optional[int] = Form(None),
+    directeur_id: Optional[int] = Form(None),
     actif: bool = Form(True),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -299,6 +337,7 @@ def api_update_direction(
     direction.libelle = libelle
     direction.description = description
     direction.programme_id = programme_id
+    direction.directeur_id = directeur_id if directeur_id else None
     direction.actif = actif
     direction.updated_at = datetime.utcnow()
     
@@ -362,7 +401,10 @@ def api_delete_direction(
 @router.get("/api/services", name="api_list_services_ref")
 def api_list_services_ref(session: Session = Depends(get_session)):
     """Liste tous les services avec leurs directions"""
-    services = session.exec(select(ServiceDept).order_by(ServiceDept.code)).all()
+    from app.models.personnel import AgentComplet, Service
+    
+    # Utiliser Service au lieu de ServiceDept pour avoir accès à chef_service_id
+    services = session.exec(select(Service).order_by(Service.code)).all()
     directions = {d.id: d for d in session.exec(select(Direction)).all()}
     
     result = []
@@ -371,6 +413,12 @@ def api_list_services_ref(session: Session = Depends(get_session)):
         if s.direction_id and s.direction_id in directions:
             direction_libelle = directions[s.direction_id].libelle
         
+        chef_service_nom = ""
+        if s.chef_service_id:
+            chef = session.get(AgentComplet, s.chef_service_id)
+            if chef:
+                chef_service_nom = f"{chef.nom} {chef.prenom}"
+        
         result.append({
             "id": s.id,
             "code": s.code,
@@ -378,7 +426,9 @@ def api_list_services_ref(session: Session = Depends(get_session)):
             "description": s.description or "",
             "actif": s.actif,
             "direction_id": s.direction_id,
-            "direction_libelle": direction_libelle
+            "direction_libelle": direction_libelle,
+            "chef_service_id": s.chef_service_id,
+            "chef_service_nom": chef_service_nom
         })
     
     # Retourner avec headers no-cache pour forcer le rafraîchissement
@@ -398,6 +448,7 @@ def api_create_service(
     libelle: str = Form(...),
     description: Optional[str] = Form(None),
     direction_id: Optional[int] = Form(None),
+    chef_service_id: Optional[int] = Form(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -411,6 +462,7 @@ def api_create_service(
         libelle=libelle, 
         description=description, 
         direction_id=direction_id,
+        chef_service_id=chef_service_id if chef_service_id else None,
         actif=True
     )
     session.add(service)
@@ -428,6 +480,7 @@ def api_update_service(
     libelle: str = Form(...),
     description: Optional[str] = Form(None),
     direction_id: Optional[int] = Form(None),
+    chef_service_id: Optional[int] = Form(None),
     actif: bool = Form(True),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
@@ -446,6 +499,7 @@ def api_update_service(
     service.libelle = libelle
     service.description = description
     service.direction_id = direction_id
+    service.chef_service_id = chef_service_id if chef_service_id else None
     service.actif = actif
     
     session.add(service)
