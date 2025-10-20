@@ -370,10 +370,7 @@ async function genererConsolidation(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('generer_consolidation_api') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('generer_consolidation_api') }}", formData, 'POST', true);
     
     const result = await response.json();
     

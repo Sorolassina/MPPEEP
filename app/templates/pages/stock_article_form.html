@@ -46,10 +46,15 @@
             {% endfor %}
           </select>
           <small style="color: var(--gray-600);">
-            {% if article %}
-              ⚠️ Changer la catégorie régénérera automatiquement le code
+            {% if categories %}
+              {{ categories|length }} catégorie(s) disponible(s) • 
+              {% if article %}
+                ⚠️ Changer la catégorie régénérera automatiquement le code
+              {% else %}
+                Le code sera généré automatiquement
+              {% endif %}
             {% else %}
-              Le code sera généré automatiquement
+              ⚠️ Aucune catégorie configurée - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des catégories</a>
             {% endif %}
           </small>
         </div>
@@ -85,6 +90,13 @@
       
       <!-- Stock & Prix -->
       <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">📊 Stock & Prix</h3>
+      
+      <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 1.5rem;">
+        <p style="color: #1e40af; margin: 0; line-height: 1.6; font-size: 0.9rem;">
+          <strong>💡 Prix Automatique :</strong> Le prix unitaire moyen est calculé automatiquement à partir des prix réels des mouvements d'entrée en stock. Ce prix sert pour la valorisation du stock et l'amortissement.
+        </p>
+      </div>
+      
       <div class="form-grid" style="margin-bottom: 2rem;">
         <div class="form-group">
           <label class="form-label">Stock Minimum *</label>
@@ -101,10 +113,15 @@
         </div>
         
         <div class="form-group">
-          <label class="form-label">Prix Unitaire (FCFA)</label>
+          <label class="form-label">Prix Unitaire Moyen (FCFA) <span style="color: #10b981;">✓ Auto</span></label>
           <input type="number" name="prix_unitaire" class="form-input" min="0" step="1"
                  value="{{ article.prix_unitaire if article else '' }}"
-                 placeholder="0">
+                 placeholder="Calculé automatiquement"
+                 readonly
+                 style="background: var(--gray-100); cursor: not-allowed;">
+          <small style="color: #10b981; font-weight: 500;">
+            Calculé automatiquement à partir des mouvements d'entrée
+          </small>
         </div>
         
         <div class="form-group">
@@ -123,108 +140,16 @@
                   placeholder="Détails supplémentaires sur l'article...">{{ article.description if article else '' }}</textarea>
       </div>
       
-      <!-- NOUVEAUTÉ : Articles Périssables -->
-      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">🍃 Article Périssable</h3>
-      <div style="margin-bottom: 2rem;">
-        <div class="form-group" style="margin-bottom: 1rem;">
-          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-            <input type="checkbox" name="est_perissable" id="est_perissable" value="true" 
-                   {{ 'checked' if article and article.est_perissable else '' }}
-                   onchange="togglePerissableFields()"
-                   style="width: 20px; height: 20px; cursor: pointer;">
-            <span style="font-weight: 600; color: var(--text-color);">Cet article est périssable (denrées, médicaments, etc.)</span>
-          </label>
-          <small style="color: var(--gray-600); margin-left: 28px; display: block; margin-top: 0.25rem;">
-            Les articles périssables nécessitent un suivi par lot avec date de péremption
-          </small>
-        </div>
-        
-        <div id="perissable-fields" style="display: none; padding: 1.5rem; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981;">
-          <div class="form-group">
-            <label class="form-label">Seuil d'alerte péremption (jours)</label>
-            <input type="number" name="seuil_alerte_peremption_jours" class="form-input" min="1" step="1"
-                   value="{{ article.seuil_alerte_peremption_jours if article else '30' }}">
-            <small style="color: var(--gray-600);">Alerte X jours avant péremption (défaut: 30 jours)</small>
-          </div>
-          
-          <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
-            <p style="color: #1e40af; margin: 0; line-height: 1.6;">
-              <strong>💡 Note :</strong> La date de péremption sera saisie lors de la création de chaque lot dans 
-              <strong>"Stock → Lots Périssables"</strong>
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      <!-- NOUVEAUTÉ : Amortissement -->
-      <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">💰 Amortissement du Matériel</h3>
-      <div style="margin-bottom: 2rem;">
-        <div class="form-group" style="margin-bottom: 1rem;">
-          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-            <input type="checkbox" name="est_amortissable" id="est_amortissable" value="true"
-                   {{ 'checked' if article and article.est_amortissable else '' }}
-                   onchange="toggleAmortissableFields()"
-                   style="width: 20px; height: 20px; cursor: pointer;">
-            <span style="font-weight: 600; color: var(--text-color);">Cet article est amortissable (équipements, véhicules, etc.)</span>
-          </label>
-          <small style="color: var(--gray-600); margin-left: 28px; display: block; margin-top: 0.25rem;">
-            Les articles amortissables nécessitent un suivi comptable de leur dépréciation
-          </small>
-        </div>
-        
-        <div id="amortissable-fields" style="display: none; padding: 1.5rem; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-          <div class="form-grid" style="margin-bottom: 1rem;">
-            <div class="form-group">
-              <label class="form-label">Date d'acquisition</label>
-              <input type="date" name="date_acquisition" class="form-input"
-                     value="{{ article.date_acquisition if article else '' }}">
-              <small style="color: var(--gray-600);">Date d'achat du matériel</small>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label">Valeur d'acquisition (FCFA)</label>
-              <input type="number" name="valeur_acquisition" class="form-input" min="0" step="1"
-                     value="{{ article.valeur_acquisition if article else '' }}"
-                     placeholder="0">
-              <small style="color: var(--gray-600);">Prix d'achat initial</small>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label">Durée d'amortissement (années)</label>
-              <input type="number" name="duree_amortissement_annees" class="form-input" min="1" step="1"
-                     value="{{ article.duree_amortissement_annees if article else '' }}"
-                     placeholder="Ex: 3">
-              <small style="color: var(--gray-600);">Durée d'amortissement</small>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label">Méthode d'amortissement</label>
-              <select name="methode_amortissement" class="form-select">
-                <option value="LINEAIRE" {{ 'selected' if not article or article.methode_amortissement == 'LINEAIRE' else '' }}>Linéaire</option>
-                <option value="DEGRESSIF" {{ 'selected' if article and article.methode_amortissement == 'DEGRESSIF' else '' }}>Dégressif</option>
-              </select>
-              <small style="color: var(--gray-600);">Mode de calcul</small>
-            </div>
-          </div>
-          
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Taux d'amortissement (%)</label>
-              <input type="number" name="taux_amortissement" class="form-input" min="0" max="100" step="0.01"
-                     value="{{ article.taux_amortissement if article else '' }}"
-                     placeholder="Ex: 33.33">
-              <small style="color: var(--gray-600);">Pour méthode dégressive</small>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label">Valeur résiduelle (FCFA)</label>
-              <input type="number" name="valeur_residuelle" class="form-input" min="0" step="1"
-                     value="{{ article.valeur_residuelle if article else '' }}"
-                     placeholder="0">
-              <small style="color: var(--gray-600);">Valeur finale après amortissement</small>
-            </div>
-          </div>
-        </div>
+      <!-- Info : Gestion Périssable et Amortissement -->
+      <div style="background: #dbeafe; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1rem;">💡 Informations Périssables et Amortissement</h3>
+        <p style="color: #1e40af; margin: 0; line-height: 1.6; font-size: 0.95rem;">
+          Les informations de <strong>péremption</strong> (pour denrées, médicaments) et d'<strong>amortissement</strong> 
+          (pour équipements, véhicules) sont désormais saisies <strong>lors des mouvements d'entrée en stock</strong>.<br><br>
+          Cela permet de gérer plusieurs lots avec des dates différentes et plusieurs achats de matériel 
+          avec des plans d'amortissement distincts.<br><br>
+          📦 <strong>Rendez-vous dans "Mouvements → Nouvelle Entrée"</strong> pour saisir ces informations.
+        </p>
       </div>
       
       <!-- Actions -->
@@ -253,36 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (overlay) {
     overlay.classList.remove('show');
   }
-  
-  // Afficher les champs conditionnels si les checkboxes sont cochées
-  togglePerissableFields();
-  toggleAmortissableFields();
 });
-
-// ========================================
-// GESTION DES CHAMPS CONDITIONNELS
-// ========================================
-function togglePerissableFields() {
-  const checkbox = document.getElementById('est_perissable');
-  const fields = document.getElementById('perissable-fields');
-  
-  if (checkbox.checked) {
-    fields.style.display = 'block';
-  } else {
-    fields.style.display = 'none';
-  }
-}
-
-function toggleAmortissableFields() {
-  const checkbox = document.getElementById('est_amortissable');
-  const fields = document.getElementById('amortissable-fields');
-  
-  if (checkbox.checked) {
-    fields.style.display = 'block';
-  } else {
-    fields.style.display = 'none';
-  }
-}
 
 // Générer automatiquement le code article
 async function genererCode() {
@@ -327,10 +223,7 @@ async function submitForm(event) {
   const method = articleId ? 'PUT' : 'POST';
   
   try {
-    const response = await fetch(url, {
-      method: method,
-      body: formData
-    });
+    const response = await submitFormAsJson(url, formData, method, true);
     
     const result = await response.json();
     

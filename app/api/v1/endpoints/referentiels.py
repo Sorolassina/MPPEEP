@@ -15,6 +15,7 @@ from app.core.enums import GradeCategory
 from app.core.logging_config import get_logger
 from app.db.session import get_session
 from app.models.personnel import Direction, GradeComplet, Programme, Service
+from app.models.stock import CategorieArticle
 from app.models.user import User
 from app.templates import get_template_context, templates
 
@@ -25,8 +26,6 @@ router = APIRouter()
 # ============================================
 # PAGE PRINCIPALE RÉFÉRENTIELS
 # ============================================
-
-
 @router.get("/", response_class=HTMLResponse, name="referentiels_home")
 def referentiels_home(
     request: Request, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
@@ -39,6 +38,7 @@ def referentiels_home(
     directions_raw = session.exec(select(Direction)).all()
     services_raw = session.exec(select(Service)).all()
     grades_raw = session.exec(select(GradeComplet)).all()
+    categories_raw = session.exec(select(CategorieArticle)).all()
 
     # Créer les dictionnaires de référence
     programmes_dict = {p.id: p for p in programmes_raw}
@@ -83,11 +83,13 @@ def referentiels_home(
             nb_programmes=len(programmes_raw),
             nb_directions=len(directions_raw),
             nb_services=len(services_raw),
+            nb_categories=len(categories_raw),
             nb_grades=len(grades_raw),
             programmes=programmes_raw,
             directions=directions_enriched,  # ← Directions enrichies avec programme_libelle
             services=services_enriched,  # ← Services enrichis avec direction_libelle
             grades=grades_raw,
+            categories=categories_raw,
             current_user=current_user,
         ),
     )
@@ -595,14 +597,15 @@ def api_create_grade(
     if existing:
         raise HTTPException(400, f"Le code '{code}' existe déjà")
 
-    # Convertir la catégorie (ex: "A" → GradeCategory.A)
+    # Convertir la catégorie (ex: "A" → GradeCategory.A) et récupérer sa valeur string
     try:
         categorie_enum = getattr(GradeCategory, categorie)
+        categorie_value = categorie_enum.value  # Extraire la valeur string
     except AttributeError:
         raise HTTPException(400, f"Catégorie invalide: {categorie}")
 
     grade = GradeComplet(
-        code=code, libelle=libelle, categorie=categorie_enum, echelon_min=echelon_min, echelon_max=echelon_max
+        code=code, libelle=libelle, categorie=categorie_value, echelon_min=echelon_min, echelon_max=echelon_max
     )
     session.add(grade)
     session.commit()
@@ -634,15 +637,16 @@ def api_update_grade(
         if existing:
             raise HTTPException(400, f"Le code '{code}' existe déjà")
 
-    # Convertir la catégorie (ex: "A" → GradeCategory.A)
+    # Convertir la catégorie (ex: "A" → GradeCategory.A) et récupérer sa valeur string
     try:
         categorie_enum = getattr(GradeCategory, categorie)
+        categorie_value = categorie_enum.value  # Extraire la valeur string
     except AttributeError:
         raise HTTPException(400, f"Catégorie invalide: {categorie}")
 
     grade.code = code
     grade.libelle = libelle
-    grade.categorie = categorie_enum
+    grade.categorie = categorie_value
     grade.echelon_min = echelon_min
     grade.echelon_max = echelon_max
     grade.actif = actif
@@ -697,3 +701,93 @@ def api_delete_grade(
         session.commit()
         logger.info(f"✅ Grade désactivé : {grade.code} par {current_user.email}")
         return {"ok": True, "message": "Grade désactivé avec succès"}
+
+
+# ============================================
+# API - CATÉGORIES D'ARTICLES (STOCK)
+# ============================================
+
+
+@router.get("/api/categories", name="api_list_categories_ref")
+def api_list_categories_ref(session: Session = Depends(get_session)):
+    """Liste toutes les catégories d'articles"""
+    categories = session.exec(select(CategorieArticle).order_by(CategorieArticle.code)).all()
+    
+    return [
+        {
+            "id": c.id,
+            "code": c.code,
+            "libelle": c.libelle,
+            "description": c.description or "",
+        }
+        for c in categories
+    ]
+
+
+@router.post("/api/categories", name="api_create_categorie")
+def api_create_categorie(
+    code: str = Form(...),
+    libelle: str = Form(...),
+    description: str | None = Form(None),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Créer une nouvelle catégorie d'article"""
+    existing = session.exec(select(CategorieArticle).where(CategorieArticle.code == code)).first()
+    if existing:
+        raise HTTPException(400, f"Le code '{code}' existe déjà")
+
+    categorie = CategorieArticle(code=code, libelle=libelle, description=description)
+    session.add(categorie)
+    session.commit()
+    session.refresh(categorie)
+
+    logger.info(f"✅ Catégorie d'article créée : {code} - {libelle} par {current_user.email}")
+    return {"ok": True, "id": categorie.id, "message": "Catégorie créée avec succès"}
+
+
+@router.put("/api/categories/{categorie_id}", name="api_update_categorie")
+def api_update_categorie(
+    categorie_id: int,
+    code: str = Form(...),
+    libelle: str = Form(...),
+    description: str | None = Form(None),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Modifier une catégorie d'article"""
+    categorie = session.get(CategorieArticle, categorie_id)
+    if not categorie:
+        raise HTTPException(404, "Catégorie non trouvée")
+
+    if code != categorie.code:
+        existing = session.exec(select(CategorieArticle).where(CategorieArticle.code == code)).first()
+        if existing:
+            raise HTTPException(400, f"Le code '{code}' existe déjà")
+
+    categorie.code = code
+    categorie.libelle = libelle
+    categorie.description = description
+
+    session.add(categorie)
+    session.commit()
+
+    logger.info(f"✅ Catégorie modifiée : {code} par {current_user.email}")
+    return {"ok": True, "message": "Catégorie modifiée avec succès"}
+
+
+@router.delete("/api/categories/{categorie_id}", name="api_delete_categorie")
+def api_delete_categorie(
+    categorie_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Supprimer une catégorie d'article (suppression définitive uniquement)"""
+    categorie = session.get(CategorieArticle, categorie_id)
+    if not categorie:
+        raise HTTPException(404, "Catégorie non trouvée")
+
+    session.delete(categorie)
+    session.commit()
+    logger.warning(f"🗑️ Catégorie SUPPRIMÉE : {categorie.code} par {current_user.email}")
+    return {"ok": True, "message": "Catégorie supprimée avec succès"}

@@ -1020,10 +1020,7 @@ async function handleUpdate(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch(`/api/v1/besoins/api/besoins/${currentBesoinId}`, {
-      method: 'PUT',
-      body: formData
-    });
+    const response = await submitFormAsJson(`/api/v1/besoins/api/besoins/${currentBesoinId}`, formData, 'PUT', true);
     
     const result = await response.json();
     

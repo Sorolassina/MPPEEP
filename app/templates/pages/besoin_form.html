@@ -77,6 +77,13 @@
               <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if programmes %}
+                {{ programmes|length }} programme(s) disponible(s)
+              {% else %}
+                ⚠️ Aucun programme - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des programmes</a>
+              {% endif %}
+            </small>
           </div>
           
           <div class="form-group">
@@ -87,6 +94,13 @@
               <option value="{{ dir.id }}" data-programme="{{ dir.programme_id }}">{{ dir.code }} - {{ dir.libelle }}</option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if directions %}
+                {{ directions|length }} direction(s) disponible(s)
+              {% else %}
+                ⚠️ Aucune direction - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des directions</a>
+              {% endif %}
+            </small>
           </div>
           
           <div class="form-group">
@@ -97,6 +111,13 @@
               <option value="{{ serv.id }}" data-direction="{{ serv.direction_id }}">{{ serv.code }} - {{ serv.libelle }}</option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if services %}
+                {{ services|length }} service(s) disponible(s)
+              {% else %}
+                ⚠️ Aucun service - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des services</a>
+              {% endif %}
+            </small>
           </div>
         </div>
       </div>
@@ -119,6 +140,13 @@
               <option value="{{ grade.id }}" data-categorie="{{ grade.categorie.name }}">{{ grade.code }} - {{ grade.libelle }}</option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if grades %}
+                {{ grades|length }} grade(s) disponible(s)
+              {% else %}
+                ⚠️ Aucun grade - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des grades</a>
+              {% endif %}
+            </small>
           </div>
           
           <div class="form-group">
@@ -245,10 +273,7 @@ async function handleSubmit(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('create_besoin_api') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('create_besoin_api') }}", formData, 'POST', true);
     
     const result = await response.json();
     

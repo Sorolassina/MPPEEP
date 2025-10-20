@@ -59,7 +59,7 @@
             <h3>🎨 Logo de l'entreprise</h3>
             <div class="logo-upload-section">
                 <div class="logo-preview">
-                    <img id="logo-preview" src="{{ static_url(settings.logo_path) }}" alt="Logo actuel">
+                    <img id="logo-preview" src="{{ static_versioned_url(static_url(settings.logo_path)) }}" alt="Logo actuel">
                     <p class="text-muted">Logo actuel</p>
                 </div>
                 <div class="logo-upload">
@@ -335,10 +335,7 @@ async function saveSettings(event) {
     showLoading('Sauvegarde...', 'Enregistrement des paramètres en cours');
     
     try {
-        const response = await fetch("{{ url_for('update_settings_api') }}", {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson("{{ url_for('update_settings_api') }}", formData, 'POST', true);
         
         const data = await response.json();
         
@@ -376,10 +373,7 @@ async function uploadLogo(input) {
     showLoading('Upload...', `Téléchargement de ${file.name} en cours`);
     
     try {
-        const response = await fetch("{{ url_for('upload_logo_api') }}", {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson("{{ url_for('upload_logo_api') }}", formData, 'POST');
         
         const data = await response.json();
         

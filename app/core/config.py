@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     # APPLICATION
     # ==========================================
     APP_NAME: str = "MPPEEP Dashboard"
-    ENV: Literal["dev", "staging", "production"] = "dev"
-    DEBUG: bool = True
+    ENV: Literal["dev", "staging", "prod"] = "dev"
+    DEBUG: bool = False
     SECRET_KEY: str = "changeme-in-production"
 
     # ROOT_PATH configuré dynamiquement selon l'environnement
@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     # ==========================================
     # DATABASE
     # ==========================================
-    DATABASE_URL: str | None = None
 
     # SQLite (dev)
     SQLITE_DB_PATH: str = "./app.db"
@@ -42,8 +41,10 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "mppeep"
-
+    POSTGRES_DB: str = "postgres"
+    
+    # URL complète de la base de données (prioritaire sur les valeurs individuelles)
+    DATABASE_URL: str | None = None
     # ==========================================
     # CORS & SECURITY
     # ==========================================
@@ -178,20 +179,24 @@ class Settings(BaseSettings):
         """
         Retourne l'URL de la base de données selon l'environnement
 
-        - Si DATABASE_URL est défini → utilise cette valeur
+        - Si DATABASE_URL est défini dans les variables d'environnement → utilise cette valeur (PRIORITAIRE)
         - Sinon, si DEBUG=True ou ENV=dev → SQLite
-        - Sinon → PostgreSQL
+        - Sinon → PostgreSQL (construit à partir des variables individuelles)
         """
+        
+        # PRIORITÉ 1 : Si DATABASE_URL est défini explicitement dans les env vars, l'utiliser
         if self.DATABASE_URL:
             return self.DATABASE_URL
-
-        if self.DEBUG or self.ENV == "dev":
+        
+        # PRIORITÉ 2 : Si DEBUG=True, utiliser SQLite
+        if self.DEBUG:
             return f"sqlite:///{self.SQLITE_DB_PATH}"
-        else:
-            return (
-                f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-                f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-            )
+        
+        # PRIORITÉ 3 : Construire l'URL PostgreSQL à partir des variables individuelles
+        return (
+            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
 
     @staticmethod
     def _get_asset_version() -> str:

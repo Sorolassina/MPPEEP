@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse
 from sqlmodel import Session, func, or_, select
 
 from app.api.v1.endpoints.auth import get_current_user
+from app.core.config import settings
 from app.core.enums import GradeCategory, PositionAdministrative, SituationFamiliale, TypeDocument
 from app.core.logging_config import get_logger
 from app.db.session import get_session
@@ -380,11 +381,15 @@ async def api_create_agent(
             raise HTTPException(400, "Le champ 'Fonction' est obligatoire")
 
         # Valider les emails s'ils sont remplis
-        if email_professionnel and not validate_email(email_professionnel):
-            raise HTTPException(400, "L'email professionnel n'est pas valide. Format attendu: exemple@domaine.com")
+        if email_professionnel and email_professionnel.strip():
+            is_valid, error = validate_email(email_professionnel)
+            if not is_valid:
+                raise HTTPException(400, f"⚠️ {error}\nFormat: exemple@domaine.com")
 
-        if email_personnel and not validate_email(email_personnel):
-            raise HTTPException(400, "L'email personnel n'est pas valide. Format attendu: exemple@domaine.com")
+        if email_personnel and email_personnel.strip():
+            is_valid, error = validate_email(email_personnel)
+            if not is_valid:
+                raise HTTPException(400, f"⚠️ {error}\nFormat: exemple@domaine.com")
 
         # Vérifier que le matricule est unique
         existing = session.exec(select(AgentComplet).where(AgentComplet.matricule == matricule)).first()
@@ -457,10 +462,9 @@ async def api_create_agent(
             with open(file_path, "wb") as f:
                 f.write(content)
 
-            # Générer l'URL avec ROOT_PATH
+            # Stocker uniquement le chemin relatif (sans préfixe /uploads/)
             relative_path = f"photos/agents/{unique_filename}"
-            photo_path = path_config.get_file_url("uploads", relative_path)
-            agent_data["photo_path"] = photo_path
+            agent_data["photo_path"] = relative_path
 
         # Créer l'agent
         agent = AgentComplet(**agent_data)
@@ -672,9 +676,10 @@ async def api_update_agent(
 
             # Supprimer l'ancienne photo si elle existe
             if agent.photo_path:
-                # Extraire le chemin relatif de l'URL
-                old_path = agent.photo_path.replace("/uploads/", "").replace(f"{settings.get_root_path}/uploads/", "")
-                old_file = path_config.UPLOADS_DIR / old_path
+                # Le chemin est maintenant relatif (ex: "photos/agents/photo.jpg")
+                # Si c'est un ancien chemin avec préfixe, le nettoyer
+                clean_path = agent.photo_path.replace("/uploads/", "").replace(f"{settings.get_root_path}/uploads/", "")
+                old_file = path_config.UPLOADS_DIR / clean_path
                 if old_file.exists():
                     old_file.unlink()
 
@@ -690,9 +695,9 @@ async def api_update_agent(
             with open(file_path, "wb") as f:
                 f.write(content)
 
-            # Générer l'URL avec ROOT_PATH
+            # Stocker uniquement le chemin relatif (sans préfixe /uploads/)
             relative_path = f"photos/agents/{unique_filename}"
-            agent.photo_path = path_config.get_file_url("uploads", relative_path)
+            agent.photo_path = relative_path
 
         agent.updated_by = current_user.id
 

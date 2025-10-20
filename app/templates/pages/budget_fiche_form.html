@@ -198,10 +198,7 @@ async function handleSubmit(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('api_creer_fiche_vide') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_creer_fiche_vide') }}", formData, 'POST', true);
     
     const result = await response.json();
     

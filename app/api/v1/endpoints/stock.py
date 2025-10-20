@@ -15,6 +15,7 @@ from sqlmodel import Session, func, select
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.logging_config import get_logger
 from app.db.session import get_session
+from app.models.personnel import Service
 from app.models.stock import (
     Article,
     CategorieArticle,
@@ -188,10 +189,20 @@ def stock_demande_new(
     request: Request, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
     """Formulaire de création de demande"""
-
+    
+    # Récupérer les référentiels
     articles = session.exec(select(Article).where(Article.actif).order_by(Article.designation)).all()
+    services = session.exec(select(Service).where(Service.actif).order_by(Service.libelle)).all()
 
-    return templates.TemplateResponse("pages/stock_demande_form.html", get_template_context(request, articles=articles))
+    return templates.TemplateResponse(
+        "pages/stock_demande_form.html",
+        get_template_context(
+            request,
+            articles=articles,
+            services=services,
+            current_user=current_user,
+        ),
+    )
 
 
 @router.get("/fournisseurs", response_class=HTMLResponse, name="stock_fournisseurs")
@@ -381,37 +392,18 @@ def api_create_article(
     prix_unitaire: float | None = Form(None),
     emplacement: str | None = Form(None),
     description: str | None = Form(None),
-    # NOUVEAUTÉ : Champs périssables
-    est_perissable: str | None = Form(None),
-    duree_conservation_jours: int | None = Form(None),
-    seuil_alerte_peremption_jours: int | None = Form(30),
-    # NOUVEAUTÉ : Champs amortissement
-    est_amortissable: str | None = Form(None),
-    date_acquisition: str | None = Form(None),
-    valeur_acquisition: float | None = Form(None),
-    duree_amortissement_annees: int | None = Form(None),
-    taux_amortissement: float | None = Form(None),
-    valeur_residuelle: float | None = Form(None),
-    methode_amortissement: str | None = Form("LINEAIRE"),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Crée un nouvel article"""
+    """
+    Crée un nouvel article
+    
+    Note: Les informations de péremption et d'amortissement sont désormais 
+    gérées au niveau des mouvements d'entrée, pas au niveau de l'article.
+    """
     try:
-        # Convertir les checkboxes en boolean
-        est_perissable_bool = est_perissable == "true" if est_perissable else False
-        est_amortissable_bool = est_amortissable == "true" if est_amortissable else False
-
-        # Convertir la date d'acquisition
-        date_acq = None
-        if date_acquisition:
-            from datetime import datetime
-
-            try:
-                date_acq = datetime.strptime(date_acquisition, "%Y-%m-%d").date()
-            except:
-                pass
-
+        # NOTE: Le prix_unitaire sera calculé automatiquement lors des mouvements d'entrée
+        # La valeur initiale est ignorée (sera None au départ)
         article = StockService.creer_article(
             session=session,
             code=code,
@@ -420,21 +412,9 @@ def api_create_article(
             unite=unite,
             quantite_min=Decimal(str(quantite_min)),
             quantite_max=Decimal(str(quantite_max)) if quantite_max else None,
-            prix_unitaire=Decimal(str(prix_unitaire)) if prix_unitaire else None,
+            prix_unitaire=None,  # Calculé automatiquement à partir des mouvements
             emplacement=emplacement,
             description=description,
-            # Périssable
-            est_perissable=est_perissable_bool,
-            duree_conservation_jours=duree_conservation_jours,
-            seuil_alerte_peremption_jours=seuil_alerte_peremption_jours,
-            # Amortissement
-            est_amortissable=est_amortissable_bool,
-            date_acquisition=date_acq,
-            valeur_acquisition=Decimal(str(valeur_acquisition)) if valeur_acquisition else None,
-            duree_amortissement_annees=duree_amortissement_annees,
-            taux_amortissement=Decimal(str(taux_amortissement)) if taux_amortissement else None,
-            valeur_residuelle=Decimal(str(valeur_residuelle)) if valeur_residuelle else None,
-            methode_amortissement=methode_amortissement,
         )
 
         # Enregistrer l'activité
@@ -475,22 +455,15 @@ def api_update_article(
     emplacement: str | None = Form(None),
     description: str | None = Form(None),
     actif: bool | None = Form(None),
-    # NOUVEAUTÉ : Champs périssables
-    est_perissable: str | None = Form(None),
-    duree_conservation_jours: int | None = Form(None),
-    seuil_alerte_peremption_jours: int | None = Form(None),
-    # NOUVEAUTÉ : Champs amortissement
-    est_amortissable: str | None = Form(None),
-    date_acquisition: str | None = Form(None),
-    valeur_acquisition: float | None = Form(None),
-    duree_amortissement_annees: int | None = Form(None),
-    taux_amortissement: float | None = Form(None),
-    valeur_residuelle: float | None = Form(None),
-    methode_amortissement: str | None = Form(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Met à jour un article"""
+    """
+    Met à jour un article
+    
+    Note: Les informations de péremption et d'amortissement sont désormais 
+    gérées au niveau des mouvements d'entrée, pas au niveau de l'article.
+    """
     try:
         article = session.get(Article, article_id)
         if not article:
@@ -507,43 +480,16 @@ def api_update_article(
             article.quantite_min = Decimal(str(quantite_min))
         if quantite_max is not None:
             article.quantite_max = Decimal(str(quantite_max))
-        if prix_unitaire is not None:
-            article.prix_unitaire = Decimal(str(prix_unitaire))
+        # IMPORTANT: Le prix_unitaire est calculé automatiquement à partir des mouvements
+        # Il ne doit JAMAIS être modifié manuellement
+        # if prix_unitaire is not None:
+        #     article.prix_unitaire = Decimal(str(prix_unitaire))
         if emplacement is not None:
             article.emplacement = emplacement
         if description is not None:
             article.description = description
         if actif is not None:
             article.actif = actif
-
-        # NOUVEAUTÉ : Champs périssables
-        if est_perissable is not None:
-            article.est_perissable = est_perissable == "true"
-        if duree_conservation_jours is not None:
-            article.duree_conservation_jours = duree_conservation_jours
-        if seuil_alerte_peremption_jours is not None:
-            article.seuil_alerte_peremption_jours = seuil_alerte_peremption_jours
-
-        # NOUVEAUTÉ : Champs amortissement
-        if est_amortissable is not None:
-            article.est_amortissable = est_amortissable == "true"
-        if date_acquisition is not None:
-            from datetime import datetime as dt
-
-            try:
-                article.date_acquisition = dt.strptime(date_acquisition, "%Y-%m-%d").date()
-            except:
-                pass
-        if valeur_acquisition is not None:
-            article.valeur_acquisition = Decimal(str(valeur_acquisition))
-        if duree_amortissement_annees is not None:
-            article.duree_amortissement_annees = duree_amortissement_annees
-        if taux_amortissement is not None:
-            article.taux_amortissement = Decimal(str(taux_amortissement))
-        if valeur_residuelle is not None:
-            article.valeur_residuelle = Decimal(str(valeur_residuelle))
-        if methode_amortissement is not None:
-            article.methode_amortissement = methode_amortissement
 
         article.updated_at = datetime.now()
 
@@ -568,6 +514,51 @@ def api_update_article(
     except Exception as e:
         logger.error(f"Erreur mise à jour article: {e}")
         return {"success": False, "error": "Erreur lors de la mise à jour"}
+
+
+@router.post("/api/recalculer-prix-moyens", response_class=JSONResponse, name="api_recalculer_prix_moyens")
+def api_recalculer_prix_moyens(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Recalcule les prix moyens de tous les articles à partir de leurs mouvements
+    Utile pour mettre à jour les prix après migration de données
+    """
+    try:
+        from sqlmodel import select
+        from app.models.stock import Article
+        
+        # Récupérer tous les articles actifs
+        articles = session.exec(select(Article).where(Article.actif)).all()
+        
+        compteur_mis_a_jour = 0
+        compteur_sans_prix = 0
+        
+        for article in articles:
+            prix_avant = article.prix_unitaire
+            StockService.mettre_a_jour_prix_moyen(session, article.id)
+            
+            # Rafraîchir l'article pour voir le nouveau prix
+            session.refresh(article)
+            
+            if article.prix_unitaire != prix_avant:
+                compteur_mis_a_jour += 1
+            elif article.prix_unitaire is None:
+                compteur_sans_prix += 1
+        
+        return {
+            "success": True,
+            "message": f"Prix moyens recalculés avec succès",
+            "data": {
+                "total_articles": len(articles),
+                "prix_mis_a_jour": compteur_mis_a_jour,
+                "sans_prix": compteur_sans_prix
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erreur recalcul prix moyens: {e}")
+        return {"success": False, "error": "Erreur lors du recalcul des prix moyens"}
 
 
 @router.delete("/api/articles/{article_id}", response_class=JSONResponse, name="api_delete_article")
@@ -825,7 +816,7 @@ async def api_delete_mouvement(
 # ============================================
 
 
-@router.post("/api/demandes", response_class=JSONResponse, name="api_create_demande")
+@router.post("/api/demandes", response_class=JSONResponse, name="api_create_demande_stock")
 async def api_create_demande(
     type_demande: str = Form(...),
     article_id: int = Form(...),
@@ -900,7 +891,7 @@ async def api_create_demande(
         return {"success": False, "error": "Erreur lors de la création de la demande"}
 
 
-@router.post("/api/demandes/{demande_id}/valider", response_class=JSONResponse, name="api_valider_demande")
+@router.post("/api/demandes/{demande_id}/valider", response_class=JSONResponse, name="api_valider_demande_stock")
 def api_valider_demande(
     demande_id: int,
     accepte: bool = Form(...),
@@ -941,6 +932,96 @@ def api_valider_demande(
     except Exception as e:
         logger.error(f"Erreur validation demande: {e}")
         return {"success": False, "error": "Erreur lors de la validation"}
+
+
+@router.post("/api/demandes/{demande_id}/servir", response_class=JSONResponse, name="api_servir_demande_stock")
+def api_servir_demande(
+    demande_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Servir une demande validée (créer le mouvement de sortie)"""
+    try:
+        demande = session.get(DemandeStock, demande_id)
+        if not demande:
+            return {"success": False, "error": "Demande introuvable"}
+        
+        if demande.statut != "VALIDEE":
+            return {"success": False, "error": "Seules les demandes validées peuvent être servies"}
+        
+        # Créer le mouvement de sortie
+        mouvement, alerte = StockService.enregistrer_mouvement(
+            session=session,
+            article_id=demande.article_id,
+            type_mouvement="SORTIE",
+            quantite=demande.quantite_demandee,
+            motif=f"Demande {demande.numero} - {demande.motif}",
+            user_id=current_user.id,
+            beneficiaire=demande.service_demandeur or "Non spécifié",
+        )
+        
+        # Mettre à jour le statut de la demande
+        demande.statut = "SERVIE"
+        demande.updated_at = datetime.now()
+        session.add(demande)
+        session.commit()
+        
+        # Enregistrer l'activité
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="update",
+            target_type="stock_demande",
+            target_id=demande.id,
+            description=f"Demande {demande.numero} servie - Mouvement #{mouvement.id} créé",
+            icon="📦",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Demande {demande.numero} servie avec succès",
+            "alerte": alerte,
+        }
+    except Exception as e:
+        logger.error(f"Erreur service demande: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.delete("/api/demandes/{demande_id}", response_class=JSONResponse, name="api_delete_demande_stock")
+def api_delete_demande(
+    demande_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Supprimer une demande (soft delete)"""
+    try:
+        demande = session.get(DemandeStock, demande_id)
+        if not demande:
+            return {"success": False, "error": "Demande introuvable"}
+        
+        # Supprimer la demande
+        session.delete(demande)
+        session.commit()
+        
+        # Enregistrer l'activité
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="delete",
+            target_type="stock_demande",
+            target_id=demande_id,
+            description=f"Demande {demande.numero} supprimée",
+            icon="🗑️",
+        )
+        
+        return {"success": True, "message": "Demande supprimée avec succès"}
+    except Exception as e:
+        logger.error(f"Erreur suppression demande: {e}")
+        return {"success": False, "error": str(e)}
 
 
 # ============================================

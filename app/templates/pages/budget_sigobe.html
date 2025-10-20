@@ -440,10 +440,7 @@ async function handleUpload(event) {
   
   try {
     // Étape 1 : Prévisualisation
-    const response = await fetch("{{ url_for('api_sigobe_preview') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_sigobe_preview') }}", formData, 'POST');
     
     const result = await response.json();
     
@@ -605,10 +602,7 @@ async function confirmerImport() {
   const formData = new FormData(document.getElementById('formUpload'));
   
   try {
-    const response = await fetch("{{ url_for('api_sigobe_upload') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_sigobe_upload') }}", formData, 'POST');
     
     const result = await response.json();
     

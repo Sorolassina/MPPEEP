@@ -165,7 +165,7 @@ def profile_picture_url(user_or_picture: any, add_cache_buster: bool = True) -> 
     from datetime import datetime
 
     # Image par défaut
-    default_image = "/static/images/default-avatar.svg"
+    default_image = static_url("images/default-avatar.svg")
 
     # Extraire le chemin de l'image
     picture_path = None
@@ -192,12 +192,25 @@ def profile_picture_url(user_or_picture: any, add_cache_buster: bool = True) -> 
     if not picture_path:
         return default_image
 
-    # Si le chemin commence déjà par /uploads/ ou /static/, le retourner tel quel
-    if picture_path.startswith("/uploads/") or picture_path.startswith("/static/"):
-        return picture_path
-
-    # Construire l'URL de l'image
-    image_url = f"/uploads/{picture_path}"
+    # Détecter le root_path pour gérer les anciens chemins
+    from app.core.config import settings
+    root_path = settings.get_root_path
+    
+    # Nettoyer les anciens chemins avec préfixe complet (rétrocompatibilité)
+    # Ex: "/mppeep/uploads/photos/..." → "photos/..."
+    if root_path and picture_path.startswith(f"{root_path}/uploads/"):
+        picture_path = picture_path.replace(f"{root_path}/uploads/", "")
+    # Ex: "/uploads/photos/..." → "photos/..."
+    elif picture_path.startswith("/uploads/"):
+        picture_path = picture_path.replace("/uploads/", "")
+    # Ex: "/static/images/..." → utiliser static_url
+    elif picture_path.startswith("/static/"):
+        relative_path = picture_path.replace("/static/", "")
+        return static_url(relative_path)
+    
+    # Maintenant picture_path est toujours relatif (ex: "photos/agents/photo.jpg")
+    # Construire l'URL avec le bon préfixe selon l'environnement
+    image_url = upload_url(picture_path)
 
     # Ajouter un cache buster si demandé
     if add_cache_buster and user_id:
@@ -227,9 +240,22 @@ def get_logo_url() -> str:
         settings_dict = SystemSettingsService.get_settings_as_dict(db)
         logo_path = settings_dict.get("logo_path", "images/logo.webp")
 
-        # Si le logo_path commence déjà par /static/ ou /uploads/, le retourner tel quel
-        if logo_path.startswith("/static/") or logo_path.startswith("/uploads/"):
-            return logo_path
+        # Nettoyer les anciens chemins avec préfixe complet (rétrocompatibilité)
+        from app.core.config import settings as app_settings
+        root_path = app_settings.get_root_path
+        
+        if root_path and logo_path.startswith(f"{root_path}/uploads/"):
+            logo_path = logo_path.replace(f"{root_path}/uploads/", "")
+            return upload_url(logo_path)
+        elif logo_path.startswith("/uploads/"):
+            logo_path = logo_path.replace("/uploads/", "")
+            return upload_url(logo_path)
+        elif root_path and logo_path.startswith(f"{root_path}/static/"):
+            logo_path = logo_path.replace(f"{root_path}/static/", "")
+            return static_url(logo_path)
+        elif logo_path.startswith("/static/"):
+            logo_path = logo_path.replace("/static/", "")
+            return static_url(logo_path)
 
         # Vérifier si le fichier existe physiquement
         from app.core.path_config import path_config

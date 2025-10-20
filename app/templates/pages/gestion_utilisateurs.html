@@ -376,10 +376,10 @@ async function openPhotoModal(userId, userName) {
             // Afficher la photo actuelle ou placeholder
             const photoPreview = document.getElementById('current-photo-preview');
             if (data.user.profile_picture) {
-                photoPreview.src = `/uploads/${data.user.profile_picture}`;
+                photoPreview.src = '{{ upload_url("") }}' + data.user.profile_picture;
                 photoPreview.style.display = 'block';
             } else {
-                photoPreview.src = '/static/images/default-avatar.svg';
+                photoPreview.src = '{{ static_versioned_url(static_url("images/default-avatar.svg")) }}';
                 photoPreview.style.display = 'block';
             }
             
@@ -416,10 +416,7 @@ async function uploadUserPhoto(input) {
     showLoading('Upload...', `Téléchargement de ${file.name} en cours`);
     
     try {
-        const response = await fetch("{{ url_for('upload_user_photo_api', user_id=0) }}".replace('/0', `/${userId}`), {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson("{{ url_for('upload_user_photo_api', user_id=0) }}".replace('/0', `/${userId}`), formData, 'POST');
         
         const data = await response.json();
         
@@ -455,10 +452,7 @@ async function createUser(event) {
     showLoading('Création...', 'Création de l\'utilisateur en cours');
     
     try {
-        const response = await fetch("{{ url_for('create_user_api') }}", {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson("{{ url_for('create_user_api') }}", formData, 'POST', true);
         
         const data = await response.json();
         
@@ -486,10 +480,7 @@ async function updateUser(event) {
     showLoading('Modification...', 'Mise à jour de l\'utilisateur en cours');
     
     try {
-        const response = await fetch(`/api/v1/admin/users/${userId}/update`, {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson(`/api/v1/admin/users/${userId}/update`, formData, 'POST', true);
         
         const data = await response.json();
         

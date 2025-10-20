@@ -579,10 +579,7 @@ async function generateReport() {
         if (dateFin) formData.append('date_fin', dateFin);
         
         // Appeler l'API pour générer le rapport
-        const response = await fetch('{{ url_for("generate_report_api") }}', {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson('{{ url_for("generate_report_api") }}', formData, 'POST', true);
         
         if (response.ok) {
             // Télécharger le fichier

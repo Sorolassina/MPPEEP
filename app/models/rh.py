@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from sqlmodel import Field, SQLModel
+from sqlalchemy import String
 
 from app.core.enums import RequestType, WorkflowState
 
@@ -81,7 +82,7 @@ class HRRequest(HRRequestBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
 
-    current_state: WorkflowState = Field(default=WorkflowState.DRAFT)
+    current_state: WorkflowState = Field(default=WorkflowState.DRAFT, sa_type=String)  # Stocké comme string
     current_assignee_role: str | None = None  # ex: "AGENT", "N1", "N2", "DRH", "DG", "DAF"
 
 
@@ -93,10 +94,10 @@ class WorkflowStep(SQLModel, table=True):
     """
 
     id: int | None = Field(default=None, primary_key=True)
-    type: RequestType
-    from_state: WorkflowState
-    to_state: WorkflowState
-    assignee_role: str | None = None  # rôle en charge à l’étape cible (N1/DRH/DG)
+    type: RequestType = Field(sa_type=String)  # Stocké comme string
+    from_state: WorkflowState = Field(sa_type=String)  # Stocké comme string
+    to_state: WorkflowState = Field(sa_type=String)  # Stocké comme string
+    assignee_role: str | None = None  # rôle en charge à l'étape cible (N1/DRH/DG)
     order_index: int = 0
 
 
@@ -104,8 +105,8 @@ class WorkflowStep(SQLModel, table=True):
 class WorkflowHistory(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     request_id: int = Field(foreign_key="hrrequest.id", index=True)
-    from_state: WorkflowState
-    to_state: WorkflowState
+    from_state: WorkflowState = Field(sa_type=String)  # Stocké comme string
+    to_state: WorkflowState = Field(sa_type=String)  # Stocké comme string
     acted_by_user_id: int | None = None  # selon ton modèle User
     acted_by_role: str | None = None
     comment: str | None = None

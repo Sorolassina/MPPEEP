@@ -332,10 +332,7 @@ async function submitComptage(event) {
     const ligneId = formData.get('ligne_id');
     
     try {
-        const response = await fetch(`/api/v1/stock/api/inventaires/lignes/${ligneId}/compter`, {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson(`/api/v1/stock/api/inventaires/lignes/${ligneId}/compter`, formData, 'POST', true);
         
         const result = await response.json();
         

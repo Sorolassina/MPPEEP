@@ -15,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -210,15 +211,18 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         # Cache pour les fichiers statiques (1 an)
-        if request.url.path.startswith("/static/") or request.url.path.startswith("/uploads/"):
+        root_path = settings.get_root_path
+        static_prefix = f"{root_path}/static" if root_path else "/static"
+        uploads_prefix = f"{root_path}/uploads" if root_path else "/uploads"
+        api_prefix = f"{root_path}/api" if root_path else "/api"
+        
+        if request.url.path.startswith(static_prefix) or request.url.path.startswith(uploads_prefix):
             response.headers["Cache-Control"] = "public, max-age=31536000"
-
         # Pas de cache pour les API
-        elif request.url.path.startswith("/api/"):
+        elif request.url.path.startswith(api_prefix):
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
-
         # Cache modéré pour les pages HTML (1 heure)
         else:
             response.headers["Cache-Control"] = "public, max-age=3600"

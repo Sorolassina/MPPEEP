@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -13,11 +15,49 @@ from app.templates import get_template_context, templates
 setup_logging()
 logger = get_logger("mppeep.main")  # ou __name__
 
-# 2) App FastAPI
+
+# 2) Lifespan events (remplace @app.on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Gestion du cycle de vie de l'application (startup/shutdown)"""
+    # Startup
+    logger.info(f"🚀 Démarrage de l'application {settings.APP_NAME}")
+    logger.info(f"📊 Environnement : {settings.ENV}")
+    logger.info(f"🐛 Debug mode : {settings.DEBUG}")
+    try:
+        # Initialisation de la base de données principale
+        from scripts.init_db import initialize_database
+
+        logger.info("🗄️  Initialisation de la base de données...")
+        initialize_database()
+        logger.info("✅ Initialisation de la base terminée avec succès")
+
+        logger.info("✅ Système RH : Workflows personnalisés activés")
+
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de l'initialisation: {e}", exc_info=True)
+        logger.warning("⚠️  L'application démarre quand même...")
+
+    yield  # Application running
+
+    # Shutdown
+    logger.info("👋 Arrêt de l'application MPPEEP Dashboard")
+    logger.info("🧹 Fermeture des connexions...")
+
+
+# 3) App FastAPI
 root_path = settings.get_root_path  # Dynamique selon DEBUG/ENV
+
+# Créer l'application principale
 app = FastAPI(
     title=settings.APP_NAME,
-    root_path=root_path,
+    version=settings.ASSET_VERSION,
+    lifespan=lifespan,
+)
+
+# Créer une sous-application pour les routes
+subapp = FastAPI(
+    title=settings.APP_NAME,
     version=settings.ASSET_VERSION,
     openapi_url=f"{root_path}/openapi.json" if root_path else "/openapi.json",
     docs_url=f"{root_path}/docs" if root_path else "/docs",
@@ -26,7 +66,7 @@ app = FastAPI(
 
 
 # 3) Gestionnaire d'erreur personnalisé pour les erreurs de validation
-@app.exception_handler(RequestValidationError)
+@subapp.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
     Gestionnaire personnalisé pour les erreurs de validation FastAPI (422)
@@ -71,46 +111,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 # 4) Middlewares
-setup_middlewares(app, settings)
-
-
-# 5) Événements de cycle de vie
-@app.on_event("startup")
-async def startup_event():
-    logger.info(f"🚀 Démarrage de l'application {settings.APP_NAME}")
-    logger.info(f"📊 Environnement : {settings.ENV}")
-    logger.info(f"🐛 Debug mode : {settings.DEBUG}")
-    try:
-        # Initialisation de la base de données principale
-        from scripts.init_db import initialize_database
-
-        logger.info("🗄️  Initialisation de la base de données...")
-        initialize_database()
-        logger.info("✅ Initialisation de la base terminée avec succès")
-
-        logger.info("✅ Système RH : Workflows personnalisés activés")
-
-    except Exception as e:
-        logger.error(f"❌ Erreur lors de l'initialisation: {e}", exc_info=True)
-        logger.warning("⚠️  L'application démarre quand même...")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("👋 Arrêt de l'application MPPEEP Dashboard")
-    logger.info("🧹 Fermeture des connexions...")
+setup_middlewares(subapp, settings)
 
 
 # 5) Static & templates
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+subapp.mount("/static", StaticFiles(directory="app/static"), name="static")
+subapp.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # 6) API
-app.include_router(api_router, prefix="/api/v1")
+subapp.include_router(api_router, prefix="/api/v1")
 
 
 # 7) Routes UI
-@app.get("/favicon.ico", include_in_schema=False)
+@subapp.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """Redirige vers le favicon dans le dossier static"""
     from app.core.path_config import path_config
@@ -119,26 +132,26 @@ async def favicon():
     return RedirectResponse(url=favicon_url)
 
 
-@app.get("/version", response_class=JSONResponse, name="version")
+@subapp.get("/version", response_class=JSONResponse, name="version")
 def get_version():
     return JSONResponse(
         {
-            "version": app.version,
-            "root_path": app.root_path,
-            "app_name": app.title,
+            "version": subapp.version,
+            "root_path": root_path,
+            "app_name": subapp.title,
             "environment": settings.ENV,
             "debug": settings.DEBUG,
         }
     )
 
 
-@app.get("/", name="read_root")
+@subapp.get("/", name="read_root")
 def read_root(request: Request):
     """Redirige vers la page de login"""
     return RedirectResponse(url=str(request.url_for("login_page")), status_code=303)
 
 
-@app.get("/accueil", response_class=HTMLResponse, name="accueil")
+@subapp.get("/accueil", response_class=HTMLResponse, name="accueil")
 def accueil(request: Request):
     from sqlmodel import func, select
 
@@ -174,6 +187,11 @@ def accueil(request: Request):
     return templates.TemplateResponse(
         "pages/accueil.html", get_template_context(request, stats=stats, recent_activity=recent_activity)
     )
+
+
+# 8) Monter la sous-application avec le bon préfixe
+mount_path = root_path if root_path else "/"
+app.mount(mount_path, subapp)
 
 
 if __name__ == "__main__":

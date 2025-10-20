@@ -131,6 +131,72 @@ class StockService:
         return article
 
     # ============================================
+    # GESTION DU PRIX MOYEN
+    # ============================================
+
+    @staticmethod
+    def calculer_prix_moyen_article(session: Session, article_id: int) -> Decimal | None:
+        """
+        Calcule le prix moyen pondéré d'un article basé sur ses mouvements d'entrée
+        
+        Le prix moyen est calculé uniquement sur les mouvements d'ENTREE qui ont un prix_unitaire_reel
+        Formule: Somme(quantité * prix) / Somme(quantité)
+        
+        Returns:
+            Decimal: Prix moyen pondéré ou None si aucun mouvement avec prix
+        """
+        # Récupérer tous les mouvements d'entrée avec prix
+        mouvements = session.exec(
+            select(MouvementStock).where(
+                MouvementStock.article_id == article_id,
+                MouvementStock.type_mouvement == "ENTREE",
+                MouvementStock.prix_unitaire_reel.is_not(None),
+                MouvementStock.prix_unitaire_reel > 0
+            )
+        ).all()
+        
+        if not mouvements:
+            return None
+        
+        total_valeur = Decimal(0)
+        total_quantite = Decimal(0)
+        
+        for mouv in mouvements:
+            total_valeur += mouv.quantite * mouv.prix_unitaire_reel
+            total_quantite += mouv.quantite
+        
+        if total_quantite == 0:
+            return None
+        
+        prix_moyen = total_valeur / total_quantite
+        
+        # Arrondir à 2 décimales
+        return prix_moyen.quantize(Decimal('0.01'))
+
+    @staticmethod
+    def mettre_a_jour_prix_moyen(session: Session, article_id: int) -> None:
+        """
+        Met à jour le prix_unitaire de l'article avec le prix moyen calculé
+        """
+        article = session.get(Article, article_id)
+        if not article:
+            return
+        
+        prix_moyen = StockService.calculer_prix_moyen_article(session, article_id)
+        
+        if prix_moyen is not None:
+            ancien_prix = article.prix_unitaire
+            article.prix_unitaire = prix_moyen
+            article.updated_at = datetime.now()
+            session.add(article)
+            session.commit()
+            
+            logger.info(
+                f"Prix moyen mis à jour pour '{article.designation}': "
+                f"{ancien_prix or 0} → {prix_moyen} FCFA"
+            )
+
+    # ============================================
     # MOUVEMENTS DE STOCK
     # ============================================
 
@@ -201,6 +267,10 @@ class StockService:
         session.add(article)
         session.commit()
         session.refresh(mouvement)
+
+        # Mettre à jour le prix moyen si c'est une ENTREE avec prix
+        if type_mouvement == "ENTREE" and kwargs.get('prix_unitaire_reel'):
+            StockService.mettre_a_jour_prix_moyen(session, article_id)
 
         # Vérifier le stock minimum
         alerte = None

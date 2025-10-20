@@ -24,6 +24,7 @@ dependencies = [
     "pypdf2>=3.0.1",
     "pdfplumber>=0.11.7",
     "ruff>=0.14.0",
+    "psycopg2>=2.9.11",
 ]
 
 [project.optional-dependencies]

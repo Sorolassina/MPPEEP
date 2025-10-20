@@ -6,11 +6,11 @@
     <title>{% block title %}Connexion{% endblock %} - {{ app_name }}</title>
     
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ static_url('favicon.ico') }}">
+    <link rel="icon" type="image/x-icon" href="{{ static_versioned_url(static_url('favicon.ico')) }}">
     
     <!-- CSS de base -->
-    <link rel="stylesheet" href="{{ static_url('css/base.css') }}">
-    <link rel="stylesheet" href="{{ static_url('css/theme.css') }}">
+    <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/base.css')) }}">
+    <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/theme.css')) }}">
     
     <!-- CSS spécifiques aux pages d'authentification -->
     {% block styles %}{% endblock %}

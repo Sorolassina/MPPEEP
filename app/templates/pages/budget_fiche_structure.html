@@ -1160,7 +1160,7 @@ document.addEventListener('click', function(event) {
 function editerFiche(ficheId) {
   showGlobalLoading('Chargement...', 'Ouverture de l\'éditeur');
   setTimeout(() => {
-    window.location.href = "{{ url_for('budget_fiche_form', fiche_id=0) }}".replace('/0', `/${ficheId}`);
+    window.location.href = "{{ url_for('budget_fiche_edit', fiche_id=0) }}".replace('/0', `/${ficheId}`);
   }, 300);
 }
 
@@ -1168,7 +1168,7 @@ function exporterPDF(ficheId) {
   showGlobalLoading('Génération de la fiche en cours...', 'Création du document PDF');
   
   // Télécharger directement le fichier PDF
-  fetch("{{ url_for('api_exporter_fiche_pdf', fiche_id=0) }}".replace('/0', `/${ficheId}`))
+  fetch("{{ url_for('api_export_fiche_pdf', fiche_id=0) }}".replace('/0', `/${ficheId}`))
     .then(response => {
       if (!response.ok) throw new Error('Erreur lors de la génération');
       
@@ -1265,10 +1265,7 @@ async function handleAjouterDocuments(event) {
   showGlobalLoading('Upload...', 'Envoi des documents');
   
   try {
-    const response = await fetch("{{ url_for('api_ajouter_document_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`), {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_ajouter_document_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`), formData, 'POST');
     
     const result = await response.json();
     
@@ -1357,10 +1354,7 @@ async function handleAjouterAction(event) {
   showGlobalLoading('Création...', 'Création de l\'action');
   
   try {
-    const response = await fetch("{{ url_for('api_creer_action') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_creer_action') }}", formData, 'POST', true);
     
     const result = await response.json();
     
@@ -1389,11 +1383,8 @@ async function handleAjouterService(event) {
   
   showGlobalLoading('Création...', 'Création du service');
   
-  try {
-    const response = await fetch("{{ url_for('api_creer_service') }}", {
-      method: 'POST',
-      body: formData
-    });
+  try{
+    const response = await submitFormAsJson("{{ url_for('api_creer_service') }}", formData, 'POST', true);
     
     const result = await response.json();
     
@@ -1423,10 +1414,7 @@ async function handleAjouterActivite(event) {
   showGlobalLoading('Création...', 'Création de l\'activité');
   
   try {
-    const response = await fetch("{{ url_for('api_creer_activite') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_creer_activite') }}", formData, 'POST', true);
     
     const result = await response.json();
     
@@ -1456,10 +1444,7 @@ async function handleAjouterLigne(event) {
   showGlobalLoading('Création...', 'Création de la ligne budgétaire et upload des documents');
   
   try {
-    const response = await fetch("{{ url_for('api_creer_ligne') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_creer_ligne') }}", formData, 'POST', true);
     
     const result = await response.json();
     
@@ -1494,10 +1479,7 @@ async function handleChangerStatut(event) {
   showGlobalLoading('Changement de statut...', 'Mise à jour de la fiche technique');
   
   try {
-    const response = await fetch("{{ url_for('api_modifier_statut_fiche', fiche_id=fiche.id) }}", {
-      method: 'PUT',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_modifier_statut_fiche', fiche_id=fiche.id) }}", formData, 'PUT', true);
     
     const result = await response.json();
     
@@ -1599,10 +1581,7 @@ async function handleEditerAction(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour de l\'action');
   
   try {
-    const response = await fetch("{{ url_for('api_modifier_action', action_id=0) }}".replace('/0', `/${actionId}`), {
-      method: 'PUT',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_modifier_action', action_id=0) }}".replace('/0', `/${actionId}`), formData, 'PUT', true);
     
     const result = await response.json();
     
@@ -1630,10 +1609,7 @@ async function handleEditerService(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour du service');
   
   try {
-    const response = await fetch("{{ url_for('api_modifier_service', service_id=0) }}".replace('/0', `/${serviceId}`), {
-      method: 'PUT',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_modifier_service', service_id=0) }}".replace('/0', `/${serviceId}`), formData, 'PUT', true);
     
     const result = await response.json();
     
@@ -1661,10 +1637,7 @@ async function handleEditerActivite(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour de l\'activité');
   
   try {
-    const response = await fetch("{{ url_for('api_modifier_activite', activite_id=0) }}".replace('/0', `/${activiteId}`), {
-      method: 'PUT',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_modifier_activite', activite_id=0) }}".replace('/0', `/${activiteId}`), formData, 'PUT', true);
     
     const result = await response.json();
     
@@ -1692,10 +1665,7 @@ async function handleEditerLigne(event) {
   showGlobalLoading('Enregistrement...', 'Mise à jour de la ligne budgétaire');
   
   try {
-    const response = await fetch("{{ url_for('api_modifier_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`), {
-      method: 'PUT',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_modifier_ligne', ligne_id=0) }}".replace('/0', `/${ligneId}`), formData, 'PUT', true);
     
     const result = await response.json();
     

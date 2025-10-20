@@ -1,0 +1,85 @@
+# Dockerfile.uv - MPPEEP Dashboard (Production avec UV)
+# Optimisé pour UV package manager
+
+# ============================================
+# STAGE 1 : BUILDER
+# ============================================
+FROM python:3.11-slim AS builder
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+# Installation des dépendances de build
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer UV
+RUN pip install --no-cache-dir uv
+
+# Copier les fichiers de configuration UV
+COPY pyproject.toml uv.lock ./
+
+# Créer l'environnement virtuel avec UV et installer les dépendances
+ENV VIRTUAL_ENV=/opt/venv
+RUN uv venv $VIRTUAL_ENV && \
+    uv pip install --python $VIRTUAL_ENV/bin/python --no-cache \
+    fastapi uvicorn sqlmodel psycopg2-binary pydantic pydantic-settings \
+    jinja2 passlib bcrypt httpx aiofiles pandas openpyxl reportlab python-multipart
+
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# ============================================
+# STAGE 2 : RUNTIME
+# ============================================
+FROM python:3.11-slim
+
+LABEL maintainer="MPPEEP <support@mppeep.gov>"
+LABEL version="1.0.0"
+LABEL environment="production"
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+
+# Installation des dépendances runtime
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Créer un utilisateur non-root
+RUN groupadd -r mppeep && \
+    useradd -r -g mppeep -u 1000 mppeep && \
+    chown -R mppeep:mppeep /app
+
+# Copier l'environnement virtuel depuis le builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Copier le code
+COPY --chown=mppeep:mppeep . .
+
+# Créer les dossiers nécessaires
+RUN mkdir -p logs uploads static/uploads && \
+    chown -R mppeep:mppeep logs uploads static
+
+# Passer à l'utilisateur non-root
+USER mppeep
+
+# Exposer le port
+EXPOSE 9000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:9000/api/v1/health || exit 1
+
+# Commande de démarrage production
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000", "--workers", "4"]
+

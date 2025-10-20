@@ -118,6 +118,13 @@
             </option>
             {% endfor %}
           </select>
+          <small style="color: var(--gray-600); font-size: 0.85rem;">
+            {% if articles %}
+              {{ articles|length }} article(s) disponible(s)
+            {% else %}
+              ⚠️ Aucun article configuré - <a href="{{ url_for('stock_articles') }}" target="_blank" style="color: #0066cc;">Créer des articles</a>
+            {% endif %}
+          </small>
         </div>
         
         <div class="form-group">
@@ -142,6 +149,23 @@
         </div>
       </div>
       
+      <!-- Options pour ENTREE seulement -->
+      <div id="entree-options" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="enable_perissable" onchange="togglePerissableSection()" 
+                   style="width: 18px; height: 18px; cursor: pointer;">
+            <span style="font-weight: 500;">🍃 Article périssable (lot avec péremption)</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="enable_amortissable" onchange="toggleAmortissableSection()" 
+                   style="width: 18px; height: 18px; cursor: pointer;">
+            <span style="font-weight: 500;">💰 Matériel amortissable (avec numéro de série)</span>
+          </label>
+        </div>
+      </div>
+      
       <!-- Info stock actuel -->
       <div id="stock-info" style="display: none; padding: 1rem; background: var(--info-light); border-left: 4px solid var(--info-color); border-radius: 8px; margin-bottom: 2rem;">
         <div style="color: var(--info-dark);">
@@ -162,6 +186,13 @@
             <option value="{{ f.id }}">{{ f.nom }}</option>
             {% endfor %}
           </select>
+          <small style="color: var(--gray-600); font-size: 0.85rem;">
+            {% if fournisseurs %}
+              {{ fournisseurs|length }} fournisseur(s) disponible(s)
+            {% else %}
+              ⚠️ Aucun fournisseur configuré - <a href="{{ url_for('stock_fournisseurs') }}" target="_blank" style="color: #0066cc;">Créer des fournisseurs</a>
+            {% endif %}
+          </small>
         </div>
         
         <div class="form-group" id="beneficiaire-group" style="display: none;">
@@ -173,6 +204,104 @@
           <label class="form-label">Observations</label>
           <textarea name="observations" class="form-textarea" rows="3" 
                     placeholder="Informations complémentaires..."></textarea>
+        </div>
+      </div>
+      
+      <!-- NOUVEAUTÉ : Articles Périssables (ENTREE seulement) -->
+      <div id="perissable-section" style="display: none; margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">🍃 Informations Périssables</h3>
+        <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981;">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Numéro de Lot *</label>
+              <input type="text" name="numero_lot" id="numero_lot" class="form-input"
+                     placeholder="Ex: LOT-2025-0312">
+              <small style="color: var(--gray-600);">Numéro de lot du fournisseur</small>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Date de Fabrication</label>
+              <input type="date" name="date_fabrication" id="date_fabrication" class="form-input">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Date de Péremption *</label>
+              <input type="date" name="date_peremption" id="date_peremption" class="form-input">
+              <small style="color: #dc2626; font-weight: 500;">Obligatoire pour les articles périssables</small>
+            </div>
+          </div>
+          
+          <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="color: #1e40af; margin: 0; line-height: 1.6; font-size: 0.9rem;">
+              <strong>💡 Info :</strong> Ces informations seront utilisées pour le suivi FIFO (First In, First Out) et les alertes de péremption.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- NOUVEAUTÉ : Amortissement du Matériel (ENTREE seulement) -->
+      <div id="amortissable-section" style="display: none; margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--secondary-color);">💰 Informations d'Amortissement</h3>
+        <div style="background: #fef3c7; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b;">
+          <div class="form-grid" style="margin-bottom: 1rem;">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label">Numéro(s) de Série *</label>
+              <input type="text" name="numero_serie" id="numero_serie" class="form-input"
+                     placeholder="Ex: SN001, SN002, SN003">
+              <small style="color: var(--gray-600);">Séparer par des virgules si plusieurs unités</small>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Date d'Acquisition *</label>
+              <input type="date" name="date_acquisition" id="date_acquisition" class="form-input">
+              <small style="color: var(--gray-600);">Date d'achat du matériel</small>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Durée d'Amortissement (années) *</label>
+              <input type="number" name="duree_amortissement_annees" id="duree_amortissement_annees" 
+                     class="form-input" min="1" step="1" placeholder="Ex: 3"
+                     onchange="calculerAmortissement()">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Méthode d'Amortissement</label>
+              <select name="methode_amortissement" id="methode_amortissement" class="form-select" 
+                      onchange="calculerAmortissement()">
+                <option value="LINEAIRE">Linéaire</option>
+                <option value="DEGRESSIF">Dégressif</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Taux d'Amortissement (%) <span style="color: #10b981;">✓ Auto</span></label>
+              <input type="number" name="taux_amortissement" id="taux_amortissement" 
+                     class="form-input" min="0" max="100" step="0.01"
+                     placeholder="Calculé automatiquement" readonly
+                     style="background: var(--gray-100); cursor: not-allowed;">
+              <small style="color: #10b981; font-weight: 500;">Calculé automatiquement</small>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Valeur Résiduelle (FCFA) <span style="color: #10b981;">✓ Auto</span></label>
+              <input type="number" name="valeur_residuelle" id="valeur_residuelle" 
+                     class="form-input" min="0" step="1"
+                     placeholder="Calculée automatiquement" readonly
+                     style="background: var(--gray-100); cursor: not-allowed;">
+              <small style="color: #10b981; font-weight: 500;">10% de la valeur d'acquisition</small>
+            </div>
+          </div>
+          
+          <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="color: #1e40af; margin: 0; line-height: 1.6; font-size: 0.9rem;">
+              <strong>💡 Calcul automatique :</strong><br>
+              • <strong>Linéaire :</strong> Taux = 100 ÷ Durée (ex: 3 ans → 33.33%)<br>
+              • <strong>Dégressif :</strong> Taux = (100 ÷ Durée) × Coefficient (1.25/1.75/2.25)<br>
+              • <strong>Valeur résiduelle :</strong> 10% de la valeur d'acquisition
+            </p>
+          </div>
         </div>
       </div>
       
@@ -212,16 +341,26 @@ function selectType(type, element) {
   // Afficher/masquer les champs spécifiques
   const fournisseurGroup = document.getElementById('fournisseur-group');
   const beneficiaireGroup = document.getElementById('beneficiaire-group');
+  const perissableSection = document.getElementById('perissable-section');
+  const amortissableSection = document.getElementById('amortissable-section');
   
   if (type === 'ENTREE') {
     fournisseurGroup.style.display = 'block';
     beneficiaireGroup.style.display = 'none';
+    // Les sections périssable et amortissable seront affichées selon l'article sélectionné
+    updateArticleSpecificSections();
   } else if (type === 'SORTIE') {
     fournisseurGroup.style.display = 'none';
     beneficiaireGroup.style.display = 'block';
+    // Masquer les sections pour les sorties
+    perissableSection.style.display = 'none';
+    amortissableSection.style.display = 'none';
   } else {
     fournisseurGroup.style.display = 'none';
     beneficiaireGroup.style.display = 'none';
+    // Masquer les sections pour les ajustements
+    perissableSection.style.display = 'none';
+    amortissableSection.style.display = 'none';
   }
 }
 
@@ -239,9 +378,98 @@ function updateArticleInfo() {
     document.getElementById('info-unite').textContent = unite;
     document.getElementById('info-unite2').textContent = unite;
     document.getElementById('stock-info').style.display = 'block';
+    
+    // Mettre à jour les sections spécifiques selon le type d'article
+    updateArticleSpecificSections();
   } else {
     document.getElementById('stock-info').style.display = 'none';
   }
+}
+
+function updateArticleSpecificSections() {
+  const typeMouvement = document.getElementById('type_mouvement').value;
+  const entreeOptions = document.getElementById('entree-options');
+  
+  // Afficher les options uniquement pour les ENTREES
+  if (typeMouvement === 'ENTREE') {
+    entreeOptions.style.display = 'block';
+  } else {
+    entreeOptions.style.display = 'none';
+    // Masquer les sections si on change de type
+    document.getElementById('perissable-section').style.display = 'none';
+    document.getElementById('amortissable-section').style.display = 'none';
+    document.getElementById('enable_perissable').checked = false;
+    document.getElementById('enable_amortissable').checked = false;
+  }
+}
+
+function togglePerissableSection() {
+  const checkbox = document.getElementById('enable_perissable');
+  const section = document.getElementById('perissable-section');
+  
+  if (checkbox.checked) {
+    section.style.display = 'block';
+  } else {
+    section.style.display = 'none';
+  }
+}
+
+function toggleAmortissableSection() {
+  const checkbox = document.getElementById('enable_amortissable');
+  const section = document.getElementById('amortissable-section');
+  
+  if (checkbox.checked) {
+    section.style.display = 'block';
+    // Calculer automatiquement l'amortissement
+    calculerAmortissement();
+  } else {
+    section.style.display = 'none';
+  }
+}
+
+// ========================================
+// CALCUL AUTOMATIQUE DE L'AMORTISSEMENT
+// ========================================
+function calculerAmortissement() {
+  const prixUnitaire = parseFloat(document.getElementById('prix_unitaire_reel')?.value) || 0;
+  const dureeAnnees = parseInt(document.getElementById('duree_amortissement_annees')?.value) || 0;
+  const methode = document.getElementById('methode_amortissement')?.value || 'LINEAIRE';
+  
+  const tauxInput = document.getElementById('taux_amortissement');
+  const valeurResiduielleInput = document.getElementById('valeur_residuelle');
+  
+  if (!tauxInput || !valeurResiduielleInput) return;
+  
+  // Si on n'a pas les données nécessaires, on ne calcule pas
+  if (dureeAnnees === 0) {
+    tauxInput.value = '';
+    valeurResiduielleInput.value = '';
+    return;
+  }
+  
+  // Calcul du taux d'amortissement
+  let taux = 0;
+  if (methode === 'LINEAIRE') {
+    // Méthode linéaire : 100 / nombre d'années
+    taux = 100 / dureeAnnees;
+  } else if (methode === 'DEGRESSIF') {
+    // Méthode dégressive : (100 / nombre d'années) × coefficient
+    let coefficient = 1.25;
+    if (dureeAnnees >= 5 && dureeAnnees <= 6) {
+      coefficient = 1.75;
+    } else if (dureeAnnees > 6) {
+      coefficient = 2.25;
+    }
+    taux = (100 / dureeAnnees) * coefficient;
+  }
+  
+  // Arrondir à 2 décimales
+  taux = Math.round(taux * 100) / 100;
+  tauxInput.value = taux;
+  
+  // Calcul de la valeur résiduelle (10% de la valeur d'acquisition)
+  const valeurResiduelle = Math.round(prixUnitaire * 0.10);
+  valeurResiduielleInput.value = valeurResiduelle;
 }
 
 function calculerMontant() {
@@ -257,6 +485,9 @@ function calculerMontant() {
   } else {
     document.getElementById('montant_total_display').value = '';
   }
+  
+  // Recalculer l'amortissement si la section est visible
+  calculerAmortissement();
 }
 
 async function submitForm(event) {
@@ -269,10 +500,7 @@ async function submitForm(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('api_create_mouvement') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_create_mouvement') }}", formData, 'POST', true);
     
     const result = await response.json();
     

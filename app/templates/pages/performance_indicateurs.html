@@ -746,10 +746,7 @@ document.getElementById('indicatorForm').addEventListener('submit', async functi
             : API_URLS.create;
         const method = editingIndicateurId ? 'PUT' : 'POST';
         
-        const response = await fetch(url, {
-            method: method,
-            body: formData
-        });
+        const response = await submitFormAsJson(url, formData, method, true);
         const result = await response.json();
         
         if (result.success) {

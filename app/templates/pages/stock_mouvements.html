@@ -212,10 +212,7 @@ async function procederInversion(mouvementId) {
       formData.append('observations', `🔄 Mouvement d'inversion du mouvement #${mouvementId}`);
       
       // Enregistrer le mouvement inverse
-      const createResponse = await fetch("{{ url_for('api_create_mouvement') }}", {
-        method: 'POST',
-        body: formData
-      });
+      const createResponse = await submitFormAsJson("{{ url_for('api_create_mouvement') }}", formData, 'POST', true);
       
       const createResult = await createResponse.json();
       

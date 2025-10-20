@@ -289,10 +289,7 @@ async function submitFournisseur(event) {
     const method = id ? 'PUT' : 'POST';
     
     try {
-        const response = await fetch(url, {
-            method: method,
-            body: formData
-        });
+        const response = await submitFormAsJson(url, formData, method, true);
         
         const result = await response.json();
         

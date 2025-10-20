@@ -48,6 +48,7 @@
       <button class="tab" onclick="switchTab('directions')">🏢 Directions</button>
       <button class="tab" onclick="switchTab('services')">📋 Services</button>
       <button class="tab" onclick="switchTab('grades')">🎓 Grades</button>
+      <button class="tab" onclick="switchTab('categories')">📦 Catégories</button>
     </div>
 
     <!-- TAB PROGRAMMES -->
@@ -149,6 +150,30 @@
           </thead>
           <tbody id="grades-tbody">
             <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB CATÉGORIES D'ARTICLES -->
+    <div id="tab-categories" class="tab-content">
+      <div class="table-header">
+        <h3>📦 Catégories d'Articles</h3>
+        <button class="btn btn-primary" onclick="openModal('categorie')">➕ Nouvelle Catégorie</button>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="categories-tbody">
+            <tr><td colspan="4" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
           </tbody>
         </table>
       </div>
@@ -344,6 +369,8 @@
 let currentType = '';
 let editingId = null;
 let agents = []; // Liste des agents pour les responsables
+let programmes = []; // Liste des programmes pour les directions
+let directions = []; // Liste des directions pour les services
 
 // Charger les données au démarrage
 document.addEventListener('DOMContentLoaded', function() {
@@ -352,6 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadDirections();
   loadServices();
   loadGrades();
+  loadCategories();
 });
 
 // ============================================
@@ -398,12 +426,15 @@ async function reloadTableData(type) {
     case 'grade':
       await loadGrades();
       break;
+    case 'categorie':
+      await loadCategories();
+      break;
   }
 }
 
 async function loadProgrammes() {
   const response = await fetch("{{ url_for('api_list_programmes_ref') }}");
-  const programmes = await response.json();
+  programmes = await response.json(); // Stocker dans la variable globale
   
   const tbody = document.getElementById('programmes-tbody');
   
@@ -459,7 +490,7 @@ async function loadProgrammes() {
 
 async function loadDirections() {
   const response = await fetch("{{ url_for('api_list_directions_ref') }}");
-  const directions = await response.json();
+  directions = await response.json(); // Stocker dans la variable globale
   
   const tbody = document.getElementById('directions-tbody');
   
@@ -634,6 +665,47 @@ async function loadGrades() {
 // ============================================
 // MODAL
 // ============================================
+async function loadCategories() {
+  const response = await fetch("{{ url_for('api_list_categories_ref') }}");
+  const categories = await response.json();
+  
+  const tbody = document.getElementById('categories-tbody');
+  
+  // Si aucune catégorie, afficher le message vide
+  if (categories.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-state">
+        <td colspan="4" style="text-align: center; padding: 3rem; color: var(--gray-600);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
+          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucune catégorie enregistrée</div>
+          <div style="font-size: 0.9rem; color: var(--gray-500);">
+            Cliquez sur "➕ Nouvelle Catégorie" pour créer votre première catégorie d'article
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = categories.map(c => `
+    <tr>
+      <td><strong>${c.code}</strong></td>
+      <td>${c.libelle}</td>
+      <td>${c.description || '-'}</td>
+      <td>
+        <div class="action-buttons">
+          <button class="btn btn-sm btn-primary" onclick="openModal('categorie', ${c.id})" title="Modifier">
+            ✏️
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="deleteItem('categorie', ${c.id})" title="Supprimer">
+            🗑️
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
 function openModal(type, id = null) {
   currentType = type;
   editingId = id;
@@ -647,7 +719,8 @@ function openModal(type, id = null) {
     'programme': id ? 'Modifier Programme' : 'Nouveau Programme',
     'direction': id ? 'Modifier Direction' : 'Nouvelle Direction',
     'service': id ? 'Modifier Service' : 'Nouveau Service',
-    'grade': id ? 'Modifier Grade' : 'Nouveau Grade'
+    'grade': id ? 'Modifier Grade' : 'Nouveau Grade',
+    'categorie': id ? 'Modifier Catégorie' : 'Nouvelle Catégorie'
   };
   title.textContent = titles[type];
   
@@ -689,9 +762,7 @@ function openModal(type, id = null) {
         <label>Programme</label>
         <select name="programme_id" id="field-programme_id" class="form-control">
           <option value="">-- Aucun --</option>
-          {% for prog in programmes %}
-          <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
-          {% endfor %}
+          ${programmes.map(p => `<option value="${p.id}">${p.code} - ${p.libelle}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
@@ -721,9 +792,7 @@ function openModal(type, id = null) {
         <label>Direction</label>
         <select name="direction_id" id="field-direction_id" class="form-control">
           <option value="">-- Aucune --</option>
-          {% for dir in directions %}
-          <option value="{{ dir.id }}">{{ dir.code }} - {{ dir.libelle }}</option>
-          {% endfor %}
+          ${directions.map(d => `<option value="${d.id}">${d.code} - ${d.libelle}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
@@ -743,15 +812,15 @@ function openModal(type, id = null) {
     formContent.innerHTML = `
       <div class="form-group">
         <label>Code *</label>
-        <input type="text" name="code" id="field-code" required placeholder="Ex: A1">
+        <input type="text" name="code" id="field-code" required placeholder="Ex: A1" class="form-control">
       </div>
       <div class="form-group">
         <label>Libellé *</label>
-        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Administrateur Civil">
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Administrateur Civil" class="form-control">
       </div>
       <div class="form-group">
         <label>Catégorie *</label>
-        <select name="categorie" id="field-categorie" required>
+        <select name="categorie" id="field-categorie" required class="form-control">
           <option value="A">A - Cadres supérieurs</option>
           <option value="B">B - Cadres moyens</option>
           <option value="C">C - Agents d'exécution</option>
@@ -760,13 +829,28 @@ function openModal(type, id = null) {
       </div>
       <div class="form-group">
         <label>Échelon Min *</label>
-        <input type="number" name="echelon_min" id="field-echelon_min" required value="1" min="1">
+        <input type="number" name="echelon_min" id="field-echelon_min" required value="1" min="1" class="form-control">
       </div>
       <div class="form-group">
         <label>Échelon Max *</label>
-        <input type="number" name="echelon_max" id="field-echelon_max" required value="5" min="1">
+        <input type="number" name="echelon_max" id="field-echelon_max" required value="5" min="1" class="form-control">
       </div>
       ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
+    `;
+  } else if (type === 'categorie') {
+    formContent.innerHTML = `
+      <div class="form-group">
+        <label>Code *</label>
+        <input type="text" name="code" id="field-code" required placeholder="Ex: FOUR" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Libellé *</label>
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Fournitures de bureau" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" id="field-description" rows="3" class="form-control"></textarea>
+      </div>
     `;
   }
   
@@ -793,8 +877,9 @@ async function loadFormData(type, id) {
   if (item) {
     Object.keys(item).forEach(key => {
       const field = document.getElementById(`field-${key}`);
-      if (field) {
-        field.value = item[key] || '';
+      if (field && item[key] != null && item[key] !== '' && item[key] !== "None") {
+        // Ne remplir que si la valeur existe (évite les problèmes de validation sur champs vides)
+        field.value = item[key];
       }
     });
   }
@@ -809,6 +894,7 @@ async function handleSubmit(event) {
   showGlobalLoading('Enregistrement...', 'Veuillez patienter');
   
   const formData = new FormData(event.target);
+  
   // Construire l'URL avec url_for selon le type
   let url;
   if (editingId && editingId !== null && editingId !== 'null') {
@@ -826,6 +912,9 @@ async function handleSubmit(event) {
       case 'grade':
         url = "{{ url_for('api_update_grade', grade_id=0) }}".replace('/0', `/${editingId}`);
         break;
+      case 'categorie':
+        url = "{{ url_for('api_update_categorie', categorie_id=0) }}".replace('/0', `/${editingId}`);
+        break;
     }
   } else {
     // Création
@@ -842,14 +931,15 @@ async function handleSubmit(event) {
       case 'grade':
         url = "{{ url_for('api_create_grade') }}";
         break;
+      case 'categorie':
+        url = "{{ url_for('api_create_categorie') }}";
+        break;
     }
   }
   
   try {
-    const response = await fetch(url, {
-      method: editingId ? 'PUT' : 'POST',
-      body: formData
-    });
+    // Utiliser la fonction utilitaire en forçant FormData (les endpoints attendent Form(...))
+    const response = await submitFormAsJson(url, formData, editingId ? 'PUT' : 'POST', true);
     
     const result = await response.json();
     
@@ -870,6 +960,9 @@ async function handleSubmit(event) {
           break;
         case 'grade':
           await loadGrades();
+          break;
+        case 'categorie':
+          await loadCategories();
           break;
       }
       
@@ -1015,6 +1108,9 @@ async function deactivateItem(type, id) {
     case 'grade':
       url = "{{ url_for('api_delete_grade', grade_id=0) }}".replace('/0', `/${id}`);
       break;
+    case 'categorie':
+      url = "{{ url_for('api_delete_categorie', categorie_id=0) }}".replace('/0', `/${id}`);
+      break;
   }
   
   try {
@@ -1083,6 +1179,9 @@ async function deleteItem(type, id) {
       break;
     case 'grade':
       url = "{{ url_for('api_delete_grade', grade_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
+      break;
+    case 'categorie':
+      url = "{{ url_for('api_delete_categorie', categorie_id=0) }}".replace('/0', `/${id}`);
       break;
   }
   

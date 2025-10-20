@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from sqlmodel import Field, SQLModel
+from sqlalchemy import String
 
 from app.core.enums import GradeCategory, PositionAdministrative, SituationFamiliale, TypeDocument
 
@@ -92,7 +93,7 @@ class GradeComplet(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     code: str = Field(index=True, unique=True, max_length=10)  # Ex: "A4", "B3"
     libelle: str = Field(max_length=200)  # Ex: "Administrateur civil principal"
-    categorie: GradeCategory  # A, B, C, D
+    categorie: GradeCategory = Field(sa_type=String)  # A, B, C, D - stocké comme string
     echelon_min: int = 1
     echelon_max: int = 10
 
@@ -132,7 +133,7 @@ class AgentComplet(SQLModel, table=True):
     lieu_naissance: str | None = Field(default=None, max_length=200)
     nationalite: str = Field(default="Sénégalaise", max_length=100)
     sexe: str | None = Field(default=None, max_length=1)  # M/F
-    situation_familiale: SituationFamiliale | None = None
+    situation_familiale: SituationFamiliale | None = Field(default=None, sa_type=String)  # Stocké comme string
     nombre_enfants: int = Field(default=0, ge=0)
 
     # Coordonnées
@@ -148,7 +149,7 @@ class AgentComplet(SQLModel, table=True):
     date_recrutement: date | None = None
     date_prise_service: date | None = None
     date_depart_retraite_prevue: date | None = None
-    position_administrative: PositionAdministrative = Field(default=PositionAdministrative.EN_ACTIVITE)
+    position_administrative: PositionAdministrative = Field(default=PositionAdministrative.EN_ACTIVITE, sa_type=String)  # Stocké comme string
 
     # Affectation actuelle
     grade_id: int | None = Field(default=None, foreign_key="grade_complet.id")

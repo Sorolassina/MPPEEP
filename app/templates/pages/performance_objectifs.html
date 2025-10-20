@@ -411,8 +411,8 @@
             </div>
             
             <div class="form-group">
-                <label for="periode" class="form-label">Période</label>
-                <input type="text" id="periode" name="periode" class="form-control" placeholder="ex: 2025, Q1 2025">
+                <label for="periode" class="form-label">Période *</label>
+                <input type="text" id="periode" name="periode" class="form-control" placeholder="ex: 2025, Q1 2025" required>
             </div>
             
             <div class="form-row">
@@ -771,10 +771,7 @@ document.getElementById('objectiveForm').addEventListener('submit', async functi
             : API_URLS.create;
         const method = editingObjectiveId ? 'PUT' : 'POST';
         
-        const response = await fetch(url, {
-            method: method,
-            body: formData
-        });
+        const response = await submitFormAsJson(url, formData, method, true);
         const result = await response.json();
         
         if (result.success) {

@@ -189,10 +189,7 @@ async function calculerAmortissement(articleId) {
   formData.append('annee', currentAnnee);
   
   try {
-    const response = await fetch("{{ url_for('api_calculer_amortissement') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_calculer_amortissement') }}", formData, 'POST', true);
     
     const result = await response.json();
     

@@ -399,10 +399,7 @@ async function handleUploadDocumentFiche(event) {
   showGlobalLoading('Upload...', 'Upload du document en cours');
   
   try {
-    const response = await fetch("{{ url_for('api_upload_document', fiche_id=0) }}".replace('/0', `/${ficheId}`), {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_upload_document', fiche_id=0) }}".replace('/0', `/${ficheId}`), formData, 'POST');
     
     const result = await response.json();
     
@@ -513,10 +510,7 @@ async function handleChargerFiche(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('api_charger_fiche') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_charger_fiche') }}", formData, 'POST');
     
     const result = await response.json();
     

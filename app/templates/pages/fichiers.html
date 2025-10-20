@@ -269,10 +269,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
     const formData = new FormData(this);
     
     try {
-        const response = await fetch("{{ url_for('upload_file') }}", {
-            method: 'POST',
-            body: formData
-        });
+        const response = await submitFormAsJson("{{ url_for('upload_file') }}", formData, 'POST');
         
         progressFill.style.width = '70%';
         

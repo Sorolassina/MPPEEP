@@ -367,10 +367,7 @@ async function handleLigneSubmit(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('api_ajouter_ligne_fiche', fiche_id=fiche.id) }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_ajouter_ligne_fiche', fiche_id=fiche.id) }}", formData, 'POST', true);
     
     const result = await response.json();
     
@@ -397,10 +394,7 @@ async function handleUpload(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('api_ajouter_document_fiche', fiche_id=fiche.id) }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_ajouter_document_fiche', fiche_id=fiche.id) }}", formData, 'POST');
     
     const result = await response.json();
     

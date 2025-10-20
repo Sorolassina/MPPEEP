@@ -1,10 +1,11 @@
 # app/api/v1/endpoints/rh.py
 import secrets
 from datetime import date
+from enum import Enum
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlmodel import Session, select
 
 from app.api.v1.endpoints.auth import get_current_user
@@ -299,7 +300,7 @@ def api_satisfaction_besoins(session: Session = Depends(get_session)):
     return RHService.satisfaction_besoins(session)
 
 
-@router.get("/api/demandes/{request_id}", response_model=HRRequest)
+@router.get("/api/demandes/{request_id}", response_class=JSONResponse)
 def api_get_demande(request_id: int, session: Session = Depends(get_session)):
     """
     Récupérer une demande (API JSON)
@@ -307,19 +308,78 @@ def api_get_demande(request_id: int, session: Session = Depends(get_session)):
     req = session.get(HRRequest, request_id)
     if not req:
         raise HTTPException(404, "Demande introuvable")
-    return req
+    
+    # Retourner un dictionnaire pour éviter les problèmes de sérialisation
+    return {
+        "id": req.id,
+        "type": req.type,
+        "objet": req.objet,
+        "motif": req.motif,
+        "agent_id": req.agent_id,
+        "current_state": req.current_state.value if isinstance(req.current_state, Enum) else req.current_state,
+        "current_assignee_role": req.current_assignee_role,
+        "date_debut": req.date_debut.isoformat() if req.date_debut else None,
+        "date_fin": req.date_fin.isoformat() if req.date_fin else None,
+        "nb_jours": req.nb_jours,
+        "acte_type": req.acte_type,
+        "document_filename": req.document_filename,
+        "created_at": req.created_at.isoformat() if req.created_at else None,
+        "updated_at": req.updated_at.isoformat() if req.updated_at else None,
+    }
 
 
-@router.post("/api/demandes", response_model=HRRequest)
-def api_create_demande(payload: HRRequestBase, agent_id: int, session: Session = Depends(get_session)):
+@router.post("/api/demandes", response_class=JSONResponse)
+def api_create_demande(
+    agent_id: int = Form(...),
+    type: str = Form(...),
+    objet: str = Form(...),
+    motif: str | None = Form(None),
+    acte_type: str | None = Form(None),
+    date_debut: str | None = Form(None),
+    date_fin: str | None = Form(None),
+    nb_jours: float | None = Form(None),
+    document_filename: str | None = Form(None),
+    session: Session = Depends(get_session)
+):
     """
-    Créer une demande via API JSON
+    Créer une demande via API (accepte FormData ou JSON)
     """
-    req = HRRequest(**payload.model_dump(), agent_id=agent_id)
-    session.add(req)
-    session.commit()
-    session.refresh(req)
-    return req
+    try:
+        # Créer le payload
+        payload_data = {
+            "type": type,
+            "objet": objet,
+            "motif": motif,
+            "date_debut": date.fromisoformat(date_debut) if date_debut else None,
+            "date_fin": date.fromisoformat(date_fin) if date_fin else None,
+            "nb_jours": nb_jours,
+            "acte_type": acte_type,
+            "document_filename": document_filename,
+        }
+        
+        payload = HRRequestBase(**payload_data)
+        req = HRRequest(**payload.model_dump(), agent_id=agent_id)
+        session.add(req)
+        session.commit()
+        session.refresh(req)
+        
+        # Retourner un dictionnaire au lieu de l'objet directement
+        # pour éviter les problèmes de sérialisation avec les enums
+        return {
+            "success": True,
+            "message": "Demande créée avec succès",
+            "data": {
+                "id": req.id,
+                "type": req.type,
+                "objet": req.objet,
+                "agent_id": req.agent_id,
+                "current_state": req.current_state.value if isinstance(req.current_state, Enum) else req.current_state,
+                "created_at": req.created_at.isoformat() if req.created_at else None,
+            }
+        }
+    except Exception as e:
+        logger.error(f"❌ Erreur création demande API: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
 
 
 # ============================================

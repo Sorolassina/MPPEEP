@@ -854,7 +854,7 @@ def api_delete_document_fiche(
 # ============================================
 
 
-@router.put("/api/fiches/{fiche_id}/statut")
+@router.put("/api/fiches/{fiche_id}/statut", name="api_modifier_statut_fiche")
 def api_changer_statut_fiche(
     fiche_id: int,
     nouveau_statut: str = Form(...),
@@ -1025,7 +1025,7 @@ async def api_import_activites_excel(
 # ============================================
 
 
-@router.get("/api/fiches/{fiche_id}/export/pdf")
+@router.get("/api/fiches/{fiche_id}/export/pdf", name="api_export_fiche_pdf")
 def api_export_fiche_pdf(
     fiche_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
@@ -1513,7 +1513,7 @@ def api_export_fiche_pdf(
     )
 
 
-@router.get("/api/fiches/{fiche_id}/export/excel")
+@router.get("/api/fiches/{fiche_id}/export/excel", name="api_export_fiche_excel")
 def api_export_fiche_excel(
     fiche_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
@@ -3934,7 +3934,7 @@ def _creer_structure_depuis_pdf_data(df_data: list, fiche_id: int, session: Sess
 # ============================================
 
 
-@router.post("/api/actions")
+@router.post("/api/actions", name="api_creer_action")
 async def api_create_action(
     fiche_id: int = Form(...),
     nature_depense: str = Form(...),
@@ -3985,7 +3985,7 @@ async def api_create_action(
         raise HTTPException(500, f"Erreur lors de la création: {e!s}")
 
 
-@router.post("/api/services")
+@router.post("/api/services", name="api_creer_service")
 async def api_create_service(
     action_id: int = Form(...),
     code: str = Form(...),
@@ -4027,7 +4027,7 @@ async def api_create_service(
         raise HTTPException(500, f"Erreur lors de la création: {e!s}")
 
 
-@router.post("/api/activites")
+@router.post("/api/activites", name="api_creer_activite")
 async def api_create_activite(
     service_id: int = Form(...),
     code: str = Form(...),
@@ -4079,7 +4079,7 @@ async def api_create_activite(
         raise HTTPException(500, f"Erreur lors de la création: {e!s}")
 
 
-@router.post("/api/lignes")
+@router.post("/api/lignes", name="api_creer_ligne")
 async def api_create_ligne(
     activite_id: int = Form(...),
     code: str = Form(...),
@@ -4200,7 +4200,7 @@ async def api_create_ligne(
 # ============================================
 
 
-@router.put("/api/actions/{action_id}")
+@router.put("/api/actions/{action_id}", name="api_modifier_action")
 def api_update_action(
     action_id: int,
     libelle: str = Form(...),
@@ -4226,7 +4226,7 @@ def api_update_action(
         raise HTTPException(500, f"Erreur lors de la modification: {e!s}")
 
 
-@router.put("/api/services/{service_id}")
+@router.put("/api/services/{service_id}", name="api_modifier_service")
 def api_update_service(
     service_id: int,
     libelle: str = Form(...),
@@ -4252,7 +4252,7 @@ def api_update_service(
         raise HTTPException(500, f"Erreur lors de la modification: {e!s}")
 
 
-@router.put("/api/activites/{activite_id}")
+@router.put("/api/activites/{activite_id}", name="api_modifier_activite")
 def api_update_activite(
     activite_id: int,
     libelle: str = Form(...),
@@ -4278,7 +4278,7 @@ def api_update_activite(
         raise HTTPException(500, f"Erreur lors de la modification: {e!s}")
 
 
-@router.put("/api/lignes/{ligne_id}")
+@router.put("/api/lignes/{ligne_id}", name="api_modifier_ligne")
 def api_update_ligne(
     ligne_id: int,
     libelle: str = Form(...),
@@ -4340,7 +4340,7 @@ def api_update_ligne(
 # ============================================
 
 
-@router.delete("/api/actions/{action_id}")
+@router.delete("/api/actions/{action_id}", name="api_supprimer_action")
 def api_delete_action(
     action_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
@@ -4380,7 +4380,7 @@ def api_delete_action(
         raise HTTPException(500, f"Erreur lors de la suppression: {e!s}")
 
 
-@router.delete("/api/services/{service_id}")
+@router.delete("/api/services/{service_id}", name="api_supprimer_service")
 def api_delete_service(
     service_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
@@ -4420,7 +4420,7 @@ def api_delete_service(
         raise HTTPException(500, f"Erreur lors de la suppression: {e!s}")
 
 
-@router.delete("/api/activites/{activite_id}")
+@router.delete("/api/activites/{activite_id}", name="api_supprimer_activite")
 def api_delete_activite(
     activite_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
@@ -4460,7 +4460,7 @@ def api_delete_activite(
         raise HTTPException(500, f"Erreur lors de la suppression: {e!s}")
 
 
-@router.delete("/api/lignes/{ligne_id}")
+@router.delete("/api/lignes/{ligne_id}", name="api_supprimer_ligne")
 def api_delete_ligne(
     ligne_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
@@ -4510,7 +4510,7 @@ def api_delete_ligne(
 # ============================================
 
 
-@router.get("/api/lignes/{ligne_id}/documents")
+@router.get("/api/lignes/{ligne_id}/documents", name="api_get_documents_ligne")
 def api_get_documents_ligne(
     ligne_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
@@ -4545,7 +4545,7 @@ def api_get_documents_ligne(
     }
 
 
-@router.post("/api/lignes/{ligne_id}/documents")
+@router.post("/api/lignes/{ligne_id}/documents", name="api_ajouter_document_ligne")
 async def api_add_documents_ligne(
     ligne_id: int,
     documents: list[UploadFile] = File(...),
@@ -4613,7 +4613,7 @@ async def api_add_documents_ligne(
         raise HTTPException(500, f"Erreur lors de l'ajout: {e!s}")
 
 
-@router.delete("/api/lignes/{ligne_id}/documents/{document_id}")
+@router.delete("/api/lignes/{ligne_id}/documents/{document_id}", name="api_supprimer_document_ligne")
 def api_delete_document_ligne(
     ligne_id: int,
     document_id: int,
@@ -6484,7 +6484,7 @@ def api_delete_sigobe_execution(
         raise HTTPException(500, f"Erreur lors de la suppression: {e!s}")
 
 
-@router.get("/api/sigobe/{chargement_id}/export/excel")
+@router.get("/api/sigobe/{chargement_id}/export/excel", name="api_export_sigobe_excel")
 def api_export_sigobe_excel(
     chargement_id: int, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):

@@ -113,6 +113,13 @@
             </option>
             {% endfor %}
           </select>
+          <small style="color: var(--gray-600); font-size: 0.85rem;">
+            {% if articles %}
+              {{ articles|length }} article(s) disponible(s)
+            {% else %}
+              ⚠️ Aucun article configuré - <a href="{{ url_for('stock_articles') }}" target="_blank" style="color: #0066cc;">Créer des articles</a>
+            {% endif %}
+          </small>
         </div>
         
         <div class="form-group">
@@ -123,8 +130,19 @@
         
         <div class="form-group">
           <label class="form-label">Service Demandeur</label>
-          <input type="text" name="service_demandeur" class="form-input" 
-                 placeholder="Ex: Direction Administrative">
+          <select name="service_demandeur" class="form-select">
+            <option value="">-- Sélectionner un service --</option>
+            {% for service in services %}
+            <option value="{{ service.libelle }}">{{ service.libelle }}</option>
+            {% endfor %}
+          </select>
+          <small style="color: var(--gray-600); font-size: 0.85rem;">
+            {% if services %}
+              {{ services|length }} service(s) disponible(s)
+            {% else %}
+              ⚠️ Aucun service configuré - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des services</a>
+            {% endif %}
+          </small>
         </div>
       </div>
       
@@ -222,10 +240,7 @@ async function submitForm(event) {
   const formData = new FormData(event.target);
   
   try {
-    const response = await fetch("{{ url_for('api_create_demande') }}", {
-      method: 'POST',
-      body: formData
-    });
+    const response = await submitFormAsJson("{{ url_for('api_create_demande_stock') }}", formData, 'POST', true);
     
     const result = await response.json();
     

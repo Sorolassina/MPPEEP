@@ -203,8 +203,13 @@ async function procederValidation(demandeId) {
   showGlobalLoading('Validation...', 'Traitement en cours');
   
   try {
-    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}/valider`, {
-      method: 'POST'
+    const url = "{{ url_for('api_valider_demande_stock', demande_id=0) }}".replace('/0', `/${demandeId}`);
+    const formData = new FormData();
+    formData.append('accepte', 'true');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
     });
     
     const result = await response.json();
@@ -251,8 +256,13 @@ async function procederRejet(demandeId) {
   showGlobalLoading('Rejet...', 'Traitement en cours');
   
   try {
-    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}/rejeter`, {
-      method: 'POST'
+    const url = "{{ url_for('api_valider_demande_stock', demande_id=0) }}".replace('/0', `/${demandeId}`);
+    const formData = new FormData();
+    formData.append('accepte', 'false');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
     });
     
     const result = await response.json();
@@ -296,7 +306,8 @@ async function procederService(demandeId) {
   showGlobalLoading('Service...', 'Création du mouvement de sortie');
   
   try {
-    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}/servir`, {
+    const url = "{{ url_for('api_servir_demande_stock', demande_id=0) }}".replace('/0', `/${demandeId}`);
+    const response = await fetch(url, {
       method: 'POST'
     });
     
@@ -341,7 +352,8 @@ async function procederSuppression(demandeId) {
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
-    const response = await fetch(`/api/v1/stock/api/demandes/${demandeId}`, {
+    const url = "{{ url_for('api_delete_demande_stock', demande_id=0) }}".replace('/0', `/${demandeId}`);
+    const response = await fetch(url, {
       method: 'DELETE'
     });
     

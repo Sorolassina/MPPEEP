@@ -336,14 +336,14 @@
           <div class="form-group">
             <label for="email_professionnel">Email professionnel</label>
             <input type="text" id="email_professionnel" name="email_professionnel" 
-                   placeholder="prenom.nom@ministere.sn" value="{{ agent.email_professionnel if mode == 'edit' else '' }}">
+                   placeholder="prenom.nom@ministere.sn" value="{{ agent.email_professionnel if mode == 'edit' and agent.email_professionnel else '' }}">
             <small>Format: exemple@domaine.com</small>
           </div>
           
           <div class="form-group">
             <label for="email_personnel">Email personnel</label>
             <input type="text" id="email_personnel" name="email_personnel" 
-                   placeholder="exemple@email.com" value="{{ agent.email_personnel if mode == 'edit' else '' }}">
+                   placeholder="exemple@email.com" value="{{ agent.email_personnel if mode == 'edit' and agent.email_personnel else '' }}">
             <small>Format: exemple@domaine.com</small>
           </div>
           
@@ -427,6 +427,13 @@
               <option value="{{ grade.id }}" {{ 'selected' if mode == 'edit' and agent.grade_id == grade.id else '' }}>{{ grade.code }} - {{ grade.libelle }}</option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if grades %}
+                {{ grades|length }} grade(s) disponible(s)
+              {% else %}
+                ⚠️ Aucun grade - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des grades</a>
+              {% endif %}
+            </small>
           </div>
           
           <div class="form-group">
@@ -450,6 +457,13 @@
               <option value="{{ prog.id }}" {{ 'selected' if mode == 'edit' and agent.programme_id == prog.id else '' }}>{{ prog.code }} - {{ prog.libelle }}</option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if programmes %}
+                {{ programmes|length }} programme(s) disponible(s)
+              {% else %}
+                ⚠️ Aucun programme - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des programmes</a>
+              {% endif %}
+            </small>
           </div>
           
           <div class="form-group">
@@ -462,6 +476,13 @@
               </option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if directions %}
+                {{ directions|length }} direction(s) disponible(s)
+              {% else %}
+                ⚠️ Aucune direction - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des directions</a>
+              {% endif %}
+            </small>
           </div>
           
           <div class="form-group">
@@ -474,6 +495,13 @@
               </option>
               {% endfor %}
             </select>
+            <small style="color: var(--gray-600); font-size: 0.85rem;">
+              {% if services %}
+                {{ services|length }} service(s) disponible(s)
+              {% else %}
+                ⚠️ Aucun service - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des services</a>
+              {% endif %}
+            </small>
           </div>
           
           <div class="form-group" style="grid-column: 1 / -1;">
@@ -630,9 +658,15 @@ function validateEmail(email) {
   return emailRegex.test(email);
 }
 
-// Validation en temps réel des emails
+// Validation en temps réel des emails (seulement si non vide)
 document.getElementById('email_professionnel').addEventListener('blur', function() {
   const email = this.value.trim();
+  
+  // Si vide, pas de validation (champ optionnel)
+  if (!email) {
+    this.style.borderColor = '';
+    return;
+  }
   if (email && !validateEmail(email)) {
     this.style.borderColor = '#dc3545';
     this.style.backgroundColor = '#fff5f5';
@@ -656,6 +690,12 @@ document.getElementById('email_professionnel').addEventListener('blur', function
 
 document.getElementById('email_personnel').addEventListener('blur', function() {
   const email = this.value.trim();
+  
+  // Si vide, pas de validation (champ optionnel)
+  if (!email) {
+    this.style.borderColor = '';
+    return;
+  }
   if (email && !validateEmail(email)) {
     this.style.borderColor = '#dc3545';
     this.style.backgroundColor = '#fff5f5';
@@ -681,27 +721,31 @@ document.getElementById('email_personnel').addEventListener('blur', function() {
 document.querySelector('form').addEventListener('submit', async function(e) {
   e.preventDefault();
   
-  // Valider les emails s'ils sont remplis
+  // Valider les emails seulement s'ils sont remplis (champs optionnels)
   const emailPro = document.getElementById('email_professionnel').value.trim();
   const emailPerso = document.getElementById('email_personnel').value.trim();
   
   if (emailPro && !validateEmail(emailPro)) {
-    showError("L'email professionnel n'est pas valide. Format attendu: exemple@domaine.com");
+    showError("⚠️ L'email professionnel n'est pas valide.\nFormat: exemple@domaine.com");
     document.getElementById('email_professionnel').focus();
     document.getElementById('email_professionnel').style.borderColor = '#dc3545';
     return;
   }
   
   if (emailPerso && !validateEmail(emailPerso)) {
-    showError("L'email personnel n'est pas valide. Format attendu: exemple@domaine.com");
+    showError("⚠️ L'email personnel n'est pas valide.\nFormat: exemple@domaine.com");
     document.getElementById('email_personnel').focus();
     document.getElementById('email_personnel').style.borderColor = '#dc3545';
     return;
   }
   
   // Réinitialiser les bordures
-  document.getElementById('email_professionnel').style.borderColor = '';
-  document.getElementById('email_personnel').style.borderColor = '';
+  if (document.getElementById('email_professionnel')) {
+    document.getElementById('email_professionnel').style.borderColor = '';
+  }
+  if (document.getElementById('email_personnel')) {
+    document.getElementById('email_personnel').style.borderColor = '';
+  }
   
   const form = e.target;
   const mode = form.dataset.mode;
@@ -719,11 +763,7 @@ document.querySelector('form').addEventListener('submit', async function(e) {
     
     const method = mode === 'edit' ? 'PUT' : 'POST';
     
-    const response = await fetch(url, {
-      method: method,
-      // Ne pas définir Content-Type pour multipart/form-data, le navigateur le fait automatiquement
-      body: formData
-    });
+    const response = await submitFormAsJson(url, formData, method);
     
     const result = await response.json();
     

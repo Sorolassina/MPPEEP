@@ -1,42 +1,78 @@
-# MPPEEP Dashboard - Requirements
+# MPPEEP Dashboard - Requirements Production
 # Pour installer: pip install -r requirements.txt
+# Synchronisé avec uv.lock
 
-# Framework Web
+# ============================================
+# FRAMEWORK WEB
+# ============================================
 fastapi>=0.118.2
 uvicorn>=0.37.0
+starlette>=0.48.0
 python-multipart>=0.0.20
 
-# Base de données
+# ============================================
+# BASE DE DONNÉES
+# ============================================
 sqlmodel>=0.0.26
+sqlalchemy>=2.0.43
+psycopg2-binary>=2.9.9  # Driver PostgreSQL (version binary pour Docker)
 
-# Validation & Configuration
-pydantic[email]>=2.12.0
+# ============================================
+# VALIDATION & CONFIGURATION
+# ============================================
+pydantic>=2.12.0
+pydantic-core>=2.41.1
 pydantic-settings>=2.11.0
+email-validator>=2.3.0
+python-dotenv>=1.1.1
 
-# Templates
+# ============================================
+# TEMPLATES
+# ============================================
 jinja2>=3.1.0
 
-# Sécurité
+# ============================================
+# SÉCURITÉ
+# ============================================
 passlib[bcrypt]>=1.7.4
 bcrypt==4.0.1
+cryptography>=46.0.3
 
-# HTTP & Async
-httpx>=0.27.0
-aiofiles>=24.1.0
+# ============================================
+# HTTP & ASYNC
+# ============================================
+httpx>=0.28.1
+httpcore>=1.0.9
+aiofiles>=25.1.0
+anyio>=4.11.0
+certifi>=2025.10.5
 
-# Traitement de fichiers Excel
-pandas>=2.0.0
-openpyxl>=3.1.0
+# ============================================
+# TRAITEMENT DE FICHIERS EXCEL
+# ============================================
+pandas>=2.3.3
+openpyxl>=3.1.5
+numpy>=2.3.3
 
-# Génération PDF
-reportlab>=4.0.0
+# ============================================
+# GÉNÉRATION & TRAITEMENT PDF
+# ============================================
+reportlab>=4.4.4
+pypdf2>=3.0.1
+pdfplumber>=0.11.7
+pdfminer-six>=20250506
+pypdfium2>=4.30.0
+pillow>=11.3.0
 
-# Tests (développement)
-pytest>=8.0.0
-pytest-cov>=5.0.0
-pytest-asyncio>=0.23.0
+# ============================================
+# VISUALISATION DE DONNÉES
+# ============================================
+matplotlib>=3.10.7
+seaborn>=0.13.2
+fonttools>=4.60.1
 
-# Code Quality (développement)
-ruff>=0.3.0
-black>=24.0.0
+# ============================================
+# CODE QUALITY (utilisé en production aussi)
+# ============================================
+ruff>=0.14.0
 
