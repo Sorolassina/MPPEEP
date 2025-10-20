@@ -37,7 +37,7 @@ class Agent(SQLModel, table=True):
 
     # Foreign keys (relations gérées manuellement)
     grade_id: Optional[int] = Field(default=None, foreign_key="grade.id")
-    service_id: Optional[int] = Field(default=None, foreign_key="servicedept.id")
+    service_id: Optional[int] = Field(default=None, foreign_key="service.id")
     
     # Note: Pas de Relationship() - on récupère les objets liés manuellement via les services
 
