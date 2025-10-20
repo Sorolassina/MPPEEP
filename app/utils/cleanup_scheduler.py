@@ -1,28 +1,22 @@
 import os
 import time
+
+from app_lia_web.core.config import FICHIERS_DIR, STATIC_IMAGES_DIR, STATIC_MAPS_DIR
 from apscheduler.schedulers.background import BackgroundScheduler
-from app_lia_web.core.config import STATIC_IMAGES_DIR, STATIC_MAPS_DIR, FICHIERS_DIR
 
 # === Paramètres === 10080=Une semaine
 CLEANUP_CONFIG = [
-    {
-        "folder": STATIC_IMAGES_DIR ,
-        "extensions": (".png", ".jpg", ".jpeg"),
-        "age_limit_minutes": 1440
-    },
+    {"folder": STATIC_IMAGES_DIR, "extensions": (".png", ".jpg", ".jpeg"), "age_limit_minutes": 1440},
     {
         "folder": FICHIERS_DIR,
-        "extensions": (".png", ".jpg", ".jpeg",".zip",".html", ".pdf", ".csv"),
-        "age_limit_minutes": 3360
+        "extensions": (".png", ".jpg", ".jpeg", ".zip", ".html", ".pdf", ".csv"),
+        "age_limit_minutes": 3360,
     },
-    {
-        "folder": STATIC_MAPS_DIR,
-        "extensions": (".html",),
-        "age_limit_minutes": 1440
-    }
+    {"folder": STATIC_MAPS_DIR, "extensions": (".html",), "age_limit_minutes": 1440},
 ]
 
 scheduler = BackgroundScheduler()
+
 
 def cleanup_temp_files():
     now = time.time()
@@ -51,16 +45,18 @@ def cleanup_temp_files():
         if deleted_files:
             print(f"🧹 {len(deleted_files)} fichiers supprimés de {folder} :", deleted_files)
 
+
 def start_cleanup_scheduler():
     if not scheduler.running:
         # Nettoyage quotidien à 01h00 du matin
         scheduler.add_job(cleanup_temp_files, "cron", hour=1, minute=0)
         scheduler.start()
-        #print("✅ Scheduler de nettoyage lancé (quotidien à 01h00).")
+        # print("✅ Scheduler de nettoyage lancé (quotidien à 01h00).")
     else:
         pass
-        #print("🔁 Scheduler déjà actif.")
+        # print("🔁 Scheduler déjà actif.")
+
 
 def stop_cleanup_scheduler():
     scheduler.shutdown()
-    #print("🛑 Scheduler arrêté proprement.")
+    # print("🛑 Scheduler arrêté proprement.")

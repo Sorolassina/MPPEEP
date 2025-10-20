@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-from app.main import app
-from app.db.session import get_session
-from app.models.user import User
 from app.core.security import get_password_hash
+from app.db.session import get_session
+from app.main import app
+from app.models.user import User
 
 
 @pytest.fixture(name="session")
@@ -23,7 +23,7 @@ def session_fixture():
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
-    
+
     with Session(engine) as session:
         yield session
 
@@ -39,7 +39,7 @@ def test_session_fixture():
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
-    
+
     with Session(engine) as session:
         yield session
 
@@ -53,10 +53,10 @@ def client_fixture(session: Session):
         return session
 
     app.dependency_overrides[get_session] = get_session_override
-    
+
     client = TestClient(app)
     yield client
-    
+
     app.dependency_overrides.clear()
 
 
@@ -84,7 +84,7 @@ def admin_user_fixture(session: Session):
     Crée un utilisateur admin de test dans la base
     """
     from app.core.enums import UserType
-    
+
     user = User(
         email="admin@example.com",
         full_name="Admin User",
@@ -104,14 +104,15 @@ def admin_client_fixture(client: TestClient, session: Session, admin_user: User)
     """
     Client authentifié en tant qu'admin
     """
-    from app.services.session_service import SessionService, SESSION_COOKIE_NAME
     from unittest.mock import Mock
-    
+
+    from app.services.session_service import SESSION_COOKIE_NAME, SessionService
+
     # Créer une fausse request pour le service
     mock_request = Mock()
     mock_request.client.host = "testclient"
     mock_request.headers.get.return_value = "test-agent"
-    
+
     # Créer une session pour l'admin
     user_session = SessionService.create_session(
         db_session=session,
@@ -119,9 +120,9 @@ def admin_client_fixture(client: TestClient, session: Session, admin_user: User)
         request=mock_request,
         remember_me=False
     )
-    
+
     # Configurer le cookie dans le client
     client.cookies.set(SESSION_COOKIE_NAME, user_session.session_token)
-    
+
     return client
 

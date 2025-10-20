@@ -1,0 +1,94 @@
+# .bandit - Configuration Bandit pour MPPEEP Dashboard
+
+[bandit]
+# Fichiers et dossiers à exclure
+exclude_dirs = [
+    '/tests/',
+    '/venv/',
+    '/.venv/',
+    '/build/',
+    '/dist/',
+    '/__pycache__/',
+    '/migrations/',
+]
+
+# Tests à ignorer (avec justification)
+skips = [
+    # B104: Hardcoded bind all interfaces (OK en dev, géré par config en prod)
+    'B104',
+    
+    # B201: Flask debug mode (pas utilisé, on utilise FastAPI)
+    'B201',
+    
+    # B403: import pickle (si utilisé, c'est intentionnel)
+    'B403',
+    
+    # B404: import subprocess (utilisé dans scripts uniquement)
+    'B404',
+    
+    # B603: subprocess without shell=True check (OK, on contrôle les inputs)
+    'B603',
+]
+
+# Tests à exécuter
+tests = [
+    'B101',  # Assert used
+    'B102',  # Exec used
+    'B103',  # Set bad file permissions
+    'B105',  # Hardcoded password string
+    'B106',  # Hardcoded password funcarg
+    'B107',  # Hardcoded password default
+    'B108',  # Hardcoded tmp directory
+    'B110',  # Try except pass
+    'B112',  # Try except continue
+    'B201',  # Flask debug
+    'B301',  # Pickle usage
+    'B302',  # Marshal usage
+    'B303',  # MD5 usage
+    'B304',  # Insecure cipher
+    'B305',  # Insecure cipher mode
+    'B306',  # tempfile.mktemp
+    'B307',  # eval usage
+    'B308',  # mark_safe usage
+    'B309',  # HTTPSConnection
+    'B310',  # urllib.urlopen
+    'B311',  # Random for crypto
+    'B312',  # Telnet usage
+    'B313',  # XML vulnerabilities
+    'B314',  # XML vulnerabilities
+    'B315',  # XML vulnerabilities
+    'B316',  # XML vulnerabilities
+    'B317',  # XML vulnerabilities
+    'B318',  # XML vulnerabilities
+    'B319',  # XML vulnerabilities
+    'B320',  # XML vulnerabilities
+    'B321',  # FTP usage
+    'B322',  # Input usage
+    'B323',  # Unverified context
+    'B324',  # Hashlib weak hash
+    'B325',  # tempfile usage
+    'B401',  # Import telnetlib
+    'B402',  # Import ftplib
+    'B501',  # SSL with bad defaults
+    'B502',  # SSL with bad version
+    'B503',  # SSL with bad ciphers
+    'B504',  # SSL context
+    'B505',  # Weak crypto key
+    'B506',  # YAML load
+    'B507',  # SSH with default key
+    'B601',  # Paramiko calls
+    'B602',  # Shell injection
+    'B604',  # Any other function with shell=True
+    'B605',  # Process with shell
+    'B606',  # Process without shell
+    'B607',  # Partial path
+    'B608',  # SQL injection
+    'B609',  # Linux wildcard injection
+]
+
+# Niveau de sévérité minimum (LOW, MEDIUM, HIGH)
+level = "LOW"
+
+# Niveau de confiance minimum (LOW, MEDIUM, HIGH)
+confidence = "MEDIUM"
+

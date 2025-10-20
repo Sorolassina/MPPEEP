@@ -1,0 +1,68 @@
+# .pre-commit-config.yaml
+# Configuration des hooks pre-commit pour MPPEEP Dashboard
+# Installation: pip install pre-commit && pre-commit install
+
+repos:
+  # Ruff - Linter et formateur ultra-rapide
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.9
+    hooks:
+      # Formater le code
+      - id: ruff-format
+        name: 🎨 Ruff Format
+        types: [python]
+      
+      # Linter avec corrections automatiques
+      - id: ruff
+        name: 🔍 Ruff Lint
+        types: [python]
+        args: [--fix, --exit-non-zero-on-fix]
+
+  # Hooks généraux
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Nettoyer les espaces en fin de ligne
+      - id: trailing-whitespace
+        name: 🧹 Nettoyer espaces
+      
+      # Ajouter une ligne vide à la fin des fichiers
+      - id: end-of-file-fixer
+        name: 📝 Fin de fichier
+      
+      # Vérifier les fichiers YAML
+      - id: check-yaml
+        name: ✅ Vérifier YAML
+        exclude: ^\.github/workflows/
+      
+      # Vérifier les fichiers JSON
+      - id: check-json
+        name: ✅ Vérifier JSON
+      
+      # Vérifier les conflits de merge
+      - id: check-merge-conflict
+        name: ⚠️ Vérifier conflits merge
+      
+      # Détecter les clés privées
+      - id: detect-private-key
+        name: 🔒 Détecter clés privées
+      
+      # Vérifier les fichiers XML
+      - id: check-xml
+        name: ✅ Vérifier XML
+      
+      # Vérifier que les scripts Python ont le shebang
+      - id: check-executables-have-shebangs
+        name: 📜 Vérifier shebangs
+
+  # Vérifier la syntaxe des fichiers Docker
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: 🐳 Vérifier Dockerfile
+        entry: hadolint
+        language: docker_image
+        types: [dockerfile]
+        exclude: ^Dockerfile\..*
+

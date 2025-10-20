@@ -1,0 +1,76 @@
+# ruff.toml - Configuration Ruff pour MPPEEP Dashboard
+
+# Version cible de Python
+target-version = "py311"
+
+# Longueur de ligne recommandée
+line-length = 120
+
+# Fichiers à exclure
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".tox",
+    "build",
+    "dist",
+    "*.egg-info",
+    "migrations",
+]
+
+[lint]
+# Règles activées
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort (tri des imports)
+    "N",      # pep8-naming
+    "UP",     # pyupgrade (modernisation du code)
+    "B",      # flake8-bugbear (bugs potentiels)
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "RUF",    # Ruff-specific rules
+]
+
+# Règles ignorées (ajuster selon vos besoins)
+ignore = [
+    "E501",   # Line too long (géré par line-length)
+    "B008",   # Function calls in argument defaults
+    "B904",   # Use raise from within except
+    "N805",   # First argument should be self
+    "UP007",  # Use X | Y for Union types (optionnel)
+]
+
+# Règles fixes automatiques
+fixable = ["ALL"]
+unfixable = []
+
+# Autoriser les imports non utilisés dans __init__.py
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"conftest.py" = ["F401"]
+
+[lint.isort]
+# Configuration pour le tri des imports
+known-first-party = ["app"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[lint.mccabe]
+# Complexité cyclomatique max
+max-complexity = 10
+
+[format]
+# Formatage du code (comme black)
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[lint.pydocstyle]
+# Style de docstrings
+convention = "google"
+

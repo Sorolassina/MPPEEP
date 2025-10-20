@@ -1,72 +1,93 @@
 """
 Models de l'application
 """
-from app.models.user import User
-from app.models.session import UserSession
-from app.models.system_settings import SystemSettings
+
 from app.models.activity import Activity
-from app.models.file import File
-from app.models.rh import Agent, Grade, HRRequest, WorkflowStep, WorkflowHistory
-from app.models.personnel import (
-    Programme, Direction, Service, GradeComplet,
-    AgentComplet, DocumentAgent, HistoriqueCarriere, EvaluationAgent
-)
-from app.models.besoins import BesoinAgent, SuiviBesoin, ConsolidationBesoin
+from app.models.besoins import BesoinAgent, ConsolidationBesoin, SuiviBesoin
 from app.models.budget import (
-    NatureDepense, Activite, FicheTechnique, LigneBudgetaire,
-    DocumentBudget, HistoriqueBudget, ExecutionBudgetaire,
-    ActionBudgetaire, ServiceBeneficiaire, ActiviteBudgetaire, LigneBudgetaireDetail,
+    ActionBudgetaire,
+    Activite,
+    ActiviteBudgetaire,
+    DocumentBudget,
     DocumentLigneBudgetaire,
-    SigobeChargement, SigobeExecution, SigobeKpi
+    ExecutionBudgetaire,
+    FicheTechnique,
+    HistoriqueBudget,
+    LigneBudgetaire,
+    LigneBudgetaireDetail,
+    NatureDepense,
+    ServiceBeneficiaire,
+    SigobeChargement,
+    SigobeExecution,
+    SigobeKpi,
 )
+from app.models.file import File
+from app.models.personnel import (
+    AgentComplet,
+    Direction,
+    DocumentAgent,
+    EvaluationAgent,
+    GradeComplet,
+    HistoriqueCarriere,
+    Programme,
+    Service,
+)
+from app.models.rh import Agent, Grade, HRRequest, WorkflowHistory, WorkflowStep
+from app.models.session import UserSession
 from app.models.stock import (
-    CategorieArticle, Fournisseur, Article, MouvementStock,
-    DemandeStock, Inventaire, LigneInventaire
+    Article,
+    CategorieArticle,
+    DemandeStock,
+    Fournisseur,
+    Inventaire,
+    LigneInventaire,
+    MouvementStock,
 )
+from app.models.system_settings import SystemSettings
+from app.models.user import User
 
 __all__ = [
-    "User", 
-    "UserSession", 
-    "SystemSettings", 
-    "Activity", 
-    "File", 
-    "Agent", 
-    "Grade", 
-    "HRRequest", 
-    "WorkflowStep", 
-    "WorkflowHistory",
-    "Programme",
-    "Direction", 
-    "Service",
-    "GradeComplet",
-    "AgentComplet",
-    "DocumentAgent",
-    "HistoriqueCarriere",
-    "EvaluationAgent",
-    "BesoinAgent",
-    "SuiviBesoin",
-    "ConsolidationBesoin",
-    "NatureDepense",
-    "Activite",
-    "FicheTechnique",
-    "LigneBudgetaire",
-    "DocumentBudget",
-    "HistoriqueBudget",
-    "ExecutionBudgetaire",
     "ActionBudgetaire",
-    "ServiceBeneficiaire",
+    "Activite",
     "ActiviteBudgetaire",
-    "LigneBudgetaireDetail",
+    "Activity",
+    "Agent",
+    "AgentComplet",
+    "Article",
+    "BesoinAgent",
+    "CategorieArticle",
+    "ConsolidationBesoin",
+    "DemandeStock",
+    "Direction",
+    "DocumentAgent",
+    "DocumentBudget",
     "DocumentLigneBudgetaire",
+    "EvaluationAgent",
+    "ExecutionBudgetaire",
+    "FicheTechnique",
+    "File",
+    "Fournisseur",
+    "Grade",
+    "GradeComplet",
+    "HRRequest",
+    "HistoriqueBudget",
+    "HistoriqueCarriere",
+    "Inventaire",
+    "LigneBudgetaire",
+    "LigneBudgetaireDetail",
+    "LigneInventaire",
+    "MouvementStock",
+    "NatureDepense",
+    "Programme",
+    "Service",
+    "ServiceBeneficiaire",
     "SigobeChargement",
     "SigobeExecution",
     "SigobeKpi",
-    "CategorieArticle",
-    "Fournisseur",
-    "Article",
-    "MouvementStock",
-    "DemandeStock",
-    "Inventaire",
-    "LigneInventaire"
+    "SuiviBesoin",
+    "SystemSettings",
+    "User",
+    "UserSession",
+    "WorkflowHistory",
+    "WorkflowStep",
 ]
-

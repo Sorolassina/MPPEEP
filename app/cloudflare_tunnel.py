@@ -5,15 +5,14 @@
 # - Lance cloudflared en arrière-plan
 # - Stoppe proprement à la fermeture
 
-import os
 import atexit
+import os
 import shutil
 import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 # --- Config via variables d'environnement ---
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1").strip()
@@ -21,8 +20,7 @@ APP_PORT = os.getenv("APP_PORT", "8000").strip()
 
 TUNNEL_NAME = os.getenv("CLOUDFLARE_TUNNEL_NAME", "liacoaching-home").strip()
 CREDENTIALS_FILE = os.getenv(
-    "CLOUDFLARE_CREDENTIALS_FILE",
-    str(Path.home() / ".cloudflared" / "81ab986e-21c9-47c6-98ea-10d47f71bf26.json")
+    "CLOUDFLARE_CREDENTIALS_FILE", str(Path.home() / ".cloudflared" / "81ab986e-21c9-47c6-98ea-10d47f71bf26.json")
 ).strip()
 HOSTNAME = os.getenv("CLOUDFLARE_HOSTNAME", "").strip()
 
@@ -30,7 +28,7 @@ CLOUDFLARED = os.getenv("CLOUDFLARED_PATH") or shutil.which("cloudflared") or "c
 CLOUDFLARED_DIR = Path.home() / ".cloudflared"
 CONFIG_FILE = CLOUDFLARED_DIR / "config.yml"
 
-_proc: Optional[subprocess.Popen] = None
+_proc: subprocess.Popen | None = None
 
 
 def _log(msg: str) -> None:
@@ -41,8 +39,7 @@ def _ensure_named_config():
     """Crée/maj ~/.cloudflared/config.yml pour tunnel nommé."""
     if not Path(CREDENTIALS_FILE).exists():
         raise FileNotFoundError(
-            f"Credentials introuvables : {CREDENTIALS_FILE}\n"
-            f"→ Fais : cloudflared tunnel create {TUNNEL_NAME}"
+            f"Credentials introuvables : {CREDENTIALS_FILE}\n→ Fais : cloudflared tunnel create {TUNNEL_NAME}"
         )
     CLOUDFLARED_DIR.mkdir(parents=True, exist_ok=True)
     content = (

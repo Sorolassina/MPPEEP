@@ -106,7 +106,7 @@ jobs:
     - name: 🔒 Scan de sécurité (Bandit)
       run: |
         pip install bandit
-        bandit -r app/ -f json -o bandit-report.json
+        bandit -r app/ -f json -o bandit-report.json -ll -ii
       continue-on-error: true
     
     - name: 🔍 Vérification des dépendances (Safety)

@@ -4,16 +4,18 @@ Configuration du système de logging
 - Logger 'mppeep' : niveau affiné, pas de handler
 - Logger 'mppeep.access' : handler dédié access.log, pas de propagation
 """
+
 import logging
 import sys
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
+from pathlib import Path
+
 from app.core.config import settings
 
 # (Optionnel) Windows : activer les couleurs ANSI en console
 try:
     import colorama  # pip install colorama
+
     colorama.just_fix_windows_console()
 except Exception:
     pass
@@ -21,14 +23,16 @@ except Exception:
 
 class ColoredFormatter(logging.Formatter):
     """Formateur avec couleurs pour la console"""
+
     COLORS = {
-        'DEBUG': '\033[36m',      # Cyan
-        'INFO': '\033[32m',       # Vert
-        'WARNING': '\033[33m',    # Jaune
-        'ERROR': '\033[31m',      # Rouge
-        'CRITICAL': '\033[35m',   # Magenta
-        'RESET': '\033[0m'        # Reset
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Vert
+        "WARNING": "\033[33m",  # Jaune
+        "ERROR": "\033[31m",  # Rouge
+        "CRITICAL": "\033[35m",  # Magenta
+        "RESET": "\033[0m",  # Reset
     }
+
     def format(self, record):
         levelname_original = record.levelname
         if levelname_original in self.COLORS:
@@ -68,7 +72,7 @@ def setup_logging() -> logging.Logger:
     # Logger applicatif (pas de handlers → propagation vers root)
     app_logger = logging.getLogger("mppeep")
     app_logger.setLevel(global_level)
-    app_logger.handlers.clear()      # important : pas de handler ici
+    app_logger.handlers.clear()  # important : pas de handler ici
     app_logger.propagate = True
 
     # ---------- Formats ----------
@@ -87,7 +91,7 @@ def setup_logging() -> logging.Logger:
             return record.levelno < logging.ERROR
 
     h_stdout = logging.StreamHandler(sys.stdout)
-    h_stdout.setLevel(logging.DEBUG)       # laisse passer, filtré par le logger + filtre
+    h_stdout.setLevel(logging.DEBUG)  # laisse passer, filtré par le logger + filtre
     h_stdout.setFormatter(console_color)
     h_stdout.addFilter(StdoutFilter())
 
@@ -129,7 +133,7 @@ def setup_logging() -> logging.Logger:
     # ---------- Harmoniser Uvicorn ----------
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         lg = logging.getLogger(name)
-        lg.handlers.clear()   # on laisse le root gérer (sauf access si tu veux un fichier dédié)
+        lg.handlers.clear()  # on laisse le root gérer (sauf access si tu veux un fichier dédié)
         lg.setLevel(root.level)
         lg.propagate = True
 
@@ -147,7 +151,7 @@ def setup_logging() -> logging.Logger:
     app_logger.info("=" * 60)
 
     # Marqueur d'initialisation (persiste tant que le process vit)
-    setattr(root, "_mppeep_configured", True)
+    root._mppeep_configured = True
     return app_logger
 
 
@@ -155,11 +159,13 @@ def setup_logging() -> logging.Logger:
 # Appelle-le explicitement dans main.py / asgi.py (au démarrage de l’appli).
 app_logger = setup_logging()
 
+
 def get_logger(name: str = "mppeep") -> logging.Logger:
     """Récupérer un logger pour un module."""
     return logging.getLogger(name)
 
+
 # Logger d'accès HTTP séparé (déjà configuré ci-dessus)
 access_logger = logging.getLogger("mppeep.access")
 
-__all__ = ["setup_logging", "get_logger", "app_logger", "access_logger"]
+__all__ = ["access_logger", "app_logger", "get_logger", "setup_logging"]

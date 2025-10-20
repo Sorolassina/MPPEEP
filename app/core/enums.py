@@ -2,6 +2,7 @@
 Énumérations utilisées dans l'application
 Les valeurs sont stockées en texte dans la base de données
 """
+
 from enum import Enum
 
 
@@ -12,8 +13,10 @@ class RequestType(str, Enum):
     FORMATION = "Formation"
     BESOIN_ACTE = "Besoin d'acte administratif"
 
+
 class ActeAdministratifType(str, Enum):
     """Types d'actes administratifs disponibles"""
+
     ATTESTATION_TRAVAIL = "Attestation de travail"
     CERTIFICAT_PRESENCE = "Certificat de présence"
     ATTESTATION_SALAIRE = "Attestation de salaire"
@@ -27,23 +30,26 @@ class ActeAdministratifType(str, Enum):
     CERTIFICAT_NATIONALITE = "Certificat de nationalité"
     AUTRE = "Autre acte administratif"
 
+
 class WorkflowState(str, Enum):
-    DRAFT = "Brouillon"                      # brouillon (agent)
-    SUBMITTED = "Soumis"                     # soumis
-    VALIDATION_N1 = "Validation N+1"         # Validation niveau 1
-    VALIDATION_N2 = "Validation N+2"         # Validation niveau 2
-    VALIDATION_N3 = "Validation N+3"         # Validation niveau 3
-    VALIDATION_N4 = "Validation N+4"         # Validation niveau 4
-    VALIDATION_N5 = "Validation N+5"         # Validation niveau 5
-    VALIDATION_N6 = "Validation N+6"         # Validation niveau 6
-    ARCHIVED = "Archivé"                     # Archivé (terminé)
-    REJECTED = "Rejeté"                      # Rejeté
+    DRAFT = "Brouillon"  # brouillon (agent)
+    SUBMITTED = "Soumis"  # soumis
+    VALIDATION_N1 = "Validation N+1"  # Validation niveau 1
+    VALIDATION_N2 = "Validation N+2"  # Validation niveau 2
+    VALIDATION_N3 = "Validation N+3"  # Validation niveau 3
+    VALIDATION_N4 = "Validation N+4"  # Validation niveau 4
+    VALIDATION_N5 = "Validation N+5"  # Validation niveau 5
+    VALIDATION_N6 = "Validation N+6"  # Validation niveau 6
+    ARCHIVED = "Archivé"  # Archivé (terminé)
+    REJECTED = "Rejeté"  # Rejeté
+
 
 class UserType(str, Enum):
     """
     Types d'utilisateurs
     Stockés comme VARCHAR dans la base de données
     """
+
     ADMIN = "admin"
     USER = "agent"
     N1 = "chef service"
@@ -51,7 +57,7 @@ class UserType(str, Enum):
     DRH = "directeur des ressources humaines"
     DAF = "directeur administratif et financier"
     INVITE = "invité"
-    
+
     def __str__(self):
         return self.value
 
@@ -60,11 +66,12 @@ class UserStatus(str, Enum):
     """
     Statuts d'utilisateur
     """
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
     PENDING = "pending"
-    
+
     def __str__(self):
         return self.value
 
@@ -73,10 +80,11 @@ class Environment(str, Enum):
     """
     Environnements de déploiement
     """
+
     DEVELOPMENT = "dev"
     STAGING = "staging"
     PRODUCTION = "production"
-    
+
     def __str__(self):
         return self.value
 
@@ -85,6 +93,7 @@ class FileType(str, Enum):
     """
     Types de fichiers supportés
     """
+
     FICHE_SYNTHETIQUE = "fiche synthetique"
     BUDGET = "données budgétaires"
     FICHE_PERSONNEL = "fiche personnel"
@@ -92,7 +101,7 @@ class FileType(str, Enum):
     LISTE_BENEFICIAIRES = "liste des beneficiaires"
     INDICATEURS_PERFORMANCE = "indicateurs de performance"
     AUTRE = "autre"
-    
+
     def __str__(self):
         return self.value
 
@@ -101,12 +110,13 @@ class FileStatus(str, Enum):
     """
     Statuts de traitement des fichiers
     """
-    UPLOADED = "téléchargé"          # Fichier téléchargé
-    PROCESSING = "en traitement"      # En cours de traitement
-    PROCESSED = "traité"        # Traité avec succès
-    ERROR = "erreur"                # Erreur de traitement
-    ARCHIVED = "archivé"          # Archivé
-    
+
+    UPLOADED = "téléchargé"  # Fichier téléchargé
+    PROCESSING = "en traitement"  # En cours de traitement
+    PROCESSED = "traité"  # Traité avec succès
+    ERROR = "erreur"  # Erreur de traitement
+    ARCHIVED = "archivé"  # Archivé
+
     def __str__(self):
         return self.value
 
@@ -115,30 +125,33 @@ class ProgramType(str, Enum):
     """
     Types de programmes
     """
+
     ADMINISTRATION_GENERALE = "administration générale"
     GESTION_ETABLISSEMENTS_PUBLICS_NATIONAUX = "gestion des établissements publics nationaux"
     PORTEFEUILLE_ETAT = "portefeuille de l'état"
-    
-    
+
     def __str__(self):
         return self.value
+
 
 class DirectionType(str, Enum):
     """
     Types de programmes
     """
+
     MOYENS_GENERAUX = "moyens généraux"
     RESSOURCES_HUMAINES = "ressources humaines"
     BUDGET = "budget"
-    
-    
+
     def __str__(self):
         return self.value
+
 
 class ServiceType(str, Enum):
     """
     Types de programmes
     """
+
     SOCIALE = "Social"
     BUDGET_RAPPORTAGE = "Budget et rapportage"
     COMPTABILITE = "comptabilité"
@@ -147,22 +160,26 @@ class ServiceType(str, Enum):
     STOCK = "stock"
     SECURITE = "sécurité"
     AUTRE = "autre"
-    
+
     def __str__(self):
         return self.value
 
+
 class GradeCategory(str, Enum):
     """Catégories de grades de la fonction publique"""
+
     A = "Catégorie A - Cadres supérieurs"
     B = "Catégorie B - Cadres moyens"
     C = "Catégorie C - Agents d'exécution"
     D = "Catégorie D - Personnel de soutien"
-    
+
     def __str__(self):
         return self.value
 
+
 class PositionAdministrative(str, Enum):
     """Position administrative de l'agent"""
+
     EN_ACTIVITE = "En activité"
     DETACHEMENT = "Détachement"
     DISPONIBILITE = "Disponibilité"
@@ -171,23 +188,27 @@ class PositionAdministrative(str, Enum):
     HORS_CADRE = "Hors cadre"
     SUSPENSION = "Suspension"
     RETRAITE = "Retraite"
-    
+
     def __str__(self):
         return self.value
 
+
 class SituationFamiliale(str, Enum):
     """Situation familiale"""
+
     CELIBATAIRE = "Célibataire"
     MARIE = "Marié(e)"
     DIVORCE = "Divorcé(e)"
     VEUF = "Veuf(ve)"
     UNION_LIBRE = "Union libre"
-    
+
     def __str__(self):
         return self.value
 
+
 class TypeDocument(str, Enum):
     """Types de documents agent"""
+
     CNI = "Carte nationale d'identité"
     PASSEPORT = "Passeport"
     ACTE_NAISSANCE = "Acte de naissance"
@@ -200,26 +221,26 @@ class TypeDocument(str, Enum):
     CERTIFICAT_MEDICAL = "Certificat médical"
     ATTESTATION_TRAVAIL = "Attestation de travail"
     AUTRE = "Autre document"
-    
+
     def __str__(self):
         return self.value
 
+
 # Pour faciliter les imports
 __all__ = [
-    "RequestType",
     "ActeAdministratifType",
-    "WorkflowState",
-    "UserType",
-    "UserStatus",
-    "Environment",
-    "FileType",
-    "FileStatus",
-    "ProgramType",
     "DirectionType",
-    "ServiceType",
+    "Environment",
+    "FileStatus",
+    "FileType",
     "GradeCategory",
     "PositionAdministrative",
+    "ProgramType",
+    "RequestType",
+    "ServiceType",
     "SituationFamiliale",
-    "TypeDocument"
+    "TypeDocument",
+    "UserStatus",
+    "UserType",
+    "WorkflowState",
 ]
-

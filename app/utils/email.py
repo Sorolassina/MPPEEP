@@ -1,26 +1,23 @@
 """
 Fonctions utilitaires pour l'envoi d'emails
 """
+
 import logging
-from typing import List, Optional
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import smtplib
 
 logger = logging.getLogger(__name__)
 
 
 async def send_email(
-    to_email: str | List[str],
+    to_email: str | list[str],
     subject: str,
     body: str,
-    html_body: Optional[str] = None,
-    from_email: Optional[str] = None,
-    from_name: Optional[str] = None
+    html_body: str | None = None,
+    from_email: str | None = None,
+    from_name: str | None = None,
 ) -> bool:
     """
     Envoie un email
-    
+
     Args:
         to_email: Email(s) destinataire(s)
         subject: Sujet de l'email
@@ -28,10 +25,10 @@ async def send_email(
         html_body: Contenu HTML (optionnel)
         from_email: Email expéditeur
         from_name: Nom expéditeur
-    
+
     Returns:
         True si envoyé avec succès, False sinon
-        
+
     Example:
         await send_email(
             "user@example.com",
@@ -42,16 +39,16 @@ async def send_email(
     try:
         # TODO: Implémenter l'envoi réel d'email
         # Options : SMTP, SendGrid, AWS SES, Mailgun, etc.
-        
+
         # Pour l'instant, juste logger
         logger.info(f"📧 Email envoyé à {to_email}: {subject}")
-        print(f"📧 Email simulé:")
+        print("📧 Email simulé:")
         print(f"   To: {to_email}")
         print(f"   Subject: {subject}")
         print(f"   Body: {body[:100]}...")
-        
+
         return True
-        
+
     except Exception as e:
         logger.error(f"❌ Erreur envoi email: {e}")
         return False
@@ -60,11 +57,11 @@ async def send_email(
 async def send_verification_email(email: str, verification_code: str) -> bool:
     """
     Envoie un email de vérification de compte
-    
+
     Args:
         email: Email du destinataire
         verification_code: Code de vérification à 6 chiffres
-    
+
     Returns:
         True si envoyé avec succès
     """
@@ -81,7 +78,7 @@ Si vous n'avez pas demandé ce code, ignorez cet email.
 Cordialement,
 L'équipe
     """
-    
+
     html_body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -99,18 +96,18 @@ L'équipe
     </body>
     </html>
     """
-    
+
     return await send_email(email, subject, body, html_body)
 
 
 async def send_password_reset_email(email: str, reset_code: str) -> bool:
     """
     Envoie un email de réinitialisation de mot de passe
-    
+
     Args:
         email: Email du destinataire
         reset_code: Code de réinitialisation à 6 chiffres
-    
+
     Returns:
         True si envoyé avec succès
     """
@@ -129,7 +126,7 @@ Si vous n'avez pas demandé cette réinitialisation, ignorez cet email et votre 
 Cordialement,
 L'équipe
     """
-    
+
     html_body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -148,21 +145,15 @@ L'équipe
     </body>
     </html>
     """
-    
+
     return await send_email(email, subject, body, html_body)
 
 
 # Configuration SMTP (à adapter selon vos besoins)
-def configure_smtp(
-    host: str,
-    port: int,
-    username: str,
-    password: str,
-    use_tls: bool = True
-):
+def configure_smtp(host: str, port: int, username: str, password: str, use_tls: bool = True):
     """
     Configure les paramètres SMTP pour l'envoi d'emails
-    
+
     Example:
         configure_smtp(
             "smtp.gmail.com",
@@ -174,4 +165,3 @@ def configure_smtp(
     """
     # TODO: Implémenter la configuration SMTP
     pass
-
