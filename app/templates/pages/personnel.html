@@ -112,6 +112,7 @@
         {'name': 'Personnel'}
     ],
     actions=[
+        {'label': '❓ Aide', 'url': url_for('aide_personnel'), 'primary': False},
         {'label': '← Retour RH', 'url': url_for('rh_home'), 'primary': False},
         {'label': '➕ Nouvel Agent', 'url': url_for('personnel_nouveau'), 'primary': True}
     ]
@@ -191,6 +192,15 @@
                 <a href="{{ url_for('personnel_edit', agent_id=agent.id) }}" class="action-icon" title="Modifier">
                   ✏️
                 </a>
+                {% if agent.user_id %}
+                  <span class="action-icon" style="color: #10b981; cursor: help;" title="✓ Compte utilisateur existant">
+                    👤✓
+                  </span>
+                {% else %}
+                  <span class="action-icon" onclick="creerCompteUtilisateur({{ agent.id }}, '{{ agent.prenom }}', '{{ agent.nom }}')" title="Créer un compte utilisateur" style="color: #3b82f6; cursor: pointer;">
+                    👤➕
+                  </span>
+                {% endif %}
                 <span class="action-icon" onclick="supprimerAgent({{ agent.id }})" title="Supprimer">
                   🗑️
                 </span>
@@ -213,6 +223,61 @@
     </table>
   </div>
 
+</div>
+
+<!-- Modal Créer Compte Utilisateur -->
+<div class="modal-md" id="modalCreerUtilisateur">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>👤 Créer un Compte Utilisateur</h2>
+      <button class="modal-close" onclick="fermerModalCreerUtilisateur()">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <p style="margin-bottom: 1rem; color: #666;">
+        Création d'un compte utilisateur pour <strong id="agentNomComplet"></strong>
+      </p>
+      
+      <div class="form-group">
+        <label for="emailUtilisateur" class="required">Email de connexion</label>
+        <input type="text" id="emailUtilisateur" placeholder="prenom.nom@ministere.sn" style="width: 100%;">
+        <small style="color: #666;">Cet email servira pour se connecter à l'application</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="passwordUtilisateur">Mot de passe</label>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <input type="text" id="passwordUtilisateur" placeholder="Laisser vide pour générer automatiquement" style="flex: 1;">
+          <button type="button" class="btn btn-secondary" onclick="genererMotDePasse()" title="Générer un mot de passe aléatoire">
+            🔄 Générer
+          </button>
+        </div>
+        <small style="color: #666;">Minimum 8 caractères. Si vide, un mot de passe sécurisé sera généré automatiquement.</small>
+      </div>
+      
+      <div id="passwordResultContainer" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px;">
+        <h4 style="color: #10b981; margin-bottom: 0.5rem;">✅ Compte créé avec succès !</h4>
+        <p style="margin-bottom: 0.5rem;"><strong>📧 Email:</strong> <span id="createdEmail"></span></p>
+        <p style="margin-bottom: 0.5rem;"><strong>🔑 Mot de passe:</strong></p>
+        <div style="background: white; padding: 0.75rem; border-radius: 4px; font-family: monospace; font-size: 1.1rem; font-weight: bold; color: #dc3545; margin-bottom: 0.5rem; border: 1px dashed #dc3545;">
+          <span id="createdPassword"></span>
+        </div>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 0;">
+          ⚠️ <strong>Important :</strong> Communiquez ces identifiants à l'utilisateur de manière sécurisée.
+        </p>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fermerModalCreerUtilisateur()">Annuler</button>
+      <button class="btn btn-primary" id="btnConfirmerCreationUtilisateur" onclick="confirmerCreationUtilisateur()">
+        ➕ Créer le compte
+      </button>
+      <button class="btn btn-success" id="btnFermerApresCreation" style="display: none;" onclick="fermerModalCreerUtilisateur(); location.reload();">
+        ✓ Fermer
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -277,6 +342,10 @@ searchInput.addEventListener('input', async function() {
             <div class="action-icons">
               <a href="${'{{ url_for("personnel_detail", agent_id=0) }}'.replace('/0', `/${agent.id}`)}" class="action-icon" title="Détails">👁️</a>
               <a href="${'{{ url_for("personnel_edit", agent_id=0) }}'.replace('/0', `/${agent.id}`)}" class="action-icon" title="Modifier">✏️</a>
+              ${agent.user_id ? 
+                '<span class="action-icon" style="color: #10b981; cursor: help;" title="✓ Compte utilisateur existant">👤✓</span>' :
+                `<span class="action-icon" onclick="creerCompteUtilisateur(${agent.id}, '${agent.prenom}', '${agent.nom}')" title="Créer un compte utilisateur" style="color: #3b82f6; cursor: pointer;">👤➕</span>`
+              }
               <span class="action-icon" onclick="supprimerAgent(${agent.id})" title="Supprimer">🗑️</span>
             </div>
           </td>
@@ -287,6 +356,163 @@ searchInput.addEventListener('input', async function() {
     console.error('Erreur recherche:', error);
   }
 });
+
+// Variables globales pour le modal de création d'utilisateur
+let currentAgentIdForUser = null;
+
+// Fonctions génériques pour gérer les modals
+function showModal(modalId) {
+  document.getElementById(modalId).classList.add('show');
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('show');
+}
+
+// Générer un mot de passe aléatoire sécurisé
+function genererMotDePasse() {
+  const length = 12;
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*-_+=';
+  let password = '';
+  
+  // Assurer au moins 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial
+  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+  password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+  password += '0123456789'[Math.floor(Math.random() * 10)];
+  password += '!@#$%&*-_+='[Math.floor(Math.random() * 12)];
+  
+  // Compléter avec des caractères aléatoires
+  for (let i = password.length; i < length; i++) {
+    password += charset[Math.floor(Math.random() * charset.length)];
+  }
+  
+  // Mélanger les caractères
+  password = password.split('').sort(() => Math.random() - 0.5).join('');
+  
+  // Afficher dans le champ
+  document.getElementById('passwordUtilisateur').value = password;
+}
+
+// Ouvrir le modal de création d'utilisateur
+function creerCompteUtilisateur(agentId, prenom, nom) {
+  currentAgentIdForUser = agentId;
+  
+  // Pré-remplir les informations
+  document.getElementById('agentNomComplet').textContent = `${prenom} ${nom}`;
+  document.getElementById('emailUtilisateur').value = `${prenom.toLowerCase()}.${nom.toLowerCase()}@ministere.sn`;
+  
+  // Réinitialiser le modal
+  document.getElementById('passwordResultContainer').style.display = 'none';
+  document.getElementById('btnConfirmerCreationUtilisateur').style.display = 'inline-block';
+  document.getElementById('btnFermerApresCreation').style.display = 'none';
+  document.getElementById('emailUtilisateur').disabled = false;
+  document.getElementById('passwordUtilisateur').disabled = false;
+  document.getElementById('passwordUtilisateur').value = '';
+  
+  // Afficher le modal
+  showModal('modalCreerUtilisateur');
+  
+  // Focus sur le champ email
+  setTimeout(() => {
+    document.getElementById('emailUtilisateur').focus();
+    document.getElementById('emailUtilisateur').select();
+  }, 100);
+}
+
+// Fermer le modal
+function fermerModalCreerUtilisateur() {
+  closeModal('modalCreerUtilisateur');
+  currentAgentIdForUser = null;
+}
+
+// Fermer le modal en cliquant à l'extérieur
+document.getElementById('modalCreerUtilisateur')?.addEventListener('click', function(e) {
+  if (e.target === this) {
+    fermerModalCreerUtilisateur();
+  }
+});
+
+// Fermer le modal avec la touche Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('modalCreerUtilisateur').classList.contains('show')) {
+    fermerModalCreerUtilisateur();
+  }
+});
+
+// Confirmer la création
+async function confirmerCreationUtilisateur() {
+  const email = document.getElementById('emailUtilisateur').value.trim();
+  const password = document.getElementById('passwordUtilisateur').value.trim();
+  
+  if (!email) {
+    showError('⚠️ Veuillez saisir un email');
+    document.getElementById('emailUtilisateur').focus();
+    return;
+  }
+  
+  // Valider le format email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    showError('❌ Format email invalide. Utilisez le format: exemple@domaine.com');
+    document.getElementById('emailUtilisateur').focus();
+    return;
+  }
+  
+  // Valider le mot de passe s'il est fourni
+  if (password && password.length < 8) {
+    showError('⚠️ Le mot de passe doit contenir au moins 8 caractères');
+    document.getElementById('passwordUtilisateur').focus();
+    return;
+  }
+  
+  showGlobalLoading('Création du compte utilisateur...', 'Veuillez patienter');
+  
+  try {
+    const res = await fetch(`/api/v1/personnel/api/agents/${currentAgentIdForUser}/create-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        email: email,
+        password: password || null  // Envoyer null si vide pour génération auto
+      })
+    });
+    
+    hideGlobalLoading();
+    
+    if (res.ok) {
+      const data = await res.json();
+      
+      // Afficher le résultat dans le modal
+      document.getElementById('createdEmail').textContent = email;
+      document.getElementById('createdPassword').textContent = data.temporary_password;
+      document.getElementById('passwordResultContainer').style.display = 'block';
+      
+      // Masquer le bouton de création et afficher le bouton de fermeture
+      document.getElementById('btnConfirmerCreationUtilisateur').style.display = 'none';
+      document.getElementById('btnFermerApresCreation').style.display = 'inline-block';
+      
+      // Désactiver les champs
+      document.getElementById('emailUtilisateur').disabled = true;
+      document.getElementById('passwordUtilisateur').disabled = true;
+      
+      // Message adapté selon si le mot de passe a été généré ou fourni
+      if (data.password_was_generated) {
+        showSuccess('✅ Compte créé avec un mot de passe généré automatiquement');
+      } else {
+        showSuccess('✅ Compte créé avec le mot de passe que vous avez défini');
+      }
+    } else {
+      await handleFetchError(res, 'Erreur lors de la création du compte');
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur réseau. Vérifiez votre connexion.');
+  }
+}
 
 // Fonction de suppression
 async function supprimerAgent(agentId) {

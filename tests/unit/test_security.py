@@ -5,6 +5,7 @@ import pytest
 from app.core.security import get_password_hash, verify_password
 
 
+@pytest.mark.critical
 def test_password_hashing():
     """Test le hashing de mot de passe"""
     password = "mysecretpassword123"
@@ -21,6 +22,7 @@ def test_password_hashing():
     assert hashed.startswith("$2b$") or hashed.startswith("$bcrypt-sha256$")
 
 
+@pytest.mark.critical
 def test_password_verification_success():
     """Test la vérification d'un mot de passe correct"""
     password = "mysecretpassword123"

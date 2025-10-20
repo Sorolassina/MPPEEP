@@ -335,14 +335,16 @@
         <div class="form-grid">
           <div class="form-group">
             <label for="email_professionnel">Email professionnel</label>
-            <input type="email" id="email_professionnel" name="email_professionnel" 
+            <input type="text" id="email_professionnel" name="email_professionnel" 
                    placeholder="prenom.nom@ministere.sn" value="{{ agent.email_professionnel if mode == 'edit' else '' }}">
+            <small>Format: exemple@domaine.com</small>
           </div>
           
           <div class="form-group">
             <label for="email_personnel">Email personnel</label>
-            <input type="email" id="email_personnel" name="email_personnel" 
+            <input type="text" id="email_personnel" name="email_personnel" 
                    placeholder="exemple@email.com" value="{{ agent.email_personnel if mode == 'edit' else '' }}">
+            <small>Format: exemple@domaine.com</small>
           </div>
           
           <div class="form-group">
@@ -384,13 +386,13 @@
         </div>
         <div class="form-grid">
           <div class="form-group">
-            <label for="date_recrutement">Date de recrutement</label>
-            <input type="date" id="date_recrutement" name="date_recrutement" value="{{ agent.date_recrutement if mode == 'edit' else '' }}">
+            <label for="date_recrutement">Date de recrutement <span style="color: #dc3545;">*</span></label>
+            <input type="date" id="date_recrutement" name="date_recrutement" value="{{ agent.date_recrutement if mode == 'edit' else '' }}" required>
           </div>
           
           <div class="form-group">
-            <label for="date_prise_service">Date de prise de service</label>
-            <input type="date" id="date_prise_service" name="date_prise_service" value="{{ agent.date_prise_service if mode == 'edit' else '' }}">
+            <label for="date_prise_service">Date de prise de service <span style="color: #dc3545;">*</span></label>
+            <input type="date" id="date_prise_service" name="date_prise_service" value="{{ agent.date_prise_service if mode == 'edit' else '' }}" required>
           </div>
           
           <div class="form-group">
@@ -418,8 +420,8 @@
         </div>
         <div class="form-grid">
           <div class="form-group">
-            <label for="grade_id">Grade</label>
-            <select id="grade_id" name="grade_id">
+            <label for="grade_id">Grade <span style="color: #dc3545;">*</span></label>
+            <select id="grade_id" name="grade_id" required>
               <option value="">-- Sélectionner --</option>
               {% for grade in grades %}
               <option value="{{ grade.id }}" {{ 'selected' if mode == 'edit' and agent.grade_id == grade.id else '' }}>{{ grade.code }} - {{ grade.libelle }}</option>
@@ -441,8 +443,8 @@
           </div>
           
           <div class="form-group">
-            <label for="programme_id">Programme</label>
-            <select id="programme_id" name="programme_id">
+            <label for="programme_id">Programme <span style="color: #dc3545;">*</span></label>
+            <select id="programme_id" name="programme_id" required>
               <option value="">-- Sélectionner --</option>
               {% for prog in programmes %}
               <option value="{{ prog.id }}" {{ 'selected' if mode == 'edit' and agent.programme_id == prog.id else '' }}>{{ prog.code }} - {{ prog.libelle }}</option>
@@ -451,8 +453,8 @@
           </div>
           
           <div class="form-group">
-            <label for="direction_id">Direction</label>
-            <select id="direction_id" name="direction_id">
+            <label for="direction_id">Direction <span style="color: #dc3545;">*</span></label>
+            <select id="direction_id" name="direction_id" required>
               <option value="">-- Sélectionner --</option>
               {% for dir in directions %}
               <option value="{{ dir.id }}" data-programme="{{ dir.programme_id }}" {{ 'selected' if mode == 'edit' and agent.direction_id == dir.id else '' }}>
@@ -463,8 +465,8 @@
           </div>
           
           <div class="form-group">
-            <label for="service_id">Service</label>
-            <select id="service_id" name="service_id">
+            <label for="service_id">Service <span style="color: #dc3545;">*</span></label>
+            <select id="service_id" name="service_id" required>
               <option value="">-- Sélectionner --</option>
               {% for serv in services %}
               <option value="{{ serv.id }}" data-direction="{{ serv.direction_id }}" {{ 'selected' if mode == 'edit' and agent.service_id == serv.id else '' }}>
@@ -475,9 +477,9 @@
           </div>
           
           <div class="form-group" style="grid-column: 1 / -1;">
-            <label for="fonction">Fonction</label>
+            <label for="fonction">Fonction <span style="color: #dc3545;">*</span></label>
             <input type="text" id="fonction" name="fonction" 
-                   placeholder="Ex: Chef de division comptabilité" value="{{ agent.fonction if mode == 'edit' else '' }}">
+                   placeholder="Ex: Chef de division comptabilité" value="{{ agent.fonction if mode == 'edit' else '' }}" required>
           </div>
         </div>
       </div>
@@ -622,9 +624,84 @@ function clearPhoto() {
   clearPhotoBtn.style.display = 'none';
 }
 
+// Validation des emails (optionnels mais doivent être valides s'ils sont remplis)
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Validation en temps réel des emails
+document.getElementById('email_professionnel').addEventListener('blur', function() {
+  const email = this.value.trim();
+  if (email && !validateEmail(email)) {
+    this.style.borderColor = '#dc3545';
+    this.style.backgroundColor = '#fff5f5';
+    
+    // Afficher un message sous le champ
+    let errorMsg = this.nextElementSibling;
+    if (!errorMsg || !errorMsg.classList.contains('email-error')) {
+      errorMsg = document.createElement('small');
+      errorMsg.className = 'email-error';
+      errorMsg.style.color = '#dc3545';
+      errorMsg.textContent = '⚠️ Format email invalide';
+      this.parentNode.insertBefore(errorMsg, this.nextSibling.nextSibling);
+    }
+  } else {
+    this.style.borderColor = '';
+    this.style.backgroundColor = '';
+    const errorMsg = this.parentNode.querySelector('.email-error');
+    if (errorMsg) errorMsg.remove();
+  }
+});
+
+document.getElementById('email_personnel').addEventListener('blur', function() {
+  const email = this.value.trim();
+  if (email && !validateEmail(email)) {
+    this.style.borderColor = '#dc3545';
+    this.style.backgroundColor = '#fff5f5';
+    
+    // Afficher un message sous le champ
+    let errorMsg = this.nextElementSibling;
+    if (!errorMsg || !errorMsg.classList.contains('email-error')) {
+      errorMsg = document.createElement('small');
+      errorMsg.className = 'email-error';
+      errorMsg.style.color = '#dc3545';
+      errorMsg.textContent = '⚠️ Format email invalide';
+      this.parentNode.insertBefore(errorMsg, this.nextSibling.nextSibling);
+    }
+  } else {
+    this.style.borderColor = '';
+    this.style.backgroundColor = '';
+    const errorMsg = this.parentNode.querySelector('.email-error');
+    if (errorMsg) errorMsg.remove();
+  }
+});
+
 // Soumission du formulaire
 document.querySelector('form').addEventListener('submit', async function(e) {
   e.preventDefault();
+  
+  // Valider les emails s'ils sont remplis
+  const emailPro = document.getElementById('email_professionnel').value.trim();
+  const emailPerso = document.getElementById('email_personnel').value.trim();
+  
+  if (emailPro && !validateEmail(emailPro)) {
+    showError("L'email professionnel n'est pas valide. Format attendu: exemple@domaine.com");
+    document.getElementById('email_professionnel').focus();
+    document.getElementById('email_professionnel').style.borderColor = '#dc3545';
+    return;
+  }
+  
+  if (emailPerso && !validateEmail(emailPerso)) {
+    showError("L'email personnel n'est pas valide. Format attendu: exemple@domaine.com");
+    document.getElementById('email_personnel').focus();
+    document.getElementById('email_personnel').style.borderColor = '#dc3545';
+    return;
+  }
+  
+  // Réinitialiser les bordures
+  document.getElementById('email_professionnel').style.borderColor = '';
+  document.getElementById('email_personnel').style.borderColor = '';
   
   const form = e.target;
   const mode = form.dataset.mode;

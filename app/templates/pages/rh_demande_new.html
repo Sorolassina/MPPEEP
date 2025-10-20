@@ -149,8 +149,22 @@
       
       <div class="form-grid-premium">
         <div class="form-group-premium">
-          <label for="agent_id" class="required">Matricule / Agent ID</label>
-          <input type="number" name="agent_id" id="agent_id" required placeholder="ex: 1023">
+          <label for="agent_id" class="required">Agent demandeur</label>
+          {% if agent %}
+            <input type="number" name="agent_id" id="agent_id" required readonly 
+                   value="{{ agent.id }}" 
+                   style="background-color: #f0f0f0; cursor: not-allowed;">
+            <small style="color: #666; display: block; margin-top: 0.25rem;">
+              📋 {{ agent.matricule }} - {{ agent.prenom }} {{ agent.nom }}
+            </small>
+          {% else %}
+            <input type="number" name="agent_id" id="agent_id" required readonly 
+                   value="" 
+                   style="background-color: #fff5f5; border-color: #dc3545;">
+            <small style="color: #dc3545; display: block; margin-top: 0.25rem;">
+              ⚠️ Votre compte utilisateur n'est pas lié à un agent. Contactez l'administrateur.
+            </small>
+          {% endif %}
         </div>
 
         <div class="form-group-premium">
@@ -376,6 +390,14 @@ dateFin.addEventListener('change', calculerJours);
 // 4. Validation du formulaire
 // ============================================
 document.querySelector('form').addEventListener('submit', function(e) {
+  // Vérifier que l'agent est bien renseigné
+  const agentId = document.getElementById('agent_id').value;
+  if (!agentId || agentId === '') {
+    e.preventDefault();
+    alert('⚠️ Votre compte utilisateur n\'est pas lié à un agent. Veuillez contacter l\'administrateur pour faire le lien.');
+    return false;
+  }
+  
   const type = typeSelect.value;
   
   // Si BESOIN_ACTE, vérifier que le type d'acte est renseigné

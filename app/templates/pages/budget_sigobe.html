@@ -58,24 +58,76 @@
     color: #991b1b;
 }
 
-/* Icônes d'action */
+/* Boutons d'action */
 .action-icons {
     display: flex;
     gap: 0.5rem;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
-.action-icon {
-    cursor: pointer;
-    padding: 0.5rem;
+.btn-action {
+    padding: 0.5rem 0.75rem;
+    border: none;
     border-radius: 8px;
-    transition: all 0.2s;
+    cursor: pointer;
     font-size: 1.1rem;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.action-icon:hover {
-    background: var(--primary-color);
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-action:active {
+    transform: translateY(0);
+}
+
+.btn-premium {
+    font-weight: 600;
+}
+
+.btn-premium.btn-primary {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     color: white;
-    transform: scale(1.1);
+}
+
+.btn-premium.btn-primary:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+}
+
+.btn-premium.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.btn-premium.btn-success:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.btn-premium.btn-info {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    color: white;
+}
+
+.btn-premium.btn-info:hover {
+    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+}
+
+.btn-premium.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.btn-premium.btn-danger:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
 /* État vide */
@@ -109,93 +161,6 @@
 }
 
 /* Les boutons utilisent maintenant les classes centralisées .btn */
-
-/* Menu déroulant d'actions */
-.dropdown-actions {
-    position: relative;
-    display: inline-block;
-    vertical-align: middle;
-}
-
-.action-menu-btn {
-    padding: 0.5rem 1rem;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #2c3e50;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-    line-height: 1;
-}
-
-.action-menu-btn:hover {
-    background: rgba(0,0,0,0.05);
-    transform: scale(1.2);
-}
-
-.action-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    min-width: 180px;
-    z-index: 9999;
-    display: none;
-    margin-top: 0.25rem;
-    overflow: visible;
-}
-
-.action-menu.show {
-    display: block;
-    animation: slideDownMenu 0.2s ease-out;
-}
-
-@keyframes slideDownMenu {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.action-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: none;
-    border: none;
-    color: #2c3e50;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: left;
-    font-size: 0.95rem;
-}
-
-.action-menu-item:hover {
-    background: #f8f9fa;
-}
-
-.action-menu-item-danger:hover {
-    background: #fee;
-    color: #dc3545;
-}
-
-.action-menu-icon {
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-}
 
 /* Accordéons */
 .accordion-header:hover {
@@ -310,26 +275,19 @@
               </span>
             </td>
             <td>
-              <div class="dropdown-actions">
-                <button class="action-menu-btn" onclick="toggleActionMenu(event, 'sigobe-{{ c.id }}')" title="Actions">⋮</button>
-                <div class="action-menu" id="menu-action-sigobe-{{ c.id }}">
-                  <button onclick="voirTable({{ c.id }}); closeAllMenus();" class="action-menu-item">
-                    <span class="action-menu-icon">📋</span>
-                    <span>Voir la table</span>
-                  </button>
-                  <button onclick="exporterExcel({{ c.id }}); closeAllMenus();" class="action-menu-item">
-                    <span class="action-menu-icon">📊</span>
-                    <span>Exporter Excel</span>
-                  </button>
-                  <button onclick="voirKPIs({{ c.id }}); closeAllMenus();" class="action-menu-item">
-                    <span class="action-menu-icon">📈</span>
-                    <span>Voir les KPIs</span>
-                  </button>
-                  <button onclick="supprimerChargement({{ c.id }}); closeAllMenus();" class="action-menu-item action-menu-item-danger">
-                    <span class="action-menu-icon">🗑️</span>
-                    <span>Supprimer</span>
-                  </button>
-                </div>
+              <div class="action-icons">
+                <button onclick="voirTable({{ c.id }});" class="btn-action btn-premium btn-primary" title="Voir la table">
+                  📋
+                </button>
+                <button onclick="exporterExcel({{ c.id }});" class="btn-action btn-premium btn-success" title="Exporter Excel">
+                  📊
+                </button>
+                <button onclick="voirKPIs({{ c.id }});" class="btn-action btn-premium btn-info" title="Voir les KPIs">
+                  📈
+                </button>
+                <button onclick="supprimerChargement({{ c.id }});" class="btn-action btn-premium btn-danger" title="Supprimer">
+                  🗑️
+                </button>
               </div>
             </td>
           </tr>
@@ -417,41 +375,6 @@
 // Fermer l'overlay au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
   hideGlobalLoading();
-});
-
-// Gestion du menu déroulant d'actions
-function toggleActionMenu(event, menuId) {
-  event.stopPropagation();
-  const menu = document.getElementById(`menu-action-${menuId}`);
-  const allMenus = document.querySelectorAll('.action-menu');
-  
-  if (!menu) {
-    console.error(`Menu non trouvé: menu-action-${menuId}`);
-    return;
-  }
-  
-  // Fermer tous les autres menus
-  allMenus.forEach(m => {
-    if (m !== menu) {
-      m.classList.remove('show');
-    }
-  });
-  
-  // Toggle le menu actuel
-  menu.classList.toggle('show');
-}
-
-function closeAllMenus() {
-  document.querySelectorAll('.action-menu').forEach(menu => {
-    menu.classList.remove('show');
-  });
-}
-
-// Fermer les menus en cliquant ailleurs
-document.addEventListener('click', function(event) {
-  if (!event.target.closest('.dropdown-actions')) {
-    closeAllMenus();
-  }
 });
 
 // Gestion des accordéons de prévisualisation

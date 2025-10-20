@@ -1,0 +1,289 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Aide - Gestion des Stocks{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='❓ Aide - Gestion des Stocks',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Stock', 'url': url_for('stock_home')},
+        {'name': 'Aide'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('stock_home'), 'primary': False}
+    ]
+) }}
+
+<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Introduction -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+        <h2 style="color: #92400e; margin-bottom: 1rem;">📦 Système de Gestion des Stocks</h2>
+        <p style="color: #78350f; line-height: 1.8; font-size: 1.05rem;">
+            Le module Stock permet de gérer l'inventaire, les mouvements (entrées/sorties), 
+            les demandes d'approvisionnement et le suivi des fournisseurs.
+        </p>
+    </div>
+
+    <!-- Gérer les articles -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📦 Gérer les Articles</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Créer un article</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Cliquer sur <strong>"➕ Nouvel Article"</strong></li>
+            <li>Remplir :
+                <ul>
+                    <li><strong>Référence :</strong> Code unique de l'article</li>
+                    <li><strong>Désignation :</strong> Nom descriptif</li>
+                    <li><strong>Catégorie :</strong> Fournitures, Matériel, Consommables, etc.</li>
+                    <li><strong>Unité :</strong> Pièce, Boîte, Carton, Litre, etc.</li>
+                    <li><strong>Stock :</strong> Quantité actuelle, stock minimum, stock maximum</li>
+                    <li><strong>Prix :</strong> Prix unitaire</li>
+                </ul>
+            </li>
+            <li>Ajouter une photo (optionnel)</li>
+            <li>Enregistrer</li>
+        </ol>
+        
+        <div style="background: #fee2e2; padding: 1rem; border-radius: 8px; border-left: 4px solid #dc3545; margin-top: 1rem;">
+            <p style="margin: 0; color: #991b1b;">
+                <strong>⚠️ Stock Minimum :</strong> Lorsqu'un article atteint le stock minimum, 
+                une alerte est générée automatiquement dans le tableau de bord.
+            </p>
+        </div>
+    </div>
+
+    <!-- Mouvements de stock -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">↕️ Mouvements de Stock</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Types de mouvements :</h4>
+        <div style="display: grid; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="padding: 1rem; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 8px;">
+                <strong style="color: #065f46;">📥 ENTRÉE</strong>
+                <p style="color: #064e3b; margin: 0.5rem 0 0 0;">
+                    Réception de marchandises (achat, don, transfert entrant)
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #fee2e2; border-left: 4px solid #dc3545; border-radius: 8px;">
+                <strong style="color: #991b1b;">📤 SORTIE</strong>
+                <p style="color: #7f1d1d; margin: 0.5rem 0 0 0;">
+                    Distribution, utilisation, perte, casse
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 8px;">
+                <strong style="color: #1e40af;">🔄 AJUSTEMENT</strong>
+                <p style="color: #1e3a8a; margin: 0.5rem 0 0 0;">
+                    Correction d'inventaire, régularisation
+                </p>
+            </div>
+        </div>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Enregistrer un mouvement</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Aller dans <strong>"Stock → Mouvements"</strong></li>
+            <li>Cliquer sur <strong>"➕ Nouveau Mouvement"</strong></li>
+            <li>Sélectionner :
+                <ul>
+                    <li>Type de mouvement (Entrée/Sortie/Ajustement)</li>
+                    <li>Article concerné</li>
+                    <li>Quantité</li>
+                    <li>Motif/Commentaire</li>
+                </ul>
+            </li>
+            <li>Enregistrer</li>
+        </ol>
+        
+        <p style="color: #374151; line-height: 1.8; margin-top: 1rem;">
+            Le stock est automatiquement mis à jour après validation du mouvement.
+        </p>
+    </div>
+
+    <!-- Inventaire -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📋 Inventaire</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            L'inventaire permet de vérifier physiquement les stocks et de détecter les écarts.
+        </p>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">🔄 Réaliser un inventaire</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Aller dans <strong>"Stock → Inventaires"</strong></li>
+            <li>Cliquer sur <strong>"➕ Nouvel Inventaire"</strong></li>
+            <li>Remplir :
+                <ul>
+                    <li>Date de l'inventaire</li>
+                    <li>Lieu/Magasin</li>
+                    <li>Responsable</li>
+                </ul>
+            </li>
+            <li>Scanner/compter les articles physiquement</li>
+            <li>Saisir les quantités réelles</li>
+            <li>Le système calcule automatiquement les écarts</li>
+            <li>Valider l'inventaire</li>
+        </ol>
+        
+        <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 1rem;">
+            <p style="margin: 0; color: #92400e;">
+                <strong>⚠️ Écarts :</strong> En cas d'écart important, le système propose de créer 
+                automatiquement un mouvement d'ajustement.
+            </p>
+        </div>
+    </div>
+
+    <!-- NOUVEAUTÉ : Articles Périssables -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #10b981;">
+        <h3 style="color: #065f46; margin-bottom: 1.5rem;">🍃 Articles Périssables</h3>
+        
+        <p style="color: #064e3b; line-height: 1.8; margin-bottom: 1rem;">
+            Les articles périssables (denrées alimentaires, médicaments, produits chimiques) nécessitent un suivi par lot avec dates de péremption.
+        </p>
+        
+        <h4 style="color: #065f46; margin-bottom: 1rem;">➕ Configurer un article périssable</h4>
+        <ol style="line-height: 1.8; color: #064e3b;">
+            <li>Lors de la création/modification d'un article</li>
+            <li>Cocher <strong>"Cet article est périssable"</strong></li>
+            <li>Définir le <strong>Seuil d'alerte</strong> : nombre de jours avant péremption pour déclencher une alerte (défaut: 30 jours)</li>
+        </ol>
+        
+        <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="color: #1e40af; line-height: 1.8; margin: 0;">
+                <strong>💡 Important :</strong> La date de péremption exacte sera saisie lors de la création de chaque lot, 
+                car elle varie selon le numéro de lot et la date de fabrication.
+            </p>
+        </div>
+        
+        <h4 style="color: #065f46; margin-bottom: 1rem; margin-top: 1.5rem;">📦 Enregistrer une entrée d'article périssable</h4>
+        <ol style="line-height: 1.8; color: #064e3b;">
+            <li>Aller dans <strong>"Stock → Mouvements"</strong></li>
+            <li>Cliquer sur <strong>"➕ Nouveau Mouvement"</strong></li>
+            <li>Sélectionner <strong>"Type : ENTRÉE"</strong></li>
+            <li>Choisir l'article périssable</li>
+            <li>Renseigner :
+                <ul>
+                    <li>Quantité reçue</li>
+                    <li><strong>Numéro de lot</strong> (fourni par le fabricant)</li>
+                    <li><strong style="color: #dc3545;">Date de péremption</strong> (obligatoire)</li>
+                    <li>Date de fabrication (optionnel)</li>
+                    <li>Fournisseur</li>
+                </ul>
+            </li>
+            <li>Enregistrer : le lot sera créé automatiquement</li>
+        </ol>
+        
+        <h4 style="color: #065f46; margin-bottom: 1rem; margin-top: 1.5rem;">👁️ Consulter les lots périssables</h4>
+        <p style="color: #064e3b; line-height: 1.8;">
+            La page <strong>"Stock → Lots Périssables"</strong> permet de <strong>visualiser</strong> tous les lots enregistrés, 
+            leurs dates de péremption, les alertes et les statistiques. Cette page est en <strong>consultation uniquement</strong>.
+        </p>
+        
+        <h4 style="color: #065f46; margin-bottom: 1rem; margin-top: 1.5rem;">🚨 Alertes automatiques</h4>
+        <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 1rem;">
+            <p style="color: #92400e; line-height: 1.8; margin: 0;">
+                <strong>⚠️ Alertes de péremption</strong><br>
+                Le système affiche automatiquement sur le dashboard :
+            </p>
+            <ul style="color: #78350f; margin-top: 0.5rem;">
+                <li><strong style="color: #f59e0b;">Lots proches de la péremption</strong> (selon le seuil défini)</li>
+                <li><strong style="color: #dc3545;">Lots périmés</strong> (date de péremption dépassée)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- NOUVEAUTÉ : Amortissement -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+        <h3 style="color: #92400e; margin-bottom: 1.5rem;">💰 Amortissement du Matériel</h3>
+        
+        <p style="color: #78350f; line-height: 1.8; margin-bottom: 1rem;">
+            L'amortissement permet de suivre la dépréciation comptable des équipements, véhicules et matériels durables.
+        </p>
+        
+        <h4 style="color: #92400e; margin-bottom: 1rem;">➕ Configurer un article amortissable</h4>
+        <ol style="line-height: 1.8; color: #78350f;">
+            <li>Lors de la création/modification d'un article</li>
+            <li>Cocher <strong>"Cet article est amortissable"</strong></li>
+            <li>Renseigner :
+                <ul>
+                    <li><strong>Date d'acquisition</strong></li>
+                    <li><strong>Valeur d'acquisition</strong> (prix d'achat)</li>
+                    <li><strong>Durée d'amortissement</strong> (en années, ex: 3 ans)</li>
+                    <li><strong>Méthode d'amortissement</strong> :
+                        <ul>
+                            <li><strong>Linéaire</strong> : amortissement constant chaque année</li>
+                            <li><strong>Dégressif</strong> : amortissement plus important les premières années</li>
+                        </ul>
+                    </li>
+                    <li><strong>Taux d'amortissement</strong> (pour méthode dégressive)</li>
+                    <li><strong>Valeur résiduelle</strong> (valeur finale après amortissement complet)</li>
+                </ul>
+            </li>
+        </ol>
+        
+        <h4 style="color: #92400e; margin-bottom: 1rem; margin-top: 1.5rem;">📊 Calculer l'amortissement</h4>
+        <ol style="line-height: 1.8; color: #78350f;">
+            <li>Aller dans <strong>"Stock → Amortissements"</strong></li>
+            <li>Sélectionner l'année comptable</li>
+            <li>Le système liste les matériels nécessitant un calcul</li>
+            <li>Cliquer sur <strong>"💾 Calculer"</strong> pour chaque matériel</li>
+            <li>Cliquer sur <strong>"📊 Voir plan"</strong> pour afficher le plan d'amortissement complet</li>
+        </ol>
+        
+        <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="color: #1e40af; line-height: 1.8; margin: 0;">
+                <strong>💡 Exemple : Ordinateur à 1 500 000 FCFA</strong><br>
+                Durée : 3 ans | Méthode : Linéaire | Valeur résiduelle : 150 000 FCFA
+            </p>
+            <ul style="color: #1e3a8a; margin-top: 0.5rem;">
+                <li>Amortissement annuel : (1 500 000 - 150 000) / 3 = <strong>450 000 FCFA/an</strong></li>
+                <li>Année 1 : VNC = 1 050 000 FCFA</li>
+                <li>Année 2 : VNC = 600 000 FCFA</li>
+                <li>Année 3 : VNC = 150 000 FCFA (valeur résiduelle)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Demandes d'approvisionnement -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📝 Demandes d'Approvisionnement</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            Processus de demande et validation d'achat :
+        </p>
+        
+        <ol style="line-height: 1.8; color: #374151;">
+            <li><strong>Agent demandeur :</strong> Crée une demande avec articles et quantités</li>
+            <li><strong>Chef de service :</strong> Valide ou rejette</li>
+            <li><strong>Responsable stock :</strong> Vérifie la disponibilité</li>
+            <li><strong>DAF :</strong> Validation finale et autorisation d'achat</li>
+            <li><strong>Magasinier :</strong> Réceptionne et enregistre l'entrée en stock</li>
+        </ol>
+    </div>
+
+    <!-- Bonnes pratiques -->
+    <div class="card" style="background: #f0fdf4; border-left: 4px solid #10b981;">
+        <h3 style="color: #065f46; margin-bottom: 1.5rem;">✨ Bonnes Pratiques</h3>
+        
+        <ul style="color: #064e3b; line-height: 2;">
+            <li>✅ <strong>Définir des stocks min/max</strong> pour chaque article</li>
+            <li>✅ <strong>Enregistrer tous les mouvements</strong> dès qu'ils se produisent</li>
+            <li>✅ <strong>Réaliser des inventaires réguliers</strong> (mensuel ou trimestriel)</li>
+            <li>🍃 <strong>Saisir le N° lot et date de péremption</strong> lors des entrées d'articles périssables</li>
+            <li>🚨 <strong>Consulter quotidiennement les alertes</strong> de péremption dans le dashboard</li>
+            <li>💰 <strong>Calculer les amortissements annuellement</strong> pour chaque matériel amortissable</li>
+            <li>📊 <strong>Vérifier les plans d'amortissement</strong> avant clôture comptable</li>
+            <li>✅ <strong>Documenter les motifs</strong> de sortie et ajustement</li>
+            <li>✅ <strong>Vérifier les alertes</strong> de stock faible quotidiennement</li>
+            <li>✅ <strong>Maintenir à jour</strong> les prix unitaires</li>
+            <li>✅ <strong>Catégoriser correctement</strong> les articles pour faciliter les recherches</li>
+        </ul>
+    </div>
+
+</div>
+{% endblock %}
+

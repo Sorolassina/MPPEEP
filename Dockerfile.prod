@@ -1,0 +1,83 @@
+# Dockerfile.prod - MPPEEP Dashboard (Production)
+# Multi-stage build pour une image optimisée
+
+# ============================================
+# STAGE 1 : BUILDER
+# ============================================
+FROM python:3.11-slim AS builder
+
+# Variables d'environnement
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+# Installation des dépendances de build
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier requirements
+COPY requirements.txt .
+
+# Créer un environnement virtuel
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Installer les dépendances
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ============================================
+# STAGE 2 : RUNTIME
+# ============================================
+FROM python:3.11-slim
+
+# Métadonnées
+LABEL maintainer="MPPEEP <support@mppeep.gov>"
+LABEL version="1.0.0"
+LABEL environment="production"
+
+# Variables d'environnement
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+
+# Installation des dépendances runtime uniquement
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Créer un utilisateur non-root pour la sécurité
+RUN groupadd -r mppeep && \
+    useradd -r -g mppeep -u 1000 mppeep && \
+    chown -R mppeep:mppeep /app
+
+# Copier l'environnement virtuel depuis le builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Copier le code
+COPY --chown=mppeep:mppeep . .
+
+# Créer les dossiers nécessaires
+RUN mkdir -p logs data static/uploads && \
+    chown -R mppeep:mppeep logs data static/uploads
+
+# Passer à l'utilisateur non-root
+USER mppeep
+
+# Exposer le port
+EXPOSE 9000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:9000/api/v1/health || exit 1
+
+# Commande de démarrage production (4 workers)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000", "--workers", "4"]
+

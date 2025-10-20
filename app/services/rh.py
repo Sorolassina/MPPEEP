@@ -9,7 +9,7 @@ from sqlmodel import Session, select, func, col
 from app.core.logging_config import get_logger
 
 from app.models.rh import (
-    Agent, Grade, ServiceDept,
+    Agent, Grade,
     HRRequest, WorkflowStep, WorkflowHistory
 )
 from app.core.enums import RequestType, WorkflowState

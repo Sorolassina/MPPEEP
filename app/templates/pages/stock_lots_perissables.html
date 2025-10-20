@@ -1,0 +1,229 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Lots Périssables - Stock - {{ app_name }}{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='🍃 Suivi des Lots Périssables',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Stock', 'url': url_for('stock_home')},
+        {'name': 'Lots Périssables'}
+    ],
+    actions=[
+        {'label': '← Retour Stock', 'url': url_for('stock_home'), 'primary': False}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Message informatif -->
+  <div style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 8px; border-left: 4px solid #3b82f6;">
+    <p style="color: #1e40af; margin: 0; line-height: 1.6;">
+      <strong>💡 Information :</strong> Cette page permet de <strong>consulter et suivre</strong> les lots périssables. 
+      Pour <strong>enregistrer une entrée ou sortie</strong> d'articles périssables, utilisez 
+      <strong>"Stock → Mouvements"</strong> où vous pourrez saisir le numéro de lot et la date de péremption.
+    </p>
+  </div>
+  
+  <!-- Statistiques -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">📊 Statistiques</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div style="padding: 1rem; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 8px; border-left: 4px solid #10b981;">
+        <div style="font-size: 0.9rem; color: #065f46; margin-bottom: 0.5rem;">Total Lots Actifs</div>
+        <div style="font-size: 2rem; font-weight: 700; color: #064e3b;" id="stat-total">—</div>
+      </div>
+      
+      <div style="padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; border-left: 4px solid #f59e0b;">
+        <div style="font-size: 0.9rem; color: #92400e; margin-bottom: 0.5rem;">Proches Péremption</div>
+        <div style="font-size: 2rem; font-weight: 700; color: #78350f;" id="stat-alerte">—</div>
+      </div>
+      
+      <div style="padding: 1rem; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 8px; border-left: 4px solid #dc3545;">
+        <div style="font-size: 0.9rem; color: #991b1b; margin-bottom: 0.5rem;">Lots Périmés</div>
+        <div style="font-size: 2rem; font-weight: 700; color: #7f1d1d;" id="stat-perimes">—</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Liste des lots -->
+  <div class="card">
+    <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">📋 Liste des Lots</h3>
+    
+    <!-- Filtres -->
+    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+      <select id="filter-statut" class="form-select" style="max-width: 200px;" onchange="filterLots()">
+        <option value="">Tous les statuts</option>
+        <option value="ACTIF">Actif</option>
+        <option value="ALERTE">Alerte</option>
+        <option value="PERIME">Périmé</option>
+        <option value="EPUISE">Épuisé</option>
+      </select>
+      
+      <input type="text" id="filter-search" class="form-input" placeholder="Rechercher (lot, article...)" 
+             style="max-width: 300px;" oninput="filterLots()">
+    </div>
+    
+    <!-- Tableau -->
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>N° Lot</th>
+            <th>Article</th>
+            <th>Date Péremption</th>
+            <th>Jours Restants</th>
+            <th>Quantité</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="table-lots">
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+              Chargement...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+</div>
+
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allLots = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadLots();
+});
+
+// Charger les lots
+async function loadLots() {
+  try {
+    const response = await fetch("{{ url_for('api_list_lots_perissables') }}");
+    const result = await response.json();
+    
+    if (result.success) {
+      allLots = result.data;
+      
+      // Statistiques
+      const actifs = allLots.filter(l => l.statut === 'ACTIF').length;
+      const alerte = allLots.filter(l => l.statut === 'ALERTE').length;
+      const perimes = allLots.filter(l => l.statut === 'PERIME').length;
+      
+      document.getElementById('stat-total').textContent = actifs;
+      document.getElementById('stat-alerte').textContent = alerte;
+      document.getElementById('stat-perimes').textContent = perimes;
+      
+      // Afficher les lots
+      displayLots(allLots);
+    }
+  } catch (error) {
+    console.error('Erreur chargement lots:', error);
+    document.getElementById('table-lots').innerHTML = `
+      <tr><td colspan="7" style="text-align: center; color: var(--danger-color);">Erreur de chargement</td></tr>
+    `;
+  }
+}
+
+// Afficher les lots
+function displayLots(lots) {
+  const tbody = document.getElementById('table-lots');
+  
+  if (lots.length === 0) {
+    tbody.innerHTML = `
+      <tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+        Aucun lot périssable enregistré
+      </td></tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = lots.map(lot => {
+    let statutBadge = '';
+    let statutColor = '';
+    
+    switch(lot.statut) {
+      case 'ACTIF':
+        statutColor = '#10b981';
+        statutBadge = '🟢 Actif';
+        break;
+      case 'ALERTE':
+        statutColor = '#f59e0b';
+        statutBadge = '🟡 Alerte';
+        break;
+      case 'PERIME':
+        statutColor = '#dc3545';
+        statutBadge = '🔴 Périmé';
+        break;
+      case 'EPUISE':
+        statutColor = '#6c757d';
+        statutBadge = '⚫ Épuisé';
+        break;
+    }
+    
+    let joursText = '';
+    if (lot.jours_restants > 0) {
+      joursText = `<span style="color: ${lot.jours_restants <= 30 ? '#f59e0b' : '#10b981'};">${lot.jours_restants} jours</span>`;
+    } else if (lot.jours_restants === 0) {
+      joursText = `<span style="color: #dc3545;">Aujourd'hui</span>`;
+    } else {
+      joursText = `<span style="color: #dc3545;">Périmé (${Math.abs(lot.jours_restants)} jours)</span>`;
+    }
+    
+    return `
+      <tr>
+        <td><strong>${lot.numero_lot}</strong></td>
+        <td>${lot.article_designation}</td>
+        <td>${lot.date_peremption}</td>
+        <td>${joursText}</td>
+        <td>${lot.quantite_restante} / ${lot.quantite_initiale}</td>
+        <td><span style="color: ${statutColor}; font-weight: 600;">${statutBadge}</span></td>
+        <td>
+          <button class="btn-action" onclick="viewLot(${lot.id})" title="Voir détails">👁️</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Filtrer les lots
+function filterLots() {
+  const statut = document.getElementById('filter-statut').value;
+  const search = document.getElementById('filter-search').value.toLowerCase();
+  
+  let filtered = allLots;
+  
+  if (statut) {
+    filtered = filtered.filter(l => l.statut === statut);
+  }
+  
+  if (search) {
+    filtered = filtered.filter(l => 
+      l.numero_lot.toLowerCase().includes(search) ||
+      l.article_designation.toLowerCase().includes(search)
+    );
+  }
+  
+  displayLots(filtered);
+}
+
+// Voir les détails d'un lot
+function viewLot(id) {
+  const lot = allLots.find(l => l.id === id);
+  if (!lot) return;
+  
+  alert(`Détails du lot:\n\nN° ${lot.numero_lot}\nArticle: ${lot.article_designation}\nDate péremption: ${lot.date_peremption}\nJours restants: ${lot.jours_restants}\nQuantité: ${lot.quantite_restante}/${lot.quantite_initiale}`);
+}
+</script>
+</body>
+{% endblock %}
+

@@ -59,7 +59,7 @@
 /* Actions Grid - Une seule ligne */
 .actions-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1.5rem;
 }
 
@@ -94,6 +94,7 @@
         {'name': 'Stocks'}
     ],
     actions=[
+        {'label': '❓ Aide', 'url': url_for('aide_stock'), 'primary': False},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
     ]
 ) }}
@@ -152,6 +153,19 @@
       <div class="kpi">
         <div class="label">Sorties</div>
         <div class="val" id="kpi-sorties">—</div>
+      </div>
+    </div>
+    
+    <!-- KPIs Péremption -->
+    <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem 0; color: #666;">🍃 Alertes Péremption</h3>
+    <div class="kpis">
+      <div class="kpi" style="border-left-color: #f59e0b;">
+        <div class="label">Lots Proches Péremption</div>
+        <div class="val" id="kpi-lots-alerte">—</div>
+      </div>
+      <div class="kpi rupture">
+        <div class="label">Lots Périmés</div>
+        <div class="val" id="kpi-lots-perimes">—</div>
       </div>
     </div>
   </div>
@@ -224,6 +238,16 @@
         <span class="action-icon">📈</span>
         <span class="action-text">Rapports</span>
       </a>
+      
+      <a href="{{ url_for('stock_lots_perissables') }}" class="action-button">
+        <span class="action-icon">🍃</span>
+        <span class="action-text">Lots Périssables</span>
+      </a>
+      
+      <a href="{{ url_for('stock_amortissements') }}" class="action-button">
+        <span class="action-icon">💰</span>
+        <span class="action-text">Amortissements</span>
+      </a>
     </div>
   </div>
   
@@ -242,6 +266,7 @@ let chartCategories = null;
 document.addEventListener('DOMContentLoaded', function() {
   loadKPIs();
   loadAlertes();
+  loadAlertesPeremption();
   loadChartMouvements();
   loadChartCategories();
 });
@@ -325,6 +350,83 @@ async function loadAlertes() {
     }
   } catch (error) {
     console.error('Erreur chargement alertes:', error);
+  }
+}
+
+async function loadAlertesPeremption() {
+  try {
+    const response = await fetch("{{ url_for('api_alertes_peremption') }}");
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      
+      // Afficher les KPIs
+      document.getElementById('kpi-lots-alerte').textContent = data.lots_alerte.length;
+      document.getElementById('kpi-lots-perimes').textContent = data.lots_perimes.length;
+      
+      // Afficher les alertes détaillées si présentes
+      if (data.lots_alerte.length > 0 || data.lots_perimes.length > 0) {
+        const alertesSection = document.getElementById('alertes-section');
+        
+        // Ajouter section péremption
+        let htmlPeremption = '';
+        
+        if (data.lots_alerte.length > 0) {
+          htmlPeremption += `
+            <div style="margin-bottom: 1rem;">
+              <h3 style="font-size: 1rem; color: var(--warning-color); margin-bottom: 0.5rem;">⚠️ Lots Proches de la Péremption</h3>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          `;
+          
+          data.lots_alerte.forEach(lot => {
+            htmlPeremption += `
+              <div style="padding: 0.75rem; background: var(--warning-light); border-left: 4px solid var(--warning-color); border-radius: 8px;">
+                <strong>${lot.numero_lot}</strong> - ${lot.article}
+                <span style="color: var(--warning-dark); margin-left: 1rem;">
+                  Péremption: ${lot.date_peremption} (${lot.jours_restants} jours) - Quantité: ${lot.quantite_restante}
+                </span>
+              </div>
+            `;
+          });
+          
+          htmlPeremption += '</div></div>';
+        }
+        
+        if (data.lots_perimes.length > 0) {
+          htmlPeremption += `
+            <div style="margin-bottom: 1rem;">
+              <h3 style="font-size: 1rem; color: var(--danger-color); margin-bottom: 0.5rem;">🛑 Lots Périmés</h3>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          `;
+          
+          data.lots_perimes.forEach(lot => {
+            htmlPeremption += `
+              <div style="padding: 0.75rem; background: var(--danger-light); border-left: 4px solid var(--danger-color); border-radius: 8px;">
+                <strong>${lot.numero_lot}</strong> - ${lot.article}
+                <span style="color: var(--danger-dark); margin-left: 1rem;">
+                  Périmé depuis ${lot.jours_perime} jours - Quantité: ${lot.quantite_restante}
+                </span>
+              </div>
+            `;
+          });
+          
+          htmlPeremption += '</div></div>';
+        }
+        
+        // Insérer avant les alertes de stock existantes
+        const divFaible = document.getElementById('alertes-faible');
+        if (divFaible && divFaible.parentNode) {
+          divFaible.insertAdjacentHTML('beforebegin', htmlPeremption);
+        } else {
+          alertesSection.insertAdjacentHTML('beforeend', htmlPeremption);
+        }
+        
+        alertesSection.style.display = 'block';
+      }
+    }
+  } catch (error) {
+    console.error('Erreur chargement alertes péremption:', error);
   }
 }
 

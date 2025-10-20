@@ -1,0 +1,204 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Aide - Référentiels{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='❓ Aide - Gestion des Référentiels',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Administration'},
+        {'name': 'Référentiels', 'url': url_for('referentiels')},
+        {'name': 'Aide'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('referentiels'), 'primary': False}
+    ]
+) }}
+
+<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Introduction -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+        <h2 style="color: #92400e; margin-bottom: 1rem;">📚 Système de Gestion des Référentiels</h2>
+        <p style="color: #78350f; line-height: 1.8; font-size: 1.05rem;">
+            Les référentiels constituent la base de données de référence de l'application. 
+            Ils définissent la structure organisationnelle (programmes, directions, services) 
+            et les classifications (grades, catégories) utilisées dans tous les modules.
+        </p>
+    </div>
+
+    <!-- Hiérarchie organisationnelle -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🏢 Structure Hiérarchique</h3>
+        
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <pre style="font-family: monospace; color: #1f2937; margin: 0; font-size: 0.95rem;">
+📊 <strong>Programme</strong> (Niveau 1)
+   └─ 📁 <strong>Direction</strong> (Niveau 2)
+      └─ 🏪 <strong>Service</strong> (Niveau 3)
+         └─ 👤 <strong>Agents</strong>
+            </pre>
+        </div>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Exemple concret :</h4>
+        <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+            <pre style="font-family: monospace; color: #0c4a6e; margin: 0;">
+📊 <strong>Programme:</strong> ADMIN (Administration Générale)
+   └─ 📁 <strong>Direction:</strong> DAAF (Direction des Affaires Administratives et Financières)
+      └─ 🏪 <strong>Service:</strong> SBUD (Service Budget)
+         ├─ 👤 Chef de service: Lassina SORO
+         └─ 👤 Agents du service...
+            </pre>
+        </div>
+    </div>
+
+    <!-- Gérer les programmes -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📊 Gérer les Programmes</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Créer un programme</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Cliquer sur <strong>"➕ Nouveau Programme"</strong></li>
+            <li>Remplir le formulaire :
+                <ul>
+                    <li><strong>Code :</strong> Identifiant court (ex: ADMIN, EDUC, SANTE)</li>
+                    <li><strong>Libellé :</strong> Nom complet du programme</li>
+                    <li><strong>Description :</strong> Détails optionnels</li>
+                    <li><strong>Responsable :</strong> Agent responsable du programme (optionnel)</li>
+                </ul>
+            </li>
+            <li>Enregistrer</li>
+        </ol>
+        
+        <h4 style="color: #4b5563; margin: 1.5rem 0 1rem 0;">✏️ Modifier / 🗑️ Supprimer</h4>
+        <p style="color: #374151; line-height: 1.8;">
+            Utiliser les actions dans la colonne "Actions" du tableau. 
+            La suppression est un <strong>soft delete</strong> : le programme est désactivé mais conservé en base.
+        </p>
+    </div>
+
+    <!-- Gérer les directions -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📁 Gérer les Directions</h3>
+        
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+            Les directions sont rattachées à un <strong>programme parent</strong>.
+        </p>
+        
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Cliquer sur <strong>"➕ Nouvelle Direction"</strong></li>
+            <li>Sélectionner le <strong>programme de rattachement</strong></li>
+            <li>Remplir :
+                <ul>
+                    <li>Code (ex: DAAF, DRH, DTIC)</li>
+                    <li>Libellé (nom complet)</li>
+                    <li>Description</li>
+                </ul>
+            </li>
+            <li>Enregistrer</li>
+        </ol>
+        
+        <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="margin: 0; color: #1e40af;">
+                <strong>💡 Astuce :</strong> Le filtrage par programme permet de visualiser 
+                la structure hiérarchique et de vérifier la cohérence organisationnelle.
+            </p>
+        </div>
+    </div>
+
+    <!-- Gérer les services -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🏪 Gérer les Services</h3>
+        
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+            Les services sont rattachés à une <strong>direction parente</strong> et peuvent avoir un <strong>chef de service</strong>.
+        </p>
+        
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Cliquer sur <strong>"➕ Nouveau Service"</strong></li>
+            <li>Sélectionner la <strong>direction de rattachement</strong></li>
+            <li>Remplir :
+                <ul>
+                    <li>Code (ex: SBUD, SCPT, SAPV)</li>
+                    <li>Libellé (nom complet)</li>
+                    <li>Description</li>
+                    <li><strong>Chef de service :</strong> Sélectionner un agent (optionnel)</li>
+                </ul>
+            </li>
+            <li>Enregistrer</li>
+        </ol>
+        
+        <h4 style="color: #4b5563; margin: 1.5rem 0 1rem 0;">👤 Attribuer un Chef de Service</h4>
+        <p style="color: #374151; line-height: 1.8;">
+            Le chef de service peut être assigné lors de la création ou modification du service. 
+            Sélectionnez un agent dans la liste déroulante. Seuls les agents actifs sont affichés.
+        </p>
+    </div>
+
+    <!-- Gérer les grades -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🎖️ Gérer les Grades</h3>
+        
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+            Les grades définissent les classifications de la fonction publique.
+        </p>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Catégories de grades</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="padding: 0.75rem; background: #dbeafe; border-radius: 6px;">
+                <strong style="color: #1e40af;">Catégorie A</strong>
+                <p style="margin: 0.25rem 0 0 0; color: #1e3a8a; font-size: 0.9rem;">Cadres supérieurs</p>
+            </div>
+            <div style="padding: 0.75rem; background: #d1fae5; border-radius: 6px;">
+                <strong style="color: #065f46;">Catégorie B</strong>
+                <p style="margin: 0.25rem 0 0 0; color: #064e3b; font-size: 0.9rem;">Cadres intermédiaires</p>
+            </div>
+            <div style="padding: 0.75rem; background: #fef3c7; border-radius: 6px;">
+                <strong style="color: #92400e;">Catégorie C</strong>
+                <p style="margin: 0.25rem 0 0 0; color: #78350f; font-size: 0.9rem;">Personnel d'exécution</p>
+            </div>
+        </div>
+        
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Cliquer sur <strong>"➕ Nouveau Grade"</strong></li>
+            <li>Remplir :
+                <ul>
+                    <li>Code (ex: A1, B2, C3)</li>
+                    <li>Libellé (nom du grade)</li>
+                    <li>Catégorie (A, B, C, Hors catégorie)</li>
+                    <li>Indices (min/max)</li>
+                </ul>
+            </li>
+            <li>Enregistrer</li>
+        </ol>
+    </div>
+
+    <!-- Impact sur les autres modules -->
+    <div class="card" style="background: #f0f9ff; border-left: 4px solid #0ea5e9;">
+        <h3 style="color: #0369a1; margin-bottom: 1.5rem;">🔄 Impact sur les Autres Modules</h3>
+        
+        <p style="color: #0c4a6e; margin-bottom: 1rem;">
+            Les référentiels sont utilisés dans <strong>tous les modules</strong> de l'application :
+        </p>
+        
+        <ul style="color: #075985; line-height: 2;">
+            <li><strong>Personnel :</strong> Affectation des agents (programme, direction, service, grade)</li>
+            <li><strong>RH :</strong> Workflows personnalisés, hiérarchie de validation</li>
+            <li><strong>Budget :</strong> Structure budgétaire, fiches techniques</li>
+            <li><strong>Stock :</strong> Affectation des articles et demandes</li>
+            <li><strong>Performance :</strong> Objectifs par programme/direction</li>
+        </ul>
+        
+        <div style="background: #fee2e2; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+            <p style="margin: 0; color: #991b1b;">
+                <strong>⚠️ Attention :</strong> Modifier ou supprimer un référentiel peut impacter 
+                tous les modules. Vérifiez les dépendances avant toute modification importante.
+            </p>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+

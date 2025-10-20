@@ -98,6 +98,24 @@ def parametres_systeme(
     )
 
 
+@router.get("/gestion-utilisateurs/aide", response_class=HTMLResponse, name="aide_utilisateurs")
+def aide_utilisateurs(request: Request):
+    """Page d'aide pour la gestion des utilisateurs"""
+    return templates.TemplateResponse(
+        "pages/aide_utilisateurs.html",
+        get_template_context(request)
+    )
+
+
+@router.get("/parametres-systeme/aide", response_class=HTMLResponse, name="aide_parametres")
+def aide_parametres(request: Request):
+    """Page d'aide pour les paramètres système"""
+    return templates.TemplateResponse(
+        "pages/aide_parametres.html",
+        get_template_context(request)
+    )
+
+
 @router.get("/rapports", response_class=HTMLResponse, name="rapports")
 def rapports(
     request: Request,

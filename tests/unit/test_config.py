@@ -5,6 +5,7 @@ import pytest
 from app.core.config import Settings
 
 
+@pytest.mark.critical
 def test_default_config():
     """Test la configuration par défaut"""
     settings = Settings()

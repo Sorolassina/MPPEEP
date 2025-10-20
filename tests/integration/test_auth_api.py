@@ -8,6 +8,7 @@ from sqlmodel import Session
 from app.models.user import User
 
 
+@pytest.mark.critical
 def test_login_page_get(client: TestClient):
     """Test l'affichage de la page de login"""
     response = client.get("/api/v1/login")
@@ -17,6 +18,7 @@ def test_login_page_get(client: TestClient):
     assert b"Connexion" in response.content or b"login" in response.content.lower()
 
 
+@pytest.mark.critical
 def test_login_success(client: TestClient, test_user: User):
     """Test une connexion réussie"""
     response = client.post(

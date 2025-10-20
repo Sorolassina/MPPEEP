@@ -12,8 +12,7 @@ from datetime import datetime
 from app.db.session import get_session
 from app.api.v1.endpoints.auth import get_current_user
 from app.models.user import User
-from app.models.personnel import Programme, Direction, GradeComplet
-from app.models.rh import ServiceDept
+from app.models.personnel import Programme, Direction, GradeComplet, Service
 from app.core.enums import GradeCategory
 from app.templates import templates, get_template_context
 from app.core.logging_config import get_logger
@@ -38,7 +37,7 @@ def referentiels_home(
     # Compter les référentiels
     programmes_raw = session.exec(select(Programme)).all()
     directions_raw = session.exec(select(Direction)).all()
-    services_raw = session.exec(select(ServiceDept)).all()
+    services_raw = session.exec(select(Service)).all()
     grades_raw = session.exec(select(GradeComplet)).all()
     
     # Créer les dictionnaires de référence
@@ -87,6 +86,16 @@ def referentiels_home(
             grades=grades_raw,
             current_user=current_user
         )
+    )
+
+
+@router.get("/aide", response_class=HTMLResponse, name="aide_referentiels")
+def aide_referentiels(request: Request):
+    """Page d'aide pour les référentiels"""
+    from app.templates import templates, get_template_context
+    return templates.TemplateResponse(
+        "pages/aide_referentiels.html",
+        get_template_context(request)
     )
 
 
@@ -453,11 +462,11 @@ def api_create_service(
     current_user: User = Depends(get_current_user)
 ):
     """Créer un nouveau service"""
-    existing = session.exec(select(ServiceDept).where(ServiceDept.code == code)).first()
+    existing = session.exec(select(Service).where(Service.code == code)).first()
     if existing:
         raise HTTPException(400, f"Le code '{code}' existe déjà")
     
-    service = ServiceDept(
+    service = Service(
         code=code, 
         libelle=libelle, 
         description=description, 
@@ -486,12 +495,12 @@ def api_update_service(
     current_user: User = Depends(get_current_user)
 ):
     """Modifier un service"""
-    service = session.get(ServiceDept, service_id)
+    service = session.get(Service, service_id)
     if not service:
         raise HTTPException(404, "Service non trouvé")
     
     if code != service.code:
-        existing = session.exec(select(ServiceDept).where(ServiceDept.code == code)).first()
+        existing = session.exec(select(Service).where(Service.code == code)).first()
         if existing:
             raise HTTPException(400, f"Le code '{code}' existe déjà")
     
@@ -516,7 +525,7 @@ def api_reactivate_service(
     current_user: User = Depends(get_current_user)
 ):
     """Réactiver un service désactivé"""
-    service = session.get(ServiceDept, service_id)
+    service = session.get(Service, service_id)
     if not service:
         raise HTTPException(404, "Service non trouvé")
     
@@ -536,7 +545,7 @@ def api_delete_service(
     current_user: User = Depends(get_current_user)
 ):
     """Supprimer un service (soft delete par défaut, hard delete si hard_delete=true)"""
-    service = session.get(ServiceDept, service_id)
+    service = session.get(Service, service_id)
     if not service:
         raise HTTPException(404, "Service non trouvé")
     

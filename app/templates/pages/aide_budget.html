@@ -1,0 +1,152 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Aide - Gestion Budget{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='❓ Aide - Gestion Budget',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Aide'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('budget_home'), 'primary': False}
+    ]
+) }}
+
+<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Introduction -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+        <h2 style="color: #92400e; margin-bottom: 1rem;">💰 Système de Gestion Budgétaire</h2>
+        <p style="color: #78350f; line-height: 1.8; font-size: 1.05rem;">
+            Le module Budget permet de gérer l'ensemble du cycle budgétaire : 
+            élaboration des fiches techniques, suivi de l'exécution, intégration SIGOBE et rapports financiers.
+        </p>
+    </div>
+
+    <!-- Fiches Techniques -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📊 Fiches Techniques Budgétaires</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Structure d'une fiche</h4>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+            <ul style="line-height: 2; color: #374151;">
+                <li><strong>Programme :</strong> Niveau stratégique (ex: ADMIN, EDUC)</li>
+                <li><strong>Actions :</strong> Déclinaison du programme</li>
+                <li><strong>Lignes budgétaires :</strong> Détail des dépenses par nature</li>
+                <li><strong>Montants :</strong> AE (Autorisations d'Engagement) et CP (Crédits de Paiement)</li>
+            </ul>
+        </div>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Créer une fiche technique</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Cliquer sur <strong>"➕ Nouvelle Fiche"</strong></li>
+            <li>Sélectionner :
+                <ul>
+                    <li>Année budgétaire</li>
+                    <li>Programme</li>
+                    <li>Phase (Élaboration, Exécution, Clôture)</li>
+                </ul>
+            </li>
+            <li>Ajouter des lignes budgétaires avec les montants</li>
+            <li>Joindre des documents justificatifs (optionnel)</li>
+            <li>Enregistrer comme brouillon ou soumettre pour validation</li>
+        </ol>
+        
+        <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="margin: 0; color: #1e40af;">
+                <strong>💡 Astuce :</strong> Utilisez le filtre par année et programme pour retrouver rapidement vos fiches.
+            </p>
+        </div>
+    </div>
+
+    <!-- Module SIGOBE -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🔄 Intégration SIGOBE</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            SIGOBE (Système Intégré de Gestion des Opérations Budgétaires de l'État) est le système national 
+            de gestion budgétaire. L'intégration permet d'importer et analyser les données d'exécution.
+        </p>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">📤 Charger un fichier SIGOBE</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Aller dans <strong>"Budget → SIGOBE"</strong></li>
+            <li>Cliquer sur <strong>"📤 Charger un fichier"</strong></li>
+            <li>Sélectionner :
+                <ul>
+                    <li>Année d'exécution</li>
+                    <li>Trimestre (optionnel)</li>
+                    <li>Fichier Excel (.xlsx ou .xls)</li>
+                </ul>
+            </li>
+            <li>Le système analyse automatiquement le fichier</li>
+            <li>Vérifier la prévisualisation (colonnes, programmes, actions)</li>
+            <li>Confirmer l'import</li>
+        </ol>
+        
+        <h4 style="color: #4b5563; margin: 1.5rem 0 1rem 0;">📊 Actions disponibles</h4>
+        <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>📋 Voir la table :</strong> Affichage complet des données importées</li>
+            <li><strong>📊 Exporter Excel :</strong> Télécharger les données au format Excel</li>
+            <li><strong>📈 Voir les KPIs :</strong> Statistiques et indicateurs budgétaires</li>
+            <li><strong>🗑️ Supprimer :</strong> Effacer un chargement (avec confirmation)</li>
+        </ul>
+        
+        <div style="background: #fee2e2; padding: 1rem; border-radius: 8px; border-left: 4px solid #dc3545; margin-top: 1rem;">
+            <p style="margin: 0; color: #991b1b;">
+                <strong>⚠️ Format requis :</strong> Le fichier Excel doit respecter le format SIGOBE standard 
+                avec les colonnes obligatoires (Programmes, Actions, Rprog, Type_depense, etc.).
+            </p>
+        </div>
+    </div>
+
+    <!-- Rapports et Export -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📈 Rapports et Exports</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Types de rapports disponibles</h4>
+        <div style="display: grid; gap: 1rem;">
+            <div style="padding: 1rem; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 8px;">
+                <h5 style="color: #0369a1; margin-bottom: 0.5rem;">📊 Rapport d'Exécution</h5>
+                <p style="color: #075985; margin: 0;">
+                    Suivi détaillé de l'exécution budgétaire par programme, avec taux de consommation.
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 8px;">
+                <h5 style="color: #065f46; margin-bottom: 0.5rem;">💹 Analyse de Performance</h5>
+                <p style="color: #064e3b; margin: 0;">
+                    Comparaison prévisions vs réalisations, identification des écarts.
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
+                <h5 style="color: #92400e; margin-bottom: 0.5rem;">📉 Tableau de Bord</h5>
+                <p style="color: #78350f; margin: 0;">
+                    Vue synthétique avec KPIs principaux et graphiques.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bonnes pratiques -->
+    <div class="card" style="background: #f0fdf4; border-left: 4px solid #10b981;">
+        <h3 style="color: #065f46; margin-bottom: 1.5rem;">✨ Bonnes Pratiques</h3>
+        
+        <ul style="color: #064e3b; line-height: 2;">
+            <li>✅ <strong>Vérifier la cohérence</strong> des montants avant soumission</li>
+            <li>✅ <strong>Joindre les documents justificatifs</strong> aux fiches importantes</li>
+            <li>✅ <strong>Valider régulièrement</strong> les données SIGOBE importées</li>
+            <li>✅ <strong>Exporter les rapports</strong> pour archivage et audit</li>
+            <li>✅ <strong>Respecter les phases budgétaires</strong> (Élaboration → Exécution → Clôture)</li>
+            <li>✅ <strong>Maintenir la structure hiérarchique</strong> à jour dans les référentiels</li>
+        </ul>
+    </div>
+
+</div>
+{% endblock %}
+

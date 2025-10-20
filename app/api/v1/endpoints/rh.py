@@ -11,8 +11,9 @@ from pathlib import Path
 # Imports locaux
 from app.db.session import get_session
 from app.models.user import User
+from app.models.personnel import Service
 from app.models.rh import (
-    Agent, Grade, ServiceDept,
+    Agent, Grade,
     HRRequest, HRRequestBase, WorkflowStep, WorkflowHistory
 )
 from app.core.enums import RequestType, WorkflowState, ActeAdministratifType
@@ -66,13 +67,20 @@ def rh_home(
 @router.get("/demandes/new", response_class=HTMLResponse, name="rh_new_demande")
 def rh_new_demande(
     request: Request,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Formulaire de création d'une nouvelle demande
     Charge les types de demandes personnalisés depuis la configuration
     """
     from app.models.workflow_config import RequestTypeCustom
+    from app.models.personnel import AgentComplet
+    
+    # Récupérer l'agent correspondant à l'utilisateur connecté
+    agent = None
+    if current_user.agent_id:
+        agent = session.get(AgentComplet, current_user.agent_id)
     
     # Récupérer les types de demandes personnalisés actifs
     request_types = session.exec(
@@ -96,7 +104,9 @@ def rh_new_demande(
             RequestType=RequestType,  # Garde pour compatibilité si utilisé ailleurs
             ActeAdministratifType=ActeAdministratifType,
             request_types_custom=request_types,
-            types_by_category=types_by_category
+            types_by_category=types_by_category,
+            agent=agent,  # Agent de l'utilisateur connecté
+            current_user=current_user
         )
     )
 
@@ -454,7 +464,7 @@ def api_list_services(session: Session = Depends(get_session)):
     """
     Liste tous les services
     """
-    services = session.exec(select(ServiceDept)).all()
+    services = session.exec(select(Service)).all()
     return services
 
 

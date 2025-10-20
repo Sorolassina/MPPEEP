@@ -227,6 +227,7 @@
         {'name': 'Performance'}
     ],
     actions=[
+        {'label': '❓ Aide', 'url': url_for('aide_performance'), 'primary': False},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
     ]
 ) }}
@@ -238,48 +239,74 @@
         <div class="kpi-card">
             <div class="kpi-icon">🎯</div>
             <div class="kpi-title">Taux de Réalisation</div>
-            <div class="kpi-value">87%</div>
-            <div class="kpi-change positive">↗ +5% vs mois dernier</div>
+            <div class="kpi-value">{{ kpis.taux_realisation }}%</div>
+            <div class="kpi-change {% if kpis.taux_realisation >= 80 %}positive{% elif kpis.taux_realisation >= 50 %}neutral{% else %}negative{% endif %}">
+                {% if kpis.total_objectifs > 0 %}
+                    {{ kpis.objectifs_atteints }} / {{ kpis.total_objectifs }} objectifs
+                {% else %}
+                    Aucun objectif défini
+                {% endif %}
+            </div>
         </div>
 
         <!-- KPI 2: Objectifs Atteints -->
         <div class="kpi-card">
             <div class="kpi-icon">✅</div>
             <div class="kpi-title">Objectifs Atteints</div>
-            <div class="kpi-value">24/30</div>
-            <div class="kpi-change positive">↗ +3 ce mois</div>
+            <div class="kpi-value">{{ kpis.objectifs_atteints }}</div>
+            <div class="kpi-change neutral">
+                Sur {{ kpis.total_objectifs }} au total
+            </div>
         </div>
 
         <!-- KPI 3: Indicateurs en Alerte -->
         <div class="kpi-card">
             <div class="kpi-icon">⚠️</div>
             <div class="kpi-title">Indicateurs en Alerte</div>
-            <div class="kpi-value">3</div>
-            <div class="kpi-change negative">↘ -2 vs semaine dernière</div>
+            <div class="kpi-value">{{ kpis.indicateurs_alerte }}</div>
+            <div class="kpi-change {% if kpis.indicateurs_alerte > 0 %}negative{% else %}positive{% endif %}">
+                {% if kpis.indicateurs_alerte > 0 %}
+                    ⚠️ Nécessitent attention
+                {% else %}
+                    ✅ Tous les indicateurs OK
+                {% endif %}
+            </div>
         </div>
 
         <!-- KPI 4: Score Global -->
         <div class="kpi-card">
             <div class="kpi-icon">⭐</div>
             <div class="kpi-title">Score Global</div>
-            <div class="kpi-value">8.2/10</div>
-            <div class="kpi-change positive">↗ +0.3 vs trimestre</div>
+            <div class="kpi-value">{{ kpis.score_global }}/10</div>
+            <div class="kpi-change {% if kpis.score_global >= 7 %}positive{% elif kpis.score_global >= 5 %}neutral{% else %}negative{% endif %}">
+                {% if kpis.score_global >= 7 %}
+                    ✅ Performance élevée
+                {% elif kpis.score_global >= 5 %}
+                    ⚠️ Performance moyenne
+                {% else %}
+                    ❌ À améliorer
+                {% endif %}
+            </div>
         </div>
 
-        <!-- KPI 5: Programmes Actifs -->
+        <!-- KPI 5: Objectifs en Cours -->
         <div class="kpi-card">
-            <div class="kpi-icon">🏢</div>
-            <div class="kpi-title">Programmes Actifs</div>
-            <div class="kpi-value">12</div>
-            <div class="kpi-change neutral">→ Stable</div>
+            <div class="kpi-icon">🏃</div>
+            <div class="kpi-title">Objectifs en Cours</div>
+            <div class="kpi-value">{{ kpis.objectifs_en_cours }}</div>
+            <div class="kpi-change neutral">
+                En progression
+            </div>
         </div>
 
-        <!-- KPI 6: Évaluations en Cours -->
+        <!-- KPI 6: Rapports Générés -->
         <div class="kpi-card">
-            <div class="kpi-icon">📝</div>
-            <div class="kpi-title">Évaluations en Cours</div>
-            <div class="kpi-value">8</div>
-            <div class="kpi-change positive">↗ +2 nouvelles</div>
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-title">Rapports Générés</div>
+            <div class="kpi-value">{{ kpis.total_rapports }}</div>
+            <div class="kpi-change neutral">
+                Disponibles
+            </div>
         </div>
     </div>
 

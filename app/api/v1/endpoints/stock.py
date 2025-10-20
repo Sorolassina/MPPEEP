@@ -15,7 +15,8 @@ from app.db.session import get_session
 from app.models.user import User
 from app.models.stock import (
     Article, CategorieArticle, Fournisseur,
-    MouvementStock, DemandeStock, Inventaire, LigneInventaire
+    MouvementStock, DemandeStock, Inventaire, LigneInventaire,
+    LotPerissable, Amortissement
 )
 from app.services.stock_service import StockService
 from app.api.v1.endpoints.auth import get_current_user
@@ -31,6 +32,16 @@ router = APIRouter()
 # ============================================
 # PAGES HTML
 # ============================================
+
+@router.get("/aide", response_class=HTMLResponse, name="aide_stock")
+def aide_stock(request: Request):
+    """Page d'aide pour le module Stock"""
+    from app.templates import templates, get_template_context
+    return templates.TemplateResponse(
+        "pages/aide_stock.html",
+        get_template_context(request)
+    )
+
 
 @router.get("/", response_class=HTMLResponse, name="stock_home")
 def stock_home(
@@ -444,11 +455,36 @@ def api_create_article(
     prix_unitaire: Optional[float] = Form(None),
     emplacement: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    # NOUVEAUTÉ : Champs périssables
+    est_perissable: Optional[str] = Form(None),
+    duree_conservation_jours: Optional[int] = Form(None),
+    seuil_alerte_peremption_jours: Optional[int] = Form(30),
+    # NOUVEAUTÉ : Champs amortissement
+    est_amortissable: Optional[str] = Form(None),
+    date_acquisition: Optional[str] = Form(None),
+    valeur_acquisition: Optional[float] = Form(None),
+    duree_amortissement_annees: Optional[int] = Form(None),
+    taux_amortissement: Optional[float] = Form(None),
+    valeur_residuelle: Optional[float] = Form(None),
+    methode_amortissement: Optional[str] = Form("LINEAIRE"),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     """Crée un nouvel article"""
     try:
+        # Convertir les checkboxes en boolean
+        est_perissable_bool = est_perissable == "true" if est_perissable else False
+        est_amortissable_bool = est_amortissable == "true" if est_amortissable else False
+        
+        # Convertir la date d'acquisition
+        date_acq = None
+        if date_acquisition:
+            from datetime import datetime
+            try:
+                date_acq = datetime.strptime(date_acquisition, '%Y-%m-%d').date()
+            except:
+                pass
+        
         article = StockService.creer_article(
             session=session,
             code=code,
@@ -459,7 +495,19 @@ def api_create_article(
             quantite_max=Decimal(str(quantite_max)) if quantite_max else None,
             prix_unitaire=Decimal(str(prix_unitaire)) if prix_unitaire else None,
             emplacement=emplacement,
-            description=description
+            description=description,
+            # Périssable
+            est_perissable=est_perissable_bool,
+            duree_conservation_jours=duree_conservation_jours,
+            seuil_alerte_peremption_jours=seuil_alerte_peremption_jours,
+            # Amortissement
+            est_amortissable=est_amortissable_bool,
+            date_acquisition=date_acq,
+            valeur_acquisition=Decimal(str(valeur_acquisition)) if valeur_acquisition else None,
+            duree_amortissement_annees=duree_amortissement_annees,
+            taux_amortissement=Decimal(str(taux_amortissement)) if taux_amortissement else None,
+            valeur_residuelle=Decimal(str(valeur_residuelle)) if valeur_residuelle else None,
+            methode_amortissement=methode_amortissement
         )
         
         # Enregistrer l'activité
@@ -500,6 +548,18 @@ def api_update_article(
     emplacement: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     actif: Optional[bool] = Form(None),
+    # NOUVEAUTÉ : Champs périssables
+    est_perissable: Optional[str] = Form(None),
+    duree_conservation_jours: Optional[int] = Form(None),
+    seuil_alerte_peremption_jours: Optional[int] = Form(None),
+    # NOUVEAUTÉ : Champs amortissement
+    est_amortissable: Optional[str] = Form(None),
+    date_acquisition: Optional[str] = Form(None),
+    valeur_acquisition: Optional[float] = Form(None),
+    duree_amortissement_annees: Optional[int] = Form(None),
+    taux_amortissement: Optional[float] = Form(None),
+    valeur_residuelle: Optional[float] = Form(None),
+    methode_amortissement: Optional[str] = Form(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
@@ -528,6 +588,34 @@ def api_update_article(
             article.description = description
         if actif is not None:
             article.actif = actif
+        
+        # NOUVEAUTÉ : Champs périssables
+        if est_perissable is not None:
+            article.est_perissable = est_perissable == "true"
+        if duree_conservation_jours is not None:
+            article.duree_conservation_jours = duree_conservation_jours
+        if seuil_alerte_peremption_jours is not None:
+            article.seuil_alerte_peremption_jours = seuil_alerte_peremption_jours
+        
+        # NOUVEAUTÉ : Champs amortissement
+        if est_amortissable is not None:
+            article.est_amortissable = est_amortissable == "true"
+        if date_acquisition is not None:
+            from datetime import datetime as dt
+            try:
+                article.date_acquisition = dt.strptime(date_acquisition, '%Y-%m-%d').date()
+            except:
+                pass
+        if valeur_acquisition is not None:
+            article.valeur_acquisition = Decimal(str(valeur_acquisition))
+        if duree_amortissement_annees is not None:
+            article.duree_amortissement_annees = duree_amortissement_annees
+        if taux_amortissement is not None:
+            article.taux_amortissement = Decimal(str(taux_amortissement))
+        if valeur_residuelle is not None:
+            article.valeur_residuelle = Decimal(str(valeur_residuelle))
+        if methode_amortissement is not None:
+            article.methode_amortissement = methode_amortissement
         
         article.updated_at = datetime.now()
         
@@ -1787,4 +1875,282 @@ def api_cloturer_inventaire(
     except Exception as e:
         logger.error(f"Erreur clôture inventaire: {e}")
         return {"success": False, "error": "Erreur lors de la clôture"}
+
+
+# ============================================
+# NOUVEAUTÉ : GESTION DES LOTS PÉRISSABLES
+# ============================================
+
+@router.get("/lots-perissables", response_class=HTMLResponse, name="stock_lots_perissables")
+def stock_lots_perissables(
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Page de gestion des lots périssables"""
+    return templates.TemplateResponse(
+        "pages/stock_lots_perissables.html",
+        get_template_context(request, current_user=current_user)
+    )
+
+
+@router.get("/api/lots-perissables", response_class=JSONResponse, name="api_list_lots_perissables")
+def api_list_lots_perissables(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Liste tous les lots périssables"""
+    try:
+        lots = session.exec(
+            select(LotPerissable)
+            .order_by(LotPerissable.date_peremption)
+        ).all()
+        
+        data = []
+        for lot in lots:
+            article = session.get(Article, lot.article_id)
+            jours_restants = (lot.date_peremption - date.today()).days
+            
+            data.append({
+                "id": lot.id,
+                "numero_lot": lot.numero_lot,
+                "article_code": article.code if article else "N/A",
+                "article_designation": article.designation if article else "N/A",
+                "date_fabrication": str(lot.date_fabrication) if lot.date_fabrication else None,
+                "date_reception": str(lot.date_reception),
+                "date_peremption": str(lot.date_peremption),
+                "jours_restants": jours_restants,
+                "quantite_initiale": float(lot.quantite_initiale),
+                "quantite_restante": float(lot.quantite_restante),
+                "statut": lot.statut,
+                "observations": lot.observations
+            })
+        
+        return {"success": True, "data": data}
+    except Exception as e:
+        logger.error(f"Erreur liste lots: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/api/lots-perissables", response_class=JSONResponse, name="api_create_lot_perissable")
+def api_create_lot_perissable(
+    article_id: int = Form(...),
+    numero_lot: str = Form(...),
+    date_peremption: str = Form(...),
+    quantite: float = Form(...),
+    date_fabrication: Optional[str] = Form(None),
+    fournisseur_id: Optional[int] = Form(None),
+    observations: Optional[str] = Form(None),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Crée un nouveau lot périssable"""
+    try:
+        from datetime import datetime as dt
+        
+        # Convertir les dates
+        date_perem = dt.strptime(date_peremption, '%Y-%m-%d').date()
+        date_fab = dt.strptime(date_fabrication, '%Y-%m-%d').date() if date_fabrication else None
+        
+        # Créer le lot
+        lot = StockService.creer_lot_perissable(
+            session=session,
+            article_id=article_id,
+            numero_lot=numero_lot,
+            quantite=Decimal(str(quantite)),
+            date_peremption=date_perem,
+            date_fabrication=date_fab,
+            fournisseur_id=fournisseur_id,
+            observations=observations
+        )
+        
+        # Enregistrer l'activité
+        article = session.get(Article, article_id)
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="create",
+            target_type="lot_perissable",
+            target_id=lot.id,
+            description=f"Création du lot {numero_lot} - {article.designation if article else 'Article'}",
+            icon="🍃"
+        )
+        
+        return {
+            "success": True,
+            "message": f"Lot périssable '{numero_lot}' créé avec succès",
+            "data": {"id": lot.id, "numero_lot": lot.numero_lot}
+        }
+    except Exception as e:
+        logger.error(f"Erreur création lot: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/api/lots-perissables/alertes", response_class=JSONResponse, name="api_alertes_peremption")
+def api_alertes_peremption(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Récupère les lots proches de la péremption"""
+    try:
+        from datetime import timedelta
+        
+        # Lots à vérifier dans les 60 prochains jours
+        date_limite = date.today() + timedelta(days=60)
+        
+        lots_alerte = StockService.get_lots_proches_peremption(
+            session=session,
+            jours=60
+        )
+        
+        lots_perimes = StockService.get_lots_perimes(session=session)
+        
+        data = {
+            "lots_alerte": [],
+            "lots_perimes": []
+        }
+        
+        for lot in lots_alerte:
+            article = session.get(Article, lot.article_id)
+            jours_restants = (lot.date_peremption - date.today()).days
+            
+            data["lots_alerte"].append({
+                "id": lot.id,
+                "numero_lot": lot.numero_lot,
+                "article": article.designation if article else "N/A",
+                "date_peremption": str(lot.date_peremption),
+                "jours_restants": jours_restants,
+                "quantite_restante": float(lot.quantite_restante)
+            })
+        
+        for lot in lots_perimes:
+            article = session.get(Article, lot.article_id)
+            jours_perime = (date.today() - lot.date_peremption).days
+            
+            data["lots_perimes"].append({
+                "id": lot.id,
+                "numero_lot": lot.numero_lot,
+                "article": article.designation if article else "N/A",
+                "date_peremption": str(lot.date_peremption),
+                "jours_perime": jours_perime,
+                "quantite_restante": float(lot.quantite_restante)
+            })
+        
+        return {"success": True, "data": data}
+    except Exception as e:
+        logger.error(f"Erreur alertes péremption: {e}")
+        return {"success": False, "error": str(e)}
+
+
+# ============================================
+# NOUVEAUTÉ : GESTION DES AMORTISSEMENTS
+# ============================================
+
+@router.get("/amortissements", response_class=HTMLResponse, name="stock_amortissements")
+def stock_amortissements(
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Page de gestion des amortissements"""
+    return templates.TemplateResponse(
+        "pages/stock_amortissements.html",
+        get_template_context(request, current_user=current_user)
+    )
+
+
+@router.get("/api/articles/{article_id}/plan-amortissement", response_class=JSONResponse, name="api_plan_amortissement")
+def api_plan_amortissement(
+    article_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Récupère le plan d'amortissement complet d'un article"""
+    try:
+        plan = StockService.get_plan_amortissement(session, article_id)
+        return {"success": True, "data": plan}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"Erreur plan amortissement: {e}")
+        return {"success": False, "error": "Erreur lors de la récupération du plan"}
+
+
+@router.post("/api/amortissements/calculer", response_class=JSONResponse, name="api_calculer_amortissement")
+def api_calculer_amortissement(
+    article_id: int = Form(...),
+    annee: int = Form(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Calcule l'amortissement pour une année donnée"""
+    try:
+        amortissement = StockService.calculer_amortissement_annee(
+            session=session,
+            article_id=article_id,
+            annee=annee
+        )
+        
+        # Enregistrer l'activité
+        article = session.get(Article, article_id)
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="create",
+            target_type="amortissement",
+            target_id=amortissement.id,
+            description=f"Calcul amortissement {annee} - {article.designation if article else 'Article'}",
+            icon="💰"
+        )
+        
+        return {
+            "success": True,
+            "message": f"Amortissement {annee} calculé avec succès",
+            "data": {
+                "id": amortissement.id,
+                "annee": amortissement.annee,
+                "amortissement_periode": float(amortissement.amortissement_periode),
+                "amortissement_cumule": float(amortissement.amortissement_cumule_fin),
+                "valeur_nette_comptable": float(amortissement.valeur_nette_comptable)
+            }
+        }
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"Erreur calcul amortissement: {e}")
+        return {"success": False, "error": "Erreur lors du calcul"}
+
+
+@router.get("/api/amortissements/materiels-a-amortir/{annee}", response_class=JSONResponse, name="api_materiels_a_amortir")
+def api_materiels_a_amortir(
+    annee: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """Liste les matériels nécessitant un calcul d'amortissement pour une année"""
+    try:
+        materiels = StockService.get_materiels_a_amortir(session, annee)
+        
+        data = []
+        for item in materiels:
+            article = item["article"]
+            data.append({
+                "id": article.id,
+                "code": article.code,
+                "designation": article.designation,
+                "date_acquisition": str(article.date_acquisition),
+                "valeur_acquisition": float(article.valeur_acquisition),
+                "duree_amortissement": article.duree_amortissement_annees,
+                "methode": article.methode_amortissement,
+                "raison": item["raison"]
+            })
+        
+        return {"success": True, "data": data}
+    except Exception as e:
+        logger.error(f"Erreur liste matériels: {e}")
+        return {"success": False, "error": str(e)}
 

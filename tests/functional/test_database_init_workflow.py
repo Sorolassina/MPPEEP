@@ -10,9 +10,9 @@ from app.models.user import User
 from app.services.user_service import UserService
 
 
+@pytest.mark.critical
 @pytest.mark.functional
 @pytest.mark.database
-@pytest.mark.slow
 def test_first_startup_workflow():
     """
     Test du workflow complet du premier démarrage

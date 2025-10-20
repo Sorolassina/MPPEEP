@@ -207,16 +207,27 @@ class HierarchyService:
         if not user_agent:
             return False
         
-        # 2. Récupérer le validateur attendu pour cette étape
+        # 2. Récupérer la demande
+        request = session.get(HRRequest, request_id)
+        if not request:
+            return False
+        
+        # 3. Cas spécial : transition DRAFT → SUBMITTED
+        # Seul le demandeur (agent propriétaire de la demande) peut soumettre
+        if request.current_state == WorkflowState.DRAFT and to_state == WorkflowState.SUBMITTED:
+            return user_agent.id == request.agent_id
+        
+        # 4. Pour les autres états : récupérer le validateur attendu pour cette étape
         expected_validator = HierarchyService.get_expected_validator(
             session, request_id, to_state
         )
         
         if not expected_validator:
             # Pas de validateur spécifique (ex: archivage automatique)
-            return True
+            # Dans ce cas, seul un admin ou le demandeur peut faire la transition
+            return user_agent.id == request.agent_id
         
-        # 3. Vérifier que l'agent de l'utilisateur correspond au validateur attendu
+        # 5. Vérifier que l'agent de l'utilisateur correspond au validateur attendu
         return user_agent.id == expected_validator.id
     
     @staticmethod

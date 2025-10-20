@@ -1,81 +1,43 @@
-# ============================================
-# DOCKERFILE MULTI-STAGE POUR MPPEEP DASHBOARD
-# ============================================
-# Stage 1 : Builder - Installation des dépendances
-# Stage 2 : Production - Image finale légère
-# ============================================
-
-# ============================================
-# STAGE 1: BUILDER
-# ============================================
-FROM python:3.11-slim as builder
-
-# Métadonnées
-LABEL maintainer="MPPEEP Dashboard"
-LABEL description="FastAPI Boilerplate Production-Ready"
-
-# Variables d'environnement pour Python
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Répertoire de travail
-WORKDIR /build
-
-# Installer uv (gestionnaire de packages rapide)
-RUN pip install uv
-
-# Copier les fichiers de dépendances
-COPY pyproject.toml ./
-COPY uv.lock ./
-
-# Installer les dépendances de production dans un venv
-RUN uv sync --no-dev --no-editable
-
-# ============================================
-# STAGE 2: PRODUCTION
-# ============================================
+# Dockerfile - MPPEEP Dashboard (Développement)
 FROM python:3.11-slim
 
-# Variables d'environnement
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/app/.venv/bin:$PATH" \
-    DEBUG=false \
-    ENV=production
+# Métadonnées
+LABEL maintainer="MPPEEP <support@mppeep.gov>"
+LABEL version="1.0.0"
+LABEL description="MPPEEP Dashboard - Système de Gestion Intégré"
 
-# Installer les dépendances système nécessaires
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Créer un utilisateur non-root pour la sécurité
-RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app /app/logs && \
-    chown -R appuser:appuser /app
+# Variables d'environnement Python
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Répertoire de travail
 WORKDIR /app
 
-# Copier le venv depuis le builder
-COPY --from=builder --chown=appuser:appuser /build/.venv /app/.venv
+# Installation des dépendances système
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier les dépendances
+COPY requirements.txt .
+
+# Installer les dépendances Python
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copier le code de l'application
-COPY --chown=appuser:appuser ./app ./app
-COPY --chown=appuser:appuser ./scripts ./scripts
-COPY --chown=appuser:appuser pyproject.toml ./
+COPY . .
 
-# Changer vers l'utilisateur non-root
-USER appuser
+# Créer les dossiers nécessaires
+RUN mkdir -p logs data static/uploads
 
 # Exposer le port
-EXPOSE 8000
+EXPOSE 9000
 
-# Health check
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/ping || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/v1/health').read()" || exit 1
 
-# Commande par défaut
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
+# Commande de démarrage
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000", "--reload"]

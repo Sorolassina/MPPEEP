@@ -11,6 +11,7 @@ import tempfile
 import os
 
 
+@pytest.mark.critical
 @pytest.mark.integration
 @pytest.mark.database
 def test_full_database_initialization():

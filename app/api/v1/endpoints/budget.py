@@ -286,6 +286,19 @@ def budget_home(
 
 
 # ============================================
+# PAGE D'AIDE
+# ============================================
+
+@router.get("/aide", response_class=HTMLResponse, name="aide_budget")
+def aide_budget(request: Request):
+    """Page d'aide pour le module Budget"""
+    return templates.TemplateResponse(
+        "pages/aide_budget.html",
+        get_template_context(request)
+    )
+
+
+# ============================================
 # FICHES TECHNIQUES
 # ============================================
 

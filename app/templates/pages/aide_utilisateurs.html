@@ -1,0 +1,194 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Aide - Gestion des Utilisateurs{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='❓ Aide - Gestion des Utilisateurs',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Administration'},
+        {'name': 'Utilisateurs', 'url': url_for('gestion_utilisateurs')},
+        {'name': 'Aide'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('gestion_utilisateurs'), 'primary': False}
+    ]
+) }}
+
+<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Introduction -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #0ea5e9;">
+        <h2 style="color: #0369a1; margin-bottom: 1rem;">👥 Système de Gestion des Utilisateurs</h2>
+        <p style="color: #0c4a6e; line-height: 1.8; font-size: 1.05rem;">
+            Le système de gestion des utilisateurs permet de créer et gérer les comptes d'accès à l'application, 
+            de définir leurs rôles et permissions, et de les lier aux agents du personnel.
+        </p>
+    </div>
+
+    <!-- Types d'utilisateurs -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🎭 Types d'Utilisateurs</h3>
+        
+        <div style="display: grid; gap: 1rem;">
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
+                <h4 style="color: #92400e; margin-bottom: 0.5rem;">👑 Administrateur (admin)</h4>
+                <ul style="color: #78350f; margin: 0; padding-left: 1.5rem;">
+                    <li>Accès complet à tous les modules</li>
+                    <li>Gestion des utilisateurs et permissions</li>
+                    <li>Configuration du système (workflows, référentiels, paramètres)</li>
+                    <li>Accès aux logs et statistiques globales</li>
+                </ul>
+            </div>
+            
+            <div style="padding: 1rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 8px;">
+                <h4 style="color: #1e40af; margin-bottom: 0.5rem;">🔧 Modérateur (moderator)</h4>
+                <ul style="color: #1e3a8a; margin: 0; padding-left: 1.5rem;">
+                    <li>Gestion des modules opérationnels (RH, Budget, Stock)</li>
+                    <li>Validation des demandes selon les rôles personnalisés assignés</li>
+                    <li>Consultation des rapports et statistiques</li>
+                    <li>Pas d'accès à la configuration système</li>
+                </ul>
+            </div>
+            
+            <div style="padding: 1rem; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 8px;">
+                <h4 style="color: #065f46; margin-bottom: 0.5rem;">👤 Utilisateur (user)</h4>
+                <ul style="color: #064e3b; margin: 0; padding-left: 1.5rem;">
+                    <li>Accès limité aux fonctionnalités de base</li>
+                    <li>Création de demandes (congés, permissions, besoins)</li>
+                    <li>Suivi de ses propres demandes</li>
+                    <li>Consultation des informations</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Créer un utilisateur -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">➕ Créer un Utilisateur</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">📝 Méthode 1 : À partir d'un agent existant (recommandé)</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li><strong>Aller dans "Gestion du Personnel"</strong> (<code>/api/v1/personnel/</code>)</li>
+            <li><strong>Identifier l'agent</strong> qui n'a pas encore de compte (icône <code style="background: #e0f2fe; padding: 0.2rem 0.5rem; border-radius: 4px; color: #3b82f6;">👤➕</code> bleue)</li>
+            <li><strong>Cliquer sur l'icône</strong> 👤➕ pour ouvrir le modal de création</li>
+            <li><strong>Saisir l'email</strong> de connexion (pré-rempli avec suggestion)</li>
+            <li><strong>Définir un mot de passe</strong> :
+                <ul>
+                    <li>Soit saisir un mot de passe personnalisé (min. 8 caractères)</li>
+                    <li>Soit cliquer sur "🔄 Générer" pour un mot de passe aléatoire sécurisé</li>
+                    <li>Soit laisser vide pour génération automatique côté serveur</li>
+                </ul>
+            </li>
+            <li><strong>Confirmer la création</strong></li>
+            <li><strong>Noter le mot de passe affiché</strong> et le communiquer à l'utilisateur de manière sécurisée</li>
+        </ol>
+        
+        <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 1rem;">
+            <p style="margin: 0; color: #92400e;">
+                <strong>💡 Avantage :</strong> Le compte est automatiquement lié à l'agent, 
+                permettant de créer des demandes RH et d'utiliser les workflows personnalisés.
+            </p>
+        </div>
+        
+        <h4 style="color: #4b5563; margin: 2rem 0 1rem 0;">🖊️ Méthode 2 : Depuis la gestion des utilisateurs</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li><strong>Aller dans "Gestion des Utilisateurs"</strong></li>
+            <li><strong>Cliquer sur "➕ Nouvel Utilisateur"</strong></li>
+            <li><strong>Remplir le formulaire</strong> :
+                <ul>
+                    <li>Email (obligatoire)</li>
+                    <li>Nom complet</li>
+                    <li>Mot de passe</li>
+                    <li>Type d'utilisateur (admin, moderator, user)</li>
+                    <li>Lier à un agent (optionnel mais recommandé)</li>
+                </ul>
+            </li>
+            <li><strong>Enregistrer</strong></li>
+        </ol>
+    </div>
+
+    <!-- Lier un utilisateur à un agent -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🔗 Lier un Utilisateur à un Agent</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            Le lien entre un utilisateur et un agent est <strong>essentiel</strong> pour :
+        </p>
+        
+        <ul style="color: #374151; line-height: 1.8;">
+            <li>✅ Permettre à l'utilisateur de créer des demandes RH</li>
+            <li>✅ Identifier automatiquement le demandeur dans les workflows</li>
+            <li>✅ Assigner des rôles personnalisés dans les circuits de validation</li>
+            <li>✅ Afficher les informations personnelles (matricule, service, grade, etc.)</li>
+        </ul>
+        
+        <div style="background: #fee2e2; padding: 1rem; border-radius: 8px; border-left: 4px solid #dc3545; margin-top: 1rem;">
+            <p style="margin: 0; color: #991b1b;">
+                <strong>⚠️ Important :</strong> Un utilisateur non lié à un agent ne pourra pas créer de demandes RH 
+                ni participer aux workflows de validation.
+            </p>
+        </div>
+    </div>
+
+    <!-- Gérer les permissions -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🔐 Gérer les Permissions</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Modifier le type d'utilisateur</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Dans la liste des utilisateurs, cliquer sur <strong>✏️ Modifier</strong></li>
+            <li>Changer le champ "Type d'utilisateur"</li>
+            <li>Enregistrer les modifications</li>
+        </ol>
+        
+        <h4 style="color: #4b5563; margin: 2rem 0 1rem 0;">Activer/Désactiver un compte</h4>
+        <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>Désactiver :</strong> L'utilisateur ne pourra plus se connecter mais ses données sont conservées</li>
+            <li><strong>Réactiver :</strong> L'utilisateur peut à nouveau se connecter</li>
+            <li><strong>Supprimer :</strong> Suppression définitive du compte (à éviter)</li>
+        </ul>
+    </div>
+
+    <!-- Bonnes pratiques -->
+    <div class="card" style="margin-bottom: 2rem; background: #f0fdf4; border-left: 4px solid #10b981;">
+        <h3 style="color: #065f46; margin-bottom: 1.5rem;">✨ Bonnes Pratiques</h3>
+        
+        <ul style="color: #064e3b; line-height: 2;">
+            <li>✅ <strong>Toujours lier les utilisateurs aux agents</strong> pour une gestion RH complète</li>
+            <li>✅ <strong>Utiliser des emails professionnels</strong> (prenom.nom@ministere.sn)</li>
+            <li>✅ <strong>Générer des mots de passe forts</strong> et les communiquer de manière sécurisée</li>
+            <li>✅ <strong>Définir le bon type d'utilisateur</strong> selon les responsabilités</li>
+            <li>✅ <strong>Désactiver plutôt que supprimer</strong> pour conserver l'historique</li>
+            <li>✅ <strong>Vérifier régulièrement</strong> les comptes inactifs</li>
+        </ul>
+    </div>
+
+    <!-- Dépannage -->
+    <div class="card" style="background: #fef2f2; border-left: 4px solid #ef4444;">
+        <h3 style="color: #991b1b; margin-bottom: 1.5rem;">🔧 Dépannage</h3>
+        
+        <h4 style="color: #7f1d1d; margin-bottom: 0.5rem;">❌ "Votre compte n'est pas lié à un agent"</h4>
+        <p style="color: #991b1b; margin-bottom: 1rem;">
+            <strong>Solution :</strong> Demander à un administrateur de modifier votre compte utilisateur 
+            et de sélectionner votre agent dans le champ "Agent associé".
+        </p>
+        
+        <h4 style="color: #7f1d1d; margin-bottom: 0.5rem;">❌ "Email déjà utilisé"</h4>
+        <p style="color: #991b1b; margin-bottom: 1rem;">
+            <strong>Solution :</strong> Vérifier si un compte existe déjà avec cet email. 
+            Si l'utilisateur a oublié son mot de passe, utiliser la fonction de réinitialisation.
+        </p>
+        
+        <h4 style="color: #7f1d1d; margin-bottom: 0.5rem;">❌ "Cet agent a déjà un compte utilisateur"</h4>
+        <p style="color: #991b1b; margin: 0;">
+            <strong>Solution :</strong> L'agent est déjà lié à un compte. 
+            Vérifier dans la liste des utilisateurs pour retrouver le compte existant (icône <code style="background: #d1fae5; padding: 0.2rem 0.5rem; border-radius: 4px; color: #10b981;">👤✓</code> verte).
+        </p>
+    </div>
+
+</div>
+{% endblock %}
+

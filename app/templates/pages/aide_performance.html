@@ -1,0 +1,177 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Aide - Module Performance{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='❓ Aide - Module Performance',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Performance', 'url': url_for('performance_home')},
+        {'name': 'Aide'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('performance_home'), 'primary': False}
+    ]
+) }}
+
+<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Introduction -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
+        <h2 style="color: #92400e; margin-bottom: 1rem;">📈 Système de Gestion de la Performance</h2>
+        <p style="color: #78350f; line-height: 1.8; font-size: 1.05rem;">
+            Le module Performance permet de définir des objectifs organisationnels, 
+            de suivre des indicateurs clés (KPIs) et de mesurer la réalisation des résultats.
+        </p>
+    </div>
+
+    <!-- Objectifs de performance -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🎯 Objectifs de Performance</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Types d'objectifs</h4>
+        <div style="display: grid; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
+                <strong style="color: #92400e;">🏆 STRATÉGIQUE</strong>
+                <p style="color: #78350f; margin: 0.5rem 0 0 0;">
+                    Objectifs à long terme, alignés sur la vision de l'organisation
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 8px;">
+                <strong style="color: #1e40af;">🎯 OPÉRATIONNEL</strong>
+                <p style="color: #1e3a8a; margin: 0.5rem 0 0 0;">
+                    Objectifs à court/moyen terme, liés aux activités quotidiennes
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 8px;">
+                <strong style="color: #065f46;">📊 PROJET</strong>
+                <p style="color: #064e3b; margin: 0.5rem 0 0 0;">
+                    Objectifs liés à un projet spécifique avec échéances définies
+                </p>
+            </div>
+        </div>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Créer un objectif</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Aller dans <strong>"Performance → Objectifs"</strong></li>
+            <li>Cliquer sur <strong>"➕ Nouvel Objectif"</strong></li>
+            <li>Remplir :
+                <ul>
+                    <li>Titre et description claire</li>
+                    <li>Type (Stratégique/Opérationnel/Projet)</li>
+                    <li>Priorité (Haute/Moyenne/Basse)</li>
+                    <li>Dates de début et fin</li>
+                    <li>Programme/Direction concerné</li>
+                    <li>Responsable de suivi</li>
+                </ul>
+            </li>
+            <li>Définir les critères de succès</li>
+            <li>Enregistrer</li>
+        </ol>
+    </div>
+
+    <!-- Indicateurs de performance -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📊 Indicateurs de Performance (KPIs)</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            Les indicateurs permettent de mesurer objectivement la performance et l'atteinte des objectifs.
+        </p>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Créer un indicateur</h4>
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Aller dans <strong>"Performance → Indicateurs"</strong></li>
+            <li>Cliquer sur <strong>"➕ Nouvel Indicateur"</strong></li>
+            <li>Définir :
+                <ul>
+                    <li><strong>Nom :</strong> Nom explicite de l'indicateur</li>
+                    <li><strong>Catégorie :</strong> Qualité, Efficacité, RH, Commercial, etc.</li>
+                    <li><strong>Type :</strong> Pourcentage, Nombre, Montant, Temps</li>
+                    <li><strong>Valeur cible :</strong> Objectif à atteindre</li>
+                    <li><strong>Valeur actuelle :</strong> Niveau actuel</li>
+                    <li><strong>Unité de mesure :</strong> %, €, jours, etc.</li>
+                    <li><strong>Seuils d'alerte :</strong> Niveaux minimum et maximum acceptables</li>
+                    <li><strong>Fréquence de mise à jour :</strong> Quotidien, Hebdomadaire, Mensuel</li>
+                </ul>
+            </li>
+            <li>Enregistrer</li>
+        </ol>
+        
+        <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 1rem;">
+            <p style="margin: 0; color: #065f46;">
+                <strong>✅ Exemple :</strong> "Taux de satisfaction client" - Cible: 85% - 
+                Actuel: 82% - Alerte si < 75%
+            </p>
+        </div>
+    </div>
+
+    <!-- Tableau de bord -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📊 Tableau de Bord Performance</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            Le tableau de bord affiche en temps réel :
+        </p>
+        
+        <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>🎯 Taux de Réalisation :</strong> % d'objectifs atteints</li>
+            <li><strong>✅ Objectifs Atteints :</strong> Nombre d'objectifs réalisés</li>
+            <li><strong>⚠️ Indicateurs en Alerte :</strong> KPIs sous les seuils</li>
+            <li><strong>⭐ Score Global :</strong> Note générale de performance (0-10)</li>
+            <li><strong>🏃 Objectifs en Cours :</strong> En progression</li>
+            <li><strong>📊 Rapports Générés :</strong> Disponibles pour consultation</li>
+        </ul>
+        
+        <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="margin: 0; color: #1e40af;">
+                <strong>💡 Astuce :</strong> Consultez le tableau de bord quotidiennement pour 
+                identifier rapidement les indicateurs nécessitant attention.
+            </p>
+        </div>
+    </div>
+
+    <!-- Rapports de performance -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📄 Rapports de Performance</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            Générez des rapports détaillés pour :
+        </p>
+        
+        <ul style="line-height: 1.8; color: #374151;">
+            <li>Présenter les résultats aux parties prenantes</li>
+            <li>Analyser les tendances sur des périodes</li>
+            <li>Identifier les points d'amélioration</li>
+            <li>Documenter les réussites</li>
+        </ul>
+        
+        <h4 style="color: #4b5563; margin: 1.5rem 0 1rem 0;">Formats d'export :</h4>
+        <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>PDF :</strong> Rapport formaté prêt à imprimer</li>
+            <li><strong>Excel :</strong> Données brutes pour analyse approfondie</li>
+            <li><strong>PowerPoint :</strong> Présentation avec graphiques</li>
+        </ul>
+    </div>
+
+    <!-- Bonnes pratiques -->
+    <div class="card" style="background: #f0fdf4; border-left: 4px solid #10b981;">
+        <h3 style="color: #065f46; margin-bottom: 1.5rem;">✨ Bonnes Pratiques</h3>
+        
+        <ul style="color: #064e3b; line-height: 2;">
+            <li>✅ <strong>Définir des objectifs SMART</strong> (Spécifiques, Mesurables, Atteignables, Réalistes, Temporels)</li>
+            <li>✅ <strong>Limiter le nombre d'indicateurs</strong> (5-10 KPIs clés par domaine)</li>
+            <li>✅ <strong>Mettre à jour régulièrement</strong> les valeurs actuelles</li>
+            <li>✅ <strong>Fixer des seuils d'alerte pertinents</strong> pour chaque indicateur</li>
+            <li>✅ <strong>Réviser les objectifs</strong> trimestriellement ou annuellement</li>
+            <li>✅ <strong>Analyser les écarts</strong> et prendre des actions correctives</li>
+            <li>✅ <strong>Partager les résultats</strong> avec les équipes concernées</li>
+        </ul>
+    </div>
+
+</div>
+{% endblock %}
+

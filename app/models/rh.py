@@ -22,20 +22,6 @@ class Grade(SQLModel, table=True):
     # Note: Pas de Relationship() pour éviter les problèmes SQLAlchemy 2.0
     # Les relations sont gérées via les foreign keys uniquement
 
-class ServiceDept(SQLModel, table=True):
-    """Services/Départements"""
-    __tablename__ = "servicedept"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    code: str = Field(index=True)
-    libelle: str
-    description: Optional[str] = None
-    actif: bool = Field(default=True)
-    direction_id: Optional[int] = Field(default=None, foreign_key="direction.id")
-    
-    # Note: Pas de Relationship() pour éviter les problèmes SQLAlchemy 2.0
-    # Les relations sont gérées via les foreign keys uniquement
-
 # --- Agent ---
 class Agent(SQLModel, table=True):
     """Agent/Employé"""

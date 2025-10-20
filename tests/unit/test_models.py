@@ -8,6 +8,7 @@ from app.models.user import User
 from app.core.security import get_password_hash
 
 
+@pytest.mark.critical
 def test_create_user(session: Session):
     """Test la création d'un utilisateur"""
     user = User(
@@ -46,6 +47,7 @@ def test_user_default_values(session: Session):
     assert user.full_name is None  # Optional
 
 
+@pytest.mark.critical
 def test_user_email_unique(session: Session):
     """Test l'unicité de l'email"""
     user1 = User(

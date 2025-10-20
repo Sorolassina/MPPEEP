@@ -1,0 +1,290 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Amortissements - Stock - {{ app_name }}{% endblock %}
+
+{% block content %}
+<body class="form-page-premium">
+{{ page_header(
+    title='💰 Gestion des Amortissements',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Stock', 'url': url_for('stock_home')},
+        {'name': 'Amortissements'}
+    ],
+    actions=[
+        {'label': '← Retour Stock', 'url': url_for('stock_home'), 'primary': False}
+    ]
+) }}
+
+<div class="page-grid">
+  
+  <!-- Sélection année -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">📅 Sélectionner une Année</h3>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <select id="annee-select" class="form-select" style="max-width: 200px;" onchange="loadMateriels()">
+        <option value="">-- Choisir une année --</option>
+      </select>
+      <span id="stat-materiels" style="color: var(--gray-600);"></span>
+    </div>
+  </div>
+  
+  <!-- Matériels à amortir -->
+  <div class="card" id="section-materiels" style="display: none;">
+    <h3 style="margin-bottom: 1rem; color: var(--secondary-color);">🛠️ Matériels à Amortir</h3>
+    
+    <div style="overflow-x: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Désignation</th>
+            <th>Date Acquisition</th>
+            <th>Valeur Acquisition</th>
+            <th>Durée</th>
+            <th>Méthode</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="table-materiels">
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Modal Plan d'Amortissement -->
+<div id="planModal" class="modal">
+  <div class="modal-lg" style="max-width: 900px;">
+    <div class="modal-header">
+      <h3>📊 Plan d'Amortissement</h3>
+      <button class="close-modal" onclick="closePlanModal()">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <div id="modal-article-info" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+      </div>
+      
+      <div style="overflow-x: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Année</th>
+              <th>Valeur Brute</th>
+              <th>Amort. Période</th>
+              <th>Amort. Cumulé</th>
+              <th>VNC</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="table-plan">
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closePlanModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentAnnee = null;
+let currentArticle = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Générer les années (10 ans passés + année actuelle + 5 ans futurs)
+  const select = document.getElementById('annee-select');
+  const now = new Date().getFullYear();
+  
+  for (let y = now - 10; y <= now + 5; y++) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === now) opt.selected = true;
+    select.appendChild(opt);
+  }
+  
+  // Charger l'année actuelle
+  loadMateriels();
+});
+
+// Charger les matériels à amortir
+async function loadMateriels() {
+  const annee = document.getElementById('annee-select').value;
+  if (!annee) {
+    document.getElementById('section-materiels').style.display = 'none';
+    return;
+  }
+  
+  currentAnnee = parseInt(annee);
+  
+  try {
+    const response = await fetch(`{{ url_for('api_materiels_a_amortir', annee=0) }}`.replace('/0', `/${annee}`));
+    const result = await response.json();
+    
+    if (result.success) {
+      const materiels = result.data;
+      document.getElementById('stat-materiels').textContent = 
+        `${materiels.length} matériel(s) à traiter pour ${annee}`;
+      
+      const tbody = document.getElementById('table-materiels');
+      
+      if (materiels.length === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--success-color);">
+            ✅ Tous les amortissements sont à jour pour ${annee}
+          </td></tr>
+        `;
+        document.getElementById('section-materiels').style.display = 'block';
+        return;
+      }
+      
+      tbody.innerHTML = materiels.map(mat => {
+        const valeur = new Intl.NumberFormat('fr-FR').format(mat.valeur_acquisition);
+        
+        return `
+          <tr>
+            <td><strong>${mat.code}</strong></td>
+            <td>${mat.designation}</td>
+            <td>${mat.date_acquisition}</td>
+            <td>${valeur} FCFA</td>
+            <td>${mat.duree_amortissement} ans</td>
+            <td><span style="padding: 0.25rem 0.5rem; background: var(--info-light); color: var(--info-dark); border-radius: 4px; font-size: 0.85rem;">${mat.methode}</span></td>
+            <td style="white-space: nowrap;">
+              <button class="btn-action" onclick="calculerAmortissement(${mat.id})" title="Calculer">💾</button>
+              <button class="btn-action" onclick="viewPlan(${mat.id})" title="Voir plan">📊</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      document.getElementById('section-materiels').style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Erreur chargement matériels:', error);
+    showError('Erreur lors du chargement des matériels');
+  }
+}
+
+// Calculer l'amortissement
+async function calculerAmortissement(articleId) {
+  if (!currentAnnee) return;
+  
+  if (!confirm(`Calculer l'amortissement pour l'année ${currentAnnee} ?`)) {
+    return;
+  }
+  
+  showGlobalLoading('Calcul en cours...', 'Veuillez patienter');
+  
+  const formData = new FormData();
+  formData.append('article_id', articleId);
+  formData.append('annee', currentAnnee);
+  
+  try {
+    const response = await fetch("{{ url_for('api_calculer_amortissement') }}", {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      hideGlobalLoading();
+      const amort = new Intl.NumberFormat('fr-FR').format(result.data.amortissement_periode);
+      const vnc = new Intl.NumberFormat('fr-FR').format(result.data.valeur_nette_comptable);
+      showSuccess(`Amortissement calculé!\n\nPériode: ${amort} FCFA\nVNC: ${vnc} FCFA`);
+      loadMateriels();
+    } else {
+      hideGlobalLoading();
+      showError(result.error);
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur lors du calcul');
+  }
+}
+
+// Voir le plan d'amortissement
+async function viewPlan(articleId) {
+  currentArticle = articleId;
+  
+  showGlobalLoading('Chargement du plan...', 'Veuillez patienter');
+  
+  try {
+    const response = await fetch(`{{ url_for('api_plan_amortissement', article_id=0) }}`.replace('/0', `/${articleId}`));
+    const result = await response.json();
+    
+    if (result.success) {
+      hideGlobalLoading();
+      const plan = result.data;
+      
+      // Info article (on récupère depuis le premier élément du plan)
+      if (plan.length > 0) {
+        document.getElementById('modal-article-info').innerHTML = `
+          <strong>Article:</strong> ${plan[0].article || 'N/A'}<br>
+          <strong>Valeur d'acquisition:</strong> ${new Intl.NumberFormat('fr-FR').format(plan[0].valeur_brute || 0)} FCFA<br>
+          <strong>Méthode:</strong> ${plan[0].methode || 'N/A'}
+        `;
+      }
+      
+      // Afficher le plan
+      const tbody = document.getElementById('table-plan');
+      tbody.innerHTML = plan.map(annee => {
+        const valeurBrute = new Intl.NumberFormat('fr-FR').format(annee.valeur_brute || 0);
+        const amortPeriode = new Intl.NumberFormat('fr-FR').format(annee.amortissement_periode || 0);
+        const amortCumule = new Intl.NumberFormat('fr-FR').format(annee.amortissement_cumule || 0);
+        const vnc = new Intl.NumberFormat('fr-FR').format(annee.valeur_nette_comptable || 0);
+        
+        const isCalcule = annee.calcule;
+        const statutBadge = isCalcule 
+          ? '<span style="color: #10b981;">✅ Calculé</span>'
+          : '<span style="color: #6c757d;">⏳ Prévisionnel</span>';
+        
+        return `
+          <tr style="${isCalcule ? '' : 'opacity: 0.7;'}">
+            <td><strong>${annee.annee}</strong></td>
+            <td>${valeurBrute} F</td>
+            <td>${amortPeriode} F</td>
+            <td>${amortCumule} F</td>
+            <td><strong>${vnc} F</strong></td>
+            <td>${statutBadge}</td>
+          </tr>
+        `;
+      }).join('');
+      
+      document.getElementById('planModal').classList.add('show');
+    } else {
+      hideGlobalLoading();
+      showError(result.error);
+    }
+  } catch (error) {
+    hideGlobalLoading();
+    console.error('Erreur:', error);
+    showError('Erreur lors du chargement du plan');
+  }
+}
+
+// Modal
+function closePlanModal() {
+  document.getElementById('planModal').classList.remove('show');
+}
+
+// Fermer le modal avec Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closePlanModal();
+  }
+});
+</script>
+</body>
+{% endblock %}
+

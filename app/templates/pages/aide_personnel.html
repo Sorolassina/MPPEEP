@@ -1,0 +1,202 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Aide - Gestion du Personnel{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='❓ Aide - Gestion du Personnel',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Personnel', 'url': url_for('personnel_home')},
+        {'name': 'Aide'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('personnel_home'), 'primary': False}
+    ]
+) }}
+
+<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    
+    <!-- Introduction -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 4px solid #10b981;">
+        <h2 style="color: #065f46; margin-bottom: 1rem;">👥 Système de Gestion du Personnel</h2>
+        <p style="color: #064e3b; line-height: 1.8; font-size: 1.05rem;">
+            Le module Personnel centralise toutes les informations relatives aux agents : 
+            état civil, affectation, carrière, documents et évaluations.
+        </p>
+    </div>
+
+    <!-- Créer un agent -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">➕ Créer un Agent</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">📝 Informations obligatoires</h4>
+        <div style="background: #fee2e2; padding: 1rem; border-radius: 8px; border-left: 4px solid #dc3545; margin-bottom: 1.5rem;">
+            <p style="color: #991b1b; margin-bottom: 0.5rem;"><strong>Champs obligatoires :</strong></p>
+            <ul style="color: #7f1d1d; margin: 0; padding-left: 1.5rem;">
+                <li>Matricule (unique)</li>
+                <li>Nom et Prénom</li>
+                <li>Date de recrutement</li>
+                <li>Date de prise de service</li>
+                <li><strong>Affectation complète :</strong> Grade, Programme, Direction, Service, Fonction</li>
+            </ul>
+        </div>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">🏢 Sections du formulaire</h4>
+        <div style="display: grid; gap: 1rem;">
+            <div style="padding: 1rem; background: #f8f9fa; border-left: 4px solid #6b7280; border-radius: 8px;">
+                <strong style="color: #374151;">🆔 Identification</strong>
+                <p style="color: #6b7280; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                    Matricule, CNI, Passeport
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #f8f9fa; border-left: 4px solid #6b7280; border-radius: 8px;">
+                <strong style="color: #374151;">👤 État Civil</strong>
+                <p style="color: #6b7280; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                    Nom, prénom, date de naissance, situation familiale, etc.
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #f8f9fa; border-left: 4px solid #6b7280; border-radius: 8px;">
+                <strong style="color: #374151;">📞 Coordonnées</strong>
+                <p style="color: #6b7280; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                    Emails, téléphones, adresse
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #f8f9fa; border-left: 4px solid #6b7280; border-radius: 8px;">
+                <strong style="color: #374151;">💼 Carrière</strong>
+                <p style="color: #6b7280; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                    Dates de recrutement, prise de service, retraite prévue
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
+                <strong style="color: #92400e;">🏢 Affectation Actuelle (Obligatoire)</strong>
+                <p style="color: #78350f; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                    Grade, Programme, Direction, Service, Fonction
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #f8f9fa; border-left: 4px solid #6b7280; border-radius: 8px;">
+                <strong style="color: #374151;">🏖️ Congés</strong>
+                <p style="color: #6b7280; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                    Solde annuel, congés de l'année en cours
+                </p>
+            </div>
+            
+            <div style="padding: 1rem; background: #f8f9fa; border-left: 4px solid #6b7280; border-radius: 8px;">
+                <strong style="color: #374151;">📸 Photo</strong>
+                <p style="color: #6b7280; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                    Photo de profil (optionnelle, formats: JPG, PNG)
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Créer un compte utilisateur -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">👤➕ Créer un Compte Utilisateur pour un Agent</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            Pour permettre à un agent de se connecter à l'application et créer des demandes RH :
+        </p>
+        
+        <ol style="line-height: 1.8; color: #374151;">
+            <li>Dans la liste des agents, identifier celui sans compte (icône <code style="background: #dbeafe; padding: 0.2rem 0.5rem; border-radius: 4px; color: #3b82f6;">👤➕</code> bleue)</li>
+            <li>Cliquer sur l'icône pour ouvrir le modal</li>
+            <li>Saisir l'email de connexion (pré-rempli avec suggestion)</li>
+            <li>Définir ou générer un mot de passe sécurisé</li>
+            <li>Confirmer la création</li>
+            <li>Noter le mot de passe affiché et le communiquer à l'agent</li>
+        </ol>
+        
+        <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 1rem;">
+            <p style="margin: 0; color: #065f46;">
+                <strong>✅ Résultat :</strong> L'agent pourra se connecter et créer des demandes RH. 
+                Son identité sera automatiquement renseignée dans les formulaires.
+            </p>
+        </div>
+    </div>
+
+    <!-- Gérer les documents -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📄 Gérer les Documents d'un Agent</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            Chaque agent peut avoir plusieurs documents attachés :
+        </p>
+        
+        <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>CNI :</strong> Carte Nationale d'Identité</li>
+            <li><strong>Diplômes :</strong> Attestations de formation</li>
+            <li><strong>Contrats :</strong> Contrat de travail, avenants</li>
+            <li><strong>Actes :</strong> Actes administratifs (nomination, affectation, etc.)</li>
+            <li><strong>Autres :</strong> Documents divers</li>
+        </ul>
+        
+        <p style="color: #374151; line-height: 1.8; margin-top: 1rem;">
+            Pour ajouter un document, aller dans la fiche détaillée de l'agent et utiliser la section "Documents".
+        </p>
+    </div>
+
+    <!-- Historique de carrière -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📚 Historique de Carrière</h3>
+        
+        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
+            L'historique permet de tracer toute la carrière de l'agent :
+        </p>
+        
+        <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>Avancements :</strong> Changements de grade et échelon</li>
+            <li><strong>Mutations :</strong> Changements de service ou direction</li>
+            <li><strong>Nominations :</strong> Nouvelles fonctions</li>
+            <li><strong>Formations :</strong> Formations suivies</li>
+        </ul>
+        
+        <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+            <p style="margin: 0; color: #1e40af;">
+                <strong>💡 Astuce :</strong> L'historique est automatiquement mis à jour lors des modifications 
+                de grade, service ou fonction.
+            </p>
+        </div>
+    </div>
+
+    <!-- Recherche et filtres -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🔍 Recherche et Filtres</h3>
+        
+        <h4 style="color: #4b5563; margin-bottom: 1rem;">Options de recherche :</h4>
+        <ul style="line-height: 1.8; color: #374151;">
+            <li><strong>Recherche globale :</strong> Par matricule, nom, prénom ou email</li>
+            <li><strong>Filtre par service :</strong> Afficher uniquement les agents d'un service</li>
+            <li><strong>Filtre par grade :</strong> Catégorie A, B, C</li>
+            <li><strong>Filtre par statut :</strong> Actifs / Inactifs</li>
+        </ul>
+        
+        <p style="color: #374151; line-height: 1.8; margin-top: 1rem;">
+            La recherche est instantanée (minimum 2 caractères) et affiche les résultats en temps réel.
+        </p>
+    </div>
+
+    <!-- Bonnes pratiques -->
+    <div class="card" style="background: #f0fdf4; border-left: 4px solid #10b981;">
+        <h3 style="color: #065f46; margin-bottom: 1.5rem;">✨ Bonnes Pratiques</h3>
+        
+        <ul style="color: #064e3b; line-height: 2;">
+            <li>✅ <strong>Vérifier l'unicité du matricule</strong> avant création</li>
+            <li>✅ <strong>Compléter l'affectation obligatoire</strong> (grade, programme, direction, service, fonction)</li>
+            <li>✅ <strong>Ajouter une photo</strong> pour faciliter l'identification</li>
+            <li>✅ <strong>Créer un compte utilisateur</strong> pour les agents qui doivent accéder à l'application</li>
+            <li>✅ <strong>Maintenir les données à jour</strong> (mutations, avancements)</li>
+            <li>✅ <strong>Archiver les documents</strong> importants (contrats, diplômes, actes)</li>
+            <li>✅ <strong>Désactiver plutôt que supprimer</strong> pour conserver l'historique</li>
+        </ul>
+    </div>
+
+</div>
+{% endblock %}
+

@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select, func, or_
 from pathlib import Path
 import secrets
+import re
 
 from app.db.session import get_session
 from app.api.v1.endpoints.auth import get_current_user
@@ -33,6 +34,15 @@ router = APIRouter()
 # ==========================================
 # PAGES HTML
 # ==========================================
+
+@router.get("/aide", response_class=HTMLResponse, name="aide_personnel")
+def aide_personnel(request: Request):
+    """Page d'aide pour le module Personnel"""
+    return templates.TemplateResponse(
+        "pages/aide_personnel.html",
+        get_template_context(request)
+    )
+
 
 @router.get("/", response_class=HTMLResponse, name="personnel_home")
 def personnel_home(
@@ -278,6 +288,13 @@ async def api_create_agent(
     matricule: str = Form(...),
     nom: str = Form(...),
     prenom: str = Form(...),
+    date_recrutement: str = Form(...),  # Obligatoire
+    date_prise_service: str = Form(...),  # Obligatoire
+    grade_id: str = Form(...),  # Obligatoire
+    programme_id: str = Form(...),  # Obligatoire
+    direction_id: str = Form(...),  # Obligatoire
+    service_id: str = Form(...),  # Obligatoire
+    fonction: str = Form(...),  # Obligatoire
     numero_cni: Optional[str] = Form(None),
     numero_passeport: Optional[str] = Form(None),
     nom_jeune_fille: Optional[str] = Form(None),
@@ -286,7 +303,7 @@ async def api_create_agent(
     nationalite: Optional[str] = Form(None),
     sexe: Optional[str] = Form(None),
     situation_familiale: Optional[str] = Form(None),
-    nombre_enfants: Optional[int] = Form(None),
+    nombre_enfants: Optional[str] = Form(None),  # Reçu comme string du formulaire
     email_professionnel: Optional[str] = Form(None),
     email_personnel: Optional[str] = Form(None),
     telephone_1: Optional[str] = Form(None),
@@ -294,35 +311,116 @@ async def api_create_agent(
     adresse: Optional[str] = Form(None),
     ville: Optional[str] = Form(None),
     code_postal: Optional[str] = Form(None),
-    date_recrutement: Optional[str] = Form(None),
-    date_prise_service: Optional[str] = Form(None),
     date_depart_retraite_prevue: Optional[str] = Form(None),
     position_administrative: Optional[str] = Form(None),
-    grade_id: Optional[int] = Form(None),
-    echelon: Optional[int] = Form(None),
-    indice: Optional[int] = Form(None),
-    service_id: Optional[int] = Form(None),
-    direction_id: Optional[int] = Form(None),
-    programme_id: Optional[int] = Form(None),
-    fonction: Optional[str] = Form(None),
-    solde_conges_annuel: Optional[int] = Form(None),
-    conges_annee_en_cours: Optional[int] = Form(None),
+    echelon: Optional[str] = Form(None),  # Reçu comme string du formulaire
+    indice: Optional[str] = Form(None),  # Reçu comme string du formulaire
+    solde_conges_annuel: Optional[str] = Form(None),  # Reçu comme string du formulaire
+    conges_annee_en_cours: Optional[str] = Form(None),  # Reçu comme string du formulaire
     notes: Optional[str] = Form(None),
     photo: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
     """Créer un nouvel agent avec photo optionnelle"""
+    
+    def parse_int_or_none(value: Optional[str]) -> Optional[int]:
+        """Convertit une chaîne en int, retourne None si vide ou invalide"""
+        if value is None or value == "" or value.strip() == "":
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+    
+    def clean_str_or_none(value: Optional[str]) -> Optional[str]:
+        """Convertit une chaîne vide en None, retourne la valeur sinon"""
+        if value is None or value == "" or value.strip() == "":
+            return None
+        return value.strip()
+    
+    def validate_email(email: str) -> bool:
+        """Valide le format d'un email"""
+        email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        return re.match(email_regex, email) is not None
+    
     try:
+        # Log des données reçues pour debug
+        logger.info(f"📝 Création agent - Matricule: {matricule}, Nom: {nom}, Prénom: {prenom}")
+        
+        # Convertir les champs numériques obligatoires
+        grade_id_int = int(grade_id) if grade_id and grade_id.strip() else None
+        programme_id_int = int(programme_id) if programme_id and programme_id.strip() else None
+        direction_id_int = int(direction_id) if direction_id and direction_id.strip() else None
+        service_id_int = int(service_id) if service_id and service_id.strip() else None
+        
+        # Convertir les champs numériques optionnels
+        nombre_enfants_int = parse_int_or_none(nombre_enfants)
+        echelon_int = parse_int_or_none(echelon)
+        indice_int = parse_int_or_none(indice)
+        solde_conges_annuel_int = parse_int_or_none(solde_conges_annuel)
+        conges_annee_en_cours_int = parse_int_or_none(conges_annee_en_cours)
+        
+        # Nettoyer les champs texte optionnels (convertir "" en None)
+        numero_cni = clean_str_or_none(numero_cni)
+        numero_passeport = clean_str_or_none(numero_passeport)
+        nom_jeune_fille = clean_str_or_none(nom_jeune_fille)
+        date_naissance = clean_str_or_none(date_naissance)
+        lieu_naissance = clean_str_or_none(lieu_naissance)
+        nationalite = clean_str_or_none(nationalite)
+        sexe = clean_str_or_none(sexe)
+        situation_familiale = clean_str_or_none(situation_familiale)
+        email_professionnel = clean_str_or_none(email_professionnel)
+        email_personnel = clean_str_or_none(email_personnel)
+        telephone_1 = clean_str_or_none(telephone_1)
+        telephone_2 = clean_str_or_none(telephone_2)
+        adresse = clean_str_or_none(adresse)
+        ville = clean_str_or_none(ville)
+        code_postal = clean_str_or_none(code_postal)
+        # date_recrutement, date_prise_service, fonction, grade_id, programme_id, direction_id, service_id sont obligatoires
+        date_depart_retraite_prevue = clean_str_or_none(date_depart_retraite_prevue)
+        position_administrative = clean_str_or_none(position_administrative)
+        notes = clean_str_or_none(notes)
+        
+        # Valider les champs obligatoires
+        if not date_recrutement or date_recrutement.strip() == "":
+            raise HTTPException(400, "Le champ 'Date de recrutement' est obligatoire")
+        
+        if not date_prise_service or date_prise_service.strip() == "":
+            raise HTTPException(400, "Le champ 'Date de prise de service' est obligatoire")
+        
+        if not grade_id_int:
+            raise HTTPException(400, "Le champ 'Grade' est obligatoire")
+        
+        if not programme_id_int:
+            raise HTTPException(400, "Le champ 'Programme' est obligatoire")
+        
+        if not direction_id_int:
+            raise HTTPException(400, "Le champ 'Direction' est obligatoire")
+        
+        if not service_id_int:
+            raise HTTPException(400, "Le champ 'Service' est obligatoire")
+        
+        if not fonction or fonction.strip() == "":
+            raise HTTPException(400, "Le champ 'Fonction' est obligatoire")
+        
+        # Valider les emails s'ils sont remplis
+        if email_professionnel and not validate_email(email_professionnel):
+            raise HTTPException(400, "L'email professionnel n'est pas valide. Format attendu: exemple@domaine.com")
+        
+        if email_personnel and not validate_email(email_personnel):
+            raise HTTPException(400, "L'email personnel n'est pas valide. Format attendu: exemple@domaine.com")
+        
         # Vérifier que le matricule est unique
         existing = session.exec(
             select(AgentComplet).where(AgentComplet.matricule == matricule)
         ).first()
         
         if existing:
+            logger.warning(f"⚠️ Matricule {matricule} existe déjà")
             raise HTTPException(400, "Ce matricule existe déjà")
         
-        # Préparer les données de l'agent
+        # Préparer les données de l'agent (utiliser les versions converties pour les entiers)
         agent_data = {
             "matricule": matricule,
             "nom": nom,
@@ -334,7 +432,7 @@ async def api_create_agent(
             "nationalite": nationalite,
             "sexe": sexe,
             "situation_familiale": situation_familiale,
-            "nombre_enfants": nombre_enfants,
+            "nombre_enfants": nombre_enfants_int,
             "email_professionnel": email_professionnel,
             "email_personnel": email_personnel,
             "telephone_1": telephone_1,
@@ -343,15 +441,15 @@ async def api_create_agent(
             "ville": ville,
             "code_postal": code_postal,
             "position_administrative": position_administrative,
-            "grade_id": grade_id,
-            "echelon": echelon,
-            "indice": indice,
-            "service_id": service_id,
-            "direction_id": direction_id,
-            "programme_id": programme_id,
+            "grade_id": grade_id_int,
+            "echelon": echelon_int,
+            "indice": indice_int,
+            "service_id": service_id_int,
+            "direction_id": direction_id_int,
+            "programme_id": programme_id_int,
             "fonction": fonction,
-            "solde_conges_annuel": solde_conges_annuel,
-            "conges_annee_en_cours": conges_annee_en_cours,
+            "solde_conges_annuel": solde_conges_annuel_int,
+            "conges_annee_en_cours": conges_annee_en_cours_int,
             "notes": notes
         }
         
@@ -413,14 +511,53 @@ async def api_create_agent(
         
         return {"ok": True, "agent_id": agent.id}
         
-    except HTTPException:
+    except HTTPException as e:
         # Re-lancer les HTTPException (erreurs de validation) sans modification
         session.rollback()
+        logger.warning(f"⚠️ Erreur validation agent: {e.detail}")
         raise
+    except ValueError as e:
+        # Erreur de validation (ex: enum invalide)
+        session.rollback()
+        error_msg = str(e)
+        
+        # Extraire les informations utiles pour l'utilisateur
+        if "is not among the defined enum values" in error_msg:
+            # Parser le message d'erreur pour extraire le nom du champ et les valeurs possibles
+            if "Enum name:" in error_msg:
+                parts = error_msg.split("Enum name:")
+                if len(parts) > 1:
+                    enum_info = parts[1].split(".")
+                    field_name = enum_info[0].strip()
+                    
+                    # Mapper les noms de champs techniques aux noms français
+                    field_names_fr = {
+                        "situationfamiliale": "Situation familiale",
+                        "sexe": "Sexe",
+                        "positionadministrative": "Position administrative"
+                    }
+                    
+                    field_name_fr = field_names_fr.get(field_name.lower(), field_name)
+                    
+                    # Extraire les valeurs possibles si disponibles
+                    if "Possible values:" in error_msg:
+                        values_part = error_msg.split("Possible values:")[1].strip()
+                        user_message = f"Le champ '{field_name_fr}' a une valeur invalide. Veuillez sélectionner une valeur dans la liste déroulante."
+                    else:
+                        user_message = f"Le champ '{field_name_fr}' a une valeur invalide."
+                else:
+                    user_message = "Une valeur sélectionnée est invalide. Veuillez vérifier tous les champs."
+            else:
+                user_message = "Une valeur sélectionnée est invalide. Veuillez vérifier tous les champs."
+        else:
+            user_message = f"Erreur de validation: {error_msg}"
+        
+        logger.warning(f"⚠️ Erreur validation enum: {error_msg}")
+        raise HTTPException(400, user_message)
     except Exception as e:
         session.rollback()
-        logger.error(f"Erreur création agent: {e}")
-        raise HTTPException(500, f"Erreur: {str(e)}")
+        logger.error(f"❌ Erreur création agent: {e}")
+        raise HTTPException(500, f"Erreur serveur: {str(e)}")
 
 
 @router.get("/api/agents/{agent_id}", name="get_agent_api")
@@ -615,6 +752,120 @@ def api_delete_agent(
     )
     
     return {"ok": True}
+
+
+@router.post("/api/agents/{agent_id}/create-user", name="api_create_user_from_agent")
+async def api_create_user_from_agent(
+    agent_id: int,
+    request_body: dict,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Créer un compte utilisateur pour un agent
+    
+    Args:
+        agent_id: ID de l'agent
+        request_body: Corps JSON avec l'email et optionnellement le password
+    
+    Returns:
+        Informations du compte créé avec mot de passe (fourni ou généré)
+    """
+    email = request_body.get('email', '').strip()
+    custom_password = request_body.get('password', '').strip()
+    
+    if not email:
+        raise HTTPException(400, "L'email est obligatoire")
+    
+    # Valider le format email
+    email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+    if not re.match(email_regex, email):
+        raise HTTPException(400, "Format email invalide")
+    
+    # Valider le mot de passe personnalisé s'il est fourni
+    if custom_password and len(custom_password) < 8:
+        raise HTTPException(400, "Le mot de passe doit contenir au moins 8 caractères")
+    
+    try:
+        # Vérifier que l'agent existe
+        agent = session.get(AgentComplet, agent_id)
+        if not agent:
+            raise HTTPException(404, "Agent non trouvé")
+        
+        # Vérifier que l'agent n'a pas déjà un compte utilisateur
+        if agent.user_id:
+            existing_user = session.get(User, agent.user_id)
+            if existing_user:
+                raise HTTPException(400, f"Cet agent a déjà un compte utilisateur ({existing_user.email})")
+        
+        # Vérifier que l'email n'est pas déjà utilisé
+        existing_user = session.exec(
+            select(User).where(User.email == email)
+        ).first()
+        
+        if existing_user:
+            raise HTTPException(400, "Cet email est déjà utilisé par un autre compte")
+        
+        # Utiliser le mot de passe fourni ou en générer un
+        if custom_password:
+            password_to_use = custom_password
+            password_was_generated = False
+        else:
+            password_to_use = secrets.token_urlsafe(12)
+            password_was_generated = True
+        
+        # Créer l'utilisateur
+        from app.core.security import get_password_hash
+        
+        new_user = User(
+            email=email,
+            full_name=f"{agent.prenom} {agent.nom}",
+            hashed_password=get_password_hash(password_to_use),
+            is_active=True,
+            is_superuser=False,
+            type_user="user",  # Type par défaut
+            agent_id=agent.id,
+            profile_picture=agent.photo_path
+        )
+        
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+        
+        # Mettre à jour l'agent avec l'ID du user
+        agent.user_id = new_user.id
+        session.add(agent)
+        session.commit()
+        
+        logger.info(f"✅ Compte utilisateur créé pour l'agent {agent.matricule} - Email: {email}")
+        
+        # Log activité
+        ActivityService.log_user_activity(
+            session=session,
+            user=current_user,
+            action_type="create",
+            target_type="user",
+            description=f"Création compte utilisateur pour {agent.prenom} {agent.nom} ({agent.matricule})",
+            target_id=new_user.id,
+            icon="👤➕"
+        )
+        
+        return {
+            "ok": True,
+            "user_id": new_user.id,
+            "email": email,
+            "temporary_password": password_to_use,
+            "password_was_generated": password_was_generated,
+            "agent_id": agent.id
+        }
+        
+    except HTTPException:
+        session.rollback()
+        raise
+    except Exception as e:
+        session.rollback()
+        logger.error(f"❌ Erreur création utilisateur: {e}")
+        raise HTTPException(500, f"Erreur serveur: {str(e)}")
 
 
 # ==========================================

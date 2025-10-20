@@ -25,17 +25,90 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 
+@router.get("/aide", response_class=HTMLResponse, name="aide_performance")
+def aide_performance(request: Request):
+    """Page d'aide pour le module Performance"""
+    from app.templates import templates, get_template_context
+    return templates.TemplateResponse(
+        "pages/aide_performance.html",
+        get_template_context(request)
+    )
+
+
 @router.get("", response_class=HTMLResponse, name="performance_home")
 def performance_home(request: Request, db: Session = Depends(get_session)):
     """Page d'accueil du module Performance"""
     try:
         from app.templates import templates, get_template_context
+        from sqlmodel import func, col
+        
+        # Calculer les vrais KPIs depuis la base de données
+        
+        # Total objectifs
+        total_objectifs = db.exec(
+            select(func.count(ObjectifPerformance.id))
+        ).one() or 0
+        
+        # Objectifs atteints (statut = ATTEINT)
+        objectifs_atteints = db.exec(
+            select(func.count(ObjectifPerformance.id))
+            .where(ObjectifPerformance.statut == StatutObjectif.ATTEINT)
+        ).one() or 0
+        
+        # Objectifs en cours
+        objectifs_en_cours = db.exec(
+            select(func.count(ObjectifPerformance.id))
+            .where(ObjectifPerformance.statut == StatutObjectif.EN_COURS)
+        ).one() or 0
+        
+        # Objectifs en retard
+        objectifs_en_retard = db.exec(
+            select(func.count(ObjectifPerformance.id))
+            .where(ObjectifPerformance.statut == StatutObjectif.EN_RETARD)
+        ).one() or 0
+        
+        # Total indicateurs
+        total_indicateurs = db.exec(
+            select(func.count(IndicateurPerformance.id))
+        ).one() or 0
+        
+        # Indicateurs en alerte (ceux qui n'ont pas atteint la cible)
+        indicateurs_alerte = db.exec(
+            select(func.count(IndicateurPerformance.id))
+            .where(IndicateurPerformance.valeur_actuelle < IndicateurPerformance.valeur_cible)
+        ).one() or 0
+        
+        # Taux de réalisation moyen
+        if total_objectifs > 0:
+            taux_realisation = round((objectifs_atteints / total_objectifs) * 100, 1)
+        else:
+            taux_realisation = 0
+        
+        # Score global (moyenne pondérée selon priorité)
+        # Pour simplifier, on calcule juste le % d'objectifs atteints
+        score_global = round((objectifs_atteints / total_objectifs * 10), 1) if total_objectifs > 0 else 0
+        
+        # Nombre de rapports générés
+        total_rapports = db.exec(
+            select(func.count(RapportPerformance.id))
+        ).one() or 0
         
         context = get_template_context(request)
         context.update({
             "page_title": "Performance",
             "module_name": "Performance",
-            "module_description": "Système de gestion de la performance organisationnelle"
+            "module_description": "Système de gestion de la performance organisationnelle",
+            "kpis": {
+                "taux_realisation": taux_realisation,
+                "objectifs_atteints": objectifs_atteints,
+                "total_objectifs": total_objectifs,
+                "objectifs_en_cours": objectifs_en_cours,
+                "objectifs_en_retard": objectifs_en_retard,
+                "indicateurs_alerte": indicateurs_alerte,
+                "total_indicateurs": total_indicateurs,
+                "score_global": score_global,
+                "total_rapports": total_rapports
+            }
         })
         
         return templates.TemplateResponse("pages/performance_home.html", context)
@@ -667,7 +740,7 @@ def update_indicateur_api(
         logger.error(f"Erreur API update_indicateur: {e}")
         return {"success": False, "error": "Erreur lors de la modification de l'indicateur"}
 
-@router.delete("/api/indicateurs/{indicateur_id}", response_class=JSONResponse)
+@router.delete("/api/indicateurs/{indicateur_id}", response_class=JSONResponse, name="delete_indicateur_api")
 def delete_indicateur_api(
     indicateur_id: int,
     db: Session = Depends(get_session),

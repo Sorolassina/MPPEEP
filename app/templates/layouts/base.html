@@ -171,11 +171,57 @@
             
             try {
                 const data = await response.json();
-                const errorMessage = data.detail || data.message || defaultMessage;
-                showError(errorMessage);
+                
+                // Gestion spéciale des erreurs de validation (422)
+                if (response.status === 422 && data.errors) {
+                    let errorMessage = data.detail || 'Erreur de validation des données';
+                    
+                    // Si on a des erreurs détaillées, les afficher
+                    if (data.errors && data.errors.length > 0) {
+                        errorMessage = data.errors.join('\n• ');
+                    }
+                    
+                    showError(errorMessage);
+                    
+                    // Optionnel : mettre en évidence les champs en erreur
+                    if (data.field_errors) {
+                        highlightErrorFields(data.field_errors);
+                    }
+                } else {
+                    // Erreur normale
+                    const errorMessage = data.detail || data.message || defaultMessage;
+                    showError(errorMessage);
+                }
             } catch {
                 showError(defaultMessage);
             }
+        }
+        
+        // Fonction pour mettre en évidence les champs en erreur
+        function highlightErrorFields(fieldErrors) {
+            // Retirer les anciens styles d'erreur
+            document.querySelectorAll('.field-error').forEach(el => {
+                el.classList.remove('field-error');
+            });
+            
+            // Ajouter les styles d'erreur aux champs concernés
+            Object.keys(fieldErrors).forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field) {
+                    field.classList.add('field-error');
+                    field.style.borderColor = '#dc3545';
+                    field.style.backgroundColor = '#fff5f5';
+                }
+            });
+            
+            // Retirer les styles après 5 secondes
+            setTimeout(() => {
+                document.querySelectorAll('.field-error').forEach(el => {
+                    el.classList.remove('field-error');
+                    el.style.borderColor = '';
+                    el.style.backgroundColor = '';
+                });
+            }, 5000);
         }
 
         // Intercepter les erreurs non gérées

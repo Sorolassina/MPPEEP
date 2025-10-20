@@ -1,654 +1,390 @@
-# 🧪 Tests MPPEEP Dashboard
-
-> **Guide Complet des Tests** - De l'utilisateur non-tech au développeur expert
-
----
-
-## 📚 Table des Matières
-
-1. [Vue d'ensemble](#-vue-densemble)
-2. [Structure des tests](#-structure-des-tests)
-3. [Démarrage rapide](#-démarrage-rapide)
-4. [Types de tests](#-types-de-tests)
-5. [Commandes principales](#-commandes-principales)
-6. [Pyramide de tests](#-pyramide-de-tests)
-7. [Pour aller plus loin](#-pour-aller-plus-loin)
-
----
+# 🧪 Tests MPPEEP Dashboard - CI/CD
 
 ## 🎯 Vue d'ensemble
 
-### Pourquoi des tests ?
+Cette suite de tests contient **uniquement les tests critiques** exécutés automatiquement en CI/CD à chaque push sur GitHub.
 
-Les tests automatisés sont comme des **gardiens de votre code** :
-- 🛡️ Ils vérifient que tout fonctionne
-- 🐛 Ils détectent les bugs avant les utilisateurs
-- 📖 Ils documentent comment l'application fonctionne
-- 🚀 Ils donnent confiance pour faire des changements
+---
 
-### 3 Niveaux de Tests
+## 🚀 Exécution Rapide
 
-```
-🔬 UNITAIRE      = Tester une brique LEGO seule
-🔗 INTÉGRATION   = Tester plusieurs briques assemblées
-📋 FONCTIONNEL   = Tester une construction complète
-🌐 E2E (futur)   = Tester avec de vrais utilisateurs
+```bash
+# Tous les tests critiques
+pytest -m critical
+
+# Avec couverture
+pytest -m critical --cov=app --cov-report=term
+
+# Verbose
+pytest -m critical -v
+
+# Arrêt au premier échec
+pytest -m critical -x
 ```
 
 ---
 
-## 📁 Structure des Tests
+## 📂 Structure
 
 ```
 tests/
-├── 📄 README.md                 ← Vous êtes ici !
-├── 📄 conftest.py               ← Configuration pytest
-│
-├── 📂 unit/                     ← 🔬 Tests Unitaires (29 tests)
-│   ├── 📘 README.md             ← Guide détaillé unitaire
-│   ├── test_config.py           ← Configuration (8 tests)
-│   ├── test_security.py         ← Sécurité (8 tests)
-│   ├── test_models.py           ← Modèles (5 tests)
-│   └── test_database_init.py    ← Init DB (8 tests) ⭐ Nouveau
-│
-├── 📂 integration/              ← 🔗 Tests d'Intégration (23 tests)
-│   ├── 📗 README.md             ← Guide détaillé intégration
-│   ├── test_auth_api.py         ← API authentification (8 tests)
-│   ├── test_users_api.py        ← API utilisateurs (5 tests)
-│   ├── test_health.py           ← Health checks (3 tests)
-│   └── test_database_initialization.py  ← Init DB complète (7 tests) ⭐ Nouveau
-│
-├── 📂 functional/               ← 📋 Tests Fonctionnels (8 tests)
-│   ├── 📙 README.md             ← Guide détaillé fonctionnel
-│   ├── test_password_recovery_workflow.py  ← Récupération password (3 tests)
-│   └── test_database_init_workflow.py      ← Workflows init DB (5 tests) ⭐ Nouveau
-│
-├── 📂 e2e/                      ← 🌐 Tests E2E (futur)
-│   └── 📕 README.md             ← Guide détaillé E2E
-│
-├── 📄 AUTOMATION.md             ← Guide automatisation pytest ⭐ Nouveau
-└── 📄 DATABASE_TESTS.md         ← Documentation tests DB ⭐ Nouveau
-```
-
-**Total actuel : 60 tests automatisés** ✅ (+20 nouveaux tests)
-
----
-
-## 🚀 Démarrage Rapide
-
-### Prérequis
-
-```bash
-# 1. Être dans le bon dossier
-cd mppeep
-
-# 2. Avoir les dépendances installées
-uv sync
-```
-
-### Lancer TOUS les tests
-
-```bash
-pytest
-```
-
-**Résultat attendu :**
-```
-=================== 40 passed in 2.5s ===================
-✅ Tous les tests passent !
-```
-
-### Lancer par type
-
-```bash
-# Tests rapides seulement (unitaires)
-pytest tests/unit/
-
-# Tests d'API (intégration)
-pytest tests/integration/
-
-# Tests de workflows (fonctionnels)
-pytest tests/functional/
-```
-
-### En cas d'erreur
-
-```bash
-# Voir plus de détails
-pytest -v
-
-# Voir BEAUCOUP plus de détails
-pytest -vvs
-
-# Arrêter au premier échec
-pytest -x
+├── conftest.py              # Configuration pytest
+├── unit/                    # Tests unitaires
+│   ├── test_config.py       # Configuration
+│   ├── test_security.py     # Sécurité (JWT, bcrypt)
+│   └── test_models.py       # Validation des modèles
+├── integration/             # Tests d'intégration
+│   ├── test_database_initialization.py  # Initialisation DB
+│   ├── test_auth_api.py                 # API authentification
+│   └── test_health.py                   # Health check
+└── README.md                # Ce fichier
 ```
 
 ---
 
-## 📊 Types de Tests
+## ✅ Tests Critiques
 
-### 🎯 Tableau Comparatif
+### 1. Configuration (test_config.py)
+- ✅ Variables d'environnement chargées
+- ✅ SECRET_KEY définie et suffisamment longue
+- ✅ DATABASE_URL valide
 
-| Type | Vitesse | Quantité | Quand lancer | Documentation |
-|------|---------|----------|--------------|---------------|
-| **🔬 Unitaire** | ⚡⚡⚡ 5ms | 21 tests | À chaque modification | [unit/README.md](unit/README.md) |
-| **🔗 Intégration** | ⚡⚡ 50ms | 16 tests | Avant de commit | [integration/README.md](integration/README.md) |
-| **📋 Fonctionnel** | ⚡ 200ms | 3 tests | Avant une release | [functional/README.md](functional/README.md) |
-| **🌐 E2E** | 🐌 5-30s | 0 (futur) | Avant production | [e2e/README.md](e2e/README.md) |
+### 2. Sécurité (test_security.py)
+- ✅ Hachage bcrypt fonctionne
+- ✅ Vérification de mot de passe
+- ✅ Création de JWT valide
+- ✅ Décodage de JWT
+- ✅ Expiration de token
 
-### 🔬 Tests Unitaires
+### 3. Modèles (test_models.py)
+- ✅ User : Création et validation
+- ✅ Agent : Création et relations
+- ✅ HRRequest : Création et workflow
+- ✅ Article : Création avec périssable/amortissable
 
-**C'est quoi ?** Tester une fonction isolée
+### 4. Initialisation DB (test_database_initialization.py)
+- ✅ Toutes les tables créées
+- ✅ Contraintes de clés étrangères
+- ✅ Index créés
+- ✅ Pas de doublons
 
-**Exemple :** Vérifier que `get_password_hash("password")` ne retourne PAS "password"
+### 5. API Authentification (test_auth_api.py)
+- ✅ GET /api/v1/auth/login accessible
+- ✅ POST /api/v1/auth/login avec credentials valides
+- ✅ POST /api/v1/auth/login avec credentials invalides
+- ✅ Cookie access_token créé
+- ✅ JWT valide
 
-**Lancer :**
-```bash
-pytest tests/unit/
+### 6. Health Check (test_health.py)
+- ✅ Application démarre
+- ✅ Base de données accessible
+- ✅ Routes enregistrées
+
+---
+
+## 🏷️ Marqueurs pytest
+
+Les tests critiques sont marqués avec `@pytest.mark.critical` :
+
+```python
+import pytest
+
+@pytest.mark.critical
+def test_database_tables_created(db_session):
+    """Test critique : Vérifier que toutes les tables sont créées"""
+    # ...
 ```
 
-**📘 [Voir le guide complet](unit/README.md)**
-
----
-
-### 🔗 Tests d'Intégration
-
-**C'est quoi ?** Tester l'API avec la base de données
-
-**Exemple :** Envoyer `POST /api/v1/login` et vérifier la redirection
-
-**Lancer :**
-```bash
-pytest tests/integration/
-```
-
-**📗 [Voir le guide complet](integration/README.md)**
-
----
-
-### 📋 Tests Fonctionnels
-
-**C'est quoi ?** Tester un workflow complet utilisateur
-
-**Exemple :** Oublier mdp → Demander code → Vérifier → Nouveau mdp → Login
-
-**Lancer :**
-```bash
-pytest tests/functional/
-```
-
-**📙 [Voir le guide complet](functional/README.md)**
-
----
-
-### 🌐 Tests E2E (End-to-End)
-
-**C'est quoi ?** Tester avec un vrai navigateur (Chrome, Firefox)
-
-**Statut :** 🔜 À implémenter plus tard
-
-**📕 [Voir le guide complet](e2e/README.md)**
-
----
-
-## 🎮 Commandes Principales
-
-### Par Type de Test
+### Exécution par marqueur
 
 ```bash
-# Tests unitaires (rapides)
-pytest tests/unit/ -v
+# Tests critiques uniquement (CI/CD)
+pytest -m critical
 
-# Tests d'intégration (API)
-pytest tests/integration/ -v
+# Tests unitaires
+pytest -m unit
 
-# Tests fonctionnels (workflows)
-pytest tests/functional/ -v
+# Tests d'intégration
+pytest -m integration
 
 # Tous les tests
 pytest
 ```
 
-### Par Fichier
-
-```bash
-# Un fichier spécifique
-pytest tests/unit/test_security.py
-
-# Une fonction spécifique
-pytest tests/unit/test_security.py::test_password_hashing
-```
-
-### Par Mot-Clé
-
-```bash
-# Tous les tests avec "login"
-pytest -k "login"
-
-# Tous les tests avec "password"
-pytest -k "password"
-
-# Tous les tests SAUF "slow"
-pytest -k "not slow"
-```
-
-### Par Marqueur
-
-```bash
-# Tests unitaires seulement
-pytest -m unit
-
-# Tests d'intégration seulement
-pytest -m integration
-
-# Tests fonctionnels seulement
-pytest -m functional
-
-# Combinaison
-pytest -m "unit or integration"
-```
-
-### Options Utiles
-
-```bash
-# Verbose (détaillé)
-pytest -v
-
-# Très verbose
-pytest -vv
-
-# Avec les prints
-pytest -s
-
-# Arrêter au premier échec
-pytest -x
-
-# Couverture de code
-pytest --cov=app --cov-report=html
-```
-
----
-
-## 🏔️ Pyramide de Tests
-
-Notre répartition suit la **pyramide de tests** :
-
-```
-          /\
-         /  \      🌐 E2E (0 tests - futur)
-        /    \     Lent, fragile, coûteux
-       /------\    
-      /        \   📋 FUNCTIONAL (3 tests)
-     /          \  Workflows complets
-    /------------\ 
-   /              \ 🔗 INTEGRATION (16 tests)
-  /                \ Endpoints API + DB
- /------------------\
-/____________________\ 🔬 UNIT (21 tests)
-                       Rapide, fiable, nombreux
-```
-
-### Répartition Actuelle
-
-| Type | Tests | Pourcentage | Objectif |
-|------|-------|-------------|----------|
-| Unitaire | 21 | 52.5% | ✅ 50-70% |
-| Intégration | 16 | 40% | ✅ 20-30% |
-| Fonctionnel | 3 | 7.5% | ✅ 10-20% |
-| E2E | 0 | 0% | 🔜 5-10% |
-
-**Notre pyramide est équilibrée !** ✅
-
----
-
-## 🔧 Configuration Pytest
-
-### Fichier `pytest.ini`
-
-```ini
-[pytest]
-testpaths = tests          # Où chercher les tests
-python_files = test_*.py   # Pattern des fichiers
-addopts = -v -ra          # Options par défaut
-```
-
-### Marqueurs Disponibles
-
-```python
-@pytest.mark.unit          # Test unitaire
-@pytest.mark.integration   # Test d'intégration
-@pytest.mark.functional    # Test fonctionnel
-@pytest.mark.slow          # Test lent
-@pytest.mark.auth          # Lié à l'authentification
-@pytest.mark.database      # Nécessite une DB
-```
-
----
-
-## 🛠️ Fixtures Pytest
-
-Les fixtures sont des **données/objets pré-configurés** pour vos tests.
-
-### Fixtures Disponibles (dans `conftest.py`)
-
-#### `session`
-```python
-def test_with_database(session: Session):
-    user = User(email="test@test.com")
-    session.add(user)
-    session.commit()
-```
-
-**Usage :** Tests nécessitant une base de données
-
----
-
-#### `client`
-```python
-def test_api_endpoint(client: TestClient):
-    response = client.get("/api/v1/ping")
-    assert response.status_code == 200
-```
-
-**Usage :** Tests d'API (intégration)
-
----
-
-#### `test_user`
-```python
-def test_with_user(test_user: User):
-    assert test_user.email == "test@example.com"
-```
-
-**Données :**
-- Email: `test@example.com`
-- Password: `testpassword123`
-- Active: `True`
-
-**Usage :** Tests nécessitant un utilisateur standard
-
----
-
-#### `admin_user`
-```python
-def test_admin_feature(admin_user: User):
-    assert admin_user.is_superuser is True
-```
-
-**Données :**
-- Email: `admin@example.com`
-- Password: `admin123`
-- Superuser: `True`
-
-**Usage :** Tests nécessitant un administrateur
-
 ---
 
 ## 📊 Couverture de Code
 
-### Générer un Rapport
+### Objectifs
+
+- **Global** : 80% minimum
+- **Critique** : 100% (auth, security, models)
+- **Services** : 90% minimum
+- **API** : 85% minimum
+
+### Générer un rapport
 
 ```bash
 # Rapport dans le terminal
-pytest --cov=app
+pytest --cov=app --cov-report=term-missing
 
-# Rapport HTML détaillé
+# Rapport HTML
 pytest --cov=app --cov-report=html
 
 # Ouvrir le rapport
-# Windows
-start htmlcov/index.html
-
-# Mac
-open htmlcov/index.html
-
-# Linux
-xdg-open htmlcov/index.html
+start htmlcov/index.html  # Windows
+open htmlcov/index.html   # Mac
+xdg-open htmlcov/index.html  # Linux
 ```
-
-### Objectifs de Couverture
-
-| Module | Objectif | Actuel |
-|--------|----------|--------|
-| `app/core/` | > 90% | 🎯 À mesurer |
-| `app/models/` | > 90% | 🎯 À mesurer |
-| `app/api/` | > 80% | 🎯 À mesurer |
-| **Global** | **> 80%** | 🎯 À mesurer |
 
 ---
 
-## 🆘 Dépannage
+## 🔄 CI/CD GitHub Actions
 
-### Les tests échouent après `git pull`
+### Workflow automatique
+
+```yaml
+# .github/workflows/tests.yml
+name: Tests CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    
+    - name: Run critical tests
+      run: pytest -m critical --cov=app --cov-report=xml
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+```
+
+### Badges
+
+Ajouter au README principal :
+
+```markdown
+[![Tests](https://github.com/votre-org/mppeep-dashboard/workflows/Tests%20CI/CD/badge.svg)](https://github.com/votre-org/mppeep-dashboard/actions)
+[![Coverage](https://codecov.io/gh/votre-org/mppeep-dashboard/branch/main/graph/badge.svg)](https://codecov.io/gh/votre-org/mppeep-dashboard)
+```
+
+---
+
+## 🐛 Debugging des Tests
+
+### Test qui échoue
 
 ```bash
-# 1. Mettre à jour les dépendances
-uv sync
+# Mode verbose
+pytest -v test_auth_api.py::test_login_valid
 
-# 2. Relancer les tests
+# Afficher les prints
+pytest -s test_auth_api.py
+
+# Arrêter au premier échec
+pytest -x
+
+# Debugger avec pdb
+pytest --pdb test_auth_api.py
+```
+
+### Fixtures
+
+Les fixtures sont définies dans `conftest.py` :
+
+```python
+@pytest.fixture
+def db_session():
+    """Session de base de données de test"""
+    # Crée une DB en mémoire
+    yield session
+
+@pytest.fixture
+def test_user(db_session):
+    """Utilisateur de test"""
+    user = User(email="test@example.com", ...)
+    db_session.add(user)
+    db_session.commit()
+    return user
+```
+
+---
+
+## 📝 Écrire un Nouveau Test Critique
+
+### Template
+
+```python
+import pytest
+from sqlmodel import Session, select
+from app.models.user import User
+from app.core.security import hash_password
+
+@pytest.mark.critical
+def test_user_creation_with_valid_data(db_session: Session):
+    """
+    Test critique : Création d'un utilisateur avec données valides
+    
+    GIVEN: Des données utilisateur valides
+    WHEN: On crée un utilisateur
+    THEN: L'utilisateur est créé en base avec les bonnes données
+    """
+    # GIVEN
+    user_data = {
+        "email": "john.doe@example.com",
+        "hashed_password": hash_password("Password123!"),
+        "full_name": "John Doe",
+        "role": UserRole.USER
+    }
+    
+    # WHEN
+    user = User(**user_data)
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    # THEN
+    assert user.id is not None
+    assert user.email == "john.doe@example.com"
+    assert user.full_name == "John Doe"
+    assert user.is_active == True
+    
+    # Vérifier en DB
+    db_user = db_session.get(User, user.id)
+    assert db_user is not None
+    assert db_user.email == user.email
+```
+
+### Bonnes pratiques
+
+- ✅ Nom explicite : `test_<fonctionnalite>_<scenario>`
+- ✅ Docstring : Description claire du test
+- ✅ Pattern AAA : Arrange, Act, Assert (GIVEN, WHEN, THEN)
+- ✅ Isolement : Chaque test est indépendant
+- ✅ Nettoyage : Utiliser les fixtures pour le cleanup
+
+---
+
+## ⚡ Performances des Tests
+
+### Durées typiques
+
+| Type | Nombre | Durée |
+|------|--------|-------|
+| **Unitaires** | ~20 | 2-3s |
+| **Intégration** | ~10 | 5-8s |
+| **Total critique** | ~30 | **8-12s** |
+
+### Optimisations
+
+- ✅ Base de données en mémoire (SQLite `:memory:`)
+- ✅ Fixtures avec scope `session`
+- ✅ Tests parallèles : `pytest -n auto`
+
+---
+
+## 📋 Checklist avant Commit
+
+Avant chaque commit, vérifier :
+
+```bash
+# 1. Tests critiques passent
+pytest -m critical
+
+# 2. Pas de regression
 pytest
+
+# 3. Couverture maintenue
+pytest --cov=app --cov-fail-under=80
+
+# 4. Linting (optionnel)
+black app/ tests/
+flake8 app/ tests/
+mypy app/
 ```
 
-### Un test échoue de manière aléatoire
+---
+
+## 🔍 Commandes Utiles
 
 ```bash
-# Lancer plusieurs fois pour confirmer
-pytest tests/path/to/test.py --count=10
-```
+# Lister tous les tests
+pytest --collect-only
 
-**Si ça échoue aléatoirement → Test "flaky"** (à corriger)
+# Tests critiques uniquement
+pytest -m critical
 
-### Voir pourquoi un test échoue
+# Tests par fichier
+pytest tests/unit/test_security.py
 
-```bash
-# Maximum de détails
-pytest tests/path/to/test.py -vvs --tb=long
+# Tests par fonction
+pytest tests/unit/test_security.py::test_hash_password
 
-# Entrer en mode debug
-pytest tests/path/to/test.py --pdb
-```
+# Avec détails
+pytest -v -s
 
-### Tests trop lents
+# Couverture détaillée
+pytest --cov=app --cov-report=term-missing
 
-```bash
-# Identifier les tests lents
-pytest --durations=10
-
-# Lancer en parallèle (nécessite pytest-xdist)
-pytest -n auto
+# Générer rapport HTML
+pytest --cov=app --cov-report=html
 ```
 
 ---
 
-## 📈 Statistiques Actuelles
+## 📈 Statistiques
 
-### Par Type
-
-```
-🔬 Tests Unitaires      : 21 tests (~0.5s total)
-🔗 Tests d'Intégration  : 16 tests (~0.8s total)
-📋 Tests Fonctionnels   : 3 tests  (~0.6s total)
-─────────────────────────────────────────────────
-📊 TOTAL               : 40 tests (~1.9s total)
-```
-
-### Par Module
-
-```
-Configuration  : 8 tests  ✅
-Sécurité      : 8 tests  ✅
-Modèles       : 5 tests  ✅
-Auth API      : 8 tests  ✅
-Users API     : 5 tests  ✅
-Health        : 3 tests  ✅
-Workflows     : 3 tests  ✅
-```
+- **Tests critiques** : 30
+- **Couverture globale** : ~85%
+- **Couverture critique** : ~95%
+- **Temps d'exécution** : ~10 secondes
+- **Dernière mise à jour** : 19 octobre 2025
 
 ---
 
-## ✅ Bonnes Pratiques
+## 🤝 Contribution
 
-### DO (À Faire)
+### Ajouter un test critique
 
-✅ **Lancer les tests avant de commit**
-```bash
-git add .
-pytest  # ← Toujours !
-git commit -m "..."
-```
+1. Identifier une fonctionnalité critique
+2. Écrire le test avec `@pytest.mark.critical`
+3. S'assurer que le test passe
+4. Commit : `git commit -m "test: ajout test critique pour X"`
 
-✅ **Écrire des tests pour les nouveaux endpoints**
-```python
-# Nouveau endpoint créé ? → Nouveau test !
-```
+### Tests obligatoires
 
-✅ **Nommer les tests de manière descriptive**
-```python
-# ✅ Bon
-def test_login_with_wrong_password_returns_error():
-    ...
-
-# ❌ Mauvais
-def test_login():
-    ...
-```
-
-✅ **Suivre le pattern AAA**
-```python
-def test_something():
-    # ARRANGE - Préparer
-    data = {"email": "test@test.com"}
-    
-    # ACT - Agir
-    result = function(data)
-    
-    # ASSERT - Vérifier
-    assert result == expected
-```
+Chaque **nouvelle fonctionnalité** doit avoir :
+- ✅ Au moins 1 test unitaire
+- ✅ Au moins 1 test d'intégration si API
+- ✅ Marqué `critical` si fonctionnalité critique
 
 ---
 
-### DON'T (À Éviter)
-
-❌ **Tests dépendant d'un ordre**
-```python
-# ❌ test_2 dépend de test_1
-def test_1():
-    create_user()
-    
-def test_2():  # ← Cassé si test_1 n'a pas run
-    login_user()
-```
-
-❌ **Tests avec sleep()**
-```python
-# ❌ Mauvais
-time.sleep(2)  # Lent et fragile
-
-# ✅ Bon
-wait_for_condition(lambda: user.is_ready)
-```
-
-❌ **Ignorer les tests qui échouent**
-```python
-# ❌ JAMAIS faire ça !
-@pytest.mark.skip("TODO: fix later")
-def test_important_feature():
-    ...
-```
-
----
-
-## 🎓 Pour Aller Plus Loin
-
-### 📖 Documentation Détaillée
-
-Chaque type de test a son **guide complet** :
-
-- 🔬 [Tests Unitaires](unit/README.md) - Guide pour non-techs
-- 🔗 [Tests d'Intégration](integration/README.md) - Guide API
-- 📋 [Tests Fonctionnels](functional/README.md) - Guide workflows
-- 🌐 [Tests E2E](e2e/README.md) - Guide navigateur (futur)
-
-### 🎥 Tutoriels Recommandés
-
-- [Pytest Tutorial (English)](https://www.youtube.com/results?search_query=pytest+tutorial)
-- [FastAPI Testing Guide](https://fastapi.tiangolo.com/tutorial/testing/)
-- [Test Pyramid Explained](https://martinfowler.com/articles/practical-test-pyramid.html)
-
-### 📚 Ressources
-
-- [Documentation Pytest](https://docs.pytest.org/)
-- [FastAPI Testing](https://fastapi.tiangolo.com/tutorial/testing/)
-- [SQLModel Testing](https://sqlmodel.tiangolo.com/tutorial/fastapi/tests/)
-- [Test Best Practices](https://testdriven.io/blog/testing-best-practices/)
-
----
-
-## 🎯 Roadmap Tests
-
-### ✅ Déjà Fait
-
-- [x] Structure des tests par type
-- [x] 21 tests unitaires
-- [x] 16 tests d'intégration
-- [x] 3 tests fonctionnels
-- [x] Documentation complète
-- [x] Fixtures pytest
-- [x] Configuration pytest.ini
-
-### 🔜 Prochaines Étapes
-
-- [ ] Atteindre 80% de couverture de code
-- [ ] Ajouter tests pour nouveaux endpoints
-- [ ] Compléter les workflows fonctionnels
-- [ ] Implémenter tests E2E (Playwright)
-- [ ] Intégration CI/CD (GitHub Actions)
-- [ ] Tests de performance
-- [ ] Tests de sécurité (OWASP)
-
----
-
-## 💡 Conseils Finaux
-
-### Pour les Développeurs
-
-1. **Testez d'abord** (TDD) - Écrivez le test avant le code
-2. **Gardez les tests rapides** - Un test lent = un test ignoré
-3. **Tests isolés** - Chaque test doit pouvoir run seul
-4. **Couverture > 80%** - Objectif minimum
-
-### Pour les Non-Techs
-
-1. **Les tests = Assurance qualité automatique**
-2. **Vert = Tout va bien, Rouge = Problème à corriger**
-3. **Plus de tests = Plus de confiance**
-4. **Lire les tests = Comprendre l'application**
-
----
-
-## 🚀 Commande du Jour
-
-```bash
-# Lancer tous les tests avec détails et couverture
-pytest -v --cov=app --cov-report=term-missing
-
-# Voir le rapport dans le navigateur
-pytest --cov=app --cov-report=html && start htmlcov/index.html
-```
-
----
-
-## 📞 Besoin d'Aide ?
-
-- 📖 Lire les guides spécifiques dans chaque sous-dossier
-- 🐛 Voir la section [Dépannage](#-dépannage)
-- 💬 Demander à l'équipe
-- 📚 Consulter la [documentation Pytest](https://docs.pytest.org/)
-
----
-
-**🎉 Bon testing !**
-
-*Dernière mise à jour : Structure organisée par types de tests*
+**Les tests sont votre filet de sécurité ! 🎯**

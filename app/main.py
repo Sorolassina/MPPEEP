@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
 from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.middleware import setup_middlewares
@@ -22,10 +23,54 @@ app = FastAPI(
     redoc_url=f"{root_path}/redoc" if root_path else "/redoc",
 )
 
-# 3) Middlewares
+# 3) Gestionnaire d'erreur personnalisé pour les erreurs de validation
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Gestionnaire personnalisé pour les erreurs de validation FastAPI (422)
+    Transforme les erreurs techniques en messages clairs pour l'utilisateur
+    """
+    logger.warning(f"⚠️ Erreur validation sur {request.url.path}: {exc.errors()}")
+    
+    # Construire un message d'erreur détaillé
+    error_details = []
+    for error in exc.errors():
+        field = ".".join(str(loc) for loc in error["loc"][1:])  # Ignorer "body" ou "query"
+        error_type = error["type"]
+        error_msg = error["msg"]
+        
+        # Messages personnalisés selon le type d'erreur
+        if error_type == "missing":
+            error_details.append(f"Le champ '{field}' est obligatoire")
+        elif error_type == "type_error.integer":
+            error_details.append(f"Le champ '{field}' doit être un nombre entier")
+        elif error_type == "type_error.str":
+            error_details.append(f"Le champ '{field}' doit être du texte")
+        elif error_type == "value_error":
+            error_details.append(f"Le champ '{field}' a une valeur invalide: {error_msg}")
+        else:
+            error_details.append(f"Erreur dans le champ '{field}': {error_msg}")
+    
+    # Message principal
+    main_message = "Erreur de validation des données"
+    if len(error_details) == 1:
+        main_message = error_details[0]
+    else:
+        main_message = f"Plusieurs erreurs détectées:\n• " + "\n• ".join(error_details)
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": main_message,
+            "errors": error_details,
+            "field_errors": {error["loc"][-1]: error["msg"] for error in exc.errors()}
+        }
+    )
+
+# 4) Middlewares
 setup_middlewares(app, settings)
 
-# 4) Événements de cycle de vie
+# 5) Événements de cycle de vie
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"🚀 Démarrage de l'application {settings.APP_NAME}")
@@ -38,18 +83,7 @@ async def startup_event():
         initialize_database()
         logger.info("✅ Initialisation de la base terminée avec succès")
         
-        # Initialisation du système RH (désactivé - utiliser workflows personnalisés)
-        # logger.info("👥 Initialisation du système RH...")
-        # from app.core.logique_metier.rh_workflow import ensure_workflow_steps
-        # from app.db.session import get_session
-        # session = next(get_session())
-        # try:
-        #     ensure_workflow_steps(session)
-        #     logger.info("✅ Système RH initialisé avec succès")
-        # except Exception as rh_error:
-        #     logger.warning(f"⚠️  Erreur initialisation RH: {rh_error}")
-        # finally:
-        #     session.close()
+        
         
         logger.info("✅ Système RH : Workflows personnalisés activés")
          

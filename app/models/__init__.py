@@ -6,7 +6,7 @@ from app.models.session import UserSession
 from app.models.system_settings import SystemSettings
 from app.models.activity import Activity
 from app.models.file import File
-from app.models.rh import Agent, Grade, ServiceDept, HRRequest, WorkflowStep, WorkflowHistory
+from app.models.rh import Agent, Grade, HRRequest, WorkflowStep, WorkflowHistory
 from app.models.personnel import (
     Programme, Direction, Service, GradeComplet,
     AgentComplet, DocumentAgent, HistoriqueCarriere, EvaluationAgent
@@ -32,7 +32,6 @@ __all__ = [
     "File", 
     "Agent", 
     "Grade", 
-    "ServiceDept", 
     "HRRequest", 
     "WorkflowStep", 
     "WorkflowHistory",
