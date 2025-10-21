@@ -1,10 +1,15 @@
 """
 Configuration pytest et fixtures partagées
 """
+import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
+# Forcer le mode DEBUG pour les tests
+os.environ["DEBUG"] = "True"
+os.environ["ENV"] = "dev"
 
 from app.core.security import get_password_hash
 from app.db.session import get_session
@@ -49,15 +54,21 @@ def client_fixture(session: Session):
     """
     Client de test FastAPI avec une session DB de test
     """
+    from app.main import subapp  # Import subapp aussi
+    
     def get_session_override():
         return session
 
+    # Override sur app et subapp pour être sûr
     app.dependency_overrides[get_session] = get_session_override
+    subapp.dependency_overrides[get_session] = get_session_override
 
-    client = TestClient(app)
+    # Utiliser raise_server_exceptions=False pour capturer les erreurs 500
+    client = TestClient(app, raise_server_exceptions=False)
     yield client
 
     app.dependency_overrides.clear()
+    subapp.dependency_overrides.clear()
 
 
 @pytest.fixture(name="test_user")

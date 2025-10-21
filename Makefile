@@ -726,25 +726,7 @@ docker-save: ## Exporter l'image Docker dans un fichier .tar (pour transfert)
 	@Write-Host "==========================================" -ForegroundColor Cyan
 	@Write-Host ""
 	@if (!(Test-Path "deploiement_docker")) { New-Item -ItemType Directory -Path "deploiement_docker" | Out-Null }
-	@$$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-	@$$filename = "deploiement_docker/mppeep-dashboard_$$timestamp.tar"
-	@Write-Host "Export en cours vers : $$filename" -ForegroundColor White
-	@Write-Host "Cela peut prendre plusieurs minutes..." -ForegroundColor Gray
-	@Write-Host ""
-	docker save mppeep:latest -o $$filename
-	@Write-Host ""
-	@Write-Host "==========================================" -ForegroundColor Cyan
-	@Write-Host "EXPORT TERMINE AVEC SUCCES !" -ForegroundColor Green
-	@Write-Host "==========================================" -ForegroundColor Cyan
-	@Write-Host ""
-	@$$size = [math]::Round((Get-Item $$filename).Length / 1MB, 2)
-	@Write-Host "Fichier cree : $$filename" -ForegroundColor White
-	@Write-Host "Taille : $${size} MB" -ForegroundColor White
-	@Write-Host ""
-	@Write-Host "Pour transferer sur un autre ordinateur :" -ForegroundColor Yellow
-	@Write-Host "  1. Copiez le fichier .tar sur l'autre ordinateur" -ForegroundColor Gray
-	@Write-Host "  2. Sur l'autre ordinateur, lancez : make docker-load" -ForegroundColor Gray
-	@Write-Host ""
+	@$$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"; $$filename = "deploiement_docker/mppeep-dashboard_$$timestamp.tar"; Write-Host "Export en cours vers : $$filename" -ForegroundColor White; Write-Host "Cela peut prendre plusieurs minutes..." -ForegroundColor Gray; Write-Host ""; docker save mppeep:latest -o $$filename; Write-Host ""; Write-Host "==========================================" -ForegroundColor Cyan; Write-Host "EXPORT TERMINE AVEC SUCCES !" -ForegroundColor Green; Write-Host "==========================================" -ForegroundColor Cyan; Write-Host ""; $$size = [math]::Round((Get-Item $$filename).Length / 1MB, 2); Write-Host "Fichier cree : $$filename" -ForegroundColor White; Write-Host "Taille : $${size} MB" -ForegroundColor White; Write-Host ""; Write-Host "Pour transferer sur un autre ordinateur :" -ForegroundColor Yellow; Write-Host "  1. Copiez le fichier .tar sur l'autre ordinateur" -ForegroundColor Gray; Write-Host "  2. Sur l'autre ordinateur, lancez : make docker-load" -ForegroundColor Gray; Write-Host ""
 
 .PHONY: docker-load
 docker-load: ## Importer l'image Docker depuis un fichier .tar
@@ -801,77 +783,77 @@ docker-package: ## Package complet pour deploiement (image + config)
 	@Write-Host ""
 	@Write-Host "[4/4] Creation du README de deploiement..." -ForegroundColor White
 	@$$readme = @"
-# MPPEEP Dashboard - Package de Deploiement
-Date: $$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-
-## Contenu du package
-- mppeep-image.tar : Image Docker complete
-- docker-compose.prod.yml : Configuration Docker Compose
-- .env.template : Template des variables d'environnement
-- nginx.conf : Configuration Nginx
-
-## Installation sur un nouveau serveur
-
-### 1. Prerequisites
-- Docker et Docker Compose installes
-- Ports 80, 443, 5432, 6379, 9000 disponibles
-
-### 2. Charger l'image Docker
-``````powershell
-docker load -i mppeep-image.tar
-``````
-
-### 3. Configurer les variables d'environnement
-``````powershell
-# Copier le template
-Copy-Item .env.template .env
-
-# Editer .env et renseigner :
-# - POSTGRES_PASSWORD
-# - SECRET_KEY
-# - Autres variables selon vos besoins
-``````
-
-### 4. Creer les dossiers necessaires
-``````powershell
-New-Item -ItemType Directory -Path backups, ssl -Force
-``````
-
-### 5. Demarrer les services
-``````powershell
-docker-compose -f docker-compose.prod.yml up -d
-``````
-
-### 6. Verifier le deploiement
-``````powershell
-docker-compose -f docker-compose.prod.yml ps
-docker-compose -f docker-compose.prod.yml logs -f app
-``````
-
-## URLs d'acces
-- Application : http://localhost:80 (Nginx)
-- API Direct : http://localhost:9000
-- PostgreSQL : localhost:5432
-- Redis : localhost:6379
-
-## Commandes utiles
-``````powershell
-# Voir les logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Arreter les services
-docker-compose -f docker-compose.prod.yml down
-
-# Redemarrer les services
-docker-compose -f docker-compose.prod.yml restart
-
-# Voir le statut
-docker-compose -f docker-compose.prod.yml ps
-``````
-
-## Support
-Contact : support@mppeep.gov
-"@
+	# MPPEEP Dashboard - Package de Deploiement
+	Date: $$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+	
+	## Contenu du package
+	- mppeep-image.tar : Image Docker complete
+	- docker-compose.prod.yml : Configuration Docker Compose
+	- .env.template : Template des variables d'environnement
+	- nginx.conf : Configuration Nginx
+	
+	## Installation sur un nouveau serveur
+	
+	### 1. Prerequisites
+	- Docker et Docker Compose installes
+	- Ports 80, 443, 5432, 6379, 9000 disponibles
+	
+	### 2. Charger l'image Docker
+	``````powershell
+	docker load -i mppeep-image.tar
+	``````
+	
+	### 3. Configurer les variables d'environnement
+	``````powershell
+	# Copier le template
+	Copy-Item .env.template .env
+	
+	# Editer .env et renseigner :
+	# - POSTGRES_PASSWORD
+	# - SECRET_KEY
+	# - Autres variables selon vos besoins
+	``````
+	
+	### 4. Creer les dossiers necessaires
+	``````powershell
+	New-Item -ItemType Directory -Path backups, ssl -Force
+	``````
+	
+	### 5. Demarrer les services
+	``````powershell
+	docker-compose -f docker-compose.prod.yml up -d
+	``````
+	
+	### 6. Verifier le deploiement
+	``````powershell
+	docker-compose -f docker-compose.prod.yml ps
+	docker-compose -f docker-compose.prod.yml logs -f app
+	``````
+	
+	## URLs d'acces
+	- Application : http://localhost:80 (Nginx)
+	- API Direct : http://localhost:9000
+	- PostgreSQL : localhost:5432
+	- Redis : localhost:6379
+	
+	## Commandes utiles
+	``````powershell
+	# Voir les logs
+	docker-compose -f docker-compose.prod.yml logs -f
+	
+	# Arreter les services
+	docker-compose -f docker-compose.prod.yml down
+	
+	# Redemarrer les services
+	docker-compose -f docker-compose.prod.yml restart
+	
+	# Voir le statut
+	docker-compose -f docker-compose.prod.yml ps
+	``````
+	
+	## Support
+	Contact : support@mppeep.gov
+	"@
 	Set-Content -Path "$$packageDir/README.md" -Value $$readme -Encoding UTF8
 	@Write-Host ""
 	@Write-Host "==========================================" -ForegroundColor Cyan

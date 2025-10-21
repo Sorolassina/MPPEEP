@@ -33,6 +33,7 @@ env/
 
 # Database
 *.db
+*.tar
 *.sqlite
 *.sqlite3
 app.db

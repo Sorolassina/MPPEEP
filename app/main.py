@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +10,9 @@ from app.core.config import settings
 from app.core.logging_config import get_logger, setup_logging  # ⬅️ on importe setup_logging
 from app.core.middleware import setup_middlewares
 from app.templates import get_template_context, templates
+
+from app.api.v1.endpoints.auth import get_current_user
+from app.models.user import User
 
 # 1) Init logging une seule fois, tout en haut
 setup_logging()
@@ -152,7 +155,7 @@ def read_root(request: Request):
 
 
 @subapp.get("/accueil", response_class=HTMLResponse, name="accueil")
-def accueil(request: Request):
+def accueil(request: Request, current_user: User = Depends(get_current_user)):
     from sqlmodel import func, select
 
     from app.db.session import get_session

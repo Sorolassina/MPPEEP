@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # PostgreSQL (production)
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_HOST: str = "localhost"
+    POSTGRES_HOST: str = "localhost"  # Utiliser "db" en production Docker
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "postgres"
     
