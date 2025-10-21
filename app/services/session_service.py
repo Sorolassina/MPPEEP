@@ -30,7 +30,7 @@ class SessionService:
             db_session: Session de base de données
             user: Utilisateur pour lequel créer la session
             request: Requête FastAPI (pour récupérer IP et User-Agent)
-            remember_me: Si True, session de 30 jours, sinon 7 jours
+            remember_me: Si True, session de 7 jours, sinon 24 heures
 
         Returns:
             UserSession créée
@@ -46,7 +46,12 @@ class SessionService:
         device_info = SessionService._extract_device_info(user_agent)
 
         # Durée de la session
-        days = 30 if remember_me else 7
+        # Sans "Remember me" : 24 heures
+        # Avec "Remember me" : 7 jours
+        if remember_me:
+            expires_at = datetime.now() + timedelta(days=7)
+        else:
+            expires_at = datetime.now() + timedelta(hours=24)
 
         # Créer la session
         user_session = UserSession(
@@ -55,7 +60,7 @@ class SessionService:
             ip_address=client_ip,
             user_agent=user_agent,
             device_info=device_info,
-            expires_at=datetime.now() + timedelta(days=days),
+            expires_at=expires_at,
             is_active=True,
         )
 
@@ -267,7 +272,7 @@ class SessionService:
     def set_session_cookie(
         response: Response,
         session_token: str,
-        max_age: int = 7 * 24 * 60 * 60,  # 7 jours par défaut
+        max_age: int = 24 * 60 * 60,  # 24 heures par défaut
     ):
         """
         Définit le cookie de session dans la réponse
@@ -277,12 +282,15 @@ class SessionService:
             session_token: Token de session
             max_age: Durée de vie du cookie en secondes
         """
+        from app.core.config import settings
+        
         response.set_cookie(
             key=SESSION_COOKIE_NAME,
             value=session_token,
+            path="/",
             max_age=max_age,
             httponly=True,  # Protection XSS
-            secure=False,  # TODO: Mettre à True en production (HTTPS)
+            secure=not settings.DEBUG,  # True en production (HTTPS uniquement)
             samesite="lax",  # Protection CSRF
         )
 
@@ -294,7 +302,18 @@ class SessionService:
         Args:
             response: Réponse FastAPI
         """
-        response.delete_cookie(key=SESSION_COOKIE_NAME)
+        from app.core.config import settings
+        
+        # Pour supprimer un cookie, il faut utiliser les mêmes paramètres
+        # que lors de sa création (path, domain, secure, samesite)
+        response.delete_cookie(
+            key=SESSION_COOKIE_NAME,
+            path="/",
+            domain=None,
+            secure=not settings.DEBUG,
+            httponly=True,
+            samesite="lax"
+        )
 
 
 __all__ = ["SESSION_COOKIE_NAME", "SessionService"]

@@ -100,11 +100,14 @@ window.cleanFormData = function(formData) {
     for (const [key, value] of formData.entries()) {
         // Si c'est un fichier, toujours l'ajouter
         if (value instanceof File) {
-            cleaned.append(key, value);
+            // N'ajouter que si le fichier a du contenu
+            if (value.size > 0) {
+                cleaned.append(key, value);
+            }
         }
-        // Si la valeur est vide, ne pas l'ajouter (sera null ou ignoré côté serveur)
+        // Si la valeur est vide, l'envoyer comme chaîne vide (le serveur convertira en null si besoin)
         else if (value === '' || value === 'null' || value === 'undefined') {
-            // Ne rien ajouter = champ absent = null pour les optionnels
+            cleaned.append(key, '');  // Envoyer explicitement la chaîne vide
         }
         // Si la valeur est remplie, l'ajouter après nettoyage des espaces
         else {

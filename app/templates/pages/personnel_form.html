@@ -226,7 +226,7 @@
           <div class="form-group">
             <label for="numero_passeport">Numéro Passeport</label>
             <input type="text" id="numero_passeport" name="numero_passeport" 
-                   placeholder="Ex: A1234567" value="{{ agent.numero_passeport if mode == 'edit' else '' }}">
+                   placeholder="Ex: A1234567" value="{{ agent.numero_passeport or '' if mode == 'edit' else '' }}">
           </div>
         </div>
       </div>
@@ -252,7 +252,7 @@
           <div class="form-group">
             <label for="nom_jeune_fille">Nom de jeune fille</label>
             <input type="text" id="nom_jeune_fille" name="nom_jeune_fille" 
-                   placeholder="Si applicable" value="{{ agent.nom_jeune_fille if mode == 'edit' else '' }}">
+                   placeholder="Si applicable" value="{{ agent.nom_jeune_fille or '' if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
@@ -350,13 +350,13 @@
           <div class="form-group">
             <label for="telephone_1">Téléphone 1</label>
             <input type="tel" id="telephone_1" name="telephone_1" 
-                   placeholder="77 123 45 67" value="{{ agent.telephone_1 if mode == 'edit' else '' }}">
+                   placeholder="77 123 45 67" value="{{ agent.telephone_1 or '' if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="telephone_2">Téléphone 2</label>
             <input type="tel" id="telephone_2" name="telephone_2" 
-                   placeholder="33 123 45 67" value="{{ agent.telephone_2 if mode == 'edit' else '' }}">
+                   placeholder="33 123 45 67" value="{{ agent.telephone_2 or '' if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group" style="grid-column: 1 / -1;">
@@ -374,7 +374,7 @@
           <div class="form-group">
             <label for="code_postal">Code postal</label>
             <input type="text" id="code_postal" name="code_postal" 
-                   placeholder="Ex: 12500" value="{{ agent.code_postal if mode == 'edit' else '' }}">
+                   placeholder="Ex: 12500" value="{{ agent.code_postal or '' if mode == 'edit' else '' }}">
           </div>
         </div>
       </div>
@@ -542,7 +542,7 @@
         <div class="form-group">
           <label for="notes">Notes</label>
           <textarea id="notes" name="notes" 
-                    placeholder="Informations complémentaires...">{{ agent.notes if mode == 'edit' else '' }}</textarea>
+                    placeholder="Informations complémentaires...">{{ agent.notes or '' if mode == 'edit' else '' }}</textarea>
         </div>
       </div>
 
@@ -756,6 +756,19 @@ document.querySelector('form').addEventListener('submit', async function(e) {
   // Utiliser FormData directement pour gérer les fichiers
   const formData = new FormData(this);
   
+  // 🔍 LOG : Afficher le contenu du FormData avant envoi
+  console.log('📤 ENVOI AU SERVEUR - Mode:', mode, '| Agent ID:', agentId);
+  console.log('═══════════════════════════════════════════════════════');
+  console.log('📋 Contenu du FormData :');
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      console.log(`  ${key}: [FILE] ${value.name} (${value.size} bytes)`);
+    } else {
+      console.log(`  ${key}: "${value}" (type: ${typeof value})`);
+    }
+  }
+  console.log('═══════════════════════════════════════════════════════');
+  
   try {
     const url = mode === 'edit' 
       ? "{{ url_for('api_update_agent', agent_id=0) }}".replace('/0', `/${agentId}`)
@@ -763,11 +776,18 @@ document.querySelector('form').addEventListener('submit', async function(e) {
     
     const method = mode === 'edit' ? 'PUT' : 'POST';
     
-    const response = await submitFormAsJson(url, formData, method);
+    console.log('🌐 URL:', url, '| Method:', method);
+    
+    // IMPORTANT : Forcer FormData car il y a un champ photo (même si vide)
+    const response = await submitFormAsJson(url, formData, method, true);
+    
+    console.log('📥 RÉPONSE DU SERVEUR - Status:', response.status, response.statusText);
     
     const result = await response.json();
+    console.log('📦 Résultat:', result);
     
     if (response.ok && result.ok) {
+      console.log('✅ Sauvegarde réussie !');
       showSuccess(mode === 'edit' ? 'Agent modifié avec succès !' : 'Agent créé avec succès !');
       
       // Rediriger vers la fiche de l'agent
@@ -777,11 +797,16 @@ document.querySelector('form').addEventListener('submit', async function(e) {
         window.location.href = "{{ url_for('personnel_detail', agent_id=0) }}".replace('/0', `/${targetAgentId}`);
       }, 1000);
     } else {
+      console.error('❌ Erreur lors de la sauvegarde - Status:', response.status);
+      console.error('❌ Détails:', result);
       await handleFetchError(response, mode === 'edit' ? 'Impossible de modifier l\'agent' : 'Impossible de créer l\'agent');
     }
   } catch (error) {
-    console.error('Erreur:', error);
+    console.error('❌ EXCEPTION:', error);
+    console.error('❌ Stack:', error.stack);
     showError('Erreur réseau. Vérifiez votre connexion.');
+  } finally {
+    hideGlobalLoading();
   }
 });
 
@@ -820,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const photoPlaceholder = document.getElementById('photoPlaceholder');
   const clearPhotoBtn = document.getElementById('clearPhotoBtn');
   if (photoImage && photoPlaceholder) {
-    photoImage.src = '{{ agent.photo_path }}';
+    photoImage.src = '{{ upload_url(agent.photo_path) }}';
     photoImage.style.display = 'block';
     photoPlaceholder.style.display = 'none';
     if (clearPhotoBtn) {

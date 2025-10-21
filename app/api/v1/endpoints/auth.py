@@ -78,8 +78,8 @@ async def login_post(
 
     response = RedirectResponse(url=str(request.url_for("accueil")), status_code=303)
 
-    # Durée du cookie alignée sur l’expiration de la session
-    max_age = 7 * 24 * 60 * 60
+    # Durée du cookie alignée sur l'expiration de la session
+    max_age = 24 * 60 * 60  # 24 heures par défaut
     if getattr(user_session, "expires_at", None):
         from datetime import datetime
 
@@ -90,8 +90,7 @@ async def login_post(
     SessionService.set_session_cookie(
         response=response,
         session_token=user_session.session_token,
-        max_age=max_age,  # 30j si remember_me=True grâce à expires_at
-        # secure=None  # si tu as ajouté l'auto en fonction de settings.DEBUG
+        max_age=max_age,  # 24h par défaut, 7j si remember_me=True
     )
 
     # Logger l'activité de connexion
@@ -302,17 +301,28 @@ async def logout(
 ):
     """Déconnexion de l'utilisateur"""
 
+    logger.info(f"🚪 Tentative de déconnexion...")
+    logger.info(f"   Cookie reçu: {session_token[:20] if session_token else 'AUCUN'}...")
+
     # Récupérer l'utilisateur avant de supprimer la session
     user = None
     try:
         user = SessionService.get_user_from_session(db_session=db_session, session_token=session_token)
-    except:
-        pass
+        if user:
+            logger.info(f"   Utilisateur: {user.email}")
+    except Exception as e:
+        logger.warning(f"⚠️  Erreur lors de la récupération de l'utilisateur: {e}")
 
     # Supprimer la session si elle existe
+    session_deleted = False
     if session_token:
-        SessionService.delete_session(db_session=db_session, session_token=session_token)
-        logger.info(f"🔓 Déconnexion - Session invalidée: {session_token[:10]}...")
+        session_deleted = SessionService.delete_session(db_session=db_session, session_token=session_token)
+        if session_deleted:
+            logger.info(f"✅ Session invalidée en base: {session_token[:10]}...")
+        else:
+            logger.warning(f"⚠️  Session introuvable en base: {session_token[:10]}...")
+    else:
+        logger.warning("⚠️  Aucun cookie de session trouvé - déconnexion sans session")
 
     # Logger l'activité de déconnexion
     if user:
@@ -327,6 +337,7 @@ async def logout(
                 description=f"Déconnexion de {user.full_name or user.email}",
                 icon="🚪",
             )
+            logger.info(f"📝 Activité de déconnexion enregistrée pour {user.email}")
         except Exception as e:
             logger.warning(f"⚠️  Impossible de logger l'activité de déconnexion: {e}")
 
@@ -336,6 +347,12 @@ async def logout(
 
     # Supprimer le cookie de session
     SessionService.delete_session_cookie(redirect_response)
+    logger.info("🍪 Cookie de session supprimé de la réponse")
 
-    logger.info("✅ Déconnexion réussie - Redirection vers login")
+    # Ajouter des headers pour empêcher le cache du navigateur
+    redirect_response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
+    redirect_response.headers["Pragma"] = "no-cache"
+    redirect_response.headers["Expires"] = "0"
+
+    logger.info("✅ Déconnexion terminée - Redirection vers login")
     return redirect_response

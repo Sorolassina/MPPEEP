@@ -35,7 +35,7 @@ class UserSession(SQLModel, table=True):
     # Gestion temporelle
     created_at: datetime = Field(default_factory=datetime.now)
     last_activity: datetime = Field(default_factory=datetime.now)
-    expires_at: datetime = Field(default_factory=lambda: datetime.now() + timedelta(days=7))
+    expires_at: datetime = Field(default_factory=lambda: datetime.now() + timedelta(hours=24))  # 24 heures par défaut
 
     # État de la session
     is_active: bool = Field(default=True)

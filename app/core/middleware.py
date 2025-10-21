@@ -215,17 +215,21 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
         static_prefix = f"{root_path}/static" if root_path else "/static"
         uploads_prefix = f"{root_path}/uploads" if root_path else "/uploads"
         api_prefix = f"{root_path}/api" if root_path else "/api"
+        login_path = f"{root_path}/login" if root_path else "/login"
         
         if request.url.path.startswith(static_prefix) or request.url.path.startswith(uploads_prefix):
+            # Fichiers statiques : cache long (1 an)
             response.headers["Cache-Control"] = "public, max-age=31536000"
-        # Pas de cache pour les API
-        elif request.url.path.startswith(api_prefix):
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        elif request.url.path.startswith(api_prefix) or request.url.path.startswith(login_path):
+            # API et pages de login : pas de cache
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
-        # Cache modéré pour les pages HTML (1 heure)
         else:
-            response.headers["Cache-Control"] = "public, max-age=3600"
+            # Pages protégées (après connexion) : pas de cache non plus pour forcer la déconnexion
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
 
         return response
 

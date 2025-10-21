@@ -137,14 +137,14 @@ document.addEventListener('DOMContentLoaded', function() {
 function voirArticle(articleId) {
   // Afficher l'overlay avant la navigation
   showGlobalLoading('Chargement des détails...', 'Veuillez patienter');
-  window.location.href = `/api/v1/stock/articles/${articleId}`;
+  window.location.href = "{{ url_for('stock_article_detail', article_id=0) }}".replace('/0', `/${articleId}`);
 }
 
 // Modifier un article
 function modifierArticle(articleId) {
   // Afficher l'overlay avant la navigation
   showGlobalLoading('Chargement du formulaire...', 'Veuillez patienter');
-  window.location.href = `/api/v1/stock/articles/${articleId}/edit`;
+  window.location.href = "{{ url_for('stock_article_edit', article_id=0) }}".replace('/0', `/${articleId}`);
 }
 
 // Supprimer un article

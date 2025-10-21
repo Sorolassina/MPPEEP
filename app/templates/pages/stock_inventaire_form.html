@@ -100,11 +100,8 @@ async function submitForm(event) {
             showSuccess(result.message);
             // L'overlay reste affiché pendant la redirection
             setTimeout(() => {
-                if (inventaireId) {
-                    window.location.href = `/api/v1/stock/inventaires/${inventaireId}`;
-                } else {
-                    window.location.href = `/api/v1/stock/inventaires/${result.data.id}`;
-                }
+                const targetId = inventaireId || result.data.id;
+                window.location.href = "{{ url_for('stock_inventaire_detail', inventaire_id=0) }}".replace('/0', `/${targetId}`);
             }, 800);
         } else {
             // Masquer l'overlay SEULEMENT en cas d'erreur

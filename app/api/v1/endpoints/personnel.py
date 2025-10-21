@@ -36,6 +36,30 @@ router = APIRouter()
 
 
 # ==========================================
+# FONCTIONS UTILITAIRES
+# ==========================================
+
+def clean_str_or_none(value: str | None) -> str | None:
+    """
+    Convertit une chaîne vide en None, retourne la valeur sinon
+    Utilisé pour éviter de stocker des chaînes vides en base
+    """
+    if value is None or value == "" or (isinstance(value, str) and value.strip() == ""):
+        return None
+    return value.strip() if isinstance(value, str) else value
+
+
+def parse_int_or_none(value: str | int | None) -> int | None:
+    """Convertit une chaîne en int, retourne None si vide ou invalide"""
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+# ==========================================
 # PAGES HTML
 # ==========================================
 
@@ -299,21 +323,6 @@ async def api_create_agent(
     current_user: User = Depends(get_current_user),
 ):
     """Créer un nouvel agent avec photo optionnelle"""
-
-    def parse_int_or_none(value: str | None) -> int | None:
-        """Convertit une chaîne en int, retourne None si vide ou invalide"""
-        if value is None or value == "" or value.strip() == "":
-            return None
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return None
-
-    def clean_str_or_none(value: str | None) -> str | None:
-        """Convertit une chaîne vide en None, retourne la valeur sinon"""
-        if value is None or value == "" or value.strip() == "":
-            return None
-        return value.strip()
 
     def validate_email(email: str) -> bool:
         """Valide le format d'un email"""
@@ -591,50 +600,67 @@ async def api_update_agent(
     current_user: User = Depends(get_current_user),
 ):
     """Mettre à jour un agent avec photo optionnelle"""
+    
+    # LOG : Afficher TOUTES les données reçues par FastAPI
+    logger.info(f"🔍 PUT /api/agents/{agent_id} - Paramètres reçus par FastAPI:")
+    logger.info(f"   matricule={repr(matricule)}, nom={repr(nom)}, prenom={repr(prenom)}")
+    logger.info(f"   telephone_1={repr(telephone_1)}, email_professionnel={repr(email_professionnel)}")
+    logger.info(f"   photo={photo.filename if photo else 'None'} ({photo.size if photo else 0} bytes)")
+    
     agent = session.get(AgentComplet, agent_id)
     if not agent:
         raise HTTPException(404, "Agent non trouvé")
 
     try:
-        # Mettre à jour les champs fournis
-        if matricule is not None:
-            agent.matricule = matricule
-        if nom is not None:
-            agent.nom = nom
-        if prenom is not None:
-            agent.prenom = prenom
+        logger.info(f"📝 Mise à jour agent {agent_id} - Traitement:")
+        logger.info(f"   Nom reçu: {repr(nom)} | Prénom reçu: {repr(prenom)} | Matricule reçu: {repr(matricule)}")
+        
+        # Mettre à jour les champs fournis (avec nettoyage des chaînes vides)
+        # Champs obligatoires (ne jamais mettre à None)
+        if matricule is not None and matricule.strip():
+            old_matricule = agent.matricule
+            agent.matricule = matricule.strip()
+            logger.info(f"   Matricule: '{old_matricule}' → '{agent.matricule}'")
+        if nom is not None and nom.strip():
+            old_nom = agent.nom
+            agent.nom = nom.strip()
+            logger.info(f"   Nom: '{old_nom}' → '{agent.nom}'")
+        if prenom is not None and prenom.strip():
+            old_prenom = agent.prenom
+            agent.prenom = prenom.strip()
+            logger.info(f"   Prénom: '{old_prenom}' → '{agent.prenom}'")
         if numero_cni is not None:
-            agent.numero_cni = numero_cni
+            agent.numero_cni = clean_str_or_none(numero_cni)
         if numero_passeport is not None:
-            agent.numero_passeport = numero_passeport
+            agent.numero_passeport = clean_str_or_none(numero_passeport)
         if nom_jeune_fille is not None:
-            agent.nom_jeune_fille = nom_jeune_fille
+            agent.nom_jeune_fille = clean_str_or_none(nom_jeune_fille)
         if lieu_naissance is not None:
-            agent.lieu_naissance = lieu_naissance
+            agent.lieu_naissance = clean_str_or_none(lieu_naissance)
         if nationalite is not None:
-            agent.nationalite = nationalite
+            agent.nationalite = clean_str_or_none(nationalite)
         if sexe is not None:
-            agent.sexe = sexe
+            agent.sexe = clean_str_or_none(sexe)
         if situation_familiale is not None:
-            agent.situation_familiale = situation_familiale
+            agent.situation_familiale = clean_str_or_none(situation_familiale)
         if nombre_enfants is not None:
             agent.nombre_enfants = nombre_enfants
         if email_professionnel is not None:
-            agent.email_professionnel = email_professionnel
+            agent.email_professionnel = clean_str_or_none(email_professionnel)
         if email_personnel is not None:
-            agent.email_personnel = email_personnel
+            agent.email_personnel = clean_str_or_none(email_personnel)
         if telephone_1 is not None:
-            agent.telephone_1 = telephone_1
+            agent.telephone_1 = clean_str_or_none(telephone_1)
         if telephone_2 is not None:
-            agent.telephone_2 = telephone_2
+            agent.telephone_2 = clean_str_or_none(telephone_2)
         if adresse is not None:
-            agent.adresse = adresse
+            agent.adresse = clean_str_or_none(adresse)
         if ville is not None:
-            agent.ville = ville
+            agent.ville = clean_str_or_none(ville)
         if code_postal is not None:
-            agent.code_postal = code_postal
+            agent.code_postal = clean_str_or_none(code_postal)
         if position_administrative is not None:
-            agent.position_administrative = position_administrative
+            agent.position_administrative = clean_str_or_none(position_administrative)
         if grade_id is not None:
             agent.grade_id = grade_id
         if echelon is not None:
@@ -648,15 +674,15 @@ async def api_update_agent(
         if programme_id is not None:
             agent.programme_id = programme_id
         if fonction is not None:
-            agent.fonction = fonction
+            agent.fonction = clean_str_or_none(fonction)
         if solde_conges_annuel is not None:
             agent.solde_conges_annuel = solde_conges_annuel
         if conges_annee_en_cours is not None:
             agent.conges_annee_en_cours = conges_annee_en_cours
         if notes is not None:
-            agent.notes = notes
+            agent.notes = clean_str_or_none(notes)
 
-        # Convertir les dates
+        # Convertir les dates (avec nettoyage)
         date_fields = {
             "date_naissance": date_naissance,
             "date_recrutement": date_recrutement,
@@ -665,10 +691,15 @@ async def api_update_agent(
         }
         for field_name, date_str in date_fields.items():
             if date_str:
-                try:
-                    setattr(agent, field_name, datetime.strptime(date_str, "%Y-%m-%d").date())
-                except ValueError:
-                    pass
+                cleaned_date = clean_str_or_none(date_str)
+                if cleaned_date:
+                    try:
+                        setattr(agent, field_name, datetime.strptime(cleaned_date, "%Y-%m-%d").date())
+                    except ValueError:
+                        pass
+                else:
+                    # Si la date est vide, la mettre à None
+                    setattr(agent, field_name, None)
 
         # Gérer la nouvelle photo
         if photo and photo.filename:
@@ -701,9 +732,21 @@ async def api_update_agent(
 
         agent.updated_by = current_user.id
 
+        # Log des modifications avant sauvegarde
+        logger.info(f"📝 Agent avant commit:")
+        logger.info(f"   Matricule: {agent.matricule}")
+        logger.info(f"   Nom: {agent.nom}")
+        logger.info(f"   Prénom: {agent.prenom}")
+        logger.info(f"   Téléphone 1: {repr(agent.telephone_1)}")
+        logger.info(f"   Email pro: {repr(agent.email_professionnel)}")
+        
         session.add(agent)
         session.commit()
         session.refresh(agent)
+        
+        # Log après commit
+        logger.info(f"✅ Agent après commit:")
+        logger.info(f"   Nom: {agent.nom} | Prénom: {agent.prenom}")
 
         logger.info(f"Agent mis à jour: {agent.matricule}")
 

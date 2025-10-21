@@ -607,8 +607,11 @@ docker-rebuild-prod: ## 🚀 REBUILD COMPLET - Arreter, reconstruire et redemarr
 	@Write-Host "[2/3] Reconstruction de l'image (sans cache)..." -ForegroundColor White
 	docker-compose -f docker-compose.prod.yml build --no-cache
 	@Write-Host ""
-	@Write-Host "[3/3] Demarrage des conteneurs..." -ForegroundColor White
+	@Write-Host "[3/4] Demarrage des conteneurs..." -ForegroundColor White
 	docker-compose -f docker-compose.prod.yml up -d
+	@Write-Host ""
+	@Write-Host "[4/4] Nettoyage des anciennes images..." -ForegroundColor White
+	docker image prune -f
 	@Write-Host ""
 	@Write-Host "==========================================" -ForegroundColor Cyan
 	@Write-Host "REBUILD TERMINE AVEC SUCCES !" -ForegroundColor Green

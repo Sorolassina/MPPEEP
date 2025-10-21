@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # APPLICATION
     # ==========================================
     APP_NAME: str = "MPPEEP Dashboard"
-    ENV: Literal["dev", "staging", "prod"] = "dev"
+    ENV: Literal["dev", "staging", "prod"] = "prod"
     DEBUG: bool = False
     SECRET_KEY: str = "changeme-in-production"
 

@@ -36,6 +36,13 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Initialisation de la base terminée avec succès")
 
         logger.info("✅ Système RH : Workflows personnalisés activés")
+        
+        # Démarrer le planificateur de tâches (nettoyage automatique)
+        from app.core.scheduler import start_scheduler
+        
+        logger.info("⏰ Démarrage du planificateur de tâches...")
+        start_scheduler()
+        logger.info("✅ Planificateur de tâches démarré")
 
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'initialisation: {e}", exc_info=True)
@@ -46,6 +53,13 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("👋 Arrêt de l'application MPPEEP Dashboard")
     logger.info("🧹 Fermeture des connexions...")
+    
+    # Arrêter le planificateur
+    try:
+        from app.core.scheduler import stop_scheduler
+        stop_scheduler()
+    except Exception as e:
+        logger.error(f"❌ Erreur arrêt scheduler: {e}")
 
 
 # 3) App FastAPI
