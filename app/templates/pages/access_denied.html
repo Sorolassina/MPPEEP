@@ -1,0 +1,143 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}
+Accès Refusé
+{% endblock %}
+
+{% block content %}
+<style>
+    .access-denied-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .access-denied-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #e74c3c;
+    }
+    
+    .access-denied-title {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+    
+    .access-denied-message {
+        font-size: 1.1rem;
+        color: #7f8c8d;
+        margin-bottom: 2rem;
+        max-width: 600px;
+        line-height: 1.6;
+    }
+    
+    .access-denied-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: transform 0.2s;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        text-decoration: none;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: #ecf0f1;
+        color: #2c3e50;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: transform 0.2s;
+    }
+    
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        text-decoration: none;
+        color: #2c3e50;
+    }
+    
+    .user-permissions {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        max-width: 500px;
+    }
+    
+    .user-permissions h4 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+    
+    .permission-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .permission-badge {
+        background: #3498db;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+</style>
+
+<div class="access-denied-container">
+    <div class="access-denied-icon">🚫</div>
+    
+    <h1 class="access-denied-title">Accès Refusé</h1>
+    
+    <div class="access-denied-message">
+        <p>Vous n'avez pas les permissions nécessaires pour accéder au module <strong>{{ module|title }}</strong>.</p>
+        
+        {% if current_user %}
+            <p>Votre type d'utilisateur actuel : <strong>{{ current_user.type_user|title }}</strong></p>
+            
+            {% if current_user.is_guest %}
+                <p>Vous êtes en mode démonstration. Contactez un administrateur pour obtenir un accès complet.</p>
+            {% else %}
+                <p>Contactez votre administrateur pour obtenir les permissions appropriées.</p>
+            {% endif %}
+        {% endif %}
+    </div>
+    
+    <div class="access-denied-actions">
+        <a href="{{ url_for('accueil') }}" class="btn-primary">
+            🏠 Retour à l'accueil
+        </a>
+    </div>
+    
+    {% if current_user and current_user.get_accessible_modules() %}
+    <div class="user-permissions">
+        <h4>📋 Vos modules accessibles :</h4>
+        <div class="permission-list">
+            {% for module in current_user.get_accessible_modules() %}
+            <span class="permission-badge">{{ module|title }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

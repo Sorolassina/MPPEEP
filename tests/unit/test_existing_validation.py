@@ -229,7 +229,7 @@ def test_user_model_properties():
     normal_user = User(
         email="user@example.com",
         hashed_password="hashed_password",
-        type_user=UserType.USER.value  # "agent"
+        type_user=UserType.AGENT.value  # "agent"
     )
     assert normal_user.is_admin is False
 
@@ -240,7 +240,7 @@ def test_enum_values():
     """Test des valeurs d'enum - EXISTANT"""
     # UserType (valeurs réelles)
     assert UserType.ADMIN.value == "admin"
-    assert UserType.USER.value == "agent"  # Pas "user" mais "agent"
+    assert UserType.AGENT.value == "agent"  # Pas "user" mais "agent"
     assert UserType.INVITE.value == "invité"
     
     # FileType (valeurs réelles)
@@ -304,14 +304,14 @@ def test_user_model_fields():
         hashed_password="hashed_password",
         full_name="Test User",
         is_active=True,
-        type_user=UserType.USER.value
+        type_user=UserType.AGENT.value
     )
     
     assert user.email == "test@example.com"
     assert user.hashed_password == "hashed_password"
     assert user.full_name == "Test User"
     assert user.is_active is True
-    assert user.type_user == UserType.USER.value
+    assert user.type_user == UserType.AGENT.value
     assert user.is_superuser is False  # Valeur par défaut
 
 

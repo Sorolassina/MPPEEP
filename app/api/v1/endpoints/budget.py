@@ -20,7 +20,9 @@ from sqlmodel import Session, delete, func, select
 
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.logging_config import get_logger
+from app.core.permission_decorators import require_data_access, require_module_dep
 from app.db.session import get_session
+from app.models.user import User
 from app.models.budget import (
     ActionBudgetaire,
     Activite,
@@ -66,6 +68,11 @@ def budget_home(
     Dashboard principal du suivi budgétaire
     Utilise les données SIGOBE pour les KPIs
     """
+    # Vérifier l'accès au module Budget
+    if not current_user.can_access_module("budget") and not current_user.is_guest:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=request.url_for("access_denied").include_query_params(module="budget"), status_code=302)
+    
     # Déterminer l'année à utiliser
     if not annee:
         # Si pas d'année spécifiée, chercher la dernière année disponible dans SIGOBE
@@ -248,6 +255,69 @@ def budget_home(
                 variation_mandatement_vise = taux_mandatement_vise - taux_mandatement_vise_n1
                 variation_mandatement_pec = taux_mandatement_pec - taux_mandatement_pec_n1
                 variation_execution_global = taux_execution_global - taux_execution_global_n1
+
+    # Données de démonstration pour les invités
+    if current_user.is_guest:
+        budget_vote_total = 2500000000  # 2.5 milliards FCFA
+        budget_actuel_total = 2400000000  # 2.4 milliards FCFA
+        engagements_total = 1800000000  # 1.8 milliards FCFA
+        mandats_emis_total = 1500000000  # 1.5 milliards FCFA
+        mandats_vises_total = 1200000000  # 1.2 milliards FCFA
+        mandats_pec_total = 1000000000  # 1 milliard FCFA
+        disponible_eng_total = 600000000  # 600 millions FCFA
+        taux_engagement = 75.0
+        taux_mandatement_emis = 83.3
+        taux_mandatement_vise = 120.0
+        taux_mandatement_pec = 66.7
+        taux_execution_global = 25.0
+        
+        # Données de démonstration pour l'année N-1 (évolution)
+        budget_vote_n1 = 2300000000  # 2.3 milliards FCFA
+        budget_actuel_n1 = 2200000000  # 2.2 milliards FCFA
+        engagements_n1 = 1500000000  # 1.5 milliards FCFA
+        taux_execution_global_n1 = 20.5
+        variation_execution_global = 4.5  # +4.5 points
+        
+        # Autres données fictives pour les variations
+        taux_engagement_n1 = 70.0
+        taux_mandatement_vise_n1 = 110.0
+        taux_mandatement_pec_n1 = 60.0
+        variation_engagement = 5.0  # +5 points
+        variation_mandatement_vise = 10.0  # +10 points
+        variation_mandatement_pec = 6.7  # +6.7 points
+        
+        # Données de démonstration par programme
+        exec_par_programme = {
+            "PROG001": {
+                "libelle": "Programme Éducation",
+                "budget": 800000000,
+                "taux": 78.5
+            },
+            "PROG002": {
+                "libelle": "Programme Santé",
+                "budget": 600000000,
+                "taux": 65.2
+            },
+            "PROG003": {
+                "libelle": "Programme Infrastructure",
+                "budget": 1000000000,
+                "taux": 45.8
+            }
+        }
+        
+        # Données de démonstration par nature
+        exec_par_nature = {
+            "FONCTIONNEMENT": {
+                "libelle": "Fonctionnement",
+                "budget": 1200000000,
+                "taux": 80.0
+            },
+            "INVESTISSEMENT": {
+                "libelle": "Investissement",
+                "budget": 1200000000,
+                "taux": 40.0
+            }
+        }
 
     return templates.TemplateResponse(
         "pages/budget_dashboard.html",

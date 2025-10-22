@@ -23,7 +23,7 @@ def test_user_service_get_by_email(session: Session):
         email="test@example.com",
         hashed_password="hashed_password",
         full_name="Test User",
-        type_user=UserType.USER.value
+        type_user=UserType.AGENT.value
     )
     session.add(user)
     session.commit()
@@ -49,7 +49,7 @@ def test_user_service_get_by_id(session: Session):
         email="test@example.com",
         hashed_password="hashed_password",
         full_name="Test User",
-        type_user=UserType.USER.value
+        type_user=UserType.AGENT.value
     )
     session.add(user)
     session.commit()
@@ -76,13 +76,13 @@ def test_user_service_create_user(session: Session):
         email="newuser@example.com",
         full_name="New User",
         password="password123",
-        type_user=UserType.USER
+        type_user=UserType.AGENT
     )
     
     assert user is not None
     assert user.email == "newuser@example.com"
     assert user.full_name == "New User"
-    assert user.type_user == UserType.USER.value
+    assert user.type_user == UserType.AGENT.value
     assert user.is_active is True
     assert user.hashed_password is not None
     assert user.hashed_password != "password123"  # Doit être hashé
@@ -98,7 +98,7 @@ def test_user_service_authenticate(session: Session):
         email="auth@example.com",
         full_name="Auth User",
         password="password123",
-        type_user=UserType.USER
+        type_user=UserType.AGENT
     )
     
     # Test authentification réussie
@@ -125,7 +125,7 @@ def test_user_service_update_user(session: Session):
         email="update@example.com",
         full_name="Original Name",
         password="password123",
-        type_user=UserType.USER
+        type_user=UserType.AGENT
     )
     
     # Mettre à jour l'utilisateur
@@ -148,7 +148,7 @@ def test_user_service_list_users(session: Session):
     """Test UserService.list_users - EXISTANT"""
     # Créer plusieurs utilisateurs
     users_data = [
-        ("user1@example.com", "User 1", UserType.USER),
+        ("user1@example.com", "User 1", UserType.AGENT),
         ("user2@example.com", "User 2", UserType.ADMIN),
         ("user3@example.com", "User 3", UserType.MODERATOR)
     ]
@@ -279,7 +279,7 @@ def test_user_service_email_case_insensitive(session: Session):
         email="test@example.com",
         full_name="Test User",
         password="password123",
-        type_user=UserType.USER
+        type_user=UserType.AGENT
     )
     
     # Rechercher avec différentes casses
@@ -305,7 +305,7 @@ def test_user_service_unique_email_constraint(session: Session):
         email="unique@example.com",
         full_name="First User",
         password="password123",
-        type_user=UserType.USER
+        type_user=UserType.AGENT
     )
     
     # Essayer de créer un deuxième utilisateur avec le même email
@@ -315,5 +315,5 @@ def test_user_service_unique_email_constraint(session: Session):
             email="unique@example.com",
             full_name="Second User",
             password="password123",
-            type_user=UserType.USER
+            type_user=UserType.AGENT
         )

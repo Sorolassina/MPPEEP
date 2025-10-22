@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     dashboard,
     files,
     health,
+    legal,
     performance,
     personnel,
     referentiels,
@@ -34,3 +35,5 @@ api_router.include_router(stock.router, prefix="/stock", tags=["stock"])
 api_router.include_router(performance.router, prefix="/performance", tags=["performance"])
 api_router.include_router(workflow_admin.router, prefix="/admin", tags=["workflow-admin"])
 api_router.include_router(aide.router, prefix="/aide", tags=["aide"])
+api_router.include_router(legal.router, tags=["legal"])
+# access_denied est maintenant dans admin.router

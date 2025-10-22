@@ -242,10 +242,10 @@ def test_user_service_role_management(session: Session):
         email="role_test@example.com",
         full_name="Role Test User",
         password="password123",
-        type_user=UserType.USER
+        type_user=UserType.AGENT
     )
     
-    assert user.type_user == UserType.USER
+    assert user.type_user == UserType.AGENT
     
     # Promouvoir en admin
     admin_user = UserService.update_user(

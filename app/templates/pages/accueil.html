@@ -6,6 +6,35 @@ Accueil
 
 
 {% block content %}
+<style>
+    .demo-notice {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 500;
+    }
+    
+    .demo-mode {
+        opacity: 0.8;
+        position: relative;
+    }
+    
+    .demo-mode::after {
+        content: "DEMO";
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: #ff6b6b;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: bold;
+    }
+</style>
 <body class="form-page-premium">
 <div class="dashboard-grid">
        
@@ -36,7 +65,85 @@ Accueil
         </div>
     </div>
     
-    <!-- Actions rapides -->
+    <!-- Modules accessibles selon les permissions -->
+    {% if current_user %}
+    {% if current_user.is_guest %}
+    <div class="quick-actions">
+        <h3>🎯 Mode Démonstration (MVP)</h3>
+        <p class="demo-notice">Vous êtes en mode invité. Vous pouvez parcourir la structure mais sans accès aux données réelles.</p>
+        <div class="actions-grid">
+            <!-- Tous les modules visibles mais en mode démo -->
+            <a href="{{ url_for('rh_home') }}" class="action-button demo-mode">
+                <span class="action-icon">👥</span>
+                <span class="action-text">Ressources Humaines (Démo)</span>
+            </a>
+            <a href="{{ url_for('budget_home') }}" class="action-button demo-mode">
+                <span class="action-icon">💰</span>
+                <span class="action-text">Budget (Démo)</span>
+            </a>
+            <a href="{{ url_for('performance_home') }}" class="action-button demo-mode">
+                <span class="action-icon">📊</span>
+                <span class="action-text">Performance (Démo)</span>
+            </a>
+            <a href="{{ url_for('stock_home') }}" class="action-button demo-mode">
+                <span class="action-icon">📦</span>
+                <span class="action-text">Stocks (Démo)</span>
+            </a>
+            <a href="{{ url_for('personnel_home') }}" class="action-button demo-mode">
+                <span class="action-icon">👤</span>
+                <span class="action-text">Personnel (Démo)</span>
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="quick-actions">
+        <h3>Modules disponibles</h3>
+        <div class="actions-grid">
+            <!-- Module RH -->
+            {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdrh' or current_user.type_user == 'cs' or current_user.type_user == 'agent' %}
+            <a href="{{ url_for('rh_home') }}" class="action-button">
+                <span class="action-icon">👥</span>
+                <span class="action-text">Ressources Humaines</span>
+            </a>
+            {% endif %}
+            
+            <!-- Module Budget -->
+            {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdb' %}
+            <a href="{{ url_for('budget_home') }}" class="action-button">
+                <span class="action-icon">💰</span>
+                <span class="action-text">Budget</span>
+            </a>
+            {% endif %}
+            
+            <!-- Module Performance -->
+            {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdb' %}
+            <a href="{{ url_for('performance_home') }}" class="action-button">
+                <span class="action-icon">📊</span>
+                <span class="action-text">Performance</span>
+            </a>
+            {% endif %}
+            
+            <!-- Module Stocks -->
+            {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdc' %}
+            <a href="{{ url_for('stock_home') }}" class="action-button">
+                <span class="action-icon">📦</span>
+                <span class="action-text">Stocks</span>
+            </a>
+            {% endif %}
+            
+            <!-- Module Personnel -->
+            {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdrh' or current_user.type_user == 'cs' %}
+            <a href="{{ url_for('personnel_home') }}" class="action-button">
+                <span class="action-icon">👤</span>
+                <span class="action-text">Personnel</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Paramétrages système - Admin seulement -->
+    {% if current_user.type_user == 'admin' or current_user.is_superuser %}
     <div class="quick-actions">
         <h3>Paramétrages système</h3>
         <div class="actions-grid">
@@ -58,6 +165,8 @@ Accueil
             </a>
         </div>
     </div>
+    {% endif %}
+    {% endif %}
 </div>
 </body>
 {% endblock %}

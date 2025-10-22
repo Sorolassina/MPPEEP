@@ -20,7 +20,11 @@
     {% if actions %}
     <div class="page-header-actions">
         {% for action in actions %}
-            {% if action.url %}
+            {% if action.disabled %}
+                <span class="btn {{ 'btn-primary' if action.primary else 'btn-secondary' }} disabled">
+                    {{ action.label }}
+                </span>
+            {% elif action.url %}
                 <a href="{{ action.url }}" class="btn {{ 'btn-primary' if action.primary else 'btn-secondary' }}">
                     {{ action.label }}
                 </a>
@@ -89,6 +93,18 @@
 }
 
 /* Les styles de boutons sont entièrement gérés par buttons.css */
+
+.btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.btn.disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
 
 @media (max-width: 768px) {
     .page-header {

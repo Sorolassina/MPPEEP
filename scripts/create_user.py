@@ -19,7 +19,7 @@ def create_user_cli(
     full_name: str, 
     password: str, 
     is_superuser: bool = False,
-    type_user: str = UserType.USER
+    type_user: str = UserType.AGENT
 ):
     """
     Interface CLI pour créer un utilisateur
@@ -119,7 +119,7 @@ def main():
     if args.superuser or is_default:
         user_type = UserType.ADMIN
     else:
-        user_type = getattr(UserType, args.type.upper(), UserType.USER)
+        user_type = getattr(UserType, args.type.upper(), UserType.AGENT)
     
     create_user_cli(
         email=args.email,

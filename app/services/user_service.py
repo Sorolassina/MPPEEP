@@ -50,7 +50,7 @@ class UserService:
         password: str,
         is_active: bool = True,
         is_superuser: bool = False,
-        type_user: str = UserType.USER,
+        type_user: str = UserType.AGENT,
     ) -> User | None:
         """
         Crée un nouvel utilisateur
@@ -73,7 +73,7 @@ class UserService:
             return None
 
         # Si is_superuser=True, forcer type_user à ADMIN
-        if is_superuser and type_user == UserType.USER:
+        if is_superuser and type_user == UserType.AGENT:
             type_user = UserType.ADMIN
 
         # Créer le nouvel utilisateur

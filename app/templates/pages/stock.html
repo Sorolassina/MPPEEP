@@ -8,6 +8,38 @@
 <style>
 /* ========== STOCK PAGE STYLES ========== */
 
+/* Bannière de démonstration */
+.demo-notice {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.demo-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.demo-icon {
+    font-size: 1.2rem;
+}
+
+.demo-text {
+    font-weight: 600;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.demo-description {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
 /* KPIs */
 .kpis {
     display: grid;
@@ -94,12 +126,23 @@
         {'name': 'Stocks'}
     ],
     actions=[
-        {'label': '❓ Aide', 'url': url_for('aide_stock'), 'primary': False},
+        {'label': '❓ Aide', 'url': url_for('aide_stock'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
     ]
 ) }}
 
 <div class="page-grid">
+  {% if current_user.is_guest %}
+  <div class="demo-notice">
+    <div class="demo-banner">
+      <span class="demo-icon">🎯</span>
+      <span class="demo-text">Mode Démonstration - Données fictives</span>
+    </div>
+    <p class="demo-description">
+      Vous êtes en mode invité. Les données affichées sont des exemples pour vous permettre de découvrir l'interface.
+    </p>
+  </div>
+  {% endif %}
 
   <!-- KPIs et Statistiques -->
   <div class="card">
@@ -110,19 +153,27 @@
     <div class="kpis">
       <div class="kpi">
         <div class="label">Total Articles</div>
-        <div class="val" id="kpi-total-articles">—</div>
+        <div class="val" id="kpi-total-articles">
+          {% if current_user.is_guest %}{{ total_articles or 156 }}{% else %}—{% endif %}
+        </div>
       </div>
       <div class="kpi">
         <div class="label">Articles Actifs</div>
-        <div class="val" id="kpi-actifs">—</div>
+        <div class="val" id="kpi-actifs">
+          {% if current_user.is_guest %}{{ articles_en_stock or 142 }}{% else %}—{% endif %}
+        </div>
       </div>
       <div class="kpi rupture">
         <div class="label">En Rupture</div>
-        <div class="val" id="kpi-rupture">—</div>
+        <div class="val" id="kpi-rupture">
+          {% if current_user.is_guest %}{{ articles_rupture or 14 }}{% else %}—{% endif %}
+        </div>
       </div>
       <div class="kpi">
         <div class="label">Valeur Stock</div>
-        <div class="val" id="kpi-valeur">—</div>
+        <div class="val" id="kpi-valeur">
+          {% if current_user.is_guest %}{{ "{:,.0f}".format(valeur_totale or 45000000) }} F{% else %}—{% endif %}
+        </div>
       </div>
     </div>
     
@@ -131,15 +182,21 @@
     <div class="kpis">
       <div class="kpi">
         <div class="label">Total Demandes</div>
-        <div class="val" id="kpi-total-demandes">—</div>
+        <div class="val" id="kpi-total-demandes">
+          {% if current_user.is_guest %}45{% else %}—{% endif %}
+        </div>
       </div>
       <div class="kpi">
         <div class="label">En Attente</div>
-        <div class="val" id="kpi-demandes-attente">—</div>
+        <div class="val" id="kpi-demandes-attente">
+          {% if current_user.is_guest %}{{ demandes_en_cours or 8 }}{% else %}—{% endif %}
+        </div>
       </div>
       <div class="kpi">
         <div class="label">Validées</div>
-        <div class="val" id="kpi-demandes-validees">—</div>
+        <div class="val" id="kpi-demandes-validees">
+          {% if current_user.is_guest %}37{% else %}—{% endif %}
+        </div>
       </div>
     </div>
     
@@ -148,11 +205,15 @@
     <div class="kpis">
       <div class="kpi">
         <div class="label">Entrées</div>
-        <div class="val" id="kpi-entrees">—</div>
+        <div class="val" id="kpi-entrees">
+          {% if current_user.is_guest %}{{ mouvements_jour or 23 }}{% else %}—{% endif %}
+        </div>
       </div>
       <div class="kpi">
         <div class="label">Sorties</div>
-        <div class="val" id="kpi-sorties">—</div>
+        <div class="val" id="kpi-sorties">
+          {% if current_user.is_guest %}18{% else %}—{% endif %}
+        </div>
       </div>
     </div>
     
@@ -161,11 +222,15 @@
     <div class="kpis">
       <div class="kpi" style="border-left-color: #f59e0b;">
         <div class="label">Lots Proches Péremption</div>
-        <div class="val" id="kpi-lots-alerte">—</div>
+        <div class="val" id="kpi-lots-alerte">
+          {% if current_user.is_guest %}7{% else %}—{% endif %}
+        </div>
       </div>
       <div class="kpi rupture">
         <div class="label">Lots Périmés</div>
-        <div class="val" id="kpi-lots-perimes">—</div>
+        <div class="val" id="kpi-lots-perimes">
+          {% if current_user.is_guest %}3{% else %}—{% endif %}
+        </div>
       </div>
     </div>
   </div>
@@ -205,6 +270,7 @@
   </div>
 
   <!-- Actions Rapides -->
+  {% if not current_user.is_guest %}
   <div class="card">
     <h2 style="margin: 0 0 1.5rem 0; color: #222; font-size: 1.3rem;">⚡ Actions Rapides</h2>
     
@@ -250,6 +316,7 @@
       </a>
     </div>
   </div>
+  {% endif %}
   
 </div>
 </body>
@@ -264,11 +331,14 @@ let chartCategories = null;
 
 // Charger les KPIs et alertes au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
+  // Ne pas charger les données réelles pour les invités (ils voient les données fictives)
+  {% if not current_user.is_guest %}
   loadKPIs();
   loadAlertes();
   loadAlertesPeremption();
   loadChartMouvements();
   loadChartCategories();
+  {% endif %}
 });
 
 async function loadKPIs() {

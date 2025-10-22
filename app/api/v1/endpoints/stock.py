@@ -14,7 +14,9 @@ from sqlmodel import Session, func, select
 
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.logging_config import get_logger
+from app.core.permission_decorators import require_data_access, require_module_dep
 from app.db.session import get_session
+from app.models.user import User
 from app.models.personnel import Service
 from app.models.stock import (
     Article,
@@ -51,11 +53,35 @@ def aide_stock(request: Request):
 
 @router.get("/", response_class=HTMLResponse, name="stock_home")
 def stock_home(
-    request: Request, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
+    request: Request, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(get_current_user)
 ):
     """Page principale du module Stocks"""
+    # Vérifier l'accès au module Stocks
+    if not current_user.can_access_module("stocks") and not current_user.is_guest:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=request.url_for("access_denied").include_query_params(module="stocks"), status_code=302)
 
-    return templates.TemplateResponse("pages/stock.html", get_template_context(request))
+    # Données de démonstration pour les invités
+    demo_data = {}
+    if current_user.is_guest:
+        demo_data = {
+            "total_articles": 156,
+            "articles_en_stock": 142,
+            "articles_rupture": 14,
+            "valeur_totale": 45000000,  # 45 millions FCFA
+            "mouvements_jour": 23,
+            "demandes_en_cours": 8,
+            "categories": [
+                {"libelle": "Fournitures de Bureau", "count": 45},
+                {"libelle": "Matériel Informatique", "count": 32},
+                {"libelle": "Équipements", "count": 28},
+                {"libelle": "Consommables", "count": 51}
+            ]
+        }
+
+    return templates.TemplateResponse("pages/stock.html", get_template_context(request, current_user=current_user, **demo_data))
 
 
 @router.get("/articles", response_class=HTMLResponse, name="stock_articles")

@@ -16,7 +16,9 @@ from app.api.v1.endpoints.auth import get_current_user
 from app.core.config import settings
 from app.core.enums import GradeCategory, PositionAdministrative, SituationFamiliale, TypeDocument
 from app.core.logging_config import get_logger
+from app.core.permission_decorators import require_data_access, require_module_dep
 from app.db.session import get_session
+from app.models.user import User
 from app.models.personnel import (
     AgentComplet,
     Direction,
@@ -72,31 +74,50 @@ def aide_personnel(request: Request):
 
 @router.get("/", response_class=HTMLResponse, name="personnel_home")
 def personnel_home(
-    request: Request, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
+    request: Request, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(get_current_user)
 ):
     """
     Page principale de gestion du personnel
     Affiche les statistiques et la liste du personnel
     """
-    # Statistiques
-    total_agents = session.exec(select(func.count(AgentComplet.id))).one()
-    agents_actifs = session.exec(select(func.count(AgentComplet.id)).where(AgentComplet.actif)).one()
+    # Vérifier l'accès au module Personnel
+    if not current_user.can_access_module("personnel") and not current_user.is_guest:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=request.url_for("access_denied").include_query_params(module="personnel"), status_code=302)
+    
+    # Données de démonstration pour les invités
+    if current_user.is_guest:
+        total_agents = 245
+        agents_actifs = 238
+        agents_par_categorie = {
+            "A": 45,
+            "B": 78,
+            "C": 89,
+            "D": 26
+        }
+        agents = []  # Liste vide pour les invités
+    else:
+        # Statistiques réelles
+        total_agents = session.exec(select(func.count(AgentComplet.id))).one()
+        agents_actifs = session.exec(select(func.count(AgentComplet.id)).where(AgentComplet.actif)).one()
 
-    # Agents par catégorie
-    agents_par_categorie = {}
-    for cat in GradeCategory:
-        count = session.exec(
-            select(func.count(AgentComplet.id))
-            .join(GradeComplet, AgentComplet.grade_id == GradeComplet.id)
-            .where(GradeComplet.categorie == cat)
-            .where(AgentComplet.actif)
-        ).one()
-        agents_par_categorie[cat.name] = count
+        # Agents par catégorie
+        agents_par_categorie = {}
+        for cat in GradeCategory:
+            count = session.exec(
+                select(func.count(AgentComplet.id))
+                .join(GradeComplet, AgentComplet.grade_id == GradeComplet.id)
+                .where(GradeComplet.categorie == cat)
+                .where(AgentComplet.actif)
+            ).one()
+            agents_par_categorie[cat.name] = count
 
-    # Récupérer les 20 derniers agents
-    agents = session.exec(
-        select(AgentComplet).where(AgentComplet.actif).order_by(AgentComplet.created_at.desc()).limit(20)
-    ).all()
+        # Récupérer les 20 derniers agents
+        agents = session.exec(
+            select(AgentComplet).where(AgentComplet.actif).order_by(AgentComplet.created_at.desc()).limit(20)
+        ).all()
 
     return templates.TemplateResponse(
         "pages/personnel.html",

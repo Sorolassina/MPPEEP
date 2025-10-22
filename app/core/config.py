@@ -106,6 +106,10 @@ class Settings(BaseSettings):
     MAX_LOGIN_ATTEMPTS: int = 5
     SESSION_TIMEOUT: int = 3600
     PASSWORD_MIN_LENGTH: int = 8
+    
+    # Charte de confidentialité
+    PRIVACY_POLICY_VERSION: str = "1.0"  # Version actuelle de la charte
+    PRIVACY_POLICY_REQUIRED: bool = True  # Forcer l'acceptation
 
     # ==========================================
     # PROPERTIES DYNAMIQUES (selon DEBUG/ENV)

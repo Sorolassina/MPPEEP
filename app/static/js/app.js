@@ -176,3 +176,70 @@ window.hideLoading = window.hideLoading || function() {
     console.log('[LOADING] Hidden');
     // Cette fonction peut être surchargée par les pages individuelles
 };
+
+// ============================================
+// TRANSITIONS DE PAGE ÉLÉGANTES
+// ============================================
+
+/**
+ * Ajoute des transitions fluides lors de la navigation entre les pages
+ * Intercepte les clics sur les liens pour ajouter une animation de sortie
+ */
+(function() {
+    // Attendre que le DOM soit chargé
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Intercepter tous les clics sur les liens internes
+        document.addEventListener('click', function(e) {
+            // Trouver le lien cliqué (peut être un parent du cible)
+            const link = e.target.closest('a');
+            
+            // Vérifier si c'est un lien valide
+            if (!link) return;
+            
+            const href = link.getAttribute('href');
+            
+            // Ignorer les cas suivants :
+            // - Liens externes (commencent par http:// ou https://)
+            // - Liens ancres (#)
+            // - Liens vides ou javascript:
+            // - Liens avec target="_blank"
+            // - Liens avec download
+            // - Clics avec Ctrl/Cmd (nouvel onglet)
+            if (!href || 
+                href.startsWith('http://') || 
+                href.startsWith('https://') ||
+                href.startsWith('#') ||
+                href.startsWith('javascript:') ||
+                href === '' ||
+                link.target === '_blank' ||
+                link.hasAttribute('download') ||
+                e.ctrlKey || 
+                e.metaKey) {
+                return;
+            }
+            
+            // Empêcher la navigation par défaut
+            e.preventDefault();
+            
+            // Ajouter la classe d'animation de sortie
+            document.body.classList.add('page-exit');
+            
+            // Naviguer après l'animation (300ms)
+            setTimeout(function() {
+                window.location.href = href;
+            }, 300);
+        });
+        
+        // Animation d'entrée au chargement de la page
+        document.body.style.opacity = '0';
+        document.body.style.transform = 'translateY(10px)';
+        
+        // Déclencher l'animation après un court délai
+        setTimeout(function() {
+            document.body.style.transition = 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out';
+            document.body.style.opacity = '1';
+            document.body.style.transform = 'translateY(0)';
+        }, 10);
+    });
+})();

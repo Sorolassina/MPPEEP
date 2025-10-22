@@ -85,20 +85,23 @@
 
 /* ===== BOUTONS PRINCIPAUX ===== */
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 85%, #000) 100%);
-  color: var(--white-color);
+  background: var(--primary-color) ;
+  color: var(--white-color) ;
   box-shadow: 0 6px 20px color-mix(in srgb, var(--primary-color) 35%, transparent),
               0 3px 10px rgba(0, 0, 0, 0.1);
+  border: var(--white-color) solid 1px ;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 95%, #fff) 0%, var(--primary-color) 100%);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--primary-color) 45%, transparent),
+  background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 95%, #fff) 0%, var(--secondary-color) 100%) !important;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--secondary-color) 45%, transparent),
               0 5px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .btn-primary:active {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 80%, #000) 0%, color-mix(in srgb, var(--primary-color) 70%, #000) 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 80%, #000) 0%, color-mix(in srgb, var(--primary-color) 70%, #000) 100%) !important;
+  transform: translateY(0);
 }
 
 .btn-secondary {
@@ -106,6 +109,7 @@
   color: var(--white-color);
   box-shadow: 0 6px 20px color-mix(in srgb, var(--secondary-color) 35%, transparent),
               0 3px 10px rgba(0, 0, 0, 0.1);
+  border: var(--white-color) solid 1px ;
 }
 
 .btn-secondary:hover {

@@ -16,7 +16,14 @@ python scripts/init_db.py
 
 **Actions automatiques :**
 1. ✅ Crée toutes les tables de la base de données (si elles n'existent pas)
-2. ✅ Crée un utilisateur admin par défaut (si aucun utilisateur n'existe)
+2. ✅ **Vérifie et applique les migrations de schéma automatiquement**
+3. ✅ Crée un utilisateur admin par défaut (si aucun utilisateur n'existe)
+
+**Nouvelles fonctionnalités de migration :**
+- 🔍 Détection automatique des colonnes manquantes/ajoutées
+- 🔄 Application automatique des migrations de structure
+- ⚠️ Protection contre les suppressions accidentelles
+- 📊 Logs détaillés des modifications
 
 **Identifiants admin par défaut :**
 - Email: `admin@mppeep.com`
@@ -66,6 +73,55 @@ python scripts/migrate_database.py \
     "postgresql://user:pass@localhost:5432/mppeep" \
     "sqlite:///./backup.db"
 ```
+
+---
+
+### `migrate_schema.py` 🆕
+**Script de migration du schéma de base de données.**
+
+Détecte et applique automatiquement les modifications de structure des tables.
+
+```bash
+# Vérification seulement (dry-run)
+python scripts/migrate_schema.py
+
+# Vérification et application des migrations
+python scripts/migrate_schema.py --apply
+
+# Vérification seulement (pas d'application)
+python scripts/migrate_schema.py --check-only
+```
+
+**Fonctionnalités :**
+- 🔍 Détection des tables manquantes
+- 📋 Détection des colonnes manquantes/ajoutées
+- 🔄 Application automatique des migrations
+- ⚠️ Protection contre les suppressions (colonnes en trop non supprimées)
+- 📊 Logs détaillés des modifications
+
+**Types de migrations supportées :**
+- ✅ Ajout de nouvelles tables
+- ✅ Ajout de nouvelles colonnes
+- ⚠️ Changements de type (détectés mais non appliqués pour sécurité)
+- ⚠️ Modifications de contraintes (détectées mais non appliquées)
+
+---
+
+### `test_migrations.py` 🆕
+**Script de test des migrations de schéma.**
+
+Teste le système de migration sans affecter la base de données.
+
+```bash
+# Exécuter les tests de migration
+python scripts/test_migrations.py
+```
+
+**Tests effectués :**
+- 📊 Récupération du schéma actuel
+- 📋 Génération du schéma attendu
+- 🔍 Comparaison des schémas
+- 🔄 Test de vérification complète (dry-run)
 
 ---
 

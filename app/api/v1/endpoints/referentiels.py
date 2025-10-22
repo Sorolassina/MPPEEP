@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlmodel import Session, select
 
-from app.api.v1.endpoints.auth import get_current_user
+from app.api.v1.endpoints.auth import get_current_user, require_roles
 from app.core.enums import GradeCategory
 from app.core.logging_config import get_logger
 from app.db.session import get_session
@@ -28,7 +28,7 @@ router = APIRouter()
 # ============================================
 @router.get("/", response_class=HTMLResponse, name="referentiels_home")
 def referentiels_home(
-    request: Request, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)
+    request: Request, session: Session = Depends(get_session), current_user: User = Depends(require_roles("admin"))
 ):
     """
     Page principale de gestion des référentiels

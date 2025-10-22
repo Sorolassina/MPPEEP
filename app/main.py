@@ -168,6 +168,16 @@ def read_root(request: Request):
     return RedirectResponse(url=str(request.url_for("login_page")), status_code=303)
 
 
+@subapp.get("/access-denied", response_class=HTMLResponse, name="access_denied")
+def access_denied(request: Request, module: str = "module", current_user: User = Depends(get_current_user)):
+    """
+    Page d'erreur d'accès refusé
+    """
+    return templates.TemplateResponse(
+        "pages/access_denied.html", 
+        get_template_context(request, module=module, current_user=current_user)
+    )
+
 @subapp.get("/accueil", response_class=HTMLResponse, name="accueil")
 def accueil(request: Request, current_user: User = Depends(get_current_user)):
     from sqlmodel import func, select

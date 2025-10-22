@@ -159,7 +159,7 @@ def test_user_type_validation():
     """Test validation des types d'utilisateur"""
     valid_types = [
         UserType.ADMIN,
-        UserType.USER,
+        UserType.AGENT,
         UserType.MODERATOR
     ]
     
@@ -271,11 +271,11 @@ def test_optional_fields_validation():
         password="password123",
         full_name="Test User",
         is_active=True,
-        type_user=UserType.USER
+        type_user=UserType.AGENT
     )
     
     assert user_data.is_active is True
-    assert user_data.type_user == UserType.USER
+    assert user_data.type_user == UserType.AGENT
     
     # Test avec champs optionnels par défaut
     user_data_minimal = UserCreate(
@@ -285,7 +285,7 @@ def test_optional_fields_validation():
     )
     
     assert user_data_minimal.is_active is True  # Valeur par défaut
-    assert user_data_minimal.type_user == UserType.USER  # Valeur par défaut
+    assert user_data_minimal.type_user == UserType.AGENT  # Valeur par défaut
 
 
 @pytest.mark.critical

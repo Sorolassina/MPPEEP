@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.enums import ActeAdministratifType, RequestType, WorkflowState
 from app.core.logging_config import get_logger
+from app.core.permission_decorators import require_data_access, require_module_dep
 
 # Imports locaux
 from app.db.session import get_session
@@ -31,11 +32,20 @@ router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse, name="rh_home")
-def rh_home(request: Request, session: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def rh_home(
+    request: Request, 
+    session: Session = Depends(get_session), 
+    current_user: User = Depends(get_current_user)
+):
     """
     Page principale RH avec KPIs, graphiques et liste des demandes
     Filtre les demandes selon les rôles personnalisés de l'utilisateur
     """
+    # Vérifier l'accès au module RH
+    if not current_user.can_access_module("rh") and not current_user.is_guest:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=request.url_for("access_denied").include_query_params(module="rh"), status_code=302)
+    
     from app.services.hierarchy_service import HierarchyService
 
     # Récupérer les demandes en attente de validation par l'utilisateur (nouvelle logique)
@@ -44,10 +54,15 @@ def rh_home(request: Request, session: Session = Depends(get_session), current_u
     # Récupérer aussi les 20 dernières demandes pour vue d'ensemble
     all_demandes = session.exec(select(HRRequest).order_by(HRRequest.created_at.desc()).limit(20)).all()
 
+    # Données de démonstration pour les invités
+    if current_user.is_guest:
+        all_demandes = []  # Liste vide pour les invités
+        pending_requests = []  # Aucune demande en attente
+
     return templates.TemplateResponse(
         "pages/rh.html",
         get_template_context(
-            request, demandes=all_demandes, pending_requests=pending_requests, WorkflowState=WorkflowState
+            request, demandes=all_demandes, pending_requests=pending_requests, WorkflowState=WorkflowState, current_user=current_user
         ),
     )
 
@@ -261,18 +276,32 @@ async def rh_create_demande(
 
 
 @router.get("/api/kpis")
-def api_kpis(session: Session = Depends(get_session)):
+def api_kpis(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """
     KPIs RH (JSON)
     """
+    # Vérifier l'accès aux données réelles
+    if not current_user.can_view_data():
+        raise HTTPException(status_code=403, detail="Accès aux données réelles refusé - Mode démonstration uniquement")
+    
     return RHService.kpis(session)
 
 
 @router.get("/api/evolution")
-def api_evolution(session: Session = Depends(get_session)):
+def api_evolution(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """
     Évolution des effectifs par année (JSON)
     """
+    # Vérifier l'accès aux données réelles
+    if not current_user.can_view_data():
+        raise HTTPException(status_code=403, detail="Accès aux données réelles refusé - Mode démonstration uniquement")
+    
     return RHService.evolution_par_annee(session)
 
 

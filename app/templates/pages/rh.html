@@ -13,6 +13,38 @@
     min-height: 100vh;
 }
 
+/* Bannière de démonstration */
+.demo-notice {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.demo-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.demo-icon {
+    font-size: 1.2rem;
+}
+
+.demo-text {
+    font-weight: 600;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.demo-description {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-size: 0.95rem;
+}
+
 /* KPIs */
 .kpis {
     display: grid;
@@ -81,13 +113,24 @@
     ],
     actions=[
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False},
-        {'label': '📝 Nouvelle demande', 'url': url_for('rh_new_demande'), 'primary': False},
-        {'label': '👥 Personnel', 'url': url_for('personnel_home'), 'primary': False},
-        {'label': '📊 Besoins agents', 'url': url_for('besoins_home'), 'primary': True}
+        {'label': '📝 Nouvelle demande', 'url': url_for('rh_new_demande'), 'primary': False, 'disabled': current_user.is_guest},
+        {'label': '👥 Personnel', 'url': url_for('personnel_home'), 'primary': False, 'disabled': current_user.is_guest},
+        {'label': '📊 Besoins agents', 'url': url_for('besoins_home'), 'primary': True, 'disabled': current_user.is_guest}
     ]
 ) }}
 
 <div class="rh-container container">
+  {% if current_user.is_guest %}
+  <div class="demo-notice">
+    <div class="demo-banner">
+      <span class="demo-icon">🎯</span>
+      <span class="demo-text">Mode Démonstration - Données fictives</span>
+    </div>
+    <p class="demo-description">
+      Vous êtes en mode invité. Les données affichées sont des exemples pour vous permettre de découvrir l'interface.
+    </p>
+  </div>
+  {% endif %}
 
   <!-- KPIs et Actions -->
   <div class="card">

@@ -11,6 +11,8 @@ from app.api.v1.endpoints.auth import require_roles
 from app.core.logging_config import get_logger
 from app.core.path_config import path_config
 from app.core.security import get_password_hash
+from app.core.enums import UserType
+from app.core.permissions import PermissionManager
 from app.db.session import get_session
 from app.models.user import User
 from app.services.activity_service import ActivityService
@@ -60,7 +62,7 @@ def gestion_utilisateurs(
     except Exception as e:
         logger.error(f"❌ Erreur récupération utilisateurs: {e}")
 
-    return templates.TemplateResponse("pages/gestion_utilisateurs.html", get_template_context(request, users=users))
+    return templates.TemplateResponse("pages/gestion_utilisateurs.html", get_template_context(request, users=users, UserType=UserType, PermissionManager=PermissionManager))
 
 
 @router.get("/parametres-systeme", response_class=HTMLResponse, name="parametres_systeme")

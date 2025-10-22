@@ -32,7 +32,7 @@ def test_users_api_create(client: TestClient, admin_client: TestClient, session:
         "full_name": "New User",
         "password": "password123",
         "is_active": True,
-        "type_user": UserType.USER.value
+        "type_user": UserType.AGENT.value
     }
     
     # Test sans authentification (doit échouer)

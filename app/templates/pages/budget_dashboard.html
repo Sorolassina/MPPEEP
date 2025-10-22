@@ -11,14 +11,26 @@
         {'name': 'Budget'}
     ],
     actions=[
-        {'label': '❓ Aide', 'url': url_for('aide_budget'), 'primary': False},
-        {'label': '📋 Fiches Techniques', 'url': url_for('budget_fiches_hierarchique'), 'primary': False},
-        {'label': '📊 SIGOBE', 'url': url_for('budget_sigobe'), 'primary': False},
+        {'label': '❓ Aide', 'url': url_for('aide_budget'), 'primary': False, 'disabled': current_user.is_guest},
+        {'label': '📋 Fiches Techniques', 'url': url_for('budget_fiches_hierarchique'), 'primary': False, 'disabled': current_user.is_guest},
+        {'label': '📊 SIGOBE', 'url': url_for('budget_sigobe'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
     ]
 ) }}
 
 <div class="budget-container">
+  {% if current_user.is_guest %}
+  <div class="demo-notice">
+    <div class="demo-banner">
+      <span class="demo-icon">🎯</span>
+      <span class="demo-text">Mode Démonstration - Données fictives</span>
+    </div>
+    <p class="demo-description">
+      Vous êtes en mode invité. Les données affichées sont des exemples pour vous permettre de découvrir l'interface.
+    </p>
+  </div>
+  {% endif %}
+  
   <div class="budget-layout">
 
     <!-- ========== ROW 2 : FILTRES (Période, Programme, Nature) ========== -->
@@ -450,6 +462,38 @@
     max-width: 1600px;
     margin: 0 auto;
     padding: 1rem;
+}
+
+/* Bannière de démonstration */
+.demo-notice {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.demo-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.demo-icon {
+    font-size: 1.2rem;
+}
+
+.demo-text {
+    font-weight: 600;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.demo-description {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-size: 0.95rem;
 }
 
 /* Filtres - Répartition équitable */

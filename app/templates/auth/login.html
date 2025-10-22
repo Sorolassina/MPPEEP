@@ -96,6 +96,19 @@
             user-select: none;
         }
         
+        /* Copyright */
+        .copyright {
+            position: absolute;
+            bottom: 20px;
+            right: 30px;
+            color: white;
+            font-size: 12px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            opacity: 0.8;
+            font-family: 'Segoe UI', sans-serif;
+            z-index: 10;
+        }
+        
         .clock-time {
             font-size: 6rem;
             font-weight: 200;
@@ -201,12 +214,13 @@
 
         /* Formulaire avec effet Neumorphisme */
         .login-form-container {
-            background: var(--secondary-color);
+            background: rgba(255, 255, 255, 0.15);  /* Blanc semi-transparent */
+            backdrop-filter: blur(10px);  /* Effet de flou (verre dépoli) */
+            -webkit-backdrop-filter: blur(10px);  /* Safari rgba(255, 255, 255, 0.3)*/
             border-radius: 20px;
             padding: 32px;
-            border: none;
-            
-            
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
         
         .login-form {
@@ -273,7 +287,7 @@
         .form-input {
             width: 100%;
             padding: 12px 16px;
-            border: 1px solid var(--gray-300);
+            border: 2px solid var(--secondary-color);
             border-radius: 8px;
             font-size: 14px;
             transition: all 0.3s ease;
@@ -328,6 +342,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            background: transparent;
         }
 
         .checkbox-input {
@@ -338,7 +353,7 @@
 
         .checkbox-label {
             font-size: 14px;
-            color: var(--gray-200);
+            color: var(--white-color);
             cursor: pointer;
         }
 
@@ -398,11 +413,11 @@
 
         .signup-text {
             font-size: 14px;
-            color: var(--gray-800);
+            color: var(--white-color);
         }
 
         .signup-link a {
-            color: var(--gray-900);
+            color: var(--white-color);
             text-decoration: underline;
             font-weight: 500;
         }
@@ -464,6 +479,13 @@
                 margin-bottom: 12px;
             }
         }
+        .btn-primary {
+            color: black !important;
+        }
+        .btn-primary:hover {
+            color: var(--white-color) !important;
+        }
+        
     </style>
 </head>
 <body>
@@ -484,27 +506,31 @@
             <div class="clock-date" id="clock-date">Chargement...</div>
         </div>
         
+        <!-- Copyright -->
+        <div class="copyright">
+            © Soro Lassina W.
+        </div>
+        
         <div class="login-wrapper" style="overflow: hidden;">
             <div class="login-content"style="overflow: hidden;">
-                
-                <!-- Logo et Titre -->
-                <div class="login-header">
-                    <div class="logo-container">
-                        <img src="{{ get_logo_url() }}" alt="Logo {{ app_name }}" class="logo-image">
-                    </div>
-                    <h2 class="login-title">
-                        Ministère du patrimoine, du Portefeuille de l'Etat et des Entreprises Publiques
-                    </h2>
-                    <h3 class="login-subtitle">
-                        Bienvenue sur {{ app_name }}
-                    </h3>
-                    <p class="login-subtitle">
-                        Connectez-vous à votre compte
-                    </p>
-                </div>
 
                 <!-- Formulaire de Connexion -->
                 <div class="login-form-container">
+                    
+                    <!-- Logo et Titre (déplacés à l'intérieur) -->
+                    <div class="login-header">
+                        <img src="{{ static_versioned_url(static_url('images/logo.webp')) }}" alt="Logo" style="width: 80px; height: 80px; margin: 0 auto 15px auto; display: block; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <h2 class="login-title" style="color: var(--white-color);">
+                            Ministère du patrimoine, du Portefeuille de l'Etat et des Entreprises Publiques
+                        </h2>
+                        <h3 class="login-subtitle" style="color: var(--white-color); opacity: 0.95;">
+                            Bienvenue sur {{ app_name }}
+                        </h3>
+                        <p class="login-subtitle" style="color: var(--white-color); opacity: 0.9;">
+                            Connectez-vous à votre compte
+                        </p>
+                    </div>
+                    
                     <form method="POST" action="{{ url_for('login') }}" id="login-form" class="login-form">
                         <!-- Messages d'erreur/succès -->
                         {% if error %}
@@ -594,17 +620,18 @@
                             </button>
                         </div>
                     </form>
+                    
+                    <!-- Lien d'inscription (déplacé à l'intérieur) -->
+                    <div class="signup-link">
+                        <p class="signup-text">
+                            Pas encore de compte ?
+                            <a href="">
+                                contactez l'administrateur
+                            </a>
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Lien d'inscription -->
-                <div class="signup-link">
-                    <p class="signup-text">
-                        Pas encore de compte ?
-                        <a href="">
-                            contactez l'administrateur
-                        </a>
-                    </p>
-                </div>
             </div>
         </div>
     </div>
@@ -682,34 +709,41 @@
             // ROTATION DES IMAGES DE FOND
             // ====================================
             const backgroundImages = [
-                '{{ static_url("images/backgroundlogin/aj-robbie-BuQ1RZckYW4-unsplash.jpg") }}',
-                '{{ static_url("images/backgroundlogin/alexander-slattery-LI748t0BK8w-unsplash.jpg") }}',
+                '{{ static_url("images/backgroundlogin/BGlogin.jpg") }}',
                 '{{ static_url("images/backgroundlogin/christian-joudrey-u_nsiSvPEak-unsplash.jpg") }}',
                 '{{ static_url("images/backgroundlogin/jonatan-pie-3l3RwQdHRHg-unsplash.jpg") }}',
-                '{{ static_url("images/backgroundlogin/BGLogin.jpg") }}'
+                '{{ static_url("images/backgroundlogin/alexander-slattery-LI748t0BK8w-unsplash.jpg") }}'
             ];
             
             let currentImageIndex = 0;
             const loginContainer = document.querySelector('.login-container');
             
+            // Précharger toutes les images au démarrage
+            function preloadAllImages() {
+                backgroundImages.forEach(imageUrl => {
+                    const img = new Image();
+                    img.src = imageUrl;
+                });
+            }
+            
             function changeBackgroundImage() {
                 const imageUrl = backgroundImages[currentImageIndex];
                 
-                // Appliquer l'image sans overlay (ou avec overlay si souhaité)
+                // Appliquer l'image immédiatement pour éviter le blanc
                 loginContainer.style.backgroundImage = `url('${imageUrl}')`;
                 
-                // Si vous voulez un overlay, décommentez ci-dessous :
-                // loginContainer.style.backgroundImage = `
-                //     linear-gradient(
-                //         rgba(255, 255, 255, 0.50),
-                //         rgba(255, 255, 255, 0.50)
-                //     ),
-                //     url('${imageUrl}')
-                // `;
+                // Précharger la prochaine image en arrière-plan
+                const nextIndex = (currentImageIndex + 1) % backgroundImages.length;
+                const nextImageUrl = backgroundImages[nextIndex];
+                const preloadImage = new Image();
+                preloadImage.src = nextImageUrl;
                 
                 // Passer à l'image suivante
-                currentImageIndex = (currentImageIndex + 1) % backgroundImages.length;
+                currentImageIndex = nextIndex;
             }
+            
+            // Précharger toutes les images
+            preloadAllImages();
             
             // Changer l'image immédiatement
             changeBackgroundImage();

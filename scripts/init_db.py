@@ -90,6 +90,39 @@ def create_tables():
         logger.error(f"❌ Erreur lors de la création des tables: {e}", exc_info=True)
         return False
 
+def check_schema_migrations():
+    """Vérifie et applique les migrations de schéma si nécessaire"""
+    try:
+        from scripts.migrate_schema import SchemaMigrator
+        
+        migrator = SchemaMigrator()
+        
+        # Vérification en mode dry-run d'abord
+        logger.info("🔍 Vérification des migrations de schéma...")
+        success = migrator.run_migration_check(dry_run=True)
+        
+        if success:
+            logger.info("✅ Schéma de base de données à jour")
+            return True
+        else:
+            logger.warning("⚠️  Des migrations sont nécessaires")
+            logger.info("🔄 Application automatique des migrations...")
+            
+            # Appliquer les migrations automatiquement
+            success = migrator.run_migration_check(dry_run=False)
+            
+            if success:
+                logger.info("✅ Migrations appliquées avec succès")
+                return True
+            else:
+                logger.error("❌ Erreur lors de l'application des migrations")
+                return False
+                
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la vérification des migrations: {e}")
+        logger.warning("⚠️  Continuons sans migration automatique")
+        return True  # Continue quand même pour ne pas bloquer le démarrage
+
 def initialize_system_settings():
     """Initialise les paramètres système par défaut"""
     try:
@@ -267,6 +300,12 @@ def initialize_database():
         logger.error("❌ Échec de l'initialisation des tables")
         return False
     logger.info("✅ Tables créées avec succès")
+    
+    # Étape 1.5: Vérifier et appliquer les migrations de schéma
+    if not check_schema_migrations():
+        logger.error("❌ Échec de la vérification des migrations")
+        return False
+    logger.info("✅ Migrations vérifiées avec succès")
     # Étape 2: Initialiser les paramètres système
     if not initialize_system_settings():
         logger.error("❌ Échec de l'initialisation des paramètres système")

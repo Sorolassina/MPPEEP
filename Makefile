@@ -575,13 +575,13 @@ docker-dev: ## Demarrer en mode developpement avec Docker
 
 .PHONY: docker-prod
 docker-prod: ## Demarrer en mode production avec Docker
-	@echo "Demarrage en mode production..."
-	docker-compose -f docker-compose.prod.yml up -d
-	@echo ""
-	@echo "✅ Application demarree en mode production"
-	@echo "📍 URL: http://localhost:80 (Nginx)"
-	@echo "📍 API: http://localhost:9000 (Direct)"
-	@echo "📊 Logs: make docker-logs-prod"
+	@Write-Host "Demarrage en mode production..." -ForegroundColor Cyan
+	docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+	@Write-Host ""
+	@Write-Host "Application demarree en mode production" -ForegroundColor Green
+	@Write-Host "URL: http://localhost:9000/mppeep (Direct)" -ForegroundColor White
+	@Write-Host "URL Cloudflare: https://mppeep.skpartners.consulting" -ForegroundColor White
+	@Write-Host "Logs: make docker-logs-prod" -ForegroundColor Gray
 
 .PHONY: docker-build-dev
 docker-build-dev: ## Construire l'image de developpement

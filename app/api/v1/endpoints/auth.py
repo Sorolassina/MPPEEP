@@ -65,6 +65,25 @@ async def login_post(
         return templates.TemplateResponse(
             "auth/login.html", get_template_context(request, error="Compte désactivé. Contactez l'administrateur.")
         )
+    
+    # Vérifier si l'utilisateur a accepté la charte de confidentialité
+    from app.core.config import settings
+    if settings.PRIVACY_POLICY_REQUIRED and not user.privacy_policy_accepted:
+        logger.info(f"📋 Redirection vers charte de confidentialité pour {username}")
+        # Créer une session temporaire pour rediriger vers la charte
+        user_session_temp = SessionService.create_session(
+            db_session=session,
+            user=user,
+            request=request,
+            remember_me=False,
+        )
+        response = RedirectResponse(url=str(request.url_for("privacy_policy_page")), status_code=303)
+        SessionService.set_session_cookie(
+            response=response,
+            session_token=user_session_temp.session_token,
+            max_age=600,  # 10 minutes pour accepter la charte
+        )
+        return response
 
     # Si authentification réussie, rediriger vers l'accueil
     logger.info(f"✅ Connexion réussie pour l'utilisateur : {user.email} (ID: {user.id})")
@@ -288,6 +307,128 @@ def require_roles(*roles: Iterable[str]):
         return current_user
 
     return _dep
+
+
+# ===== ROUTE DE CHARTE DE CONFIDENTIALITÉ =====
+
+
+@router.get("/privacy-policy", response_class=HTMLResponse, name="privacy_policy_page")
+async def privacy_policy_get(
+    request: Request,
+    view: bool = False,  # Paramètre pour consultation simple
+    session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
+    db_session: Session = Depends(get_session),
+):
+    """Affiche la charte de confidentialité"""
+    from app.core.config import settings
+    from datetime import datetime
+    
+    # Mode consultation (depuis le footer) - ne nécessite pas de connexion
+    if view:
+        logger.info("📋 Consultation de la charte (mode lecture seule)")
+        return templates.TemplateResponse(
+            "auth/privacy_policy.html",
+            get_template_context(
+                request,
+                privacy_version=settings.PRIVACY_POLICY_VERSION,
+                current_date=datetime.now().strftime("%d/%m/%Y"),
+                view_only=True,  # Mode lecture seule
+            ),
+        )
+    
+    # Mode acceptation (première connexion)
+    # Vérifier que l'utilisateur est connecté (session temporaire créée au login)
+    user = None
+    if session_token:
+        try:
+            user = SessionService.get_user_from_session(db_session=db_session, session_token=session_token)
+        except Exception as e:
+            logger.warning(f"⚠️  Session invalide pour la charte: {e}")
+    
+    if not user:
+        logger.warning("⚠️  Tentative d'accès à la charte sans session valide")
+        return RedirectResponse(url=str(request.url_for("login_page")), status_code=303)
+    
+    # Si l'utilisateur a déjà accepté la charte, rediriger vers l'accueil
+    if user.privacy_policy_accepted:
+        logger.info(f"✅ Charte déjà acceptée pour {user.email}, redirection vers accueil")
+        return RedirectResponse(url=str(request.url_for("accueil")), status_code=303)
+    
+    logger.info(f"📋 Affichage de la charte pour {user.email}")
+    
+    return templates.TemplateResponse(
+        "auth/privacy_policy.html",
+        get_template_context(
+            request,
+            privacy_version=settings.PRIVACY_POLICY_VERSION,
+            current_date=datetime.now().strftime("%d/%m/%Y"),
+        ),
+    )
+
+
+@router.post("/privacy-policy", response_class=HTMLResponse, name="accept_privacy_policy")
+async def privacy_policy_post(
+    request: Request,
+    accept: bool = Form(False),
+    session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
+    db_session: Session = Depends(get_session),
+):
+    """Enregistre l'acceptation de la charte"""
+    from app.core.config import settings
+    from datetime import datetime
+    
+    # Récupérer l'utilisateur
+    user = None
+    if session_token:
+        try:
+            user = SessionService.get_user_from_session(db_session=db_session, session_token=session_token)
+        except Exception as e:
+            logger.warning(f"⚠️  Session invalide lors de l'acceptation de la charte: {e}")
+    
+    if not user:
+        logger.warning("⚠️  Tentative d'acceptation de la charte sans session valide")
+        return RedirectResponse(url=str(request.url_for("login_page")), status_code=303)
+    
+    if not accept:
+        logger.warning(f"⚠️  {user.email} n'a pas accepté la charte")
+        return templates.TemplateResponse(
+            "auth/privacy_policy.html",
+            get_template_context(
+                request,
+                privacy_version=settings.PRIVACY_POLICY_VERSION,
+                current_date=datetime.now().strftime("%d/%m/%Y"),
+                error="Vous devez accepter la charte pour continuer",
+            ),
+        )
+    
+    # Enregistrer l'acceptation
+    user.privacy_policy_accepted = True
+    user.privacy_policy_accepted_at = datetime.now()
+    user.privacy_policy_version = settings.PRIVACY_POLICY_VERSION
+    
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    logger.info(f"✅ Charte acceptée par {user.email} (version {settings.PRIVACY_POLICY_VERSION})")
+    
+    # Logger l'activité
+    try:
+        ActivityService.log_activity(
+            db_session=db_session,
+            user_id=user.id,
+            user_email=user.email,
+            user_full_name=user.full_name,
+            action_type="privacy_policy",
+            target_type="user",
+            description=f"Acceptation de la charte de confidentialité v{settings.PRIVACY_POLICY_VERSION}",
+            icon="📋",
+        )
+    except Exception as e:
+        logger.warning(f"⚠️  Impossible de logger l'acceptation de la charte: {e}")
+    
+    # Rediriger vers l'accueil
+    return RedirectResponse(url=str(request.url_for("accueil")), status_code=303)
 
 
 # ===== ROUTE DE DÉCONNEXION =====

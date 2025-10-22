@@ -11,9 +11,11 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from sqlmodel import Session, select
 
-from app.api.v1.endpoints.auth import require_roles
+from app.api.v1.endpoints.auth import require_roles, get_current_user
 from app.core.logging_config import get_logger
+from app.core.permission_decorators import require_data_access, require_module_dep
 from app.db.session import get_session
+from app.models.user import User
 from app.models.performance import (
     IndicateurPerformance,
     ObjectifPerformance,
@@ -38,8 +40,17 @@ def aide_performance(request: Request):
 
 
 @router.get("", response_class=HTMLResponse, name="performance_home")
-def performance_home(request: Request, db: Session = Depends(get_session)):
+def performance_home(
+    request: Request, 
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
     """Page d'accueil du module Performance"""
+    # Vérifier l'accès au module Performance
+    if not current_user.can_access_module("performance") and not current_user.is_guest:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=request.url_for("access_denied").include_query_params(module="performance"), status_code=302)
+    
     try:
         from sqlmodel import func
 
@@ -100,6 +111,18 @@ def performance_home(request: Request, db: Session = Depends(get_session)):
         # Nombre de rapports générés
         total_rapports = db.exec(select(func.count(RapportPerformance.id))).one() or 0
 
+        # Données de démonstration pour les invités
+        if current_user.is_guest:
+            total_objectifs = 25
+            objectifs_atteints = 18
+            objectifs_en_cours = 5
+            objectifs_en_retard = 2
+            total_indicateurs = 45
+            indicateurs_alerte = 8
+            taux_realisation = 72.0
+            score_global = 7.2
+            total_rapports = 12
+
         context = get_template_context(request)
         context.update(
             {
@@ -117,6 +140,7 @@ def performance_home(request: Request, db: Session = Depends(get_session)):
                     "score_global": score_global,
                     "total_rapports": total_rapports,
                 },
+                "current_user": current_user,
             }
         )
 

@@ -51,12 +51,17 @@ class UserType(str, Enum):
     """
 
     ADMIN = "admin"
-    USER = "agent"
-    N1 = "chef service"
-    N2 = "directeur"
-    DRH = "directeur des ressources humaines"
-    DAF = "directeur administratif et financier"
-    INVITE = "invité"
+    INVITE = "invite"
+    
+    # Nouveaux types directionnels
+    SDB = "sdb"  # Direction Budget - Budget et Performance
+    SDRH = "sdrh"  # Direction RH - Ressources Humaines
+    SDCMG = "sdc"  # Direction Commerciale et Marketing - Stocks
+    DAF = "daf"  # Direction Administrative et Financière - Tout
+    
+    # Types hiérarchiques (héritent des autorisations de leur responsable)
+    CS = "cs"  # Chef de service
+    AGENT = "agent"  # Agent standard
 
     def __str__(self):
         return self.value

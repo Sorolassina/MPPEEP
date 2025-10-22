@@ -32,8 +32,23 @@ from app.models.personnel import (
     Programme,
     Service,
 )
+from app.models.performance import (
+    EvaluationPerformance,
+    IndicateurPerformance,
+    ObjectifPerformance,
+    ProgrammePerformance,
+    RapportPerformance,
+)
 from app.models.rh import Agent, Grade, HRRequest, WorkflowHistory, WorkflowStep
 from app.models.session import UserSession
+from app.models.workflow_config import (
+    CustomRole,
+    CustomRoleAssignment,
+    RequestTypeCustom,
+    WorkflowConfigHistory,
+    WorkflowTemplate,
+    WorkflowTemplateStep,
+)
 from app.models.stock import (
     Article,
     CategorieArticle,
@@ -57,12 +72,15 @@ __all__ = [
     "BesoinAgent",
     "CategorieArticle",
     "ConsolidationBesoin",
+    "CustomRole",
+    "CustomRoleAssignment",
     "DemandeStock",
     "Direction",
     "DocumentAgent",
     "DocumentBudget",
     "DocumentLigneBudgetaire",
     "EvaluationAgent",
+    "EvaluationPerformance",
     "ExecutionBudgetaire",
     "FicheTechnique",
     "File",
@@ -72,13 +90,18 @@ __all__ = [
     "HRRequest",
     "HistoriqueBudget",
     "HistoriqueCarriere",
+    "IndicateurPerformance",
     "Inventaire",
     "LigneBudgetaire",
     "LigneBudgetaireDetail",
     "LigneInventaire",
     "MouvementStock",
     "NatureDepense",
+    "ObjectifPerformance",
     "Programme",
+    "ProgrammePerformance",
+    "RapportPerformance",
+    "RequestTypeCustom",
     "Service",
     "ServiceBeneficiaire",
     "SigobeChargement",
@@ -88,6 +111,9 @@ __all__ = [
     "SystemSettings",
     "User",
     "UserSession",
+    "WorkflowConfigHistory",
     "WorkflowHistory",
     "WorkflowStep",
+    "WorkflowTemplate",
+    "WorkflowTemplateStep",
 ]
