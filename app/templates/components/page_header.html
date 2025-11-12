@@ -40,7 +40,7 @@
 
 <style>
 .page-header {
-    background: var(--secondary-color);
+    background: var(--border-color);
     color: white;
     padding: 2rem;
     margin-bottom: 2rem;
@@ -68,12 +68,13 @@
     font-size: 0.9rem;
     opacity: 0.95;
     align-items: center;
+    color: var(--blanc-color);
 }
 
 .breadcrumbs a {
-    color: white;
+    color: var(--blanc-color);
     text-decoration: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s ease;
 }
 
 .breadcrumbs a:hover {
@@ -82,7 +83,7 @@
 }
 
 .breadcrumbs span {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .page-header-actions {
@@ -92,19 +93,21 @@
     flex-wrap: wrap;
 }
 
+.page-header-actions .btn-primary {
+    background: var(--blanc-color);
+    color: var(--noir-color);
+    border: 1px solid var(--border-color);
+}
+
+.page-header-actions .btn-secondary {
+    background: var(--border-color);
+    color: var(--blanc-color);
+    border: 1px solid var(--border-color);
+}
+
 /* Les styles de boutons sont entièrement gérés par buttons.css */
 
-.btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none !important;
-    box-shadow: none !important;
-}
 
-.btn.disabled:hover {
-    transform: none !important;
-    box-shadow: none !important;
-}
 
 @media (max-width: 768px) {
     .page-header {

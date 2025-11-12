@@ -6,6 +6,7 @@ Système de gestion de la performance organisationnelle
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -24,6 +25,7 @@ from app.models.performance import (
 )
 from app.services.activity_service import ActivityService
 from app.services.performance_service import PerformanceService
+from app.services.engagement_letter_service import EngagementLetterGenerator
 from app.services.report_generator import ReportGenerator
 
 logger = get_logger(__name__)
@@ -171,6 +173,58 @@ def performance_dashboard(request: Request, db: Session = Depends(get_session)):
     except Exception as e:
         logger.error(f"Erreur lors du chargement du dashboard Performance: {e}")
         raise HTTPException(status_code=500, detail="Erreur interne du serveur")
+
+
+@router.get(
+    "/lettres-engagement/pdf",
+    response_class=StreamingResponse,
+    name="performance_lettres_engagement_pdf",
+)
+def generate_lettre_engagement_pdf(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Génère la couverture de la lettre d'engagement opérationnel."""
+    try:
+        data: dict[str, Any] = {}
+
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            data[target_key] = transform(value) if transform else value
+
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("pays", "pays")
+        optional_param("devise", "devise")
+        optional_param("ministere", "ministere")
+        optional_param("ville", "ville_signature")
+        optional_param("date", "date_signature")
+        optional_param("programme", "programme_intitule")
+        optional_param("bop", "bop_intitule")
+        optional_param("rprog_nom", "rprog_nom")
+        optional_param("rprog_fonction", "rprog_fonction")
+        optional_param("rprog_photo", "rprog_photo")
+        optional_param("rbop_nom", "rbop_nom")
+        optional_param("rbop_fonction", "rbop_fonction")
+        optional_param("rbop_photo", "rbop_photo")
+        optional_param("decret_org_num", "decret_org_num")
+        optional_param("decret_org_date", "decret_org_date")
+        optional_param("decret_resp_num", "decret_resp_num")
+        optional_param("decret_resp_date", "decret_resp_date")
+        optional_param("logo_path", "logo_path")
+
+        pdf_buffer = EngagementLetterGenerator.generate_pdf(data)
+
+        year = data.get("annee", EngagementLetterGenerator.DEFAULT_DATA.get("annee", "2025"))
+
+        headers = {
+            "Content-Disposition": f"inline; filename=lettre_engagement_{year}.pdf",
+        }
+        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers=headers)
+    except Exception as exc:
+        logger.exception("Erreur génération lettre d'engagement: %s", exc)
+        raise HTTPException(status_code=500, detail="Erreur lors de la génération de la lettre d'engagement")
 
 
 @router.get("/objectifs", response_class=HTMLResponse, name="performance_objectifs")

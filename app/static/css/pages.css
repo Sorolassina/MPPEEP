@@ -20,28 +20,11 @@
 }
 
 /* ========================================
-   2. CARDS
-   ======================================== */
-
-.card {
-  background: white;
-  padding: 2rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 50px rgba(0,0,0,0.15);
-}
-
-/* ========================================
-   3. STATS CARDS - Tous les styles sont dans cards.css
+   2. STATS CARDS - Tous les styles sont dans cards.css
    ======================================== */
 
 /* ========================================
-   4. BARRE D'ACTIONS
+   3. BARRE D'ACTIONS
    ======================================== */
 
 .actions-bar {
@@ -83,54 +66,7 @@
 /* Les styles de boutons sont maintenant centralisés dans buttons.css */
 
 /* ========================================
-   6. TABLES
-   ======================================== */
-
-.data-table {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-  overflow: hidden;
-  animation: slideUp 0.5s ease-out;
-}
-
-.data-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.data-table th {
-  padding: 1.25rem 1.5rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.data-table td {
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #f0f0f0;
-  transition: all 0.2s;
-}
-
-.data-table tbody tr {
-  transition: all 0.3s ease;
-}
-
-.data-table tbody tr:hover {
-  background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
-  transform: scale(1.005);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-}
-
-/* ========================================
-   7. BADGES
+   4. BADGES
    ======================================== */
 
 .badge {
@@ -166,7 +102,7 @@
 }
 
 /* ========================================
-   8. ACTION ICONS
+   5. ACTION ICONS
    ======================================== */
 
 .action-icons {
@@ -196,7 +132,7 @@
 }
 
 /* ========================================
-   9. EMPTY STATE
+   7. EMPTY STATE
    ======================================== */
 
 .empty-state {
@@ -218,7 +154,7 @@
 }
 
 /* ========================================
-   10. ANIMATIONS
+   8. ANIMATIONS
    ======================================== */
 
 @keyframes countUp {
@@ -242,7 +178,7 @@
 }
 
 /* ========================================
-   11. RESPONSIVE
+   9. RESPONSIVE
    ======================================== */
 
 @media (max-width: 768px) {

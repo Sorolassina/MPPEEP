@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     stock,
     users,
     workflow_admin,
+    message,
 )
 
 api_router = APIRouter()
@@ -36,4 +37,5 @@ api_router.include_router(performance.router, prefix="/performance", tags=["perf
 api_router.include_router(workflow_admin.router, prefix="/admin", tags=["workflow-admin"])
 api_router.include_router(aide.router, prefix="/aide", tags=["aide"])
 api_router.include_router(legal.router, tags=["legal"])
+api_router.include_router(message.router, prefix="/messages", tags=["messages"])
 # access_denied est maintenant dans admin.router

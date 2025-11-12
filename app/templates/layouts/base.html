@@ -17,6 +17,11 @@
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ static_versioned_url(static_url('favicon.ico')) }}">
     
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- CSS de base -->
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/base.css')) }}">
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/theme.css')) }}">
@@ -60,11 +65,19 @@
     <!-- Toast Notifications -->
     {% include "components/toast_notifications.html" %}
 
-    <!-- Bouton d'aide flottant -->
-    <a href="{{ url_for('aide_home') }}" class="floating-help-button" title="Centre d'Aide">
-        ❓
-        <span class="help-tooltip">Besoin d'aide ?</span>
-    </a>
+    <!-- Bouton de messagerie flottant -->
+    <button
+        type="button"
+        class="floating-help-button"
+        title="Messagerie"
+        aria-label="Ouvrir la messagerie"
+        onclick="toggleMessagerie()"
+    >
+        <span class="messagerie-icon">💬</span>
+        <span class="messagerie-badge hidden">
+            <span class="messagerie-badge-text">0</span>
+        </span>
+    </button>
 
     {% block body %}
         <!-- Header / Navigation -->
@@ -87,9 +100,42 @@
             {% include "components/footer.html" %}
         {% endblock %}
     {% endblock %}
+
+    {% include "components/messagerie.html" %}
     
     <!-- Scripts JS de base -->
     <script src="{{ static_versioned_url(static_url('js/app.js')) }}"></script>
+    
+    <script>
+        (function() {
+            const storageKey = 'mppeep-theme';
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedTheme = localStorage.getItem(storageKey);
+            const root = document.documentElement;
+
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    root.setAttribute('data-theme', 'dark');
+                } else {
+                    root.removeAttribute('data-theme');
+                }
+                const icon = document.querySelector('.theme-toggle-icon');
+                if (icon) {
+                    icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+                }
+            }
+
+            window.toggleTheme = function() {
+                const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
+                applyTheme(next === 'dark' ? 'dark' : null);
+                localStorage.setItem(storageKey, next);
+            };
+
+            const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+            applyTheme(initialTheme === 'dark' ? 'dark' : null);
+        })();
+    </script>
     
     <!-- Script global pour l'overlay de navigation -->
     <script>

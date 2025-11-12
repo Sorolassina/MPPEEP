@@ -24,6 +24,7 @@ body.modal-open {
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -188,24 +189,11 @@ body.modal-open {
     border-radius: 0 0 12px 12px;
 }
 
-/* Modal avec formulaire */
-.modal form {
-    margin: 0;
-}
-
-.modal .form-group:last-child {
-    margin-bottom: 0;
-}
-
-/* Force les formulaires en une seule colonne dans les modaux */
-.modal .form-grid,
-.modal .form-row {
-    grid-template-columns: 1fr !important;
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
     gap: 1rem;
-}
-
-.modal .form-group {
-    width: 100%;
+    margin-top: 1.5rem;
 }
 
 /* Scroll personnalisé dans modal */
@@ -298,9 +286,9 @@ body.modal-open {
         padding: 1rem;
         flex-direction: column-reverse;
     }
-    
-    .modal-footer .btn {
-        width: 100%;
+
+    .modal-actions {
+        flex-direction: column-reverse;
     }
 }
 

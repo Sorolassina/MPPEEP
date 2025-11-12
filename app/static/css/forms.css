@@ -63,12 +63,99 @@
     margin-bottom: 1rem;
 }
 
+/* Actions de Formulaire */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 2rem;
+    border-top: 2px solid #f0f0f0;
+    margin-top: 2rem;
+}
+
 /* Groupe de Champ */
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     margin-bottom: 1rem;
+    animation: fadeInUp 0.5s ease-out backwards;
+}
+
+/* Filtres - barres de contrôle */
+.filters-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--vert-color) 0%, color-mix(in srgb, var(--vert-color) 70%, var(--orange-color) 30%) 100%);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    color: var(--blanc-color);
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.filter-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--blanc-color);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.filter-select {
+    width: 100%;
+    padding: 0.85rem 1.2rem;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--noir-color);
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.filter-select:hover,
+.filter-select:focus {
+    outline: none;
+    border-color: var(--blanc-color);
+    background: var(--blanc-color);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+[data-theme="dark"] .filters-row {
+    background: linear-gradient(135deg, var(--orange-color) 0%, color-mix(in srgb, var(--orange-color) 60%, var(--vert-color) 40%) 100%);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .filter-select {
+    background: rgba(31, 32, 39, 0.85);
+    color: var(--blanc-color);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="dark"] .filter-select:hover,
+[data-theme="dark"] .filter-select:focus {
+    background: rgba(31, 32, 39, 0.95);
+    border-color: var(--blanc-color);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 768px) {
+    .filters-row {
+        flex-direction: column;
+        padding: 1.25rem;
+    }
 }
 
 /* Labels */
@@ -205,16 +292,6 @@ input[type="file"]:hover {
     border-color: var(--success-color);
 }
 
-/* Actions de Formulaire Premium */
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    padding-top: 2rem;
-    border-top: 2px solid #f0f0f0;
-    margin-top: 2rem;
-}
-
 /* Labels Premium */
 .form-group label {
     font-weight: 500;
@@ -311,6 +388,7 @@ input[type="range"] {
     background: var(--gray-300);
     outline: none;
     -webkit-appearance: none;
+    appearance: none;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -362,21 +440,40 @@ fieldset legend {
     margin-bottom: 0;
 }
 
+/* Formulaires affichés dans les modals */
+.modal form {
+    margin: 0;
+}
+
+.modal .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.modal .form-grid,
+.modal .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+}
+
+.modal .form-group {
+    width: 100%;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .form-grid,
     .form-row {
         grid-template-columns: 1fr;
     }
-    
+
     .form-actions {
         flex-direction: column-reverse;
     }
-    
+
     .form-actions .btn {
         width: 100%;
     }
-    
+
     .form-inline {
         flex-direction: column;
         align-items: stretch;

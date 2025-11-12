@@ -1,0 +1,805 @@
+<!-- Popup de messagerie -->
+<div id="messageriePopup" class="messagerie-popup">
+    <div class="messagerie-header">
+        <h3>📩 Messagerie</h3>
+        <button class="messagerie-close" onclick="toggleMessagerie()">×</button>
+    </div>
+    
+    <div class="messagerie-content">
+        <!-- Liste des conversations -->
+        <div id="conversationsList" class="conversations-list">
+            <div class="messagerie-search">
+                <input type="text" id="searchUserInput" placeholder="Rechercher un utilisateur..." onkeyup="searchUsers()">
+                <button onclick="showNewConversation()" class="btn-new-conv">➕ Nouveau</button>
+            </div>
+            <div id="conversationsContainer" class="conversations-container">
+                <div class="loading-messages">Chargement des conversations...</div>
+            </div>
+        </div>
+        
+        <!-- Zone de chat -->
+        <div id="chatArea" class="chat-area">
+            <div class="chat-header">
+                <button onclick="backToConversations()" class="btn-back">← Retour</button>
+                <div class="chat-recipient">
+                    <span id="chatRecipientName">...</span>
+                </div>
+            </div>
+            <div id="messagesContainer" class="messages-container"></div>
+            <div class="chat-input-area">
+                <textarea id="messageInput" placeholder="Tapez votre message..." rows="2" onkeydown="handleMessageKeydown(event)"></textarea>
+                <button onclick="sendMessage()" class="btn-send">Envoyer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.messagerie-popup {
+    position: fixed;
+    right: 20px;
+    bottom: 100px;
+    width: 450px;
+    max-height: 600px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 10000;
+    border-radius: 15px;
+    --messagerie-surface: #1f2027;
+    --messagerie-surface-alt: #15161c;
+    --messagerie-border: rgba(255, 255, 255, 0.08);
+    --messagerie-text: #f5f7ff;
+    --messagerie-muted: #9ca3af;
+    --messagerie-hover: rgba(255, 255, 255, 0.08);
+    --messagerie-highlight: rgba(255, 211, 0, 0.2);
+    --messagerie-scroll-track: #12131a;
+    --messagerie-scroll-thumb-border: #1b1c23;
+    background: var(--messagerie-surface);
+    color: var(--messagerie-text);
+    border: 1px solid var(--messagerie-border);
+    box-shadow: 0 20px 55px rgba(0, 0, 0, 0.55);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+}
+
+.messagerie-popup.active {
+    display: flex;
+}
+
+[data-theme="dark"] .messagerie-popup {
+    --messagerie-surface: #ffffff;
+    --messagerie-surface-alt: #f7f8fb;
+    --messagerie-border: rgba(15, 23, 42, 0.08);
+    --messagerie-text: #1f2937;
+    --messagerie-muted: #6b7280;
+    --messagerie-hover: rgba(148, 163, 184, 0.16);
+    --messagerie-highlight: rgba(250, 204, 21, 0.22);
+    --messagerie-scroll-track: #e9edf5;
+    --messagerie-scroll-thumb-border: #d8dfea;
+    box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.25);
+}
+
+.messagerie-header {
+    background: var(--messagerie-surface-alt);
+    color: var(--messagerie-text);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--messagerie-border);
+}
+
+.messagerie-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: inherit;
+}
+
+.messagerie-close {
+    background: none;
+    border: none;
+    color: var(--messagerie-text);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.messagerie-close:hover {
+    background: var(--messagerie-hover);
+    color: var(--primary-color);
+}
+
+.messagerie-content {
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+    overflow: hidden;
+}
+
+.conversations-list {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.messagerie-search {
+    padding: 15px;
+    border-bottom: 1px solid var(--messagerie-border);
+    display: flex;
+    gap: 10px;
+    background: var(--messagerie-surface);
+}
+
+.messagerie-search input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--messagerie-border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: var(--messagerie-surface-alt);
+    color: var(--messagerie-text);
+}
+
+.messagerie-search input::placeholder {
+    color: var(--messagerie-muted);
+}
+
+.messagerie-search input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 28%, transparent);
+}
+
+.btn-new-conv {
+    padding: 8px 15px;
+    background: var(--primary-color);
+    color: var(--secondary-color);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-new-conv:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px color-mix(in srgb, var(--primary-color) 35%, transparent);
+}
+
+.conversations-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.conversation-item {
+    padding: 12px;
+    border-bottom: 1px solid var(--messagerie-border);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--messagerie-surface);
+}
+
+.conversation-item:hover {
+    background: var(--messagerie-hover);
+}
+
+.conversation-item.active {
+    background: var(--messagerie-highlight);
+    border-left: 3px solid var(--primary-color);
+}
+
+.conversation-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.conversation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.conversation-name {
+    font-weight: 600;
+    color: var(--messagerie-text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-preview {
+    font-size: 0.85rem;
+    color: var(--messagerie-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.conversation-time {
+    font-size: 0.75rem;
+    color: var(--messagerie-muted);
+    white-space: nowrap;
+}
+
+.conversation-badge {
+    background: var(--primary-color);
+    color: var(--secondary-color);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+}
+
+.user-search-result {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--messagerie-border);
+    background: var(--messagerie-surface);
+    transition: background 0.2s ease;
+}
+
+.user-search-result:hover {
+    background: var(--messagerie-hover);
+}
+
+.chat-area {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chat-area.is-visible {
+    display: flex;
+}
+
+.chat-header {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--messagerie-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--messagerie-surface-alt);
+}
+
+.btn-back {
+    background: var(--messagerie-surface);
+    border: 1px solid var(--messagerie-border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--messagerie-text);
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background: var(--messagerie-hover);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.chat-recipient {
+    font-weight: 600;
+    color: var(--messagerie-text);
+}
+
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--messagerie-surface);
+}
+
+.message-item {
+    display: flex;
+    flex-direction: column;
+    max-width: 75%;
+}
+
+.message-item.own {
+    align-self: flex-end;
+}
+
+.message-item.other {
+    align-self: flex-start;
+}
+
+.message-bubble {
+    padding: 10px 15px;
+    border-radius: 12px;
+    word-wrap: break-word;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.message-item.own .message-bubble {
+    background: var(--primary-color);
+    color: var(--secondary-color);
+    border-bottom-right-radius: 4px;
+    font-weight: 500;
+}
+
+.message-item.other .message-bubble {
+    background: var(--messagerie-surface-alt);
+    color: var(--messagerie-text);
+    border: 1px solid var(--messagerie-border);
+    border-bottom-left-radius: 4px;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    color: var(--messagerie-muted);
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.message-item.own .message-time {
+    text-align: right;
+}
+
+.chat-input-area {
+    padding: 15px;
+    border-top: 1px solid var(--messagerie-border);
+    display: flex;
+    gap: 10px;
+    background: var(--messagerie-surface-alt);
+}
+
+.chat-input-area textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--messagerie-border);
+    border-radius: 8px;
+    resize: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: var(--messagerie-surface);
+    color: var(--messagerie-text);
+}
+
+.chat-input-area textarea::placeholder {
+    color: var(--messagerie-muted);
+}
+
+.chat-input-area textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 28%, transparent);
+}
+
+.btn-send {
+    padding: 10px 20px;
+    background: var(--primary-color);
+    color: var(--secondary-color);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.btn-send:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px color-mix(in srgb, var(--primary-color) 35%, transparent);
+}
+
+.loading-messages {
+    text-align: center;
+    padding: 30px;
+    color: var(--messagerie-muted);
+}
+
+.conversations-container::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.conversations-container::-webkit-scrollbar-track,
+.messages-container::-webkit-scrollbar-track {
+    background: var(--messagerie-scroll-track);
+    border-radius: 10px;
+}
+
+.conversations-container::-webkit-scrollbar-thumb,
+.messages-container::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 10px;
+    border: 1px solid var(--messagerie-scroll-thumb-border);
+}
+
+.conversations-container::-webkit-scrollbar-thumb:hover,
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+.conversations-container,
+.messages-container {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--messagerie-scroll-track);
+}
+</style>
+
+<script>
+let currentConversationId = null;
+let currentReceiverId = null;
+let conversations = [];
+let messagesInterval = null;
+let isSearchMode = false; // Flag pour savoir si on est en mode recherche
+
+// Toggle messagerie popup
+function toggleMessagerie() {
+    const popup = document.getElementById('messageriePopup');
+    const button = document.querySelector('.floating-help-button');
+    const isActive = popup.classList.contains('active');
+    
+    if (isActive) {
+        popup.classList.remove('active');
+        stopPolling();
+        // Réafficher le bouton
+        if (button) {
+            button.style.display = 'flex';
+        }
+    } else {
+        popup.classList.add('active');
+        loadConversations();
+        startPolling();
+        // Cacher le bouton
+        if (button) {
+            button.style.display = 'none';
+        }
+    }
+}
+
+// Charger les conversations
+async function loadConversations() {
+    try {
+        const response = await window.fetch('/api/v1/messages/conversations', {
+            credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('Erreur lors du chargement');
+        
+        conversations = await response.json();
+        displayConversations();
+        updateUnreadBadge();
+    } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('conversationsContainer').innerHTML = 
+            '<div class="loading-messages">Erreur de chargement</div>';
+    }
+}
+
+// Afficher les conversations
+function displayConversations() {
+    const container = document.getElementById('conversationsContainer');
+    
+    if (conversations.length === 0) {
+        container.innerHTML = '<div class="loading-messages">Aucune conversation</div>';
+        return;
+    }
+    
+    isSearchMode = false; // Désactiver le mode recherche quand on affiche les conversations
+    container.innerHTML = conversations.map(conv => `
+        <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}" 
+             onclick="openConversation(${conv.id}, ${conv.other_user_id}, '${escapeHtml(conv.other_user_name)}')">
+            <div class="conversation-avatar">${getInitials(conv.other_user_name)}</div>
+            <div class="conversation-info">
+                <div class="conversation-name">${escapeHtml(conv.other_user_name)}</div>
+                <div class="conversation-preview">${escapeHtml(conv.last_message_preview || 'Aucun message')}</div>
+            </div>
+            <div class="conversation-meta">
+                ${conv.unread_count > 0 ? `<span class="conversation-badge">${conv.unread_count}</span>` : ''}
+                <div class="conversation-time">${formatTime(conv.last_message_at)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Ouvrir une conversation
+async function openConversation(conversationId, receiverId, receiverName) {
+    currentConversationId = conversationId;
+    currentReceiverId = receiverId;
+    
+    document.getElementById('conversationsList').style.display = 'none';
+    const chatArea = document.getElementById('chatArea');
+    chatArea.classList.add('is-visible');
+    document.getElementById('chatRecipientName').textContent = receiverName;
+    
+    await loadMessages(conversationId);
+}
+
+// Retour à la liste des conversations
+function backToConversations() {
+    isSearchMode = false; // Désactiver le mode recherche
+    document.getElementById('conversationsList').style.display = 'flex';
+    document.getElementById('chatArea').classList.remove('is-visible');
+    document.getElementById('searchUserInput').value = ''; // Réinitialiser le champ de recherche
+    currentConversationId = null;
+    currentReceiverId = null;
+    loadConversations(); // Recharger les conversations
+    stopPolling();
+    startPolling();
+}
+
+// Charger les messages d'une conversation
+async function loadMessages(conversationId) {
+    try {
+        const response = await window.fetch(`/api/v1/messages/conversations/${conversationId}/messages`, {
+            credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('Erreur lors du chargement');
+        
+        const messages = await response.json();
+        displayMessages(messages);
+        
+        // Auto-scroll vers le bas
+        const container = document.getElementById('messagesContainer');
+        container.scrollTop = container.scrollHeight;
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+// Afficher les messages
+function displayMessages(messages) {
+    const container = document.getElementById('messagesContainer');
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="loading-messages">Aucun message</div>';
+        return;
+    }
+    
+    container.innerHTML = messages.map(msg => `
+        <div class="message-item ${msg.is_own ? 'own' : 'other'}">
+            <div class="message-bubble">${escapeHtml(msg.content)}</div>
+            <div class="message-time">${formatTime(msg.created_at)}</div>
+        </div>
+    `).join('');
+    
+    container.scrollTop = container.scrollHeight;
+}
+
+// Envoyer un message
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (!content || !currentReceiverId) {
+        if (!currentConversationId) {
+            alert('Veuillez d\'abord sélectionner ou créer une conversation');
+            return;
+        }
+    }
+    
+    try {
+        const response = await window.fetch('/api/v1/messages/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                receiver_id: currentReceiverId,
+                content: content
+            })
+        });
+        
+        if (!response.ok) throw new Error('Erreur lors de l\'envoi');
+        
+        const result = await response.json();
+        input.value = '';
+        
+        // Recharger les messages et les conversations
+        if (currentConversationId) {
+            await loadMessages(currentConversationId);
+        } else if (result.conversation_id) {
+            currentConversationId = result.conversation_id;
+            await openConversation(result.conversation_id, currentReceiverId, 
+                document.getElementById('chatRecipientName').textContent);
+        }
+        await loadConversations();
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'envoi du message');
+    }
+}
+
+// Rechercher des utilisateurs
+let searchUsersTimeout = null;
+async function searchUsers() {
+    const input = document.getElementById('searchUserInput');
+    const query = input.value.trim();
+    
+    // Si le champ est vide, on est en mode "nouveau" et on charge tous les utilisateurs
+    if (query.length === 0) {
+        isSearchMode = true;
+    } else {
+        // Si on tape quelque chose, on active aussi le mode recherche
+        isSearchMode = true;
+    }
+    
+    clearTimeout(searchUsersTimeout);
+    searchUsersTimeout = setTimeout(async () => {
+        if (query.length < 2 && query.length > 0) return;
+        
+        try {
+            const url = query ? `/api/v1/messages/users/search?q=${encodeURIComponent(query)}` : '/api/v1/messages/users/search';
+            const response = await window.fetch(url, {
+                credentials: 'same-origin'
+            });
+            if (!response.ok) throw new Error('Erreur de recherche');
+            
+            const users = await response.json();
+            displayUserSearchResults(users);
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }, 300);
+}
+
+// Afficher les résultats de recherche
+function displayUserSearchResults(users) {
+    const container = document.getElementById('conversationsContainer');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div class="loading-messages">Aucun utilisateur trouvé</div>';
+        return;
+    }
+    
+    container.innerHTML = users.map(user => `
+        <div class="user-search-result" onclick="startConversation(${user.id}, '${escapeHtml(user.full_name)}')">
+            <div class="conversation-avatar">${getInitials(user.full_name)}</div>
+            <div class="conversation-info">
+                <div class="conversation-name">${escapeHtml(user.full_name)}</div>
+                <div class="conversation-preview">${escapeHtml(user.email)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Démarrer une nouvelle conversation
+function startConversation(userId, userName) {
+    currentReceiverId = userId;
+    currentConversationId = null;
+    
+    document.getElementById('conversationsList').style.display = 'none';
+    document.getElementById('chatArea').classList.add('is-visible');
+    document.getElementById('chatRecipientName').textContent = userName;
+    document.getElementById('messagesContainer').innerHTML = '<div class="loading-messages">Nouvelle conversation</div>';
+    document.getElementById('messageInput').focus();
+}
+
+// Afficher l'interface de nouvelle conversation
+function showNewConversation() {
+    isSearchMode = true; // Activer le mode recherche
+    document.getElementById('searchUserInput').value = '';
+    document.getElementById('searchUserInput').focus();
+    searchUsers(); // Charger tous les utilisateurs
+}
+
+// Polling pour les nouveaux messages
+function startPolling() {
+    if (messagesInterval) clearInterval(messagesInterval);
+    
+    messagesInterval = setInterval(async () => {
+        if (currentConversationId) {
+            await loadMessages(currentConversationId);
+        }
+        // Ne pas recharger les conversations si on est en mode recherche
+        if (!isSearchMode) {
+            await loadConversations();
+        }
+        updateUnreadBadge();
+    }, 3000); // Toutes les 3 secondes
+}
+
+function stopPolling() {
+    if (messagesInterval) {
+        clearInterval(messagesInterval);
+        messagesInterval = null;
+    }
+}
+
+// Mettre à jour le badge de notifications
+async function updateUnreadBadge() {
+    try {
+        const response = await window.fetch('/api/v1/messages/unread-count', {
+            credentials: 'same-origin'
+        });
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const badge = document.querySelector('.messagerie-badge');
+        const badgeText = document.querySelector('.messagerie-badge-text');
+        
+        if (data.unread_count > 0) {
+            badge.classList.remove('hidden');
+            badgeText.textContent = data.unread_count;
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Erreur badge:', error);
+    }
+}
+
+// Utilitaires
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+}
+
+function formatTime(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now - date;
+    const hours = diff / (1000 * 60 * 60);
+    
+    if (hours < 24) {
+        return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    } else {
+        return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    }
+}
+
+function handleMessageKeydown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+}
+
+// Charger le badge au démarrage
+document.addEventListener('DOMContentLoaded', function() {
+    updateUnreadBadge();
+    setInterval(updateUnreadBadge, 10000); // Mettre à jour toutes les 10 secondes
+});
+</script>
+

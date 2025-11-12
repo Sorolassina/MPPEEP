@@ -1,171 +1,211 @@
 <style>
-    /* --- NAVBAR --- */
-    .navbar { background:var(--white-color); border-bottom:1px solid var(--primary-color); }
-    .navbar-container{
-      max-width:1200px; margin:0 auto; display:flex; align-items:center;
-      justify-content:space-between; gap:1rem; padding:.5rem 1rem;
+  /* --- NAVBAR --- */
+  
+  .navbar {
+    background: var(--background-color);
+    border-bottom: 2px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    color: var(--text-color);
+  }
+
+  .navbar-container {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* Bouton Connexion/Déconnexion */
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--background-color);
+    background: var(--secondary-color);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Effet de brillance pour le bouton */
+  .nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s ease;
+    z-index: 1;
+  }
+
+  .nav-link:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-link:hover::before {
+    left: 100%;
+  }
+
+  .nav-link:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .nav-link--logout {
+    background: var(--danger-color) ;
+  }
+
+  .nav-link--logout:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-link--logout:active {
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* --- BRAND --- */
+  .navbar-brand a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 1.2rem;
+  }
+
+  .navbar-logo {
+    height: 36px;
+    width: auto;
+    border-radius: 6px;
+    object-fit: contain;
+  }
+
+  /* --- MENU (bandeau) --- */
+  .navbar-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* user chip */
+  .nav-user {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.5rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    background: var(--border-color);
+    color: #ffffff;
+    font-size: 0.95rem;
+  }
+
+  .nav-user-photo {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  /* responsive */
+  @media (max-width: 900px) {
+    .navbar-container {
+      flex-wrap: wrap;
+      gap: 0.75rem;
     }
 
-    /* Bouton Connexion/Déconnexion */
-    .nav-link{
-      display:inline-flex; align-items:center; justify-content:center;
-      padding:0.5rem 1rem; border-radius:8px; text-decoration:none;
-      font-weight:600; font-size:0.9rem; color:#fff;
-      background:linear-gradient(135deg, var(--danger-color) 0%, color-mix(in srgb, var(--danger-color) 85%, #000) 100%);
-      box-shadow:0 4px 12px rgba(0, 0, 0, 0.15);
-      transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position:relative; overflow:hidden;
+    .navbar-menu {
+      width: 100%;
+      justify-content: center;
     }
-    
-    /* Effet de brillance pour le bouton */
-    .nav-link::before{
-      content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
-      background:linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-      transition:left 0.6s ease; z-index:1;
+  }
+
+  @media (max-width: 768px) {
+    .navbar-container {
+      flex-direction: column;
+      align-items: stretch;
     }
-    
-    .nav-link:hover{
-      transform:translateY(-2px);
-      box-shadow:0 8px 20px rgba(220, 38, 38, 0.3);
+
+    .navbar-menu {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
     }
-    
-    .nav-link:hover::before{
-      left:100%;
+
+    .nav-link {
+      width: 100%;
+      text-align: center;
     }
-    
-    .nav-link:active{
-      transform:translateY(0);
-      box-shadow:0 4px 12px rgba(220, 38, 38, 0.2);
-    }
-    
-    /* --- BRAND --- */
-    .navbar-brand a{ display:flex; align-items:center; gap:.5rem; text-decoration:none; color:#222; font-weight:600; }
-    .navbar-logo{ height:36px; width:auto; border-radius:6px; }
-    
-    /* --- MENU (bandeau) --- */
-    .navbar-menu{ display:flex; align-items:center; gap:.5rem; }
-    .menu{
-      padding:.4rem; background:var(--white-color); display:flex; gap:.25rem;
+  }
+
+
+
+
+  @media (max-width: 768px) {
+  .btn,
+  .action-button {
+    font-size: 0.85rem;
+    padding: 0.75rem 1.25rem;
+  }
+
+  .action-button {
+    padding: 1.5rem 1rem;
+    min-height: 120px;
+  }
+
+  .action-button .action-icon {
+    font-size: 2.5rem;
+  }
+
+  .action-button .action-text {
+    font-size: 0.9rem;
+  }
+}
+</style>
+
+<nav class="navbar">
+  <div class="navbar-container">
+    <div class="navbar-brand">
+      <a href="{{ url_for('read_root') }}">
+        <img src="{{ get_logo_url() }}" alt="Logo" class="navbar-logo">
+        <span>{{ system_settings.company_name or app_name }}</span>
+      </a>
+    </div>
+
+    <div class="navbar-menu">
       
-    }
-    
-    /* item */
-    .link{
-      display:inline-flex; justify-content:center; align-items:center;
-      width:120px; height:40px; border-radius:5px; position:relative; z-index:1;
-      overflow:hidden; transform-origin:center left; transition:width .2s ease-in, color .2s ease-in;
-      text-decoration:none; color:#222; font-weight:500;
-    }
-    .link::before{
-      content:""; position:absolute; inset:0; border-radius:8px; background:var(--primary-color);
-      transform:translateX(100%); transition:transform .2s ease-in; transform-origin:center right; z-index:-1;
-    }
-    /* Effet de miroitement (shine/shimmer) renforcé */
-    .link::after{
-      content:''; position:absolute; top:0; left:-150%; width:150%; height:100%;
-      background:linear-gradient(90deg, 
-        transparent 0%, 
-        rgba(255, 255, 255, 0.1) 25%,
-        rgba(255, 255, 255, 0.8) 50%, 
-        rgba(255, 255, 255, 0.1) 75%,
-        transparent 100%
-      );
-      transition:left 0.8s ease; z-index:2; pointer-events:none;
-      transform:skewX(-20deg);
-    }
-    .link:hover,.link:focus{ outline:0; width:138px; color:#111; }
-    .link:hover::before,.link:focus::before{ transform:translateX(0); }
-    .link:hover::after{ left:100%; }
-    
-    /* icône */
-    .link-icon{ width:50px; height:28px; position:absolute; left:18px; display:block; padding-right: 12px }
-    .link-icon img{ width:100%; height:28px; padding-right: 10px}
-    
-    /* label */
-    .link-title{
-      transform:translateX(100%); transition:transform .2s ease-in, opacity .2s ease-in;
-      transform-origin:center right; display:block; text-align:center; text-indent:28px; width:100%; opacity:0;font-size:.9rem;
       
-    }
-    .link:hover .link-title, .link:focus .link-title{ transform:translateX(0); opacity:1; }
-    
-    /* user chip */
-    .nav-user{
-      display:flex; align-items:center; gap:.5rem; margin-left:.5rem;
-      padding:.35rem .6rem; border-radius:999px; background:var(--secondary-color);color:var(--white-color); font-size:.95rem;
-    }
-    .nav-user-photo{ width:28px; height:28px; border-radius:50%; object-fit:cover; }
-    
-    /* responsive */
-    @media (max-width:900px){ .navbar-container{flex-wrap:wrap; gap:.75rem;} .navbar-menu{width:100%; justify-content:center;} }
-    </style>
-    
-    <nav class="navbar">
-      <div class="navbar-container">
-        <!-- Brand -->
-        <div class="navbar-brand">
-          <a href="{{ url_for('read_root') }}">
-            <img src="{{ get_logo_url() }}" alt="Logo" class="navbar-logo">
-            <span>{{ system_settings.company_name or app_name }}</span>
-          </a>
-        </div>
-    
-        <!-- Menu (icônes + libellés au hover) -->
-        <div class="navbar-menu">
-          <div class="menu">
-            <!-- Accueil -->
-            <a href="{{ url_for('accueil') }}" class="link" aria-label="Accueil">
-              <span class="link-icon">
-                <img src="{{ static_versioned_url(static_url('images/navbar/accueil.png')) }}" alt="">
-              </span>
-              <span class="link-title">Accueil</span>
-            </a>
-    
-            <!-- Budget -->
-            <a href="{{ url_for('budget_home') }}" class="link" aria-label="Budget">
-              <span class="link-icon">
-                <img src="{{ static_versioned_url(static_url('images/navbar/budget.png')) }}" alt="">
-              </span>
-              <span class="link-title">Budget</span>
-            </a>
 
-            <!-- Performance -->
-            <a href="{{ url_for('performance_home') }}" class="link" aria-label="Performance">                                                                             
-              <span class="link-icon">
-                <img src="{{ static_versioned_url(static_url('images/navbar/performance.png')) }}" alt=""> 
-              </span>
-              <span class="link-title">Perform.</span>
-            </a>
-    
-            <!-- RH -->
-            <a href="{{ url_for('rh_home') }}" class="link" aria-label="RH">
-              <span class="link-icon">
-                <img src="{{ static_versioned_url(static_url('images/navbar/rh.png')) }}" alt="">
-              </span>
-              <span class="link-title">RH</span>
-            </a>
-    
-            <!--Stocks-->
-            <a href="{{ url_for('stock_home') }}" class="link" aria-label="Stocks">                                                                             
-              <span class="link-icon">
-                <img src="{{ static_versioned_url(static_url('images/navbar/stocks.png')) }}" alt=""> 
-              </span>
-              <span class="link-title">Stocks</span>
-            </a>
+      <button class="theme-toggle" type="button" onclick="window.toggleTheme && window.toggleTheme()" aria-label="Basculer le thème">
+        <span class="theme-toggle-icon">🌙</span>
+      </button>
 
-          </div>
-    
-          {% if current_user %}
-            <!-- Chip à droite (avec vraie photo si dispo) -->
-            <span class="nav-user">
-              <img src="{{ profile_picture_url(current_user) }}" alt="Photo profil" class="nav-user-photo">
-              {{ current_user.full_name or current_user.email }}
-            </span>
-            <a href="{{ url_for('logout') }}" class="nav-link">⏻ Déconnexion</a>
-          {% else %}
-            <a href="{{ url_for('login_page') }}" class="nav-link">🔐 Connexion</a>
-          {% endif %}
-        </div>
-      </div>
-    </nav>
+      {% if current_user %}
+        <span class="nav-user">
+          <img src="{{ profile_picture_url(current_user) }}" alt="Photo profil" class="nav-user-photo">
+          {{ current_user.full_name or current_user.email }}
+        </span>
+        <a href="{{ url_for('logout') }}" class="nav-link nav-link--logout">⏻ Déconnexion</a>
+      {% else %}
+        <a href="{{ url_for('login_page') }}" class="nav-link nav-link--signin">🔐 Connexion</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
     

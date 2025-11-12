@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # ==========================================
     # APPLICATION
     # ==========================================
-    APP_NAME: str = "MPPEEP Dashboard"
+    APP_NAME: str = "SYGEP"
     ENV: Literal["dev", "staging", "prod"] = "prod"
     DEBUG: bool = False
     SECRET_KEY: str = "changeme-in-production"

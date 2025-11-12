@@ -5,7 +5,7 @@
 
 {% block content %}
 {{ page_header(
-    title='💰 Suivi Budgétaire ' + annee|string + (' - Trimestre ' + trimestre|string if trimestre else ''),
+    title='💰 Exécution Budgétaire ' + annee|string + (' - Trimestre ' + trimestre|string if trimestre else ''),
     breadcrumbs=[
         {'name': 'Accueil', 'url': url_for('accueil')},
         {'name': 'Budget'}
@@ -14,7 +14,7 @@
         {'label': '❓ Aide', 'url': url_for('aide_budget'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '📋 Fiches Techniques', 'url': url_for('budget_fiches_hierarchique'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '📊 SIGOBE', 'url': url_for('budget_sigobe'), 'primary': False, 'disabled': current_user.is_guest},
-        {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
+        {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': True}
     ]
 ) }}
 
@@ -462,87 +462,9 @@
     max-width: 1600px;
     margin: 0 auto;
     padding: 1rem;
-}
-
-/* Bannière de démonstration */
-.demo-notice {
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.demo-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.demo-icon {
-    font-size: 1.2rem;
-}
-
-.demo-text {
-    font-weight: 600;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.demo-description {
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-/* Filtres - Répartition équitable */
-.filters-row {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 85%, #000) 100%);
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    flex: 1;
-}
-
-.filter-label {
-    font-weight: 600;
-    color: #FFFFFF !important;
-    font-size: 0.9rem;
-}
-
-.filter-select {
-    width: 100%;
-    padding: 0.875rem 1.25rem;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    cursor: pointer;
-    transition: all 0.3s;
-    font-weight: 500;
-    font-size: 1rem;
-}
-
-.filter-select:hover {
-    border-color: var(--white-color);
-    background: var(--white-color);
-    transform: translateY(-2px);
-}
-
-.filter-select:focus {
-    outline: none;
-    border-color: var(--white-color);
-    background: var(--white-color);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    overflow-y: auto;
 }
 
 /* KPIs - Style Power BI horizontal agrandi */
@@ -1280,7 +1202,6 @@
     }
 }
 
-.filters-row { animation: fadeInUp 0.3s ease-out; }
 .kpis-container { animation: fadeInUp 0.4s ease-out; }
 .kpi-item { animation: fadeInUp 0.4s ease-out backwards; }
 .kpi-item:nth-child(1) { animation-delay: 0.05s; }
@@ -1306,10 +1227,6 @@
     
     .kpi-item {
         width: 100%;
-    }
-    
-    .filters-row {
-        flex-direction: column;
     }
     
     .bars-and-legend {
