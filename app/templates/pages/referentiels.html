@@ -16,7 +16,7 @@
     ]
 ) }}
 
-<div class="page-grid">
+<div class="referentials-page">
 
   <!-- Statistiques -->
   <div class="stats-grid">
@@ -66,12 +66,17 @@
               <th>Libellé</th>
               <th>Responsable</th>
               <th>Description</th>
-              <th>Statut</th>
-              <th style="text-align: center;">Actions</th>
+          <th>Statut</th>
+          <th class="is-centered">Actions</th>
             </tr>
           </thead>
           <tbody id="programmes-tbody">
-            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr class="loading-row">
+              <td colspan="6" class="table-placeholder">
+                <div class="placeholder-icon">⏳</div>
+                <p class="placeholder-text">Chargement...</p>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -91,13 +96,18 @@
               <th>Code</th>
               <th>Libellé</th>
               <th>Programme</th>
-              <th>Directeur</th>
-              <th>Statut</th>
-              <th>Actions</th>
+          <th>Directeur</th>
+          <th>Statut</th>
+          <th class="is-centered">Actions</th>
             </tr>
           </thead>
           <tbody id="directions-tbody">
-            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr class="loading-row">
+              <td colspan="6" class="table-placeholder">
+                <div class="placeholder-icon">⏳</div>
+                <p class="placeholder-text">Chargement...</p>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -118,12 +128,17 @@
               <th>Libellé</th>
               <th>Direction</th>
               <th>Chef de Service</th>
-              <th>Statut</th>
-              <th>Actions</th>
+          <th>Statut</th>
+          <th class="is-centered">Actions</th>
             </tr>
           </thead>
           <tbody id="services-tbody">
-            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr class="loading-row">
+              <td colspan="6" class="table-placeholder">
+                <div class="placeholder-icon">⏳</div>
+                <p class="placeholder-text">Chargement...</p>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -144,12 +159,17 @@
               <th>Libellé</th>
               <th>Catégorie</th>
               <th>Échelons</th>
-              <th>Statut</th>
-              <th>Actions</th>
+          <th>Statut</th>
+          <th class="is-centered">Actions</th>
             </tr>
           </thead>
           <tbody id="grades-tbody">
-            <tr><td colspan="6" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr class="loading-row">
+              <td colspan="6" class="table-placeholder">
+                <div class="placeholder-icon">⏳</div>
+                <p class="placeholder-text">Chargement...</p>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -168,12 +188,17 @@
             <tr>
               <th>Code</th>
               <th>Libellé</th>
-              <th>Description</th>
-              <th>Actions</th>
+          <th>Description</th>
+          <th class="is-centered">Actions</th>
             </tr>
           </thead>
           <tbody id="categories-tbody">
-            <tr><td colspan="4" style="text-align: center; padding: 2rem;">⏳ Chargement...</td></tr>
+            <tr class="loading-row">
+              <td colspan="4" class="table-placeholder">
+                <div class="placeholder-icon">⏳</div>
+                <p class="placeholder-text">Chargement...</p>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -205,164 +230,7 @@
 
 {% endblock %}
 
-{% block styles %}
-<style>
-/* Styles spécifiques pour la page Référentiels */
-.page-grid {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 1rem;
-}
-
-/* Tabs */
-.tabs {
-    display: flex;
-    gap: 0.5rem;
-    border-bottom: 2px solid var(--gray-200);
-    margin-bottom: 2rem;
-}
-
-.tab {
-    padding: 1rem 1.5rem;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--gray-600);
-    transition: all 0.3s;
-}
-
-.tab:hover {
-    color: var(--primary-color);
-}
-
-.tab.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-}
-
-/* Tab content */
-.tab-content {
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Table header */
-.table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.table-header h3 {
-    margin: 0;
-    color: var(--secondary-color);
-    font-size: 1.3rem;
-}
-
-/* Action icons dans les tables */
-.action-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin: 0 0.25rem;
-    border: none;
-    background: var(--gray-200);
-}
-
-.action-icon:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.action-icon.edit {
-    background: var(--primary-color);
-    color: var(--white-color);
-}
-
-.action-icon.deactivate {
-    background: var(--warning-color);
-    color: var(--white-color);
-}
-
-.action-icon.reactivate {
-    background: var(--success-color);
-    color: var(--white-color);
-}
-
-.action-icon.delete {
-    background: var(--danger-color);
-    color: var(--white-color);
-}
-
-/* Form grid pour modals */
-.modal .form-grid {
-    grid-template-columns: 1fr !important;
-    gap: 1rem;
-}
-
-@media (max-width: 768px) {
-    .tabs {
-        flex-wrap: wrap;
-    }
-    
-    .table-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    
-    .table-header .btn {
-        width: 100%;
-    }
-}
-
-/* Action buttons spacing */
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: nowrap;
-  justify-content: center;
-  align-items: center;
-}
-
-.action-buttons .btn {
-  min-width: 40px;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Élargir la colonne Actions */
-.data-table th:last-child,
-.data-table td:last-child {
-  min-width: 200px;
-  text-align: center;
-}
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block scripts %}
 <script>
@@ -442,11 +310,13 @@ async function loadProgrammes() {
   if (programmes.length === 0) {
     tbody.innerHTML = `
       <tr class="empty-state">
-        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--gray-600);">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
-          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucun programme enregistré</div>
-          <div style="font-size: 0.9rem; color: var(--gray-500);">
-            Cliquez sur "➕ Nouveau Programme" pour créer votre premier programme budgétaire
+        <td colspan="6">
+          <div class="empty-state-card">
+            <div class="empty-state-icon">📁</div>
+            <h4 class="empty-state-title">Aucun programme enregistré</h4>
+            <p class="empty-state-text">
+              Cliquez sur « ➕ Nouveau Programme » pour créer votre premier programme budgétaire.
+            </p>
           </div>
         </td>
       </tr>
@@ -458,25 +328,25 @@ async function loadProgrammes() {
     <tr>
       <td><strong>${p.code}</strong></td>
       <td>${p.libelle}</td>
-      <td>${p.responsable_nom || '<span style="color: var(--gray-400);">-</span>'}</td>
-      <td>${p.description || '-'}</td>
+      <td>${p.responsable_nom || '<span class="text-muted">—</span>'}</td>
+      <td>${p.description || '<span class="text-muted">—</span>'}</td>
       <td>
         <span class="badge ${p.actif ? 'badge-success' : 'badge-danger'}">
           ${p.actif ? 'Actif' : 'Inactif'}
         </span>
       </td>
-      <td>
+      <td class="actions-cell">
         <div class="action-buttons">
           <button class="btn btn-sm btn-primary" onclick="openModal('programme', ${p.id})" title="Modifier">
             ✏️
           </button>
           ${!p.actif ? `
             <button class="btn btn-sm btn-success" onclick="reactivateItem('programme', ${p.id})" title="Réactiver">
-              ⏸️
+              ♻️
             </button>
           ` : `
             <button class="btn btn-sm btn-warning" onclick="deactivateItem('programme', ${p.id})" title="Désactiver">
-              ↩️
+              ⏸️
             </button>
           `}
           <button class="btn btn-sm btn-danger" onclick="deleteItem('programme', ${p.id})" title="Supprimer définitivement">
@@ -498,11 +368,13 @@ async function loadDirections() {
   if (directions.length === 0) {
     tbody.innerHTML = `
       <tr class="empty-state">
-        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--gray-600);">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
-          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucune direction enregistrée</div>
-          <div style="font-size: 0.9rem; color: var(--gray-500);">
-            Cliquez sur "➕ Nouvelle Direction" pour créer votre première direction
+        <td colspan="6">
+          <div class="empty-state-card">
+            <div class="empty-state-icon">🏢</div>
+            <h4 class="empty-state-title">Aucune direction enregistrée</h4>
+            <p class="empty-state-text">
+              Cliquez sur « ➕ Nouvelle Direction » pour créer votre première direction.
+            </p>
           </div>
         </td>
       </tr>
@@ -514,25 +386,25 @@ async function loadDirections() {
       <tr>
         <td><strong>${d.code}</strong></td>
         <td>${d.libelle}</td>
-        <td>${d.programme_libelle || '-'}</td>
-        <td>${d.directeur_nom || '-'}</td>
+        <td>${d.programme_libelle || '<span class="text-muted">—</span>'}</td>
+        <td>${d.directeur_nom || '<span class="text-muted">—</span>'}</td>
         <td>
           <span class="badge ${d.actif ? 'badge-success' : 'badge-danger'}">
             ${d.actif ? 'Actif' : 'Inactif'}
           </span>
         </td>
-        <td>
+        <td class="actions-cell">
           <div class="action-buttons">
             <button class="btn btn-sm btn-primary" onclick="openModal('direction', ${d.id})" title="Modifier">
               ✏️
             </button>
             ${!d.actif ? `
               <button class="btn btn-sm btn-success" onclick="reactivateItem('direction', ${d.id})" title="Réactiver">
-                ⏸️
+                ♻️
               </button>
             ` : `
               <button class="btn btn-sm btn-warning" onclick="deactivateItem('direction', ${d.id})" title="Désactiver">
-                ↩️
+                ⏸️
               </button>
             `}
             <button class="btn btn-sm btn-danger" onclick="deleteItem('direction', ${d.id})" title="Supprimer définitivement">
@@ -560,11 +432,13 @@ async function loadServices() {
   if (services.length === 0) {
     tbody.innerHTML = `
       <tr class="empty-state">
-        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--gray-600);">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
-          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucun service enregistré</div>
-          <div style="font-size: 0.9rem; color: var(--gray-500);">
-            Cliquez sur "➕ Nouveau Service" pour créer votre premier service
+        <td colspan="6">
+          <div class="empty-state-card">
+            <div class="empty-state-icon">📋</div>
+            <h4 class="empty-state-title">Aucun service enregistré</h4>
+            <p class="empty-state-text">
+              Cliquez sur « ➕ Nouveau Service » pour créer votre premier service.
+            </p>
           </div>
         </td>
       </tr>
@@ -576,25 +450,25 @@ async function loadServices() {
       <tr>
         <td><strong>${s.code}</strong></td>
         <td>${s.libelle}</td>
-        <td>${s.direction_libelle || '-'}</td>
-        <td>${s.chef_service_nom || '-'}</td>
+        <td>${s.direction_libelle || '<span class="text-muted">—</span>'}</td>
+        <td>${s.chef_service_nom || '<span class="text-muted">—</span>'}</td>
         <td>
           <span class="badge ${s.actif ? 'badge-success' : 'badge-danger'}">
             ${s.actif ? 'Actif' : 'Inactif'}
           </span>
         </td>
-        <td>
+        <td class="actions-cell">
           <div class="action-buttons">
             <button class="btn btn-sm btn-primary" onclick="openModal('service', ${s.id})" title="Modifier">
               ✏️
             </button>
             ${!s.actif ? `
               <button class="btn btn-sm btn-success" onclick="reactivateItem('service', ${s.id})" title="Réactiver">
-                ⏸️
+                ♻️
               </button>
             ` : `
               <button class="btn btn-sm btn-warning" onclick="deactivateItem('service', ${s.id})" title="Désactiver">
-                ↩️
+                ⏸️
               </button>
             `}
             <button class="btn btn-sm btn-danger" onclick="deleteItem('service', ${s.id})" title="Supprimer définitivement">
@@ -616,11 +490,13 @@ async function loadGrades() {
   if (grades.length === 0) {
     tbody.innerHTML = `
       <tr class="empty-state">
-        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--gray-600);">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">🎓</div>
-          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucun grade enregistré</div>
-          <div style="font-size: 0.9rem; color: var(--gray-500);">
-            Cliquez sur "➕ Nouveau Grade" pour créer votre premier grade de la fonction publique
+        <td colspan="6">
+          <div class="empty-state-card">
+            <div class="empty-state-icon">🎓</div>
+            <h4 class="empty-state-title">Aucun grade enregistré</h4>
+            <p class="empty-state-text">
+              Cliquez sur « ➕ Nouveau Grade » pour créer votre premier grade de la fonction publique.
+            </p>
           </div>
         </td>
       </tr>
@@ -639,14 +515,14 @@ async function loadGrades() {
           ${g.actif ? 'Actif' : 'Inactif'}
         </span>
       </td>
-      <td>
+      <td class="actions-cell">
         <div class="action-buttons">
           <button class="btn btn-sm btn-primary" onclick="openModal('grade', ${g.id})" title="Modifier">
             ✏️
           </button>
           ${!g.actif ? `
             <button class="btn btn-sm btn-success" onclick="reactivateItem('grade', ${g.id})" title="Réactiver">
-              ↩️
+              ♻️
             </button>
           ` : `
             <button class="btn btn-sm btn-warning" onclick="deactivateItem('grade', ${g.id})" title="Désactiver">
@@ -675,11 +551,13 @@ async function loadCategories() {
   if (categories.length === 0) {
     tbody.innerHTML = `
       <tr class="empty-state">
-        <td colspan="4" style="text-align: center; padding: 3rem; color: var(--gray-600);">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">📦</div>
-          <div style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">Aucune catégorie enregistrée</div>
-          <div style="font-size: 0.9rem; color: var(--gray-500);">
-            Cliquez sur "➕ Nouvelle Catégorie" pour créer votre première catégorie d'article
+        <td colspan="4">
+          <div class="empty-state-card">
+            <div class="empty-state-icon">📦</div>
+            <h4 class="empty-state-title">Aucune catégorie enregistrée</h4>
+            <p class="empty-state-text">
+              Cliquez sur « ➕ Nouvelle Catégorie » pour créer votre première catégorie d’article.
+            </p>
           </div>
         </td>
       </tr>
@@ -691,8 +569,8 @@ async function loadCategories() {
     <tr>
       <td><strong>${c.code}</strong></td>
       <td>${c.libelle}</td>
-      <td>${c.description || '-'}</td>
-      <td>
+      <td>${c.description || '<span class="text-muted">—</span>'}</td>
+      <td class="actions-cell">
         <div class="action-buttons">
           <button class="btn btn-sm btn-primary" onclick="openModal('categorie', ${c.id})" title="Modifier">
             ✏️

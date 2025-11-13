@@ -90,46 +90,6 @@
     transform: translateY(0);
 }
 
-.btn-premium {
-    font-weight: 600;
-}
-
-.btn-premium.btn-primary {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-    color: white;
-}
-
-.btn-premium.btn-primary:hover {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-}
-
-.btn-premium.btn-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
-}
-
-.btn-premium.btn-success:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-}
-
-.btn-premium.btn-info {
-    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-    color: white;
-}
-
-.btn-premium.btn-info:hover {
-    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-}
-
-.btn-premium.btn-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-}
-
-.btn-premium.btn-danger:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-}
-
 /* État vide */
 .empty-state {
     text-align: center;
@@ -249,7 +209,7 @@
   <div class="chargements-section">
     {% if chargements %}
     <div class="table-responsive">
-      <table class="data-table chargements-table" style="font-size: 0.9rem;">
+      <table class="data-table table-compact chargements-table">
         <thead>
           <tr>
             <th>Période</th>
@@ -275,17 +235,17 @@
               </span>
             </td>
             <td>
-              <div class="action-icons">
-                <button onclick="voirTable({{ c.id }});" class="btn-action btn-premium btn-primary" title="Voir la table">
+              <div class="action-icons table-actions table-actions-compact">
+                <button onclick="voirTable({{ c.id }});" class="btn-action btn-premium btn-primary btn-compact" title="Voir la table">
                   📋
                 </button>
-                <button onclick="exporterExcel({{ c.id }});" class="btn-action btn-premium btn-success" title="Exporter Excel">
+                <button onclick="exporterExcel({{ c.id }});" class="btn-action btn-premium btn-success btn-compact" title="Exporter Excel">
                   📊
                 </button>
-                <button onclick="voirKPIs({{ c.id }});" class="btn-action btn-premium btn-info" title="Voir les KPIs">
+                <button onclick="voirKPIs({{ c.id }});" class="btn-action btn-premium btn-info btn-compact" title="Voir les KPIs">
                   📈
                 </button>
-                <button onclick="supprimerChargement({{ c.id }});" class="btn-action btn-premium btn-danger" title="Supprimer">
+                <button onclick="supprimerChargement({{ c.id }});" class="btn-action btn-premium btn-danger btn-compact" title="Supprimer">
                   🗑️
                 </button>
               </div>

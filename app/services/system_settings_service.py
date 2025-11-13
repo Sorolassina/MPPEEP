@@ -2,7 +2,9 @@
 Service pour la gestion des paramètres système
 """
 
-from sqlmodel import Session
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlmodel import Session, text
 
 from app.core.config import settings as app_settings
 from app.core.logging_config import get_logger
@@ -28,7 +30,16 @@ class SystemSettingsService:
         Returns:
             Les paramètres système
         """
-        settings = db_session.get(SystemSettings, 1)
+        SystemSettingsService.ensure_schema(db_session)
+
+        try:
+            settings = db_session.get(SystemSettings, 1)
+        except (OperationalError, ProgrammingError) as exc:
+            if "minister_photo" in str(exc).lower():
+                SystemSettingsService.ensure_schema(db_session, force=True)
+                settings = db_session.get(SystemSettings, 1)
+            else:
+                raise
 
         if not settings:
             # Créer les paramètres par défaut complets
@@ -43,6 +54,10 @@ class SystemSettingsService:
                 primary_color="#f77902",  # Orange
                 secondary_color="#038c25",  # Vert
                 accent_color="#fcc603",  # Jaune
+                minister_civility="Monsieur",
+                minister_photo="images/utilisateur.png",
+                minister_name="Ministre du MPPEEP",
+                minister_role="Ministre du Patrimoine, du Portefeuille de l'État et des Entreprises Publiques",
                 footer_text=f"© 2025 {app_settings.APP_NAME}. Tous droits réservés.",
             )
             db_session.add(settings)
@@ -52,6 +67,24 @@ class SystemSettingsService:
             logger.info(f"   📛 Entreprise: {settings.company_name}")
             logger.info(f"   🎨 Couleurs: Primary={settings.primary_color}, Secondary={settings.secondary_color}")
             logger.info(f"   🖼️  Logo: {settings.logo_path}")
+
+        if settings:
+            changed = False
+            if not getattr(settings, "minister_photo", None):
+                settings.minister_photo = "images/utilisateur.png"
+                changed = True
+            if not getattr(settings, "minister_civility", None):
+                settings.minister_civility = "Mr. le Ministre"
+                changed = True
+            if not getattr(settings, "minister_name", None):
+                settings.minister_name = "Ministre du MPPEEP"
+                changed = True
+            if not getattr(settings, "minister_role", None):
+                settings.minister_role = "Ministre du Patrimoine, du Portefeuille de l'État et des Entreprises Publiques"
+                changed = True
+            if changed:
+                db_session.add(settings)
+                db_session.commit()
 
         return settings
 
@@ -120,6 +153,10 @@ class SystemSettingsService:
                 "primary_color": settings.primary_color,
                 "secondary_color": settings.secondary_color,
                 "accent_color": settings.accent_color,
+                "minister_civility": settings.minister_civility,
+                "minister_photo": settings.minister_photo,
+                "minister_name": settings.minister_name,
+                "minister_role": settings.minister_role,
                 # Calculer les couleurs dérivées
                 "primary_dark": SystemSettingsService.darken_color(settings.primary_color, 0.1),
                 "primary_light": SystemSettingsService.lighten_color(settings.primary_color, 0.2),
@@ -141,6 +178,41 @@ class SystemSettingsService:
             )
             # Fallback sur les valeurs par défaut depuis la config
             return SystemSettingsService.get_default_settings()
+
+    @staticmethod
+    def ensure_schema(db_session: Session, force: bool = False) -> None:
+        """
+        Vérifie et applique les ajustements mineurs de schéma nécessaires aux paramètres système.
+        """
+        try:
+            engine = db_session.get_bind()
+            inspector = inspect(engine)
+            columns = {col["name"] for col in inspector.get_columns("system_settings")}
+
+            if force or "minister_photo" not in columns:
+                db_session.exec(
+                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_photo VARCHAR(255)")
+                )
+                db_session.commit()
+            if force or "minister_civility" not in columns:
+                db_session.exec(
+                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_civility VARCHAR(50)")
+                )
+                db_session.commit()
+
+            if force or "minister_name" not in columns:
+                db_session.exec(
+                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_name VARCHAR(255)")
+                )
+                db_session.commit()
+
+            if force or "minister_role" not in columns:
+                db_session.exec(
+                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_role VARCHAR(255)")
+                )
+                db_session.commit()
+        except Exception as exc:
+            logger.warning(f"⚠️ Impossible de vérifier/mettre à jour le schéma system_settings: {exc}")
 
     @staticmethod
     def lighten_color(hex_color: str, percent: float = 0.15) -> str:
@@ -211,6 +283,10 @@ class SystemSettingsService:
             "primary_color": default_primary,
             "secondary_color": "#036c1d",
             "accent_color": "#e63600",
+            "minister_civility": "Mr. le Ministre",
+            "minister_photo": "images/utilisateur.png",
+            "minister_name": "Ministre du MPPEEP",
+            "minister_role": "Ministre du Patrimoine, du Portefeuille de l'État et des Entreprises Publiques",
             # Couleurs dérivées
             "primary_dark": SystemSettingsService.darken_color(default_primary, 0.1),
             "primary_light": SystemSettingsService.lighten_color(default_primary, 0.2),

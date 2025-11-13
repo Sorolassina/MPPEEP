@@ -106,45 +106,25 @@
     <!-- Scripts JS de base -->
     <script src="{{ static_versioned_url(static_url('js/app.js')) }}"></script>
     
-    <script>
-        (function() {
-            const storageKey = 'mppeep-theme';
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const savedTheme = localStorage.getItem(storageKey);
-            const root = document.documentElement;
-
-            function applyTheme(theme) {
-                if (theme === 'dark') {
-                    root.setAttribute('data-theme', 'dark');
-                } else {
-                    root.removeAttribute('data-theme');
-                }
-                const icon = document.querySelector('.theme-toggle-icon');
-                if (icon) {
-                    icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-                }
-            }
-
-            window.toggleTheme = function() {
-                const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-                const next = current === 'dark' ? 'light' : 'dark';
-                applyTheme(next === 'dark' ? 'dark' : null);
-                localStorage.setItem(storageKey, next);
-            };
-
-            const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-            applyTheme(initialTheme === 'dark' ? 'dark' : null);
-        })();
-    </script>
-    
     <!-- Script global pour l'overlay de navigation -->
     <script>
         // ============================================
         // GESTION DE L'OVERLAY GLOBAL
         // ============================================
-        
+
+        function focusOverlay(scrollBehavior = 'smooth') {
+            if (typeof window !== 'undefined') {
+                try {
+                    window.scrollTo({ top: 0, behavior: scrollBehavior });
+                } catch (error) {
+                    window.scrollTo(0, 0);
+                }
+            }
+        }
+
         // Fonction pour afficher l'overlay global
         function showGlobalLoading(text = 'Chargement...', subtext = 'Veuillez patienter') {
+            focusOverlay();
             const overlay = document.getElementById('globalLoadingOverlay');
             if (overlay) {
                 overlay.querySelector('.loading-text').textContent = text;

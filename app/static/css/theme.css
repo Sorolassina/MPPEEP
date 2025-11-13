@@ -9,9 +9,9 @@
 
 :root {
   /* === Couleurs Principales === */
-  --vert-color: #059a17;
-  --orange-color: #e86a0a;
-  --blanc-color: #ffffff;
+  --secondary-color: #059a17;
+  --accent-color: #e86a0a;
+  --primary-color: #ffffff;
   --noir-color: #000000;
 
   --background-color: var(--blanc-color);
@@ -73,21 +73,6 @@
   --sidebar-width-collapsed: 60px;
 }
 
-[data-theme="dark"] {
-  /* === Couleurs Principales === */
-  --background-color: #000000;
-  --surface-color: #000000;
-  --text-color: #e0e5ec;
-  --text-muted-color: #7c818c;
-  --border-color: var(--orange-color);
-  --link-color: var(--orange-color);
-  --hover-color: var(--orange-color);
-  --focus-color: rgba(232, 106, 10, 0.45);
-  --disabled-color: rgba(124, 129, 140, 0.45);
-}
-
-
-
 /* ========================================
    2. TYPOGRAPHIE
    ======================================== */
@@ -98,21 +83,8 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--secondary-color);
 }
 
-[data-theme="dark"] h1,
-[data-theme="dark"] h2,
-[data-theme="dark"] h3,
-[data-theme="dark"] h4,
-[data-theme="dark"] h5,
-[data-theme="dark"] h6 {
-  color: var(--white-color);
-}
-
 p {
   margin-bottom: var(--spacing-md);
-}
-
-[data-theme="dark"] p {
-  color: var(--gray-300);
 }
 
 a {
@@ -125,11 +97,6 @@ a:hover {
   color: var(--primary-dark);
   text-decoration: underline;
 }
-
-[data-theme="dark"] a:hover {
-  color: var(--primary-light);
-}
-
 
 /* ========================================
    5. ALERTES & MESSAGES

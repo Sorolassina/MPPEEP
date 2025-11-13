@@ -4,105 +4,7 @@
 {% block title %}RH – Administration Publique · {{ app_name }}
 {% endblock %}
 
-{% block styles %}
-<style>
-/* ========== RH PAGE STYLES ========== */
-.rh-container {
-    padding: 2rem 0;
-    background: #f8f9fa;
-    min-height: 100vh;
-}
-
-/* Bannière de démonstration */
-.demo-notice {
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.demo-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.demo-icon {
-    font-size: 1.2rem;
-}
-
-.demo-text {
-    font-weight: 600;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.demo-description {
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-/* KPIs */
-.kpis {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.kpi {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    transition: all 0.3s;
-    border: 2px solid transparent;
-}
-
-.kpi:hover {
-    background: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary-color);
-}
-
-.kpi .label {
-    font-size: 0.9rem;
-    color: #6c757d;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.kpi .val {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--primary-color);
-}
-
-/* Les actions sont maintenant dans l'en-tête */
-
-/* Badges d'état */
-.badge-state {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.badge-state.draft { background: #adb5bd; color: white; }
-.badge-state.submitted { background: #0dcaf0; color: white; }
-.badge-state.validation { background: #ffc107; color: white; }
-.badge-state.signature { background: #fd7e14; color: white; }
-.badge-state.archived { background: #198754; color: white; }
-.badge-state.rejected { background: #dc3545; color: white; }
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -119,96 +21,124 @@
     ]
 ) }}
 
-<div class="rh-container container">
+<div class="rh-page">
   {% if current_user.is_guest %}
-  <div class="demo-notice">
-    <div class="demo-banner">
-      <span class="demo-icon">🎯</span>
-      <span class="demo-text">Mode Démonstration - Données fictives</span>
+  <div class="notice-banner">
+    <span class="banner-icon">🎯</span>
+    <div class="banner-content">
+      <strong>Mode Démonstration</strong>
+      <p>Vous consultez des données fictives afin d'explorer les fonctionnalités RH.</p>
     </div>
-    <p class="demo-description">
-      Vous êtes en mode invité. Les données affichées sont des exemples pour vous permettre de découvrir l'interface.
-    </p>
   </div>
   {% endif %}
 
-  <!-- KPIs et Actions -->
-  <div class="card">
-    <h2 style="margin: 0 0 1.5rem 0; color: #000000; font-size: 1.3rem;">📊 Statistiques et Indicateurs</h2>
-    
-    <!-- KPIs Agents -->
-    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #000000;">👥 Effectifs</h3>
-    <div class="kpis">
-      <div class="kpi">
-        <div class="label">Total Agents</div>
-        <div class="val" id="kpi-total-agents">—</div>
+  <!-- KPIs et Circuit -->
+  <section class="rh-overview">
+    <header class="section-header">
+      <div class="section-header-icon">📊</div>
+      <div class="section-header-text">
+        <h2>Statistiques et indicateurs</h2>
+        <p>Suivi de l’effectif et de l’activité des demandes RH.</p>
       </div>
-      <div class="kpi">
-        <div class="label">Agents Actifs</div>
-        <div class="val" id="kpi-actifs">—</div>
-      </div>
-    </div>
-    
-    <!-- KPIs Demandes -->
-    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #000000;">📋 Demandes</h3>
-    <div class="kpis">
-      <div class="kpi">
-        <div class="label">Total Demandes</div>
-        <div class="val" id="kpi-total-demandes">—</div>
-      </div>
-      <div class="kpi">
-        <div class="label">En Cours</div>
-        <div class="val" id="kpi-demandes-cours">—</div>
-      </div>
-      <div class="kpi">
-        <div class="label">Archivées</div>
-        <div class="val" id="kpi-demandes-archivees">—</div>
-      </div>
-      <div class="kpi">
-        <div class="label">Taux Traitement</div>
-        <div class="val" id="kpi-taux-traitement">—</div>
-      </div>
-    </div>
-    
-    <!-- Circuit - En attente par état (dynamique) -->
-    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #000000;">🔄 Circuit de Validation</h3>
-    <div class="kpis" id="kpis-etats">
-      <!-- Sera peuplé dynamiquement -->
+    </header>
+
+    <div class="rh-kpi-grid">
+      <article class="rh-kpi-card">
+        <span class="rh-kpi-label">Total agents</span>
+        <span class="rh-kpi-value" id="kpi-total-agents">—</span>
+        <span class="rh-kpi-sub">Effectifs déclarés</span>
+      </article>
+      <article class="rh-kpi-card">
+        <span class="rh-kpi-label">Agents actifs</span>
+        <span class="rh-kpi-value" id="kpi-actifs">—</span>
+        <span class="rh-kpi-sub">Présents ce mois</span>
+      </article>
+      <article class="rh-kpi-card">
+        <span class="rh-kpi-label">Demandes en cours</span>
+        <span class="rh-kpi-value" id="kpi-demandes-cours">—</span>
+        <span class="rh-kpi-sub">Actions nécessaires</span>
+      </article>
+      <article class="rh-kpi-card">
+        <span class="rh-kpi-label">Taux de traitement</span>
+        <span class="rh-kpi-value" id="kpi-taux-traitement">—</span>
+        <span class="rh-kpi-sub">Demandes clôturées</span>
+      </article>
     </div>
 
+    <div class="rh-circuit">
+      <header class="circuit-header">
+        <div class="section-header-icon">🔄</div>
+        <div class="section-header-text">
+          <h3>Circuit de validation</h3>
+          <p>Demande en attente par étape</p>
+        </div>
+      </header>
+      <div class="rh-circuit-grid" id="kpis-etats">
+        <!-- alimenté via JS -->
+      </div>
     </div>
+  </section>
 
   <!-- Évolution des effectifs -->
-  <div class="card chart-card">
-    <h3>📈 Évolution des effectifs par année</h3>
-      <canvas id="chart-evolution" height="120"></canvas>
-  </div>
+  <section class="rh-chart-card">
+    <header class="section-header">
+      <div class="section-header-icon">📈</div>
+      <div class="section-header-text">
+        <h3>Évolution des effectifs</h3>
+        <p>Suivi annuel du nombre d’agents</p>
+      </div>
+    </header>
+    <canvas id="chart-evolution" height="120"></canvas>
+  </section>
 
   <!-- Répartition par grade -->
-  <div class="card chart-card">
-    <h3>🎯 Répartition par grade</h3>
-      <canvas id="chart-grade" height="180"></canvas>
-    </div>
+  <section class="rh-chart-card">
+    <header class="section-header">
+      <div class="section-header-icon">🎯</div>
+      <div class="section-header-text">
+        <h3>Répartition par grade</h3>
+        <p>Visualisation des positions internes</p>
+      </div>
+    </header>
+    <canvas id="chart-grade" height="180"></canvas>
+  </section>
 
   <!-- Répartition par service -->
-  <div class="card chart-card">
-    <h3>🏢 Répartition par service</h3>
-      <canvas id="chart-service" height="180"></canvas>
-    </div>
+  <section class="rh-chart-card">
+    <header class="section-header">
+      <div class="section-header-icon">🏢</div>
+      <div class="section-header-text">
+        <h3>Répartition par service</h3>
+        <p>Filières administratives principales</p>
+      </div>
+    </header>
+    <canvas id="chart-service" height="180"></canvas>
+  </section>
 
   <!-- Satisfaction besoins -->
-  <div class="card chart-card">
-    <h3>⭐ Satisfaction besoins d'actes</h3>
-      <canvas id="chart-satisfaction" height="160"></canvas>
-  </div>
+  <section class="rh-chart-card">
+    <header class="section-header">
+      <div class="section-header-icon">⭐</div>
+      <div class="section-header-text">
+        <h3>Satisfaction des besoins</h3>
+        <p>Comparaison des besoins exprimés vs satisfaits</p>
+      </div>
+    </header>
+    <canvas id="chart-satisfaction" height="160"></canvas>
+  </section>
 
   <!-- Liste des demandes récentes -->
-  <div class="card">
-    <h3>📋 Demandes Récentes ({{ demandes|length }})</h3>
-    
+  <section class="rh-table-card">
+    <header class="section-header">
+      <div class="section-header-icon">📋</div>
+      <div class="section-header-text">
+        <h3>Demandes récentes ({{ demandes|length }})</h3>
+        <p>Dernières actions soumises par les agents</p>
+      </div>
+    </header>
     {% if demandes and demandes|length > 0 %}
     <div class="data-table">
-    <table>
+    <table class="rh-data-table">
       <thead>
         <tr>
           <th>ID</th>
@@ -228,7 +158,7 @@
           <td>
             {{ d.objet }}
             {% if d.document_joint %}<span title="Document joint">📎</span>{% endif %}
-            {% if d.acte_type %}<br><small style="color: #000000;">{{ d.acte_type.value }}</small>{% endif %}
+            {% if d.acte_type %}<br><small class="text-muted">{{ d.acte_type.value }}</small>{% endif %}
           </td>
           <td>#{{ d.agent_id }}</td>
           <td>
@@ -241,21 +171,27 @@
             {% endif %}
             <span class="badge-state {{ state_class }}">{{ d.current_state.value }}</span>
             {% if d.current_assignee_role %}
-            <br><small style="color: #000000;">→ {{ d.current_assignee_role }}</small>
+            <br><small class="text-muted">→ {{ d.current_assignee_role }}</small>
             {% endif %}
           </td>
-          <td style="font-size: 0.85rem;">
+          <td class="text-small">
             {{ d.created_at.strftime('%d/%m/%Y') if d.created_at else '—' }}<br>
-            <small style="color: #000000;">{{ d.created_at.strftime('%H:%M') if d.created_at else '' }}</small>
+            <small class="text-muted">{{ d.created_at.strftime('%H:%M') if d.created_at else '' }}</small>
           </td>
           <td>
             <div class="action-icons">
-              <a href="{{ url_for('rh_demande_detail', request_id=d.id) }}" class="action-icon" title="Voir les détails">
+              <a href="{{ url_for('rh_demande_detail', request_id=d.id) }}" class="btn-action btn-premium btn-primary btn-compact" title="Voir les détails">
                 👁️
               </a>
-              <span class="action-icon" onclick="supprimerDemande({{ d.id }})" title="Supprimer" style="cursor: pointer;">
+              <button
+                type="button"
+                class="btn-action btn-premium btn-danger btn-compact"
+                data-delete-url="{{ url_for('api_delete_rh_demande', demande_id=d.id) }}"
+                onclick="supprimerDemande(this)"
+                title="Supprimer"
+              >
                 🗑️
-              </span>
+              </button>
             </div>
           </td>
         </tr>
@@ -267,10 +203,10 @@
     <div class="empty-state">
       <div class="empty-state-icon">📭</div>
       <p><strong>Aucune demande pour le moment</strong></p>
-      <p>Les demandes apparaîtront ici</p>
+      <p>Les demandes apparaîtront ici dès leur soumission.</p>
     </div>
     {% endif %}
-  </div>
+  </section>
   
 </div>
 {% endblock %}
@@ -381,7 +317,8 @@ async function getJSON(url){
 })();
 
 // Fonction pour supprimer une demande
-async function supprimerDemande(demandeId) {
+async function supprimerDemande(button) {
+  const demandeId = button.dataset.deleteUrl.split('/').pop(); // Récupérer l'ID de la demande
   if (!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette demande ?\n\nCette action est irréversible.')) {
     return;
   }
@@ -389,7 +326,7 @@ async function supprimerDemande(demandeId) {
   showGlobalLoading('Suppression en cours...', 'Veuillez patienter');
   
   try {
-    const res = await fetch(`/api/v1/rh/api/demandes/${demandeId}`, {
+    const res = await fetch(button.dataset.deleteUrl, {
       method: 'DELETE',
       headers: {'Accept': 'application/json'}
     });

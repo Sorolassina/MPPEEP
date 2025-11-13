@@ -416,6 +416,9 @@ async def update_system_settings(
     primary_color: str = Form("#ffd300"),
     secondary_color: str = Form("#036c1d"),
     accent_color: str = Form("#e63600"),
+    minister_civility: str | None = Form(None),
+    minister_name: str | None = Form(None),
+    minister_role: str | None = Form(None),
     footer_text: str | None = Form(None),
     maintenance_mode: str | None = Form(None),
     allow_registration: str | None = Form(None),
@@ -435,6 +438,9 @@ async def update_system_settings(
             "primary_color": primary_color,
             "secondary_color": secondary_color,
             "accent_color": accent_color,
+            "minister_civility": minister_civility,
+            "minister_name": minister_name,
+            "minister_role": minister_role,
             "footer_text": footer_text,
             "maintenance_mode": (maintenance_mode == "on"),
             "allow_registration": (allow_registration == "on"),
@@ -535,6 +541,75 @@ async def upload_logo(
         return JSONResponse(content={"success": True, "message": "Logo uploadé avec succès", "logo_url": logo_url})
     except Exception as e:
         logger.error(f"❌ Erreur upload logo: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+
+@router.post("/settings/upload-minister", name="upload_minister_photo_api")
+async def upload_minister_photo(
+    request: Request, session: Session = Depends(get_session), current_user: User = Depends(require_roles("admin"))
+):
+    """Upload de la photo du ministre"""
+    try:
+        from pathlib import Path
+
+        import aiofiles
+
+        form = await request.form()
+        photo_file = form.get("photo")
+
+        if not photo_file or not hasattr(photo_file, "filename"):
+            return JSONResponse(status_code=400, content={"success": False, "message": "Aucun fichier fourni"})
+
+        allowed_extensions = [".jpg", ".jpeg", ".png", ".webp"]
+        file_ext = Path(photo_file.filename).suffix.lower()
+
+        if file_ext not in allowed_extensions:
+            return JSONResponse(
+                status_code=400, content={"success": False, "message": "Format de fichier non supporté"}
+            )
+
+        minister_dir = path_config.STATIC_IMAGES_DIR
+        minister_dir.mkdir(parents=True, exist_ok=True)
+        file_path = minister_dir / f"minister_photo{file_ext}"
+
+        # Supprimer les anciennes photos du ministre
+        for old_photo in minister_dir.glob("minister_photo.*"):
+            try:
+                old_photo.unlink()
+            except Exception as exc:
+                logger.warning(f"⚠️ Impossible de supprimer l'ancienne photo du ministre {old_photo.name}: {exc}")
+
+        content = await photo_file.read()
+        if len(content) > 3 * 1024 * 1024:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Fichier trop volumineux (max 3MB)"})
+
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(content)
+
+        relative_path = f"images/{file_path.name}"
+        SystemSettingsService.update_settings(
+            db_session=session,
+            user_id=current_user.id,
+            minister_photo=relative_path,
+        )
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="upload",
+            target_type="minister_photo",
+            description=f"Upload de la photo du ministre ({file_path.name})",
+            icon="👤",
+        )
+
+        photo_url = path_config.get_file_url("static", relative_path)
+        return JSONResponse(
+            content={"success": True, "message": "Photo du ministre mise à jour avec succès", "photo_url": photo_url}
+        )
+    except Exception as e:
+        logger.error(f"❌ Erreur upload photo ministre: {e}")
         return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
 
 

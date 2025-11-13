@@ -34,54 +34,66 @@
   <div class="budget-layout">
 
     <!-- ========== ROW 2 : FILTRES (Période, Programme, Nature) ========== -->
-    <div class="filters-row">
-      <!-- Filtre Période -->
-      <div class="filter-group">
-        <label class="filter-label">📅 Année</label>
-        <select id="filter-annee" class="filter-select" onchange="filtrerDashboard()">
-          {% if annees_disponibles %}
-            {% for an in annees_disponibles %}
-              <option value="{{ an }}" {% if an == annee %}selected{% endif %}>{{ an }}</option>
+    <div class="budget-filters">
+      <div class="filters-header">
+        <div class="filters-heading">
+          <span class="filters-icon">🧭</span>
+          <div class="filters-text">
+            <h3>Paramètres d'analyse</h3>
+            <p>Ajustez la période et le périmètre pour actualiser les indicateurs budgétaires.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="filters-row">
+        <!-- Filtre Période -->
+        <div class="filter-group">
+          <label class="filter-label" for="filter-annee">📅 Année</label>
+          <select id="filter-annee" class="filter-select" onchange="filtrerDashboard()">
+            {% if annees_disponibles %}
+              {% for an in annees_disponibles %}
+                <option value="{{ an }}" {% if an == annee %}selected{% endif %}>{{ an }}</option>
+              {% endfor %}
+            {% else %}
+              <option value="{{ annee }}" selected>{{ annee }}</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <!-- Filtre Trimestre -->
+        <div class="filter-group">
+          <label class="filter-label" for="filter-trimestre">📊 Trimestre</label>
+          <select id="filter-trimestre" class="filter-select" onchange="filtrerDashboard()">
+            <option value="">Annuel</option>
+            <option value="1" {% if trimestre == 1 %}selected{% endif %}>T1</option>
+            <option value="2" {% if trimestre == 2 %}selected{% endif %}>T2</option>
+            <option value="3" {% if trimestre == 3 %}selected{% endif %}>T3</option>
+            <option value="4" {% if trimestre == 4 %}selected{% endif %}>T4</option>
+          </select>
+        </div>
+
+        <!-- Filtre Programme -->
+        <div class="filter-group">
+          <label class="filter-label" for="filter-programme">🏢 Programme</label>
+          <select id="filter-programme" class="filter-select" onchange="filtrerDashboard()">
+            <option value="">Tous les programmes</option>
+            {% for prog in programmes %}
+            <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
             {% endfor %}
-          {% else %}
-            <option value="{{ annee }}" selected>{{ annee }}</option>
-          {% endif %}
-        </select>
-      </div>
-      
-      <!-- Filtre Trimestre -->
-      <div class="filter-group">
-        <label class="filter-label">📊 Trimestre</label>
-        <select id="filter-trimestre" class="filter-select" onchange="filtrerDashboard()">
-          <option value="">Annuel</option>
-          <option value="1" {% if trimestre == 1 %}selected{% endif %}>T1</option>
-          <option value="2" {% if trimestre == 2 %}selected{% endif %}>T2</option>
-          <option value="3" {% if trimestre == 3 %}selected{% endif %}>T3</option>
-          <option value="4" {% if trimestre == 4 %}selected{% endif %}>T4</option>
-        </select>
-      </div>
-      
-      <!-- Filtre Programme -->
-      <div class="filter-group">
-        <label class="filter-label">🏢 Programme</label>
-        <select id="filter-programme" class="filter-select" onchange="filtrerDashboard()">
-          <option value="">Tous les programmes</option>
-          {% for prog in programmes %}
-          <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      
-      <!-- Filtre Nature de dépense -->
-      <div class="filter-group">
-        <label class="filter-label">💳 Nature de Dépense</label>
-        <select id="filter-nature" class="filter-select" onchange="filtrerDashboard()">
-          <option value="">Toutes les natures</option>
-          <option value="BS">BS - Biens & Services</option>
-          <option value="P">P - Personnel</option>
-          <option value="I">I - Investissement</option>
-          <option value="T">T - Transferts</option>
-        </select>
+          </select>
+        </div>
+
+        <!-- Filtre Nature de dépense -->
+        <div class="filter-group">
+          <label class="filter-label" for="filter-nature">💳 Nature de Dépense</label>
+          <select id="filter-nature" class="filter-select" onchange="filtrerDashboard()">
+            <option value="">Toutes les natures</option>
+            <option value="BS">BS - Biens & Services</option>
+            <option value="P">P - Personnel</option>
+            <option value="I">I - Investissement</option>
+            <option value="T">T - Transferts</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -467,6 +479,15 @@
     overflow-y: auto;
 }
 
+.budget-filters {
+    margin-bottom: 2rem;
+    padding: 1.75rem 2rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.08) 0%, rgba(232, 106, 10, 0.08) 100%);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
 /* KPIs - Style Power BI horizontal agrandi */
 .kpis-container {
     border-radius: 20px;
@@ -628,69 +649,69 @@
 }
 
 .stats-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    padding: 20px;
-    border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    border-top: 3px solid transparent;
+    background: radial-gradient(circle at top left, rgba(5, 154, 23, 0.06), rgba(232, 106, 10, 0.04)), #ffffff;
+    padding: 2rem;
+    border-radius: 22px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-top: 4px solid transparent;
 }
 
 .stats-card:nth-child(1) {
-    border-top-color: #667eea;
+    border-top-color: var(--secondary-color);
 }
 
 .stats-card:nth-child(2) {
-    border-top-color: #f093fb;
+    border-top-color: var(--accent-color);
 }
 
 .card-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 20px;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 14px;
     border-left: 4px solid transparent;
 }
 
 .stats-card:nth-child(1) .card-header {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-    border-left-color: #667eea;
+    border-left-color: var(--secondary-color);
 }
 
 .stats-card:nth-child(2) .card-header {
-    background: linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%);
-    border-left-color: #f093fb;
+    border-left-color: var(--accent-color);
 }
 
 .variation-container .card-header {
-    background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
-    border-left-color: #4facfe;
+    background: rgba(15, 23, 42, 0.05);
+    border-left-color: var(--accent-color);
 }
 
 .card-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 18px;
+    color: #ffffff;
 }
 
 .stats-card:nth-child(1) .card-icon {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: var(--secondary-color);
 }
 
 .stats-card:nth-child(2) .card-icon {
-    background: linear-gradient(135deg, #f093fb, #f5576c);
+    background: var(--accent-color);
 }
 
 .card-title {
-    font-weight: 600;
-    font-size: 18px;
-    color: #333;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: rgba(15, 23, 42, 0.85);
 }
 
 /* Programme Cards - Style Power BI */
@@ -704,15 +725,17 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    border-radius: 12px;
-    background: #f9f9f9;
-    box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
-    transition: all 0.3s ease;
+    padding: 1rem 1.25rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .prog-card:hover {
-    box-shadow: 2px 2px 8px #d1d9e6, -2px -2px 8px #ffffff;
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
 }
 
 .prog-card-left {
@@ -723,17 +746,16 @@
 }
 
 .prog-card-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #eeeeee;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 14px;
-    color: #555;
-    box-shadow: 3px 3px 6px #d1d9e6, -3px -3px 6px #ffffff;
+    font-size: 0.95rem;
+    color: var(--secondary-color);
 }
 
 .prog-card-details {
@@ -743,29 +765,29 @@
 }
 
 .prog-card-name {
-    font-weight: 500;
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 2px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: rgba(15, 23, 42, 0.85);
+    margin-bottom: 0.15rem;
 }
 
 .prog-card-budget {
-    font-size: 12px;
-    color: #777;
-    margin-bottom: 5px;
+    font-size: 0.85rem;
+    color: rgba(15, 23, 42, 0.55);
+    margin-bottom: 0.5rem;
 }
 
 .prog-card-bar-container {
     width: 100%;
     height: 6px;
-    background: #e5e7eb;
+    background: rgba(15, 23, 42, 0.1);
     border-radius: 3px;
     overflow: hidden;
 }
 
 .prog-card-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #10b981, #34d399);
+    background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
     border-radius: 3px;
     transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -777,19 +799,19 @@
 }
 
 .prog-card-percent {
-    font-weight: 600;
-    font-size: 14px;
-    color: #10b981;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--secondary-color);
 }
 
 .prog-card-percent.low {
-    color: #f59e0b;
+    color: #d97706;
 }
 
 .prog-card-label {
-    font-size: 10px;
-    color: #999;
-    margin-top: 2px;
+    font-size: 0.75rem;
+    color: rgba(15, 23, 42, 0.45);
+    margin-top: 0.35rem;
 }
 
 /* Nature Items - Style Power BI */
@@ -803,15 +825,17 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    border-radius: 12px;
-    background: #f9f9f9;
-    box-shadow: inset 2px 2px 5px #ffffff, inset -2px -2px 5px #d1d9e6;
-    transition: all 0.3s ease;
+    padding: 1rem 1.25rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .nature-item:hover {
-    box-shadow: 2px 2px 8px #d1d9e6, -2px -2px 8px #ffffff;
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
 }
 
 .nature-item-left {
@@ -821,10 +845,10 @@
 }
 
 .nature-item-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #eeeeee;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -877,18 +901,19 @@
 
 /* Variation Container - Agrandi avec légende à droite */
 .variation-container {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    padding: 2rem;
-    border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    margin-bottom: 2rem;
-    border-top: 3px solid #4facfe;
+    background: radial-gradient(circle at top left, rgba(5, 154, 23, 0.07), rgba(232, 106, 10, 0.05)), #ffffff;
+    padding: 2.25rem;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1);
+    margin-bottom: 2.25rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-top: 4px solid var(--accent-color);
 }
 
 .variation-container .card-icon {
-    background: linear-gradient(135deg, #4facfe, #00f2fe);
-    width: 28px;
-    height: 28px;
+    background: var(--accent-color);
+    width: 32px;
+    height: 32px;
 }
 
 .variation-grid {
@@ -897,14 +922,14 @@
 
 .bars-and-legend {
     display: flex;
-    gap: 60px;
+    gap: 3rem;
     align-items: center;
     justify-content: center;
 }
 
 .bars-wrapper {
     display: flex;
-    gap: 60px;
+    gap: 3rem;
     align-items: flex-end;
     padding: 2rem 0;
 }
@@ -917,12 +942,11 @@
 
 .bar-container {
     position: relative;
-    width: 25px;
-    height: 150px;
-    border-radius: 12px;
-    background: #f0f0f0;
+    width: 28px;
+    height: 170px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.08);
     overflow: hidden;
-    box-shadow: inset 6px 6px 12px #a3b1c6, inset -6px -6px 12px #ffffff;
     margin-bottom: 0.75rem;
 }
 
@@ -979,52 +1003,53 @@
 .legend-box {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0.75rem;
     padding: 1.5rem;
-    background: var(--gray-50);
-    border-radius: 10px;
-    min-width: 200px;
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 16px;
+    min-width: 220px;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.75rem;
 }
 
 .legend-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
     flex-shrink: 0;
 }
 
 .legend-color.positive {
-    background: #27ae60;
+    background: rgba(34, 197, 94, 0.9);
 }
 
 .legend-color.negative {
-    background: #c0392b;
+    background: rgba(239, 68, 68, 0.9);
 }
 
 .legend-text {
-    font-size: 14px;
-    color: #333;
-    font-weight: 500;
+    font-size: 0.95rem;
+    color: rgba(15, 23, 42, 0.72);
+    font-weight: 600;
 }
 
 /* Évolution Taux d'Exécution N vs N-1 */
 .execution-evolution-container {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    padding: 2rem;
-    border-radius: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    margin-bottom: 2rem;
-    border-top: 3px solid #667eea;
+    background: radial-gradient(circle at top left, rgba(5, 154, 23, 0.06), rgba(232, 106, 10, 0.05)), #ffffff;
+    padding: 2.25rem;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1);
+    margin-bottom: 2.25rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-top: 4px solid var(--secondary-color);
 }
 
 .execution-evolution-container .card-icon {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: var(--secondary-color);
 }
 
 .execution-comparison {
@@ -1169,12 +1194,12 @@
 
 .execution-info {
     margin-top: 2rem;
-    padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-    border-left: 4px solid #667eea;
-    border-radius: 8px;
-    font-size: 14px;
-    color: var(--gray-700);
+    padding: 1.2rem 1.5rem;
+    background: rgba(15, 23, 42, 0.05);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 14px;
+    font-size: 0.9rem;
+    color: rgba(15, 23, 42, 0.7);
 }
 
 /* Empty State */

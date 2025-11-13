@@ -4,142 +4,7 @@
 {% block title %}{{ agent.prenom }} {{ agent.nom }} - {{ app_name }}
 {% endblock %}
 
-{% block styles %}
-<style>
-/* ========== PERSONNEL DETAIL PAGE STYLES ========== */
-.personnel-detail-container {
-    padding: 2rem 0;
-    background: #f8f9fa;
-    min-height: 100vh;
-}
-
-/* Photo et infos principales */
-.profile-header {
-    background: white;
-    border-radius: 15px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-}
-
-.profile-photo {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--white-color);
-    font-size: 3rem;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-.profile-photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.profile-info {
-    flex: 1;
-    padding-left: 2rem;
-}
-
-.profile-name {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #000000;
-    margin-bottom: 0.5rem;
-}
-
-.profile-matricule {
-    font-size: 1.1rem;
-    color: #6c757d;
-    margin-bottom: 1rem;
-    font-weight: 600;
-}
-
-.profile-details {
-    color: #6c757d;
-    margin: 0;
-    font-size: 1rem;
-    line-height: 1.6;
-}
-
-/* Sections d'informations */
-.info-section {
-    background: white;
-    border-radius: 15px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-}
-
-.section-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #000000;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-bottom: 2px solid #e0e0e0;
-    padding-bottom: 0.5rem;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.info-label {
-    font-weight: 600;
-    color: #6c757d;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.info-value {
-    font-size: 1rem;
-    color: #000000;
-    font-weight: 500;
-    line-height: 1.5;
-}
-
-/* Bouton de retour */
-.btn-back {
-    background: #6c757d;
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all 0.3s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-back:hover {
-    background: #5a6268;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    color: white;
-    text-decoration: none;
-}
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -156,232 +21,323 @@
     ]
 ) }}
 
-<div class="personnel-detail-container container">
+<div class="personnel-detail-page" data-agent-actif="{{ 1 if agent.actif else 0 }}">
   
-  <!-- Photo et infos principales -->
-  <div class="profile-header">
-    <div style="display: flex; gap: 2rem; align-items: center;">
-      <div class="profile-photo">
-        <img src="{{ profile_picture_url(agent) }}" alt="{{ agent.prenom }} {{ agent.nom }}">
-      </div>
-      
-      <div class="profile-info">
-        <h1 class="profile-name">{{ agent.prenom }} {{ agent.nom }}</h1>
-        <div class="profile-matricule">Matricule: {{ agent.matricule }}</div>
-        <div class="profile-details">
-          {% if grade %}
-            <div>• {{ grade.libelle }} ({{ grade.code }})</div>
-          {% endif %}
-          {% if service %}
-            <div>📍 {{ service.libelle }}</div>
-          {% endif %}
-          {% if agent.fonction %}
-            <div>• {{ agent.fonction }}</div>
-          {% endif %}
+  <section class="profile-summary">
+    <div class="profile-header">
+      <div class="profile-identity">
+        <div class="profile-photo">
+          <img src="{{ profile_picture_url(agent) }}" alt="{{ agent.prenom }} {{ agent.nom }}">
+        </div>
+        <div class="profile-main">
+          <h1>{{ agent.prenom }} {{ agent.nom }}</h1>
+          <p class="profile-matricule">Matricule • <strong>{{ agent.matricule }}</strong></p>
+          <ul class="profile-meta">
+            {% if grade %}
+            <li>🎓 {{ grade.libelle }} ({{ grade.code }})</li>
+            {% endif %}
+            {% if service %}
+            <li>📍 {{ service.libelle }}</li>
+            {% endif %}
+            {% if agent.fonction %}
+            <li>💼 {{ agent.fonction }}</li>
+            {% endif %}
+          </ul>
         </div>
       </div>
+      <div class="profile-status">
+        <span class="badge badge-{{ 'success' if agent.actif else 'danger' }}">{{ '✅ Actif' if agent.actif else '❌ Inactif' }}</span>
+        <span class="badge badge-info">{{ agent.position_administrative or 'En service' }}</span>
+      </div>
     </div>
-    
-    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-      <span class="badge badge-{{ 'success' if agent.actif else 'danger' }}">
-        {{ '✅ Actif' if agent.actif else '❌ Inactif' }}
-      </span>
-      <span class="badge badge-info">{{ agent.position_administrative or 'En service' }}</span>
-    </div>
-  </div>
+  </section>
 
   <!-- Informations personnelles -->
-  <div class="info-section">
-    <h2 class="section-title">👤 Informations Personnelles</h2>
-    
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">Date de naissance</div>
-        <div class="info-value">{{ agent.date_naissance or '-' }}</div>
+  <section class="info-section">
+    <header class="section-header">
+      <div class="section-icon">👤</div>
+      <div>
+        <h2>Informations personnelles</h2>
+        <p>Identité, état civil et contact</p>
       </div>
-      
-      <div class="info-item">
-        <div class="info-label">Lieu de naissance</div>
-        <div class="info-value">{{ agent.lieu_naissance or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Nationalité</div>
-        <div class="info-value">{{ agent.nationalite or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Sexe</div>
-        <div class="info-value">{{ agent.sexe or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Situation familiale</div>
-        <div class="info-value">{{ agent.situation_familiale or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Nombre d'enfants</div>
-        <div class="info-value">{{ agent.nombre_enfants or '0' }}</div>
+    </header>
+
+    <div class="info-panel-grid">
+      <article class="info-panel">
+        <div class="info-panel-icon">🎂</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Date de naissance</span>
+          <span class="info-panel-value">{{ agent.date_naissance or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">📍</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Lieu de naissance</span>
+          <span class="info-panel-value">{{ agent.lieu_naissance or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">🌍</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Nationalité</span>
+          <span class="info-panel-value">{{ agent.nationalite or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">⚧️</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Sexe</span>
+          <span class="info-panel-value">{{ agent.sexe or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">👪</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Situation familiale</span>
+          <span class="info-panel-value">{{ agent.situation_familiale or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">🧒</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Nombre d'enfants</span>
+          <span class="info-panel-value">{{ agent.nombre_enfants or 0 }}</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="info-subsection">
+      <h3>📞 Contact</h3>
+      <div class="info-panel-grid">
+        <article class="info-panel">
+          <div class="info-panel-icon">💼</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Email professionnel</span>
+            <span class="info-panel-value">{{ agent.email_professionnel or '—' }}</span>
+          </div>
+        </article>
+
+        <article class="info-panel">
+          <div class="info-panel-icon">🏠</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Email personnel</span>
+            <span class="info-panel-value">{{ agent.email_personnel or '—' }}</span>
+          </div>
+        </article>
+
+        <article class="info-panel">
+          <div class="info-panel-icon">📱</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Téléphone 1</span>
+            <span class="info-panel-value">{{ agent.telephone_1 or '—' }}</span>
+          </div>
+        </article>
+
+        <article class="info-panel">
+          <div class="info-panel-icon">☎️</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Téléphone 2</span>
+            <span class="info-panel-value">{{ agent.telephone_2 or '—' }}</span>
+          </div>
+        </article>
+
+        <article class="info-panel info-panel-wide">
+          <div class="info-panel-icon">📬</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Adresse</span>
+            <span class="info-panel-value">{{ agent.adresse or '—' }}</span>
+            {% if agent.ville or agent.code_postal %}
+            <span class="info-panel-meta">{{ agent.ville or '' }} {{ agent.code_postal or '' }}</span>
+            {% endif %}
+          </div>
+        </article>
       </div>
     </div>
-    
-    <hr style="margin: 2rem 0; border: none; border-top: 2px solid #e0e0e0;">
-    
-    <h3 style="margin-bottom: 1rem;">📞 Contact</h3>
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">Email professionnel</div>
-        <div class="info-value">{{ agent.email_professionnel or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Email personnel</div>
-        <div class="info-value">{{ agent.email_personnel or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Téléphone 1</div>
-        <div class="info-value">{{ agent.telephone_1 or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Téléphone 2</div>
-        <div class="info-value">{{ agent.telephone_2 or '-' }}</div>
-      </div>
-      
-      <div class="info-item" style="grid-column: 1 / -1;">
-        <div class="info-label">Adresse</div>
-        <div class="info-value">{{ agent.adresse or '-' }}</div>
-        {% if agent.ville or agent.code_postal %}
-        <div style="color: #6c757d;">{{ agent.ville or '' }} {{ agent.code_postal or '' }}</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
+  </section>
 
   <!-- Informations professionnelles -->
-  <div class="info-section">
-    <h2 class="section-title">💼 Informations Professionnelles</h2>
-    
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">Date de recrutement</div>
-        <div class="info-value">{{ agent.date_recrutement or '-' }}</div>
+  <section class="info-section">
+    <header class="section-header">
+      <div class="section-icon">💼</div>
+      <div>
+        <h2>Informations professionnelles</h2>
+        <p>Parcours, affectation et statut</p>
       </div>
-      
-      <div class="info-item">
-        <div class="info-label">Date de prise de service</div>
-        <div class="info-value">{{ agent.date_prise_service or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Grade</div>
-        <div class="info-value">{{ grade.libelle if grade else '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Échelon</div>
-        <div class="info-value">{{ agent.echelon or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Indice</div>
-        <div class="info-value">{{ agent.indice or '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Date départ retraite prévue</div>
-        <div class="info-value">{{ agent.date_depart_retraite_prevue or '-' }}</div>
+    </header>
+
+    <div class="info-panel-grid">
+      <article class="info-panel">
+        <div class="info-panel-icon">🗓️</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Date de recrutement</span>
+          <span class="info-panel-value">{{ agent.date_recrutement or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">🚀</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Prise de service</span>
+          <span class="info-panel-value">{{ agent.date_prise_service or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">🎓</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Grade</span>
+          <span class="info-panel-value">{{ grade.libelle if grade else '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">📈</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Échelon</span>
+          <span class="info-panel-value">{{ agent.echelon or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">💵</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Indice</span>
+          <span class="info-panel-value">{{ agent.indice or '—' }}</span>
+        </div>
+      </article>
+
+      <article class="info-panel">
+        <div class="info-panel-icon">🧓</div>
+        <div class="info-panel-body">
+          <span class="info-panel-label">Départ retraite prévu</span>
+          <span class="info-panel-value">{{ agent.date_depart_retraite_prevue or '—' }}</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="info-subsection">
+      <h3>🏢 Affectation</h3>
+      <div class="info-panel-grid">
+        <article class="info-panel">
+          <div class="info-panel-icon">🧭</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Programme</span>
+            <span class="info-panel-value">{{ programme.libelle if programme else '—' }}</span>
+          </div>
+        </article>
+
+        <article class="info-panel">
+          <div class="info-panel-icon">🏛️</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Direction</span>
+            <span class="info-panel-value">{{ direction.libelle if direction else '—' }}</span>
+          </div>
+        </article>
+
+        <article class="info-panel">
+          <div class="info-panel-icon">🏢</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Service</span>
+            <span class="info-panel-value">{{ service.libelle if service else '—' }}</span>
+          </div>
+        </article>
+
+        <article class="info-panel info-panel-wide">
+          <div class="info-panel-icon">💼</div>
+          <div class="info-panel-body">
+            <span class="info-panel-label">Fonction</span>
+            <span class="info-panel-value">{{ agent.fonction or '—' }}</span>
+          </div>
+        </article>
       </div>
     </div>
-    
-    <hr style="margin: 2rem 0; border: none; border-top: 2px solid #e0e0e0;">
-    
-    <h3 style="margin-bottom: 1rem;">🏢 Affectation</h3>
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="info-label">Programme</div>
-        <div class="info-value">{{ programme.libelle if programme else '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Direction</div>
-        <div class="info-value">{{ direction.libelle if direction else '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Service</div>
-        <div class="info-value">{{ service.libelle if service else '-' }}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Fonction</div>
-        <div class="info-value">{{ agent.fonction or '-' }}</div>
-      </div>
-    </div>
-  </div>
+  </section>
 
   <!-- Congés -->
-  <div class="info-section">
-    <h2 class="section-title">🏖️ Gestion des Congés</h2>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
-      <div style="text-align: center; padding: 1.5rem; background: #e3f2fd; border-radius: 15px;">
-        <div style="font-size: 2.5rem; font-weight: 700; color: #1976d2;">{{ agent.solde_conges_annuel or 0 }}</div>
-        <div style="font-weight: 600; color: #1976d2;">Solde annuel</div>
+  <section class="info-section">
+    <header class="section-header">
+      <div class="section-icon">🏖️</div>
+      <div>
+        <h2>Gestion des congés</h2>
+        <p>Vision globale des droits et consommations</p>
       </div>
-      
-      <div style="text-align: center; padding: 1.5rem; background: #fff3e0; border-radius: 15px;">
-        <div style="font-size: 2.5rem; font-weight: 700; color: #f57c00;">{{ agent.conges_annee_en_cours or 0 }}</div>
-        <div style="font-weight: 600; color: #f57c00;">Pris cette année</div>
+    </header>
+
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-info">
+        <span class="kpi-value">{{ agent.solde_conges_annuel or 0 }}</span>
+        <span class="kpi-label">Solde annuel</span>
       </div>
-      
-      <div style="text-align: center; padding: 1.5rem; background: #e8f5e9; border-radius: 15px;">
-        <div style="font-size: 2.5rem; font-weight: 700; color: #388e3c;">{{ (agent.solde_conges_annuel or 0) - (agent.conges_annee_en_cours or 0) }}</div>
-        <div style="font-weight: 600; color: #388e3c;">Restant</div>
+
+      <div class="kpi-card kpi-warning">
+        <span class="kpi-value">{{ agent.conges_annee_en_cours or 0 }}</span>
+        <span class="kpi-label">Pris cette année</span>
+      </div>
+
+      <div class="kpi-card kpi-success">
+        <span class="kpi-value">{{ (agent.solde_conges_annuel or 0) - (agent.conges_annee_en_cours or 0) }}</span>
+        <span class="kpi-label">Restant</span>
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- Documents, Historique, Évaluations -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
-    
-    <!-- Documents -->
-    <div class="card">
-      <h2 style="margin-bottom: 1.5rem;">📄 Documents</h2>
+  <section class="detail-grid">
+    <article class="detail-card">
+      <header class="detail-card-header">
+        <span class="detail-icon">📄</span>
+        <div>
+          <h3>Documents</h3>
+          <p>Pièces jointes et justificatifs</p>
+        </div>
+      </header>
       {% if documents %}
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="document-list">
         {% for doc in documents %}
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 10px;">
-          <div>
-            <div style="font-weight: 600;">{{ doc.type_document }}</div>
-            <div style="font-size: 0.9rem; color: #6c757d;">{{ doc.uploaded_at.strftime('%d/%m/%Y') }}</div>
+        <div class="document-item">
+          <div class="document-meta">
+            <span class="document-title">{{ doc.type_document }}</span>
+            <span class="document-date">{{ doc.uploaded_at.strftime('%d/%m/%Y') }}</span>
           </div>
-          <a href="{{ doc.file_path }}" target="_blank" class="btn btn-primary" style="padding: 0.5rem 1rem;">📥</a>
+          <a href="{{ doc.file_path }}" target="_blank" class="btn-action btn-premium btn-primary btn-compact" title="Télécharger">
+            📥
+          </a>
         </div>
         {% endfor %}
       </div>
       {% else %}
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
-        <p>Aucun document</p>
+        <p class="empty-state-title">Aucun document</p>
+        <p class="empty-state-message">Ajoutez les pièces importantes pour suivre le dossier.</p>
       </div>
       {% endif %}
-    </div>
+    </article>
 
-    <!-- Historique -->
-    <div class="card">
-      <h2 style="margin-bottom: 1.5rem;">📜 Historique de Carrière</h2>
+    <article class="detail-card">
+      <header class="detail-card-header">
+        <span class="detail-icon">📜</span>
+        <div>
+          <h3>Historique de carrière</h3>
+          <p>Événements récents et affectations</p>
+        </div>
+      </header>
       {% if historique %}
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="timeline">
         {% for h in historique[:5] %}
-        <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px; border-left: 4px solid var(--secondary-color);">
-          <div style="font-weight: 600; color: var(--secondary-color);">{{ h.type_evenement }}</div>
-          <div style="font-size: 0.9rem; color: #6c757d; margin-top: 0.25rem;">
-            {{ h.date_evenement.strftime('%d/%m/%Y') }}
+        <div class="timeline-item">
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <h4>{{ h.type_evenement }}</h4>
+            <span class="timeline-date">{{ h.date_evenement.strftime('%d/%m/%Y') }}</span>
             {% if h.description %}
-            • {{ h.description }}
+            <p>{{ h.description }}</p>
             {% endif %}
           </div>
         </div>
@@ -390,28 +346,34 @@
       {% else %}
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
-        <p>Aucun historique</p>
+        <p class="empty-state-title">Aucun historique</p>
+        <p class="empty-state-message">Les changements et événements apparaîtront ici.</p>
       </div>
       {% endif %}
-    </div>
+    </article>
 
-    <!-- Évaluations -->
-    <div class="card" style="grid-column: 1 / -1;">
-      <h2 style="margin-bottom: 1.5rem;">⭐ Évaluations</h2>
+    <article class="detail-card detail-card-wide">
+      <header class="detail-card-header">
+        <span class="detail-icon">⭐</span>
+        <div>
+          <h3>Évaluations</h3>
+          <p>Performances annuelles et appréciations</p>
+        </div>
+      </header>
       {% if evaluations %}
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="evaluation-list">
         {% for eval in evaluations[:5] %}
-        <div style="padding: 1rem; background: #f8f9fa; border-radius: 10px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-weight: 600;">Année {{ eval.annee }}</div>
-            <div style="display: flex; gap: 0.25rem;">
+        <div class="evaluation-item">
+          <div class="evaluation-header">
+            <strong>Année {{ eval.annee }}</strong>
+            <div class="evaluation-stars">
               {% for i in range(5) %}
-                <span style="color: {{ '#ffc107' if i < (eval.note or 0) else '#e0e0e0' }};">★</span>
+              <span class="star {{ 'filled' if i < (eval.note or 0) else '' }}">★</span>
               {% endfor %}
             </div>
           </div>
           {% if eval.commentaire %}
-          <div style="font-size: 0.9rem; color: #6c757d; margin-top: 0.5rem;">{{ eval.commentaire[:100] }}...</div>
+          <p>{{ eval.commentaire[:120] }}{% if eval.commentaire|length > 120 %}…{% endif %}</p>
           {% endif %}
         </div>
         {% endfor %}
@@ -419,36 +381,40 @@
       {% else %}
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
-        <p>Aucune évaluation</p>
+        <p class="empty-state-title">Aucune évaluation</p>
+        <p class="empty-state-message">Les évaluations de performance seront listées ici.</p>
       </div>
       {% endif %}
-    </div>
-  </div>
+    </article>
+  </section>
 
   <!-- Notes -->
   {% if agent.notes %}
-  <div class="card">
-    <h2 style="margin-bottom: 1rem;">📝 Notes</h2>
-    <div style="padding: 1rem; background: #fff9c4; border-radius: 10px; border-left: 4px solid #fbc02d;">
+  <section class="info-section">
+    <header class="section-header">
+      <div class="section-icon">📝</div>
+      <div>
+        <h2>Notes internes</h2>
+        <p>Informations complémentaires liées à l’agent</p>
+      </div>
+    </header>
+    <div class="note-card">
       {{ agent.notes }}
     </div>
-  </div>
+  </section>
   {% endif %}
 
   <!-- Actions -->
-  <div class="info-section">
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-      <a href="{{ url_for('personnel_edit', agent_id=agent.id) }}" class="btn btn-primary">
+  <section class="info-section actions-section">
+    <div class="action-buttons">
+      <a href="{{ url_for('personnel_edit', agent_id=agent.id) }}" class="btn-action btn-premium btn-primary">
         ✏️ Modifier
       </a>
-      <button onclick="confirmerDesactivation()" class="btn btn-primary" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+      <button type="button" onclick="confirmerDesactivation()" class="btn-action btn-premium btn-accent">
         {{ '🔓 Réactiver' if not agent.actif else '🔒 Désactiver' }}
       </button>
-      <button onclick="imprimerFiche()" class="btn btn-primary" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-        🖨️ Imprimer la fiche
-      </button>
     </div>
-  </div>
+  </section>
 
 </div>
 </body>
@@ -471,7 +437,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function confirmerDesactivation() {
-  const isActif = {{ 'true' if agent.actif else 'false' }};
+  const detailContainer = document.querySelector('.personnel-detail-page');
+  const isActif = detailContainer ? Boolean(Number(detailContainer.dataset.agentActif || 0)) : false;
   const action = isActif ? 'désactiver' : 'réactiver';
   
   if (confirm(`Voulez-vous vraiment ${action} cet agent ?`)) {
@@ -504,30 +471,8 @@ function confirmerDesactivation() {
   }
 }
 
-function imprimerFiche() {
-  window.print();
-}
-
 console.log('✅ Page détail agent chargée');
 </script>
 
-<style>
-@media print {
-  .personnel-detail-container {
-    background: white;
-    padding: 0;
-  }
-  
-  .profile-header, .info-section {
-    box-shadow: none;
-    border: 1px solid #e0e0e0;
-    page-break-inside: avoid;
-  }
-  
-  .btn-back {
-    display: none;
-  }
-}
-</style>
 {% endblock %}
 

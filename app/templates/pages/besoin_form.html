@@ -3,18 +3,7 @@
 
 {% block title %}{{ 'Nouveau Besoin' if mode == 'create' else 'Modifier Besoin' }} - {{ app_name }}{% endblock %}
 
-{% block styles %}
-<style>
-/* ========== BESOIN FORM PAGE STYLES ========== */
-.besoin-form-container {
-    padding: 2rem 0;
-    background: #f8f9fa;
-    min-height: 100vh;
-}
-
-
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -30,29 +19,41 @@
     ]
 ) }}
 
-<div class="besoin-form-container container">
+<div class="besoin-form-page">
 
-  <!-- Formulaire -->
-  <div class="card" style="padding: 2.5rem;">
+  <section class="needs-form-intro">
+    <div class="needs-form-icon">🧾</div>
+    <div class="needs-form-text">
+      <h2>Déclarez un besoin en effectifs</h2>
+      <p>Précisez la structure, le profil recherché et le niveau d'urgence pour anticiper les recrutements nécessaires.</p>
+    </div>
+  </section>
+
+  <section class="needs-form-card">
     <form id="besoinForm" onsubmit="handleSubmit(event)">
-      
-      <!-- PÉRIODE -->
-      <div class="form-section">
-        <h3>📅 Période du Besoin</h3>
-        <div class="form-grid">
+
+      <div class="needs-form-section">
+        <div class="needs-form-header">
+          <div class="needs-form-header-icon">📅</div>
+          <div>
+            <h3>Période du besoin</h3>
+            <p>Sélectionnez l'année budgétaire et la période concernée.</p>
+          </div>
+        </div>
+        <div class="needs-form-grid">
           <div class="form-group">
-            <label class="required">Année</label>
-            <select name="annee"  class="form-select" required>
+            <label class="required" for="annee-select">Année</label>
+            <select name="annee" id="annee-select" class="form-select" required>
               {% set current_year = 2025 %}
               <option value="{{ current_year }}" selected>{{ current_year }}</option>
               <option value="{{ current_year + 1 }}">{{ current_year + 1 }}</option>
               <option value="{{ current_year + 2 }}">{{ current_year + 2 }}</option>
             </select>
           </div>
-          
+
           <div class="form-group">
-            <label>Période</label>
-            <select name="periode" class="form-select">
+            <label for="periode-select">Période</label>
+            <select name="periode" id="periode-select" class="form-select">
               <option value="">Année complète</option>
               <option value="Trimestre 1">Trimestre 1 (Jan-Mar)</option>
               <option value="Trimestre 2">Trimestre 2 (Avr-Juin)</option>
@@ -65,92 +66,102 @@
         </div>
       </div>
 
-      <!-- LOCALISATION -->
-      <div class="form-section">
-        <h3>🏢 Localisation Organisationnelle</h3>
-        <div class="form-grid">
+      <div class="needs-form-section">
+        <div class="needs-form-header">
+          <div class="needs-form-header-icon">🏢</div>
+          <div>
+            <h3>Localisation organisationnelle</h3>
+            <p>Indiquez le rattachement du besoin au sein de la structure.</p>
+          </div>
+        </div>
+        <div class="needs-form-grid">
           <div class="form-group">
-            <label>Programme</label>
+            <label for="programme-select">Programme</label>
             <select name="programme_id" id="programme-select" class="form-select">
               <option value="">-- Sélectionner --</option>
               {% for prog in programmes %}
               <option value="{{ prog.id }}">{{ prog.code }} - {{ prog.libelle }}</option>
               {% endfor %}
             </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
+            <span class="form-help">
               {% if programmes %}
                 {{ programmes|length }} programme(s) disponible(s)
               {% else %}
-                ⚠️ Aucun programme - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des programmes</a>
+                ⚠️ Aucun programme — <a href="{{ url_for('referentiels_home') }}" target="_blank">Créer des programmes</a>
               {% endif %}
-            </small>
+            </span>
           </div>
-          
+
           <div class="form-group">
-            <label>Direction</label>
+            <label for="direction-select">Direction</label>
             <select name="direction_id" id="direction-select" class="form-select">
               <option value="">-- Sélectionner --</option>
               {% for dir in directions %}
               <option value="{{ dir.id }}" data-programme="{{ dir.programme_id }}">{{ dir.code }} - {{ dir.libelle }}</option>
               {% endfor %}
             </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
+            <span class="form-help">
               {% if directions %}
                 {{ directions|length }} direction(s) disponible(s)
               {% else %}
-                ⚠️ Aucune direction - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des directions</a>
+                ⚠️ Aucune direction — <a href="{{ url_for('referentiels_home') }}" target="_blank">Créer des directions</a>
               {% endif %}
-            </small>
+            </span>
           </div>
-          
+
           <div class="form-group">
-            <label class="required">Service</label>
+            <label class="required" for="service-select">Service</label>
             <select name="service_id" id="service-select" class="form-select" required>
               <option value="">-- Sélectionner --</option>
               {% for serv in services %}
               <option value="{{ serv.id }}" data-direction="{{ serv.direction_id }}">{{ serv.code }} - {{ serv.libelle }}</option>
               {% endfor %}
             </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
+            <span class="form-help">
               {% if services %}
                 {{ services|length }} service(s) disponible(s)
               {% else %}
-                ⚠️ Aucun service - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des services</a>
+                ⚠️ Aucun service — <a href="{{ url_for('referentiels_home') }}" target="_blank">Créer des services</a>
               {% endif %}
-            </small>
+            </span>
           </div>
         </div>
       </div>
 
-      <!-- DESCRIPTION DU BESOIN -->
-      <div class="form-section">
-        <h3>👤 Description du Poste</h3>
-        <div class="form-grid">
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label class="required">Intitulé du Poste</label>
-            <input type="text" class="form-input" name="poste_libelle" required placeholder="Ex: Secrétaire de Direction">
-            <small>Titre du poste recherché</small>
+      <div class="needs-form-section">
+        <div class="needs-form-header">
+          <div class="needs-form-header-icon">👤</div>
+          <div>
+            <h3>Description du poste</h3>
+            <p>Précisez le profil recherché et le volume demandé.</p>
           </div>
-          
+        </div>
+        <div class="needs-form-grid">
+          <div class="form-group full">
+            <label class="required" for="poste-libelle-input">Intitulé du poste</label>
+            <input type="text" class="form-input" id="poste-libelle-input" name="poste_libelle" required placeholder="Ex: Secrétaire de Direction">
+            <span class="form-help">Titre du poste recherché</span>
+          </div>
+
           <div class="form-group">
-            <label>Grade Souhaité</label>
+            <label for="grade-select">Grade souhaité</label>
             <select name="grade_id" id="grade-select" class="form-select">
               <option value="">-- Sélectionner --</option>
               {% for grade in grades %}
               <option value="{{ grade.id }}" data-categorie="{{ grade.categorie.name }}">{{ grade.code }} - {{ grade.libelle }}</option>
               {% endfor %}
             </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
+            <span class="form-help">
               {% if grades %}
                 {{ grades|length }} grade(s) disponible(s)
               {% else %}
-                ⚠️ Aucun grade - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des grades</a>
+                ⚠️ Aucun grade — <a href="{{ url_for('referentiels_home') }}" target="_blank">Créer des grades</a>
               {% endif %}
-            </small>
+            </span>
           </div>
-          
+
           <div class="form-group">
-            <label>Ou Catégorie</label>
+            <label for="categorie-select">Ou catégorie</label>
             <select name="categorie_souhaitee" id="categorie-select" class="form-select">
               <option value="">-- Sélectionner --</option>
               <option value="A">A - Cadres supérieurs</option>
@@ -158,18 +169,18 @@
               <option value="C">C - Agents d'exécution</option>
               <option value="D">D - Personnel de soutien</option>
             </select>
-            <small>Si grade non précis</small>
+            <span class="form-help">À renseigner si le grade n'est pas fixe</span>
           </div>
-          
+
           <div class="form-group">
-            <label class="required">Nombre d'Agents</label>
-            <input type="number" name="nombre_demande" min="1" value="1" required>
-            <small>Effectif demandé</small>
+            <label class="required" for="nombre-demande-input">Nombre d'agents</label>
+            <input type="number" id="nombre-demande-input" name="nombre_demande" min="1" value="1" required>
+            <span class="form-help">Effectif total demandé</span>
           </div>
-          
+
           <div class="form-group">
-            <label>Urgence</label>
-            <select name="urgence" class="form-select">
+            <label for="urgence-select">Urgence</label>
+            <select name="urgence" id="urgence-select" class="form-select">
               <option value="Faible">Faible</option>
               <option value="Normale" selected>Normale</option>
               <option value="Élevée">Élevée</option>
@@ -179,28 +190,32 @@
         </div>
       </div>
 
-      <!-- JUSTIFICATION -->
-      <div class="form-section">
-        <h3>📝 Justification</h3>
-        <div class="form-group">
-          <label>Motif du Besoin</label>
-          <textarea name="motif" rows="5" class="form-textarea" placeholder="Expliquez les raisons du besoin en agents (départs, surcharge, nouveau service, etc.)"></textarea>
-          <small>Justification détaillée pour appuyer la demande</small>
+      <div class="needs-form-section">
+        <div class="needs-form-header">
+          <div class="needs-form-header-icon">📝</div>
+          <div>
+            <h3>Justification</h3>
+            <p>Décrivez les raisons qui motivent ce besoin.</p>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label for="motif-textarea">Motif du besoin</label>
+          <textarea name="motif" id="motif-textarea" rows="5" class="form-textarea" placeholder="Expliquez les raisons du besoin en agents (départs, surcharge, nouveau service, etc.)"></textarea>
+          <span class="form-help">Justification détaillée pour appuyer la demande</span>
         </div>
       </div>
 
-      <!-- Actions -->
-      <div class="form-actions">
-        <button type="button" class="btn-secondary" onclick="window.location.href='{{ url_for('besoins_home') }}';">
+      <div class="needs-form-actions">
+        <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('besoins_home') }}';">
           Annuler
         </button>
-        <button type="submit" class="btn-primary">
-          ➕ Exprimer le Besoin
+        <button type="submit" class="btn btn-primary">
+          ➕ Exprimer le besoin
         </button>
       </div>
-      
+
     </form>
-  </div>
+  </section>
 
 </div>
 {% endblock %}

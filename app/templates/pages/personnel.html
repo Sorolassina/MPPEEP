@@ -4,136 +4,7 @@
 {% block title %}Gestion du Personnel - {{ app_name }}
 {% endblock %}
 
-{% block styles %}
-<style>
-/* ========== PERSONNEL PAGE STYLES ========== */
-.personnel-container {
-    padding: 2rem 0;
-    background: #f8f9fa;
-    min-height: 100vh;
-}
-
-/* Bannière de démonstration */
-.demo-notice {
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.demo-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.demo-icon {
-    font-size: 1.2rem;
-}
-
-.demo-text {
-    font-weight: 600;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.demo-description {
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-/* Statistiques */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.stat-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    transition: all 0.3s;
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.stat-card.success {
-    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-    color: #065f46;
-}
-
-.stat-card.secondary {
-    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
-    color: #374151;
-}
-
-.stat-card.warning {
-    background: linear-gradient(135deg, #fef3c7, #fde68a);
-    color: #92400e;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stat-number {
-    font-size: 2rem;
-    font-weight: 700;
-}
-
-/* Section de recherche */
-.search-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.search-box {
-    width: 100%;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 1.25rem 2rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 30px;
-    background: #ffffff;
-    color: #000000;
-    font-size: 1.1rem;
-    font-weight: 500;
-    transition: all 0.3s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.search-box input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    background: white;
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
-}
-
-.search-box input::placeholder {
-    color: #6c757d;
-}
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -150,56 +21,74 @@
     ]
 ) }}
 
-<div class="personnel-container container">
+<div class="personnel-page">
   {% if current_user.is_guest %}
-  <div class="demo-notice">
-    <div class="demo-banner">
-      <span class="demo-icon">🎯</span>
-      <span class="demo-text">Mode Démonstration - Données fictives</span>
+  <div class="notice-banner">
+    <span class="banner-icon">🎯</span>
+    <div class="banner-content">
+      <strong>Mode Démonstration</strong>
+      <p>Vous consultez des données fictives pour explorer la gestion du personnel.</p>
     </div>
-    <p class="demo-description">
-      Vous êtes en mode invité. Les données affichées sont des exemples pour vous permettre de découvrir l'interface.
-    </p>
   </div>
   {% endif %}
 
   <!-- Statistiques -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Total Agents</div>
-      <div class="stat-number">{{ total_agents }}</div>
+  <section class="personnel-overview">
+    <header class="section-header">
+      <div class="section-header-icon">📊</div>
+      <div class="section-header-text">
+        <h2>Statistiques du personnel</h2>
+        <p>Effectifs globaux et répartition par catégories</p>
+      </div>
+    </header>
+
+    <div class="personnel-kpi-grid">
+      <article class="personnel-kpi-card">
+        <span class="personnel-kpi-label">Total agents</span>
+        <span class="personnel-kpi-value">{{ total_agents }}</span>
+        <span class="personnel-kpi-sub">Effectif global</span>
+      </article>
+      <article class="personnel-kpi-card accent">
+        <span class="personnel-kpi-label">Agents actifs</span>
+        <span class="personnel-kpi-value">{{ agents_actifs }}</span>
+        <span class="personnel-kpi-sub">Actifs ce mois</span>
+      </article>
+      <article class="personnel-kpi-card">
+        <span class="personnel-kpi-label">Catégorie A</span>
+        <span class="personnel-kpi-value">{{ agents_par_categorie.get('A', 0) }}</span>
+        <span class="personnel-kpi-sub">Cadres supérieurs</span>
+      </article>
+      <article class="personnel-kpi-card">
+        <span class="personnel-kpi-label">Catégorie B</span>
+        <span class="personnel-kpi-value">{{ agents_par_categorie.get('B', 0) }}</span>
+        <span class="personnel-kpi-sub">Cadres moyens</span>
+      </article>
     </div>
-    
-    <div class="stat-card success">
-      <div class="stat-label">Agents Actifs</div>
-      <div class="stat-number">{{ agents_actifs }}</div>
-    </div>
-    
-    <div class="stat-card secondary">
-      <div class="stat-label">Catégorie A</div>
-      <div class="stat-number">{{ agents_par_categorie.get('A', 0) }}</div>
-    </div>
-    
-    <div class="stat-card warning">
-      <div class="stat-label">Catégorie B</div>
-      <div class="stat-number">{{ agents_par_categorie.get('B', 0) }}</div>
-    </div>
-  </div>
+  </section>
 
   <!-- Barre de recherche -->
-  <div class="search-section">
+  <section class="personnel-search">
+    <label for="searchInput" class="search-label">Rechercher un agent</label>
     <div class="search-box">
       <input 
         type="text" 
         id="searchInput" 
-        placeholder="🔍 Rechercher un agent (matricule, nom, prénom)..."
+        placeholder="🔍 Matricule, nom, prénom..."
       >
     </div>
-  </div>
+  </section>
 
   <!-- Tableau des agents -->
-  <div class="data-table">
-    <table>
+  <section class="personnel-table-card">
+    <header class="section-header">
+      <div class="section-header-icon">👥</div>
+      <div class="section-header-text">
+        <h3>Liste des agents</h3>
+        <p>Résumé des informations principales</p>
+      </div>
+    </header>
+    <div class="data-table">
+    <table class="personnel-data-table">
       <thead>
         <tr>
           <th>Matricule</th>
@@ -229,24 +118,20 @@
             </td>
             <td>
               <div class="action-icons">
-                <a href="{{ url_for('personnel_detail', agent_id=agent.id) }}" class="action-icon" title="Détails">
-                  👁️
-                </a>
-                <a href="{{ url_for('personnel_edit', agent_id=agent.id) }}" class="action-icon" title="Modifier">
-                  ✏️
-                </a>
+                <a href="{{ url_for('personnel_detail', agent_id=agent.id) }}" class="btn-action btn-premium btn-primary btn-compact" title="Détails">👁️</a>
+                <a href="{{ url_for('personnel_edit', agent_id=agent.id) }}" class="btn-action btn-premium btn-secondary btn-compact" title="Modifier">✏️</a>
                 {% if agent.user_id %}
-                  <span class="action-icon" style="color: #10b981; cursor: help;" title="✓ Compte utilisateur existant">
+                  <span class="btn-action btn-premium btn-success btn-compact" title="✓ Compte utilisateur existant" style="cursor: help;">
                     👤✓
                   </span>
                 {% else %}
-                  <span class="action-icon" onclick="creerCompteUtilisateur({{ agent.id }}, '{{ agent.prenom }}', '{{ agent.nom }}')" title="Créer un compte utilisateur" style="color: #3b82f6; cursor: pointer;">
+                  <button type="button" class="btn-action btn-premium btn-info btn-compact" onclick="creerCompteUtilisateur({{ agent.id }}, '{{ agent.prenom }}', '{{ agent.nom }}')" title="Créer un compte utilisateur">
                     👤➕
-                  </span>
+                  </button>
                 {% endif %}
-                <span class="action-icon" onclick="supprimerAgent({{ agent.id }})" title="Supprimer">
+                <button type="button" class="btn-action btn-premium btn-danger btn-compact" onclick="supprimerAgent({{ agent.id }})" title="Supprimer">
                   🗑️
-                </span>
+                </button>
               </div>
             </td>
           </tr>
@@ -264,7 +149,8 @@
         {% endif %}
       </tbody>
     </table>
-  </div>
+    </div>
+  </section>
 
 </div>
 

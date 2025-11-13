@@ -3,253 +3,7 @@
 
 {% block title %}Performance - {{ app_name }}{% endblock %}
 
-{% block styles %}
-<style>
-/* Styles spécifiques au module Performance */
-.performance-dashboard {
-    margin-top: 2rem;
-}
-
-/* Bannière de démonstration */
-.demo-notice {
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.demo-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.demo-icon {
-    font-size: 1.2rem;
-}
-
-.demo-text {
-    font-weight: 600;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.demo-description {
-    color: rgba(255, 255, 255, 0.9);
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 1rem;
-    margin-bottom: 3rem;
-}
-
-.kpi-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid var(--primary-color);
-    transition: transform 0.2s ease;
-}
-
-.kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-}
-
-.kpi-icon {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    color: var(--primary-color);
-}
-
-.kpi-title {
-    font-size: 0.7rem;
-    color: #6b7280;
-    font-weight: 500;
-    margin-bottom: 0.3rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    line-height: 1.2;
-}
-
-.kpi-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.3rem;
-}
-
-.kpi-change {
-    font-size: 0.65rem;
-    font-weight: 500;
-    line-height: 1.2;
-}
-
-.kpi-change.positive {
-    color: #10b981;
-}
-
-.kpi-change.negative {
-    color: #ef4444;
-}
-
-.kpi-change.neutral {
-    color: #6b7280;
-}
-
-/* Section des graphiques */
-.charts-section {
-    margin-top: 3rem;
-}
-
-.charts-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-    margin-top: 2rem;
-}
-
-.chart-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.chart-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 1rem;
-}
-
-.chart-placeholder {
-    height: 300px;
-    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6b7280;
-    font-size: 1rem;
-    text-align: center;
-}
-
-/* Section des actions rapides */
-.quick-actions {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    border-radius: 12px;
-    padding: 2rem;
-    margin-top: 2rem;
-}
-
-.quick-actions h3 {
-    color: #2d3748;
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    text-align: center;
-}
-
-.actions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.action-button {
-    background: white;
-    border: none;
-    border-radius: 12px;
-    padding: 1.5rem;
-    text-decoration: none;
-    color: #2d3748;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    cursor: pointer;
-}
-
-.action-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    color: var(--primary-color);
-}
-
-.action-icon {
-    font-size: 2rem;
-    margin-bottom: 0.75rem;
-    display: block;
-}
-
-.action-text {
-    font-size: 0.9rem;
-    font-weight: 500;
-    line-height: 1.3;
-}
-
-/* Section d'introduction */
-.intro-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    text-align: center;
-    color: white;
-}
-
-.intro-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
-
-.intro-description {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    max-width: 600px;
-    margin: 0 auto;
-    line-height: 1.6;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-    .dashboard-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .charts-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .actions-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 480px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -264,161 +18,517 @@
     ]
 ) }}
 
-<div class="performance-dashboard">
+<div class="performance-page">
     {% if current_user.is_guest %}
-    <div class="demo-notice">
-        <div class="demo-banner">
-            <span class="demo-icon">🎯</span>
-            <span class="demo-text">Mode Démonstration - Données fictives</span>
+    <div class="performance-demo-notice">
+        <div class="performance-demo-icon">🎯</div>
+        <div class="performance-demo-content">
+            <h3>Mode démonstration</h3>
+            <p>Vous êtes en mode invité. Les données affichées sont fictives et illustrent les indicateurs du module performance.</p>
         </div>
-        <p class="demo-description">
-            Vous êtes en mode invité. Les données affichées sont des exemples pour vous permettre de découvrir l'interface.
-        </p>
     </div>
     {% endif %}
     
-    <!-- KPIs Principaux -->
-    <div class="dashboard-grid">
-        <!-- KPI 1: Taux de Réalisation -->
-        <div class="kpi-card">
-            <div class="kpi-icon">🎯</div>
-            <div class="kpi-title">Taux de Réalisation</div>
-            <div class="kpi-value">{{ kpis.taux_realisation }}%</div>
-            <div class="kpi-change {% if kpis.taux_realisation >= 80 %}positive{% elif kpis.taux_realisation >= 50 %}neutral{% else %}negative{% endif %}">
+    <section class="performance-hero">
+        <div class="performance-hero-content">
+            <h2 class="performance-hero-title">Pilotez l'exécution des objectifs stratégiques</h2>
+            <p class="performance-hero-description">
+                Visualisez la progression des programmes, identifiez les alertes et priorisez les actions pour soutenir la performance du MPPEEP.
+            </p>
+            <div class="performance-hero-insights">
+                <div class="hero-insight">
+                    <span class="hero-insight-label">Taux de réalisation</span>
+                    <span class="hero-insight-value">{{ kpis.taux_realisation }}%</span>
+                </div>
+                <div class="hero-insight">
+                    <span class="hero-insight-label">Objectifs atteints</span>
+                    <span class="hero-insight-value">
+                        {% if kpis.total_objectifs > 0 %}
+                        {{ kpis.objectifs_atteints }} / {{ kpis.total_objectifs }}
+                        {% else %}
+                        Aucune cible
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="hero-insight">
+                    <span class="hero-insight-label">Indicateurs en alerte</span>
+                    <span class="hero-insight-value">{{ kpis.indicateurs_alerte }}</span>
+                </div>
+            </div>
+            <div class="performance-hero-actions">
+                <a href="{{ url_for('performance_objectifs') }}" class="btn btn-premium btn-primary">Gérer les objectifs</a>
+                <button type="button" class="btn btn-premium btn-secondary" onclick="openEngagementModal()">Lettre d'engagement</button>
+            </div>
+        </div>
+        <div class="performance-hero-metrics">
+            <div class="performance-hero-metric">
+                <span class="metric-icon">⭐</span>
+                <span class="metric-label">Score global</span>
+                <span class="metric-value">{{ kpis.score_global }}/10</span>
+            </div>
+            <div class="performance-hero-metric">
+                <span class="metric-icon">🏃</span>
+                <span class="metric-label">Objectifs en cours</span>
+                <span class="metric-value">{{ kpis.objectifs_en_cours }}</span>
+            </div>
+            <div class="performance-hero-metric">
+                <span class="metric-icon">📊</span>
+                <span class="metric-label">Rapports disponibles</span>
+                <span class="metric-value">{{ kpis.total_rapports }}</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="performance-kpis">
+        <div class="performance-section-header">
+            <div class="section-icon">📌</div>
+            <div class="section-text">
+                <h3>Indicateurs clés</h3>
+                <p>Synthèse de la performance courante et des actions à prioriser.</p>
+            </div>
+        </div>
+        <div class="performance-kpi-grid">
+            <article class="performance-kpi-card">
+                <div class="performance-kpi-icon">🎯</div>
+                <span class="performance-kpi-title">Taux de réalisation</span>
+                <span class="performance-kpi-value">{{ kpis.taux_realisation }}%</span>
+                <span class="performance-kpi-change {% if kpis.taux_realisation >= 80 %}positive{% elif kpis.taux_realisation >= 50 %}neutral{% else %}negative{% endif %}">
                 {% if kpis.total_objectifs > 0 %}
                     {{ kpis.objectifs_atteints }} / {{ kpis.total_objectifs }} objectifs
                 {% else %}
                     Aucun objectif défini
                 {% endif %}
-            </div>
-        </div>
+                </span>
+            </article>
 
-        <!-- KPI 2: Objectifs Atteints -->
-        <div class="kpi-card">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-title">Objectifs Atteints</div>
-            <div class="kpi-value">{{ kpis.objectifs_atteints }}</div>
-            <div class="kpi-change neutral">
-                Sur {{ kpis.total_objectifs }} au total
-            </div>
-        </div>
+            <article class="performance-kpi-card">
+                <div class="performance-kpi-icon">✅</div>
+                <span class="performance-kpi-title">Objectifs atteints</span>
+                <span class="performance-kpi-value">{{ kpis.objectifs_atteints }}</span>
+                <span class="performance-kpi-change neutral">Sur {{ kpis.total_objectifs }} au total</span>
+            </article>
 
-        <!-- KPI 3: Indicateurs en Alerte -->
-        <div class="kpi-card">
-            <div class="kpi-icon">⚠️</div>
-            <div class="kpi-title">Indicateurs en Alerte</div>
-            <div class="kpi-value">{{ kpis.indicateurs_alerte }}</div>
-            <div class="kpi-change {% if kpis.indicateurs_alerte > 0 %}negative{% else %}positive{% endif %}">
+            <article class="performance-kpi-card">
+                <div class="performance-kpi-icon">⚠️</div>
+                <span class="performance-kpi-title">Indicateurs en alerte</span>
+                <span class="performance-kpi-value">{{ kpis.indicateurs_alerte }}</span>
+                <span class="performance-kpi-change {% if kpis.indicateurs_alerte > 0 %}negative{% else %}positive{% endif %}">
                 {% if kpis.indicateurs_alerte > 0 %}
                     ⚠️ Nécessitent attention
                 {% else %}
-                    ✅ Tous les indicateurs OK
+                    ✅ Tous les indicateurs sont au vert
                 {% endif %}
-            </div>
-        </div>
+                </span>
+            </article>
 
-        <!-- KPI 4: Score Global -->
-        <div class="kpi-card">
-            <div class="kpi-icon">⭐</div>
-            <div class="kpi-title">Score Global</div>
-            <div class="kpi-value">{{ kpis.score_global }}/10</div>
-            <div class="kpi-change {% if kpis.score_global >= 7 %}positive{% elif kpis.score_global >= 5 %}neutral{% else %}negative{% endif %}">
+            <article class="performance-kpi-card">
+                <div class="performance-kpi-icon">⭐</div>
+                <span class="performance-kpi-title">Score global</span>
+                <span class="performance-kpi-value">{{ kpis.score_global }}/10</span>
+                <span class="performance-kpi-change {% if kpis.score_global >= 7 %}positive{% elif kpis.score_global >= 5 %}neutral{% else %}negative{% endif %}">
                 {% if kpis.score_global >= 7 %}
                     ✅ Performance élevée
                 {% elif kpis.score_global >= 5 %}
                     ⚠️ Performance moyenne
                 {% else %}
-                    ❌ À améliorer
+                    ❌ À renforcer
                 {% endif %}
+                </span>
+            </article>
+
+            <article class="performance-kpi-card">
+                <div class="performance-kpi-icon">🏃</div>
+                <span class="performance-kpi-title">Objectifs en cours</span>
+                <span class="performance-kpi-value">{{ kpis.objectifs_en_cours }}</span>
+                <span class="performance-kpi-change neutral">En progression</span>
+            </article>
+
+            <article class="performance-kpi-card">
+                <div class="performance-kpi-icon">📊</div>
+                <span class="performance-kpi-title">Rapports générés</span>
+                <span class="performance-kpi-value">{{ kpis.total_rapports }}</span>
+                <span class="performance-kpi-change neutral">Disponibles pour analyse</span>
+            </article>
+        </div>
+    </section>
+
+    <section class="performance-charts">
+        <div class="performance-section-header">
+            <div class="section-icon">📈</div>
+            <div class="section-text">
+                <h3>Analyses et tendances</h3>
+                <p>Visualisations clés pour anticiper les évolutions et prioriser les actions.</p>
             </div>
         </div>
-
-        <!-- KPI 5: Objectifs en Cours -->
-        <div class="kpi-card">
-            <div class="kpi-icon">🏃</div>
-            <div class="kpi-title">Objectifs en Cours</div>
-            <div class="kpi-value">{{ kpis.objectifs_en_cours }}</div>
-            <div class="kpi-change neutral">
-                En progression
-            </div>
-        </div>
-
-        <!-- KPI 6: Rapports Générés -->
-        <div class="kpi-card">
-            <div class="kpi-icon">📊</div>
-            <div class="kpi-title">Rapports Générés</div>
-            <div class="kpi-value">{{ kpis.total_rapports }}</div>
-            <div class="kpi-change neutral">
-                Disponibles
-            </div>
-        </div>
-    </div>
-
-    <!-- Section des graphiques -->
-    <div class="charts-section">
-        <h2 style="color: #1f2937; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">
-            📊 Analyses et Tendances
-        </h2>
-        
-        <div class="charts-grid">
-            <!-- Graphique Évolution des Objectifs -->
-            <div class="chart-card">
-                <h3 class="chart-title">Évolution des Objectifs (6 derniers mois)</h3>
-                <div class="chart-placeholder">
-                    📈 Graphique d'évolution des objectifs<br>
+        <div class="performance-chart-grid">
+            <article class="performance-chart-card">
+                <h3 class="performance-chart-title">Évolution des objectifs (6 derniers mois)</h3>
+                <div class="performance-chart-placeholder">
+                    📈 Graphique d'évolution des objectifs
                     <small>Les graphiques interactifs seront intégrés prochainement</small>
                 </div>
-            </div>
-
-            <!-- Graphique Performance par Programme -->
-            <div class="chart-card">
-                <h3 class="chart-title">Performance par Programme</h3>
-                <div class="chart-placeholder">
-                    📊 Graphique en barres par programme<br>
+            </article>
+            <article class="performance-chart-card">
+                <h3 class="performance-chart-title">Performance par programme</h3>
+                <div class="performance-chart-placeholder">
+                    📊 Graphique en barres par programme
                     <small>Comparaison des performances par secteur</small>
                 </div>
-            </div>
-
-            <!-- Graphique Indicateurs Clés -->
-            <div class="chart-card">
-                <h3 class="chart-title">Indicateurs Clés de Performance</h3>
-                <div class="chart-placeholder">
-                    🎯 Graphique radar des KPIs<br>
+            </article>
+            <article class="performance-chart-card">
+                <h3 class="performance-chart-title">Indicateurs clés de performance</h3>
+                <div class="performance-chart-placeholder">
+                    🎯 Graphique radar des KPIs
                     <small>Vue d'ensemble des indicateurs principaux</small>
                 </div>
-            </div>
-
-            <!-- Graphique Tendances -->
-            <div class="chart-card">
-                <h3 class="chart-title">Tendances et Prévisions</h3>
-                <div class="chart-placeholder">
-                    📈 Graphique de tendances<br>
+            </article>
+            <article class="performance-chart-card">
+                <h3 class="performance-chart-title">Tendances et prévisions</h3>
+                <div class="performance-chart-placeholder">
+                    📈 Graphique de tendances
                     <small>Projections et analyses prédictives</small>
                 </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="performance-actions">
+        <div class="performance-section-header">
+            <div class="section-icon">⚡</div>
+            <div class="section-text">
+                <h3>Actions rapides</h3>
+                <p>Accédez aux modules clés pour suivre et documenter la performance.</p>
             </div>
         </div>
-    </div>
-
-    <!-- Actions Rapides -->
-    <div class="quick-actions">
-        <h3>Actions Rapides</h3>
-        <div class="actions-grid">
+        <div class="performance-actions-grid">
             <a href="{{ url_for('performance_objectifs') }}" class="action-button">
                 <span class="action-icon">🎯</span>
-                <span class="action-text">Gérer les Objectifs</span>
+                <span class="action-text">Gérer les objectifs</span>
             </a>
             <a href="{{ url_for('performance_indicateurs') }}" class="action-button">
                 <span class="action-icon">📊</span>
-                <span class="action-text">Configurer les Indicateurs</span>
+                <span class="action-text">Configurer les indicateurs</span>
             </a>
             <a href="{{ url_for('performance_rapports') }}" class="action-button">
                 <span class="action-icon">📋</span>
-                <span class="action-text">Générer un Rapport</span>
+                <span class="action-text">Générer un rapport</span>
             </a>
-            <a href="{{ url_for('performance_lettres_engagement_pdf') }}" class="action-button" target="_blank" rel="noopener">
+            <button type="button" class="action-button" onclick="openEngagementModal()">
                 <span class="action-icon">✉️</span>
-                <span class="action-text">Lettres d'engagement</span>
-            </a>
+                <span class="action-text">Lettre d'engagement opérationnel</span>
+            </button>
+            <button type="button" class="action-button" onclick="openPerformanceEngagementModal()">
+                <span class="action-icon">📈</span>
+                <span class="action-text">Lettre d'engagement de performance</span>
+            </button>
+        </div>
+    </section>
+</div>
+
+<div id="engagementModal" class="modal-xl performance-modal">
+    <div class="modal-content performance-engagement-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Préparer la lettre d'engagement</h2>
+            <button type="button" class="modal-close" onclick="closeEngagementModal()">&times;</button>
+        </div>
+        <form id="engagementForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_lettres_engagement_pdf') }}">
+            <p class="performance-engagement-intro">
+                Renseignez les informations ci-dessous. Les champs laissés vides utiliseront les valeurs de référence déjà enregistrées.
+            </p>
+            <button type="button" class="link-button performance-engagement-reset" onclick="applyEngagementDefaults()">
+                ↺ Remettre les valeurs de référence
+            </button>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>📄</span> Informations générales
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="annee" class="form-label">Année</label>
+                        <input type="number" id="annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2025">
+                    </div>
+                    <div class="form-group">
+                        <label for="pays" class="form-label">Pays</label>
+                        <input type="text" id="pays" name="pays" class="form-control" placeholder="République de Côte d'Ivoire">
+                    </div>
+                    <div class="form-group">
+                        <label for="devise" class="form-label">Devise / devise nationale</label>
+                        <input type="text" id="devise" name="devise" class="form-control" placeholder="Union – Discipline – Travail">
+                    </div>
+                    <div class="form-group">
+                        <label for="ministere" class="form-label">Ministère</label>
+                        <input type="text" id="ministere" name="ministere" class="form-control" placeholder="Ministère du Patrimoine...">
+                    </div>
+                    <div class="form-group">
+                        <label for="programme" class="form-label">Intitulé du programme</label>
+                        <input type="text" id="programme" name="programme" class="form-control" placeholder="Administration Générale">
+                    </div>
+                    <div class="form-group">
+                        <label for="bop" class="form-label">Intitulé du BOP</label>
+                        <input type="text" id="bop" name="bop" class="form-control" placeholder="Affaires Administratives et Financières">
+                    </div>
+                    <div class="form-group">
+                        <label for="ville" class="form-label">Ville de signature</label>
+                        <input type="text" id="ville" name="ville" class="form-control" placeholder="Abidjan">
+                    </div>
+                    <div class="form-group">
+                        <label for="date" class="form-label">Date de signature</label>
+                        <input type="date" id="date" name="date" class="form-control">
+                        <span class="performance-engagement-hint">Format : JJ/MM/AAAA</span>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>👤</span> Responsable de programme
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="rprog_nom" class="form-label">Nom complet</label>
+                        <input type="text" id="rprog_nom" name="rprog_nom" class="form-control" placeholder="Monsieur ADAMA SALL">
+                    </div>
+                    <div class="form-group">
+                        <label for="rprog_fonction" class="form-label">Fonction</label>
+                        <input type="text" id="rprog_fonction" name="rprog_fonction" class="form-control" placeholder="Responsable du Programme">
+                    </div>
+                    <div class="performance-upload-group">
+                        <label for="rprog_photo" class="form-label">Photo officielle</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="rprog_photo" name="rprog_photo" class="form-control" placeholder="uploads/performance/engagement/rprog_photo.png">
+                            <label class="performance-upload-button">
+                                <input type="file" id="rprog_photo_file" accept="image/*" onchange="uploadEngagementPhoto('rprog_photo')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Formats acceptés&nbsp;: JPG, PNG, WEBP (max 5&nbsp;MB)</span>
+                        <div class="performance-upload-preview" id="rprog_photo_preview_wrapper">
+                            <img id="rprog_photo_preview" alt="Prévisualisation du responsable de programme">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>🤝</span> Responsable BOP
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="rbop_nom" class="form-label">Nom complet</label>
+                        <input type="text" id="rbop_nom" name="rbop_nom" class="form-control" placeholder="Monsieur DIARRA Hamidou">
+                    </div>
+                    <div class="form-group">
+                        <label for="rbop_fonction" class="form-label">Fonction</label>
+                        <input type="text" id="rbop_fonction" name="rbop_fonction" class="form-control" placeholder="Responsable du BOP">
+                    </div>
+                    <div class="performance-upload-group">
+                        <label for="rbop_photo" class="form-label">Photo officielle</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="rbop_photo" name="rbop_photo" class="form-control" placeholder="uploads/performance/engagement/rbop_photo.png">
+                            <label class="performance-upload-button">
+                                <input type="file" id="rbop_photo_file" accept="image/*" onchange="uploadEngagementPhoto('rbop_photo')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Formats acceptés&nbsp;: JPG, PNG, WEBP (max 5&nbsp;MB)</span>
+                        <div class="performance-upload-preview" id="rbop_photo_preview_wrapper">
+                            <img id="rbop_photo_preview" alt="Prévisualisation du responsable BOP">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>📑</span> Références et visuels
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="decret_org_num" class="form-label">Décret organisation (numéro)</label>
+                        <input type="text" id="decret_org_num" name="decret_org_num" class="form-control" placeholder="Ex: N° 2023-123">
+                    </div>
+                    <div class="form-group">
+                        <label for="decret_org_date" class="form-label">Décret organisation (date)</label>
+                        <input type="text" id="decret_org_date" name="decret_org_date" class="form-control" placeholder="Ex: 15/03/2023">
+                    </div>
+                    <div class="form-group">
+                        <label for="decret_resp_num" class="form-label">Décret nomination (numéro)</label>
+                        <input type="text" id="decret_resp_num" name="decret_resp_num" class="form-control" placeholder="Ex: N° 2024-045">
+                    </div>
+                    <div class="form-group">
+                        <label for="decret_resp_date" class="form-label">Décret nomination (date)</label>
+                        <input type="text" id="decret_resp_date" name="decret_resp_date" class="form-control" placeholder="Ex: 01/02/2024">
+                    </div>
+                    <div class="performance-upload-group">
+                        <label for="logo_path" class="form-label">Logo à afficher</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="logo_path" name="logo_path" class="form-control" placeholder="uploads/performance/engagement/logo.png">
+                            <label class="performance-upload-button">
+                                <input type="file" id="logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('logo_path')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5&nbsp;MB)</span>
+                        <div class="performance-upload-preview" id="logo_path_preview_wrapper">
+                            <img id="logo_path_preview" alt="Prévisualisation du logo">
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </form>
+        <div class="modal-footer performance-engagement-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeEngagementModal()">Annuler</button>
+            <button type="submit" form="engagementForm" class="btn btn-primary">Générer le PDF</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour la lettre d'engagement de performance -->
+<div id="performanceEngagementModal" class="modal-xl performance-modal">
+    <div class="modal-content performance-engagement-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Préparer la lettre d'engagement de performance</h2>
+            <button type="button" class="modal-close" onclick="closePerformanceEngagementModal()">&times;</button>
+        </div>
+        <form id="performanceEngagementForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_lettres_engagement_performance_pdf') }}">
+            <p class="performance-engagement-intro">
+                Renseignez les informations ci-dessous. Les champs laissés vides utiliseront les valeurs de référence déjà enregistrées.
+            </p>
+            <button type="button" class="link-button performance-engagement-reset" onclick="applyPerformanceEngagementDefaults()">
+                ↺ Remettre les valeurs de référence
+            </button>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>📄</span> Informations générales
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="perf_annee" class="form-label">Année</label>
+                        <input type="number" id="perf_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2025">
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_pays" class="form-label">Pays</label>
+                        <input type="text" id="perf_pays" name="pays" class="form-control" placeholder="République de Côte d'Ivoire">
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_devise" class="form-label">Devise / devise nationale</label>
+                        <input type="text" id="perf_devise" name="devise" class="form-control" placeholder="Union – Discipline – Travail">
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_programme" class="form-label">Intitulé du programme</label>
+                        <input type="text" id="perf_programme" name="programme" class="form-control" placeholder="PORTEFEUILLE DE L'ETAT">
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_ville" class="form-label">Ville de signature</label>
+                        <input type="text" id="perf_ville" name="ville" class="form-control" placeholder="Abidjan">
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_date" class="form-label">Date de signature</label>
+                        <input type="date" id="perf_date" name="date" class="form-control">
+                        <span class="performance-engagement-hint">Format : JJ/MM/AAAA</span>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>👔</span> Ministre
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="perf_minister_civility" class="form-label">Civilité</label>
+                        <select id="perf_minister_civility" name="minister_civility" class="form-control">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Monsieur">Monsieur</option>
+                            <option value="Madame">Madame</option>
+                            <option value="Mademoiselle">Mademoiselle</option>
+                            <option value="Docteur">Docteur</option>
+                            <option value="Professeur">Professeur</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_minister_nom" class="form-label">Nom complet</label>
+                        <input type="text" id="perf_minister_nom" name="minister_nom" class="form-control" placeholder="MOUSSA SANOGO">
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_minister_fonction" class="form-label">Fonction</label>
+                        <input type="text" id="perf_minister_fonction" name="minister_fonction" class="form-control" placeholder="MINISTRE DU PATRIMOINE, DU PORTEFEUILLE DE L'ETAT ET DES ENTREPRISES PUBLIQUES">
+                    </div>
+                    <div class="performance-upload-group">
+                        <label for="perf_minister_photo" class="form-label">Photo officielle</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="perf_minister_photo" name="minister_photo" class="form-control" placeholder="uploads/performance/engagement/minister_photo.png">
+                            <label class="performance-upload-button">
+                                <input type="file" id="perf_minister_photo_file" accept="image/*" onchange="uploadEngagementPhoto('perf_minister_photo')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Formats acceptés&nbsp;: JPG, PNG, WEBP (max 5&nbsp;MB)</span>
+                        <div class="performance-upload-preview" id="perf_minister_photo_preview_wrapper">
+                            <img id="perf_minister_photo_preview" alt="Prévisualisation du ministre">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>👤</span> Responsable de programme
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="perf_rprog_nom" class="form-label">Nom complet</label>
+                        <input type="text" id="perf_rprog_nom" name="rprog_nom" class="form-control" placeholder="Monsieur ADAMA SALL">
+                    </div>
+                    <div class="form-group">
+                        <label for="perf_rprog_fonction" class="form-label">Fonction</label>
+                        <input type="text" id="perf_rprog_fonction" name="rprog_fonction" class="form-control" placeholder="Responsable du Programme">
+                    </div>
+                    <div class="performance-upload-group">
+                        <label for="perf_rprog_photo" class="form-label">Photo officielle</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="perf_rprog_photo" name="rprog_photo" class="form-control" placeholder="uploads/performance/engagement/rprog_photo.png">
+                            <label class="performance-upload-button">
+                                <input type="file" id="perf_rprog_photo_file" accept="image/*" onchange="uploadEngagementPhoto('perf_rprog_photo')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Formats acceptés&nbsp;: JPG, PNG, WEBP (max 5&nbsp;MB)</span>
+                        <div class="performance-upload-preview" id="perf_rprog_photo_preview_wrapper">
+                            <img id="perf_rprog_photo_preview" alt="Prévisualisation du responsable de programme">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>📑</span> Références et visuels
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="performance-upload-group">
+                        <label for="perf_logo_path" class="form-label">Logo à afficher</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="perf_logo_path" name="logo_path" class="form-control" placeholder="uploads/performance/engagement/logo.png">
+                            <label class="performance-upload-button">
+                                <input type="file" id="perf_logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('perf_logo_path')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5&nbsp;MB)</span>
+                        <div class="performance-upload-preview" id="perf_logo_path_preview_wrapper">
+                            <img id="perf_logo_path_preview" alt="Prévisualisation du logo">
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </form>
+        <div class="modal-footer performance-engagement-footer">
+            <button type="button" class="btn btn-secondary" onclick="closePerformanceEngagementModal()">Annuler</button>
+            <button type="submit" form="performanceEngagementForm" class="btn btn-primary">Générer le PDF</button>
         </div>
     </div>
 </div>
@@ -435,5 +545,376 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.classList.remove('show');
     }
 });
+
+const engagementDefaults = JSON.parse('{{ engagement_defaults | tojson | safe }}');
+const performanceEngagementDefaults = JSON.parse('{{ performance_engagement_defaults | tojson | safe }}');
+const ENGAGEMENT_PHOTO_MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+const engagementPhotoUploadUrl = "{{ url_for('upload_engagement_photo') }}";
+const engagementPhotoFields = ["rprog_photo", "rbop_photo", "logo_path"];
+const performanceEngagementPhotoFields = ["perf_minister_photo", "perf_rprog_photo", "perf_logo_path"];
+
+function normalizeEngagementAssetUrl(rawValue) {
+    if (!rawValue) {
+        return "";
+    }
+
+    if (/^(https?:\/\/|data:)/i.test(rawValue)) {
+        return rawValue;
+    }
+
+    let url = rawValue.trim();
+    if (url.startsWith("/")) {
+        return url;
+    }
+
+    if (url.startsWith("uploads/")) {
+        return `/${url}`;
+    }
+
+    if (url.startsWith("static/")) {
+        return `/${url}`;
+    }
+
+    if (url.startsWith("images/")) {
+        return `/static/${url}`;
+    }
+
+    return `/static/${url}`;
+}
+
+function updateEngagementPhotoPreview(field, explicitUrl) {
+    const wrapper = document.getElementById(`${field}_preview_wrapper`);
+    const img = document.getElementById(`${field}_preview`);
+    if (!wrapper || !img) {
+        return;
+    }
+
+    const input = document.getElementById(field);
+    const value = explicitUrl || input?.value || "";
+
+    if (!value) {
+        wrapper.classList.remove("show");
+        img.src = "";
+        return;
+    }
+
+    const url = normalizeEngagementAssetUrl(value);
+    img.src = url;
+    wrapper.classList.add("show");
+}
+
+async function uploadEngagementPhoto(field) {
+    const fileInput = document.getElementById(`${field}_file`);
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return;
+    }
+
+    const file = fileInput.files[0];
+    if (file.size > ENGAGEMENT_PHOTO_MAX_SIZE) {
+        if (typeof showError === "function") {
+            showError("La photo dépasse la taille maximale de 5 MB.");
+        }
+        fileInput.value = "";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Téléversement en cours...", "Import de la photo");
+    }
+
+    try {
+        const response = await fetch(engagementPhotoUploadUrl, {
+            method: "POST",
+            body: formData,
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result?.success) {
+            const message = result?.detail || result?.error || "Erreur lors du téléversement de la photo.";
+            if (typeof showError === "function") {
+                showError(message);
+            }
+            return;
+        }
+
+        const input = document.getElementById(field);
+        if (input) {
+            input.value = result.path || result.relative_path || result.url || "";
+        }
+
+        updateEngagementPhotoPreview(field, result.url || input?.value);
+
+        if (typeof showSuccess === "function") {
+            showSuccess(result.message || "Photo importée avec succès.");
+        }
+    } catch (error) {
+        console.error("Erreur upload photo lettre engagement:", error);
+        if (typeof showError === "function") {
+            showError("Erreur réseau lors du téléversement de la photo.");
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        fileInput.value = "";
+    }
+}
+
+function openEngagementModal() {
+    const modal = document.getElementById('engagementModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+}
+
+function closeEngagementModal() {
+    const modal = document.getElementById('engagementModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+}
+
+function formatDateForInput(value) {
+    if (!value) {
+        return "";
+    }
+    if (value.includes("-")) {
+        return value;
+    }
+    const parts = value.split("/");
+    if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    return value;
+}
+
+function formatDateForApi(value) {
+    if (!value) {
+        return "";
+    }
+    if (value.includes("/")) {
+        return value;
+    }
+    const parts = value.split("-");
+    if (parts.length === 3) {
+        const [year, month, day] = parts;
+        return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year.padStart(4, "0")}`;
+    }
+    return value;
+}
+
+function applyEngagementDefaults() {
+    const form = document.getElementById('engagementForm');
+    if (!form || !engagementDefaults) {
+        return;
+    }
+    form.reset();
+    Object.entries(engagementDefaults).forEach(([key, value]) => {
+        const field = form.querySelector(`[name="${key}"]`);
+        if (!field) {
+            return;
+        }
+        if (key === "date") {
+            field.value = formatDateForInput(value);
+            return;
+        }
+        field.value = value ?? "";
+    });
+
+    engagementPhotoFields.forEach((field) => updateEngagementPhotoPreview(field));
+}
+
+function handleEngagementSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Impossible de déterminer l'URL de génération du PDF.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    for (const [key, rawValue] of formData.entries()) {
+        let value = (rawValue || "").toString().trim();
+        if (!value) {
+            continue;
+        }
+
+        if (key === "date") {
+            value = formatDateForApi(value);
+        }
+
+        if (key === "annee") {
+            value = value.replace(/[^\d]/g, "");
+        }
+
+        if (!value) {
+            continue;
+        }
+
+        params.append(key, value);
+    }
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Génération du PDF...", "Veuillez patienter");
+    }
+
+    closeEngagementModal();
+    window.location.assign(targetUrl);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('engagementForm');
+    if (form) {
+        applyEngagementDefaults();
+        form.addEventListener('submit', handleEngagementSubmit);
+    }
+
+    engagementPhotoFields.forEach((field) => {
+        const input = document.getElementById(field);
+        if (input) {
+            input.addEventListener('change', () => updateEngagementPhotoPreview(field));
+            input.addEventListener('blur', () => updateEngagementPhotoPreview(field));
+        }
+    });
+
+    const modal = document.getElementById('engagementModal');
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeEngagementModal();
+            }
+        });
+    }
+
+    // Modal de performance
+    const perfForm = document.getElementById('performanceEngagementForm');
+    if (perfForm) {
+        applyPerformanceEngagementDefaults();
+        perfForm.addEventListener('submit', handlePerformanceEngagementSubmit);
+    }
+
+    performanceEngagementPhotoFields.forEach((field) => {
+        const input = document.getElementById(field);
+        if (input) {
+            input.addEventListener('change', () => updateEngagementPhotoPreview(field));
+            input.addEventListener('blur', () => updateEngagementPhotoPreview(field));
+        }
+    });
+
+    const perfModal = document.getElementById('performanceEngagementModal');
+    if (perfModal) {
+        perfModal.addEventListener('click', function(event) {
+            if (event.target === perfModal) {
+                closePerformanceEngagementModal();
+            }
+        });
+    }
+});
+
+// Fonctions pour le modal de performance
+function openPerformanceEngagementModal() {
+    const modal = document.getElementById('performanceEngagementModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+}
+
+function closePerformanceEngagementModal() {
+    const modal = document.getElementById('performanceEngagementModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+}
+
+function applyPerformanceEngagementDefaults() {
+    const form = document.getElementById('performanceEngagementForm');
+    if (!form || !performanceEngagementDefaults) {
+        return;
+    }
+    form.reset();
+    Object.entries(performanceEngagementDefaults).forEach(([key, value]) => {
+        const field = form.querySelector(`[name="${key}"]`);
+        if (!field) {
+            return;
+        }
+        if (key === "date") {
+            field.value = formatDateForInput(value);
+            return;
+        }
+        field.value = value ?? "";
+    });
+
+    // Mettre à jour les prévisualisations des photos
+    performanceEngagementPhotoFields.forEach((field) => {
+        updateEngagementPhotoPreview(field);
+    });
+}
+
+function handlePerformanceEngagementSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Impossible de déterminer l'URL de génération du PDF.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    for (const [key, rawValue] of formData.entries()) {
+        let value = (rawValue || "").toString().trim();
+        if (!value) {
+            continue;
+        }
+
+        if (key === "date") {
+            value = formatDateForApi(value);
+        }
+
+        if (key === "annee") {
+            value = value.replace(/[^\d]/g, "");
+        }
+
+        if (!value) {
+            continue;
+        }
+
+        params.append(key, value);
+    }
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Génération du PDF...", "Veuillez patienter");
+    }
+
+    closePerformanceEngagementModal();
+    window.location.assign(targetUrl);
+}
 </script>
 {% endblock %}

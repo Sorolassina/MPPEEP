@@ -4,576 +4,7 @@
 {% block title %}Suivi des Besoins en Agents - {{ app_name }}
 {% endblock %}
 
-{% block styles %}
-<style>
-/* ========== BESOINS PAGE STYLES ========== */
-.besoins-container {
-    padding: 2rem 0;
-    background: #f8f9fa;
-    min-height: 100vh;
-}
-
-/* Grille de statistiques */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.stat-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border-left: 5px solid var(--primary-color);
-    transition: all 0.3s;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.15);
-}
-
-.stat-card.warning {
-    border-left-color: #ffc107;
-}
-
-.stat-card.success {
-    border-left-color: #28a745;
-}
-
-.stat-card.secondary {
-    border-left-color: #6c757d;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
-}
-
-.stat-number {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #000000;
-}
-
-/* Filtres */
-.filters-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-}
-
-.filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    align-items: end;
-}
-
-.filter-group label {
-    font-weight: 600;
-    color: #000000;
-    margin-bottom: 0.5rem;
-    display: block;
-    font-size: 0.9rem;
-}
-
-.filter-group select {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    background: white;
-    color: #000000;
-    font-size: 1rem;
-    transition: all 0.3s;
-}
-
-.filter-group select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-/* Graphiques */
-.charts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 2rem;
-    margin-bottom: 2rem;
-}
-
-.chart-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.chart-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #000000;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #e0e0e0;
-}
-
-/* Tableau des besoins */
-.besoins-table-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.besoins-table-section .data-table {
-    table-layout: fixed;
-    width: 100%;
-}
-
-.besoins-table-section .data-table th,
-.besoins-table-section .data-table td {
-    padding: 0.6rem 0.4rem;
-    font-size: 0.85rem;
-}
-
-/* Largeurs des colonnes du tableau besoins */
-.besoins-table-section .data-table th:nth-child(1),
-.besoins-table-section .data-table td:nth-child(1) {
-    width: 15%; /* Service */
-}
-
-.besoins-table-section .data-table th:nth-child(2),
-.besoins-table-section .data-table td:nth-child(2) {
-    width: 12%; /* Poste */
-}
-
-.besoins-table-section .data-table th:nth-child(3),
-.besoins-table-section .data-table td:nth-child(3) {
-    width: 10%; /* Grade */
-}
-
-.besoins-table-section .data-table th:nth-child(4),
-.besoins-table-section .data-table td:nth-child(4) {
-    width: 8%; /* Demandé */
-    text-align: center;
-}
-
-.besoins-table-section .data-table th:nth-child(5),
-.besoins-table-section .data-table td:nth-child(5) {
-    width: 8%; /* Obtenu */
-    text-align: center;
-}
-
-.besoins-table-section .data-table th:nth-child(6),
-.besoins-table-section .data-table td:nth-child(6) {
-    width: 15%; /* Satisfaction */
-}
-
-.besoins-table-section .data-table th:nth-child(7),
-.besoins-table-section .data-table td:nth-child(7) {
-    width: 10%; /* Urgence */
-    text-align: center;
-}
-
-.besoins-table-section .data-table th:nth-child(8),
-.besoins-table-section .data-table td:nth-child(8) {
-    width: 12%; /* Statut */
-    text-align: center;
-}
-
-.besoins-table-section .data-table th:nth-child(9),
-.besoins-table-section .data-table td:nth-child(9) {
-    width: 10%; /* Actions */
-    text-align: center;
-}
-
-.besoins-table-section .data-table td small {
-    font-size: 0.7rem;
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 1.3;
-}
-
-.besoins-table-section .data-table td strong {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.85rem;
-}
-
-/* Badges de statut */
-.badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    display: inline-block;
-    white-space: nowrap;
-    line-height: 1.2;
-}
-
-.badge.info {
-    background: #d1ecf1;
-    color: #0c5460;
-}
-
-.badge.success {
-    background: #d4edda;
-    color: #155724;
-}
-
-.badge.warning {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.badge.danger {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.badge.secondary {
-    background: #e9ecef;
-    color: #6c757d;
-}
-
-/* Barres de progression */
-.progress-bar {
-    width: 100%;
-    height: 18px;
-    background: #e9ecef;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-    transition: width 0.5s ease;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: white;
-    white-space: nowrap;
-    padding: 0 0.25rem;
-}
-
-.progress-fill.low {
-    background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
-}
-
-.progress-fill.medium {
-    background: linear-gradient(90deg, #ffc107 0%, #e0a800 100%);
-}
-
-.progress-fill.high {
-    background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
-}
-
-/* Optimisation de la colonne satisfaction */
-.besoins-table-section .data-table td:nth-child(6) .progress-bar {
-    min-width: 80px;
-}
-
-/* Badges d'urgence */
-.badge-urgence {
-    padding: 0.25rem 0.5rem;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    display: inline-block;
-    white-space: nowrap;
-    line-height: 1.2;
-}
-
-.badge-urgence.elevee,
-.badge-urgence.élevée {
-    background: #dc3545;
-    color: white;
-}
-
-.badge-urgence.moyenne {
-    background: #ffc107;
-    color: #000;
-}
-
-.badge-urgence.normale {
-    background: #28a745;
-    color: white;
-}
-
-/* Badges de statut */
-.badge-statut {
-    padding: 0.25rem 0.5rem;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    display: inline-block;
-    white-space: nowrap;
-    line-height: 1.2;
-}
-
-.badge-statut.exprime {
-    background: #d1ecf1;
-    color: #0c5460;
-}
-
-.badge-statut.transmis {
-    background: #cce5ff;
-    color: #004085;
-}
-
-.badge-statut.en-attente {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.badge-statut.partiellement-satisfait {
-    background: #d1ecf1;
-    color: #0c5460;
-}
-
-.badge-statut.satisfait {
-    background: #d4edda;
-    color: #155724;
-}
-
-.badge-statut.rejete {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-/* Actions dans le tableau */
-.action-icons {
-    display: flex;
-    gap: 0.25rem;
-    justify-content: center;
-    align-items: center;
-}
-
-.action-icon {
-    cursor: pointer;
-    font-size: 0.95rem;
-    transition: transform 0.2s;
-    padding: 0.2rem;
-}
-
-.action-icon:hover {
-    transform: scale(1.1);
-}
-
-/* Empty state */
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #6c757d;
-}
-
-.empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
-
-/* Styles pour les modals */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
-    font-weight: 600;
-    color: #000000;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 0.75rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    background: white;
-    color: #000000;
-    font-size: 1rem;
-    transition: all 0.3s;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-.form-group small {
-    margin-top: 0.25rem;
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.detail-grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.detail-grid-2 {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.detail-field {
-    display: flex;
-    flex-direction: column;
-}
-
-.detail-label {
-    font-weight: 600;
-    color: #6c757d;
-    margin-bottom: 0.5rem;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.detail-value {
-    font-size: 1rem;
-    color: #000000;
-    font-weight: 500;
-}
-
-.detail-kpi {
-    text-align: center;
-    padding: 1.5rem;
-    border-radius: 12px;
-    transition: transform 0.3s;
-}
-
-.detail-kpi:hover {
-    transform: translateY(-3px);
-}
-
-.detail-kpi.demande {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
-}
-
-.detail-kpi.obtenu {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-}
-
-.detail-kpi-number {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.detail-kpi.demande .detail-kpi-number {
-    color: #856404;
-}
-
-.detail-kpi.obtenu .detail-kpi-number {
-    color: #155724;
-}
-
-.detail-kpi-label {
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.detail-kpi.demande .detail-kpi-label {
-    color: #856404;
-}
-
-.detail-kpi.obtenu .detail-kpi-label {
-    color: #155724;
-}
-
-.detail-separator {
-    border: none;
-    border-top: 2px solid #e0e0e0;
-    margin: 1.5rem 0;
-}
-
-.detail-progress {
-    margin-bottom: 1.5rem;
-}
-
-.detail-progress .detail-label {
-    margin-bottom: 0.75rem;
-}
-
-.detail-progress-bar {
-    width: 100%;
-    height: 32px;
-    background: #e9ecef;
-    border-radius: 10px;
-    overflow: hidden;
-    position: relative;
-}
-
-.detail-progress-fill {
-    height: 100%;
-    transition: width 0.5s ease;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 700;
-    color: white;
-    white-space: nowrap;
-}
-
-.detail-progress-fill.low {
-    background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
-}
-
-.detail-progress-fill.medium {
-    background: linear-gradient(90deg, #ffc107 0%, #e0a800 100%);
-}
-
-.detail-progress-fill.high {
-    background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
-}
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -589,76 +20,90 @@
     ]
 ) }}
 
-<div class="besoins-container container">
+<div class="besoins-page">
 
-  <!-- Statistiques -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Total Besoins</div>
-      <div class="stat-number">{{ total_besoins }}</div>
-      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
+  <section class="needs-overview">
+    <div class="needs-overview-header">
+      <div class="needs-overview-icon">🧑‍🤝‍🧑</div>
+      <div class="needs-overview-text">
+        <h2>Anticipez vos besoins en effectifs</h2>
+        <p>Suivez les demandes exprimées, mesurez leur satisfaction et priorisez les recrutements critiques.</p>
+      </div>
     </div>
-    
-    <div class="stat-card warning">
-      <div class="stat-label">Agents Demandés</div>
-      <div class="stat-number">{{ total_demande }}</div>
-      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
+    <div class="needs-kpi-grid">
+      <article class="needs-kpi-card">
+        <span class="needs-kpi-label">Total besoins</span>
+        <span class="needs-kpi-value">{{ total_besoins }}</span>
+        <span class="needs-kpi-meta">Demandes enregistrées</span>
+      </article>
+      <article class="needs-kpi-card warning">
+        <span class="needs-kpi-label">Agents demandés</span>
+        <span class="needs-kpi-value">{{ total_demande }}</span>
+        <span class="needs-kpi-meta">Volumes exprimés</span>
+      </article>
+      <article class="needs-kpi-card success">
+        <span class="needs-kpi-label">Agents obtenus</span>
+        <span class="needs-kpi-value">{{ total_obtenu }}</span>
+        <span class="needs-kpi-meta">Affectations validées</span>
+      </article>
+      <article class="needs-kpi-card neutral">
+        <span class="needs-kpi-label">Taux de satisfaction</span>
+        <span class="needs-kpi-value">{{ taux_satisfaction }}%</span>
+        <span class="needs-kpi-meta">Couverture globale</span>
+      </article>
     </div>
-    
-    <div class="stat-card success">
-      <div class="stat-label">Agents Obtenus</div>
-      <div class="stat-number">{{ total_obtenu }}</div>
-      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
-    </div>
-    
-    <div class="stat-card secondary">
-      <div class="stat-label">Taux Satisfaction</div>
-      <div class="stat-number">{{ taux_satisfaction }}%</div>
-      <div style="font-size: 0.9rem; opacity: 0.8;"></div>
-    </div>
-  </div>
+  </section>
 
-  <!-- Filtres et Actions -->
-  <div class="filters-section">
-    <div style="display: flex; justify-content: space-between; align-items: end; gap: 2rem; flex-wrap: wrap;">
-      <div class="filters-grid" style="flex: 1;">
-        <div class="filter-group">
-          <label>Année</label>
-          <select id="filter-annee" onchange="filtrerBesoins()">
-            <option value="{{ annee_actuelle }}" selected>{{ annee_actuelle }}</option>
-            <option value="{{ annee_actuelle - 1 }}">{{ annee_actuelle - 1 }}</option>
-            <option value="{{ annee_actuelle - 2 }}">{{ annee_actuelle - 2 }}</option>
-          </select>
-        </div>
-        
-        <div class="filter-group">
-          <label>Statut</label>
-          <select id="filter-statut" onchange="filtrerBesoins()">
-            <option value="">Tous</option>
-            <option value="Exprimé">Exprimé</option>
-            <option value="Transmis">Transmis</option>
-            <option value="En attente">En attente</option>
-            <option value="Partiellement satisfait">Partiellement satisfait</option>
-            <option value="Satisfait">Satisfait</option>
-            <option value="Rejeté">Rejeté</option>
-          </select>
+  <section class="needs-filters filters-panel">
+    <div class="filters-header">
+      <div class="filters-heading">
+        <span class="filters-icon">🧭</span>
+        <div class="filters-text">
+          <h3>Paramètres d'analyse</h3>
+          <p>Affinez la liste selon l'année budgétaire et le statut de traitement.</p>
         </div>
       </div>
-      
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <a href="{{ url_for('besoins_consolidation') }}" class="btn btn-secondary">
-          📋 Vue Consolidée
+      <div class="filters-actions">
+        <a href="{{ url_for('besoins_consolidation') }}" class="btn btn-premium btn-secondary">
+          📋 Vue consolidée
         </a>
       </div>
     </div>
-  </div>
+    <div class="filters-row">
+      <div class="filter-group">
+        <label class="filter-label" for="filter-annee">Année</label>
+        <select id="filter-annee" class="filter-select" onchange="filtrerBesoins()">
+          <option value="{{ annee_actuelle }}" selected>{{ annee_actuelle }}</option>
+          <option value="{{ annee_actuelle - 1 }}">{{ annee_actuelle - 1 }}</option>
+          <option value="{{ annee_actuelle - 2 }}">{{ annee_actuelle - 2 }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label" for="filter-statut">Statut</label>
+        <select id="filter-statut" class="filter-select" onchange="filtrerBesoins()">
+          <option value="">Tous</option>
+          <option value="Exprimé">Exprimé</option>
+          <option value="Transmis">Transmis</option>
+          <option value="En attente">En attente</option>
+          <option value="Partiellement satisfait">Partiellement satisfait</option>
+          <option value="Satisfait">Satisfait</option>
+          <option value="Rejeté">Rejeté</option>
+        </select>
+      </div>
+    </div>
+  </section>
 
-  <!-- Tableau des besoins -->
-  <div class="besoins-table-section">
-    <h3 class="chart-title">📋 Liste des Besoins</h3>
-    
-    <div class="table-responsive">
-      <table class="data-table">
+  <section class="needs-table-card">
+    <header class="needs-section-header">
+      <div class="needs-section-icon">📋</div>
+      <div>
+        <h3>Liste des besoins</h3>
+        <p>Visualisez les demandes par service et suivez leur avancement.</p>
+      </div>
+    </header>
+
+    <div class="table-container">
+      <table class="data-table table-compact needs-table">
         <thead>
           <tr>
             <th>Service</th>
@@ -675,50 +120,60 @@
         <tbody id="besoins-tbody">
           {% if besoins %}
             {% for b in besoins %}
+            {% set progress = (b.nombre_obtenu / b.nombre_demande * 100) if b.nombre_demande > 0 else 0 %}
+            {% set statut_class = b.statut|lower|replace(' ', '-')|replace('é', 'e')|replace('è', 'e') %}
+            {% set urgence_value = b.urgence or 'Non défini' %}
+            {% set urgence_class = urgence_value|lower|replace(' ', '-')|replace('é', 'e')|replace('è', 'e') %}
             <tr>
               <td>
-                <strong>{{ services[b.service_id].code if b.service_id and b.service_id in services else '-' }}</strong>
-                <br>
-                <small style="color: #666;">{{ services[b.service_id].libelle if b.service_id and b.service_id in services else '-' }}</small>
+                {% if b.service_id and b.service_id in services %}
+                <div class="needs-cell">
+                  <strong class="needs-strong">{{ services[b.service_id].code }}</strong>
+                  <span class="needs-meta">{{ services[b.service_id].libelle }}</span>
+                </div>
+                {% else %}
+                <span class="needs-empty">—</span>
+                {% endif %}
               </td>
               <td>
-                <strong>{{ b.poste_libelle }}</strong>
-                {% if b.periode %}
-                <br><small style="color: #666;">{{ b.periode }}</small>
-                {% endif %}
+                <div class="needs-cell">
+                  <strong class="needs-strong">{{ b.poste_libelle }}</strong>
+                  {% if b.periode %}
+                  <span class="needs-meta">{{ b.periode }}</span>
+                  {% endif %}
+                </div>
               </td>
               <td>
                 {% if b.grade_id and b.grade_id in grades %}
-                  <span class="badge badge-info">{{ grades[b.grade_id].code }}</span>
+                <span class="needs-badge badge-info">{{ grades[b.grade_id].code }}</span>
                 {% elif b.categorie_souhaitee %}
-                  <span class="badge badge-warning">Cat. {{ b.categorie_souhaitee }}</span>
+                <span class="needs-badge badge-warning">Cat. {{ b.categorie_souhaitee }}</span>
                 {% else %}
-                  -
+                <span class="needs-empty">—</span>
                 {% endif %}
               </td>
-              <td><strong style="font-size: 1.1rem;">{{ b.nombre_demande }}</strong></td>
-              <td><strong style="font-size: 1.1rem; color: #28a745;">{{ b.nombre_obtenu }}</strong></td>
+              <td><span class="needs-amount">{{ b.nombre_demande }}</span></td>
+              <td><span class="needs-amount needs-amount-success">{{ b.nombre_obtenu }}</span></td>
               <td>
-                {% set progress = (b.nombre_obtenu / b.nombre_demande * 100) if b.nombre_demande > 0 else 0 %}
-                <div class="progress-bar">
-                  <div class="progress-fill {% if progress < 50 %}low{% elif progress < 100 %}medium{% else %}high{% endif %}" 
-                       style="width: {{ progress }}%;">
-                    {{ progress|round(0)|int }}%
+                <div class="needs-progress">
+                  <div class="needs-progress-bar">
+                    <div class="needs-progress-fill {% if progress < 50 %}low{% elif progress < 100 %}medium{% else %}high{% endif %}" style="--progress-value: {{ progress|round(2) }};">
+                      {{ progress|round(0)|int }}%
+                    </div>
                   </div>
                 </div>
               </td>
               <td>
-                <span class="badge-urgence {{ b.urgence|lower }}">{{ b.urgence }}</span>
+                <span class="badge-urgence {{ urgence_class }}">{{ urgence_value }}</span>
               </td>
               <td>
-                {% set statut_class = b.statut|lower|replace(' ', '-')|replace('é', 'e')|replace('è', 'e') %}
                 <span class="badge-statut {{ statut_class }}">{{ b.statut }}</span>
               </td>
               <td>
-                <div class="action-icons">
-                  <span class="action-icon" onclick="voirDetail({{ b.id }})" title="Voir détail">👁️</span>
-                  <span class="action-icon" onclick="mettreAJour({{ b.id }})" title="Mettre à jour">📝</span>
-                  <span class="action-icon" onclick="supprimerBesoin({{ b.id }})" title="Supprimer">🗑️</span>
+                <div class="table-actions table-actions-compact">
+                  <button type="button" class="btn-action btn-premium btn-primary btn-compact needs-action" data-need-action="detail" data-need-id="{{ b.id }}" title="Voir détail">👁️</button>
+                  <button type="button" class="btn-action btn-premium btn-secondary btn-compact needs-action" data-need-action="update" data-need-id="{{ b.id }}" title="Mettre à jour">📝</button>
+                  <button type="button" class="btn-action btn-premium btn-danger btn-compact needs-action" data-need-action="delete" data-need-id="{{ b.id }}" title="Supprimer">🗑️</button>
                 </div>
               </td>
             </tr>
@@ -728,8 +183,8 @@
               <td colspan="9">
                 <div class="empty-state">
                   <div class="empty-state-icon">📭</div>
-                  <p><strong>Aucun besoin exprimé pour {{ annee_actuelle }}</strong></p>
-                  <p>Commencez par exprimer un besoin</p>
+                  <p class="empty-state-title"><strong>Aucun besoin exprimé pour {{ annee_actuelle }}</strong></p>
+                  <p class="empty-state-message">Commencez par exprimer un besoin</p>
                 </div>
               </td>
             </tr>
@@ -737,51 +192,53 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
 </div>
 
 <!-- Modal Mise à jour -->
-<div id="updateModal" class="modal-xl">
+<div id="updateModal" class="modal modal-xl">
   <div class="modal-content">
     <div class="modal-header">
-      <h2>📝 Mettre à Jour le Besoin</h2>
+      <h2>📝 Mettre à jour le besoin</h2>
       <button class="modal-close" onclick="closeUpdateModal()">&times;</button>
     </div>
-    
-    <form id="updateForm" style="margin:1.5rem" onsubmit="handleUpdate(event)">
-      <div class="form-grid" style="gap: 1rem;">
-        <div class="form-group">
-          <label>Nombre obtenu</label>
-          <input type="number" name="nombre_obtenu" id="update-nombre-obtenu" min="0" required>
-          <small style="color: #666;">Agents effectivement obtenus</small>
-        </div>
-        
-        <div class="form-group">
-          <label>Statut</label>
-          <select name="statut" id="update-statut">
-            <option value="Exprimé">Exprimé</option>
-            <option value="Transmis">Transmis au Ministère</option>
-            <option value="En attente">En attente de réponse</option>
-            <option value="Partiellement satisfait">Partiellement satisfait</option>
-            <option value="Satisfait">Satisfait</option>
-            <option value="Rejeté">Rejeté</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Date de transmission</label>
-          <input type="date" name="date_transmission" id="update-date-transmission">
-          <small style="color: #666;">Date d'envoi au Ministère de la Fonction Publique</small>
-        </div>
-        
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label>Observations</label>
-          <textarea name="observations" id="update-observations" rows="3" placeholder="Commentaires sur l'évolution du besoin..."></textarea>
+
+    <form id="updateForm" class="needs-update-form" onsubmit="handleUpdate(event)">
+      <div class="modal-body">
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label for="update-nombre-obtenu">Nombre obtenu</label>
+            <input type="number" name="nombre_obtenu" id="update-nombre-obtenu" min="0" required>
+            <span class="form-help">Agents effectivement obtenus</span>
+          </div>
+
+          <div class="form-group">
+            <label for="update-statut">Statut</label>
+            <select name="statut" id="update-statut">
+              <option value="Exprimé">Exprimé</option>
+              <option value="Transmis">Transmis au Ministère</option>
+              <option value="En attente">En attente de réponse</option>
+              <option value="Partiellement satisfait">Partiellement satisfait</option>
+              <option value="Satisfait">Satisfait</option>
+              <option value="Rejeté">Rejeté</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="update-date-transmission">Date de transmission</label>
+            <input type="date" name="date_transmission" id="update-date-transmission">
+            <span class="form-help">Date d'envoi au Ministère de la Fonction Publique</span>
+          </div>
+
+          <div class="form-group full">
+            <label for="update-observations">Observations</label>
+            <textarea name="observations" id="update-observations" rows="3" placeholder="Commentaires sur l'évolution du besoin..."></textarea>
+          </div>
         </div>
       </div>
-      
-      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
+
+      <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeUpdateModal()">Annuler</button>
         <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
       </div>
@@ -790,14 +247,14 @@
 </div>
 
 <!-- Modal Détail -->
-<div id="detailModal" class="modal-xl">
-  <div class="modal-content" >
+<div id="detailModal" class="modal modal-xl">
+  <div class="modal-content">
     <div class="modal-header">
-      <h2>📊 Détail du Besoin</h2>
+      <h2>📊 Détail du besoin</h2>
       <button class="modal-close" onclick="closeDetailModal()">&times;</button>
     </div>
-    
-    <div class="modal-body" id="detail-content">
+
+    <div class="modal-body needs-detail-container" id="detail-content">
       <!-- Rempli dynamiquement -->
     </div>
   </div>
@@ -821,6 +278,28 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = this.href;
       }, 300);
     });
+  }
+});
+
+document.addEventListener('click', function(event) {
+  const trigger = event.target.closest('.needs-action');
+  if (!trigger) {
+    return;
+  }
+
+  const action = trigger.dataset.needAction;
+  const id = Number(trigger.dataset.needId);
+
+  if (Number.isNaN(id)) {
+    return;
+  }
+
+  if (action === 'detail') {
+    voirDetail(id);
+  } else if (action === 'update') {
+    mettreAJour(id);
+  } else if (action === 'delete') {
+    supprimerBesoin(id);
   }
 });
 
@@ -855,32 +334,52 @@ async function filtrerBesoins() {
     } else {
       tbody.innerHTML = besoins.map(b => {
         const progress = b.nombre_demande > 0 ? Math.round((b.nombre_obtenu / b.nombre_demande) * 100) : 0;
-        const progressClass = progress < 50 ? 'low' : progress < 100 ? 'medium' : 'high';
-        const statutClass = b.statut.toLowerCase().replace(/ /g, '-').replace(/é/g, 'e').replace(/è/g, 'e');
-        
+        const progressValue = Math.max(0, Math.min(progress, 100));
+        const progressClass = progressValue < 50 ? 'low' : progressValue < 100 ? 'medium' : 'high';
+        const statutClass = (b.statut || '').toLowerCase().replace(/ /g, '-').replace(/é/g, 'e').replace(/è/g, 'e');
+        const urgenceLabel = b.urgence || 'Non défini';
+        const urgenceClass = urgenceLabel.toLowerCase().replace(/ /g, '-').replace(/é/g, 'e').replace(/è/g, 'e');
+        const gradeBadge = b.grade_code
+          ? `<span class="needs-badge badge-info">${b.grade_code}</span>`
+          : (b.categorie_souhaitee ? `<span class="needs-badge badge-warning">Cat. ${b.categorie_souhaitee}</span>` : `<span class="needs-empty">—</span>`);
+        const serviceSection = b.service_libelle
+          ? `
+              <div class="needs-cell">
+                <strong class="needs-strong">${b.service_code || '—'}</strong>
+                <span class="needs-meta">${b.service_libelle}</span>
+              </div>
+            `
+          : '<span class="needs-empty">—</span>';
+        const periodeLabel = b.periode ? `<span class="needs-meta">${b.periode}</span>` : '';
+
         return `
           <tr>
+            <td>${serviceSection}</td>
             <td>
-              <strong>${b.service_libelle || '-'}</strong>
+              <div class="needs-cell">
+                <strong class="needs-strong">${b.poste_libelle}</strong>
+                ${periodeLabel}
+              </div>
             </td>
-            <td><strong>${b.poste_libelle}</strong></td>
-            <td>${b.grade_code ? '<span class="badge badge-info">' + b.grade_code + '</span>' : '-'}</td>
-            <td><strong style="font-size: 1.1rem;">${b.nombre_demande}</strong></td>
-            <td><strong style="font-size: 1.1rem; color: #28a745;">${b.nombre_obtenu}</strong></td>
+            <td>${gradeBadge}</td>
+            <td><span class="needs-amount">${b.nombre_demande}</span></td>
+            <td><span class="needs-amount needs-amount-success">${b.nombre_obtenu}</span></td>
             <td>
-              <div class="progress-container">
-                <div class="progress-bar ${progressClass}" style="width: ${progress}%;">
-                  ${progress}%
+              <div class="needs-progress">
+                <div class="needs-progress-bar">
+                  <div class="needs-progress-fill ${progressClass}" style="--progress-value: ${progressValue};">
+                    ${progressValue}%
+                  </div>
                 </div>
               </div>
             </td>
-            <td><span class="badge-urgence ${b.urgence?.toLowerCase() || 'normale'}">${b.urgence}</span></td>
+            <td><span class="badge-urgence ${urgenceClass}">${urgenceLabel}</span></td>
             <td><span class="badge-statut ${statutClass}">${b.statut}</span></td>
             <td>
-              <div class="action-icons">
-                <span class="action-icon" onclick="voirDetail(${b.id})" title="Voir détail">👁️</span>
-                <span class="action-icon" onclick="mettreAJour(${b.id})" title="Mettre à jour">📝</span>
-                <span class="action-icon" onclick="supprimerBesoin(${b.id})" title="Supprimer">🗑️</span>
+              <div class="table-actions table-actions-compact">
+                <button type="button" class="btn-action btn-premium btn-primary btn-compact needs-action" data-need-action="detail" data-need-id="${b.id}" title="Voir détail">👁️</button>
+                <button type="button" class="btn-action btn-premium btn-secondary btn-compact needs-action" data-need-action="update" data-need-id="${b.id}" title="Mettre à jour">📝</button>
+                <button type="button" class="btn-action btn-premium btn-danger btn-compact needs-action" data-need-action="delete" data-need-id="${b.id}" title="Supprimer">🗑️</button>
               </div>
             </td>
           </tr>
@@ -910,75 +409,73 @@ async function voirDetail(besoinId) {
     }
     
     const progress = besoin.nombre_demande > 0 ? Math.round((besoin.nombre_obtenu / besoin.nombre_demande) * 100) : 0;
-    const progressClass = progress < 50 ? 'low' : progress < 100 ? 'medium' : 'high';
+    const progressValue = Math.max(0, Math.min(progress, 100));
+    const progressClass = progressValue < 50 ? 'low' : progressValue < 100 ? 'medium' : 'high';
+    const statutClass = (besoin.statut || '').toLowerCase().replace(/ /g, '-').replace(/é/g, 'e').replace(/è/g, 'e');
+    const urgenceLabel = besoin.urgence || 'Non défini';
+    const urgenceClass = urgenceLabel.toLowerCase().replace(/ /g, '-').replace(/é/g, 'e').replace(/è/g, 'e');
+    const periodeLabel = besoin.periode ? ` · ${besoin.periode}` : '';
+    const gradeBadge = besoin.grade_code ? `<span class="needs-badge badge-info">${besoin.grade_code}</span>` : '—';
+    const urgenceBadge = besoin.urgence ? `<span class="badge-urgence ${urgenceClass}">${urgenceLabel}</span>` : '—';
     
     document.getElementById('detail-content').innerHTML = `
-      <div style="display: grid; gap: 1.5rem;">
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-          <div>
-            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Année</div>
-            <div style="font-size: 1.2rem; color: #333;">${besoin.annee} ${besoin.periode ? '- ' + besoin.periode : ''}</div>
+      <div class="needs-detail-content">
+        <div class="needs-detail-grid meta">
+          <div class="needs-detail-card">
+            <span class="needs-detail-label">Année</span>
+            <span class="needs-detail-value">${besoin.annee}${periodeLabel}</span>
           </div>
-          
-          <div>
-            <div style="font-weight: 600; color: #666; margin-bottom: 0.5rem;">Statut</div>
-            <div><span class="badge-statut ${besoin.statut.toLowerCase().replace(/ /g, '-')}">${besoin.statut}</span></div>
-          </div>
-        </div>
-        
-        <hr style="border: none; border-top: 2px solid #e0e0e0;">
-        
-        <h3 style="margin-bottom: 1.5rem; font-size: 1.4rem; font-weight: 700; color: #000;">${besoin.poste_libelle}</h3>
-        
-        <div class="detail-grid-3">
-          <div class="detail-field">
-            <div class="detail-label">Service</div>
-            <div class="detail-value">${besoin.service_libelle || '-'}</div>
-          </div>
-          
-          <div class="detail-field">
-            <div class="detail-label">Direction</div>
-            <div class="detail-value">${besoin.direction_libelle || '-'}</div>
-          </div>
-          
-          <div class="detail-field">
-            <div class="detail-label">Grade souhaité</div>
-            <div class="detail-value">${besoin.grade_code ? '<span class="badge badge-info">' + besoin.grade_code + '</span>' : '-'}</div>
+          <div class="needs-detail-card">
+            <span class="needs-detail-label">Statut</span>
+            <span class="needs-detail-value"><span class="badge-statut ${statutClass}">${besoin.statut}</span></span>
           </div>
         </div>
-        
-        <hr class="detail-separator">
-        
-        <div class="detail-grid-2">
-          <div class="detail-kpi demande">
-            <div class="detail-kpi-number">${besoin.nombre_demande}</div>
-            <div class="detail-kpi-label">Agents Demandés</div>
+
+        <h3 class="needs-detail-title">${besoin.poste_libelle}</h3>
+
+        <div class="needs-detail-grid">
+          <div class="needs-detail-card">
+            <span class="needs-detail-label">Service</span>
+            <span class="needs-detail-value">${besoin.service_libelle || '—'}</span>
           </div>
-          
-          <div class="detail-kpi obtenu">
-            <div class="detail-kpi-number">${besoin.nombre_obtenu}</div>
-            <div class="detail-kpi-label">Agents Obtenus</div>
+          <div class="needs-detail-card">
+            <span class="needs-detail-label">Direction</span>
+            <span class="needs-detail-value">${besoin.direction_libelle || '—'}</span>
           </div>
-        </div>
-        
-        <div class="detail-progress">
-          <div class="detail-label">Taux de Satisfaction</div>
-          <div class="detail-progress-bar">
-            <div class="detail-progress-fill ${progressClass}" style="width: ${progress}%;">
-              ${progress}%
-            </div>
+          <div class="needs-detail-card">
+            <span class="needs-detail-label">Grade souhaité</span>
+            <span class="needs-detail-value">${gradeBadge}</span>
           </div>
         </div>
-        
-        <div class="detail-grid-2">
-          <div class="detail-field">
-            <div class="detail-label">Urgence</div>
-            <div class="detail-value"><span class="badge-urgence ${besoin.urgence?.toLowerCase() || 'normale'}">${besoin.urgence}</span></div>
+
+        <div class="needs-detail-divider"></div>
+
+        <div class="needs-detail-kpis">
+          <div class="needs-detail-kpi demande">
+            <span class="needs-detail-kpi-value">${besoin.nombre_demande}</span>
+            <span class="needs-detail-kpi-label">Agents demandés</span>
           </div>
-          
-          <div class="detail-field">
-            <div class="detail-label">Date d'expression</div>
-            <div class="detail-value">${besoin.date_expression || '-'}</div>
+          <div class="needs-detail-kpi obtenu">
+            <span class="needs-detail-kpi-value">${besoin.nombre_obtenu}</span>
+            <span class="needs-detail-kpi-label">Agents obtenus</span>
+          </div>
+        </div>
+
+        <div class="needs-detail-progress">
+          <span class="needs-detail-label">Taux de satisfaction</span>
+          <div class="needs-progress-bar">
+            <div class="needs-progress-fill ${progressClass}" style="--progress-value: ${progressValue};">${progressValue}%</div>
+          </div>
+        </div>
+
+        <div class="needs-detail-grid meta">
+          <div class="needs-detail-card">
+            <span class="needs-detail-label">Urgence</span>
+            <span class="needs-detail-value">${urgenceBadge}</span>
+          </div>
+          <div class="needs-detail-card">
+            <span class="needs-detail-label">Date d'expression</span>
+            <span class="needs-detail-value">${besoin.date_expression || '—'}</span>
           </div>
         </div>
       </div>

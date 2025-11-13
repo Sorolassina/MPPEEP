@@ -47,6 +47,10 @@ class SystemSettings(SQLModel, table=True):
     primary_color: str = Field(default="#ffd300")
     secondary_color: str = Field(default="#036c1d")
     accent_color: str = Field(default="#e63600")
+    minister_photo: str | None = Field(default="images/utilisateur.png")
+    minister_civility: str | None = Field(default="Monsieur")
+    minister_name: str | None = Field(default=None)
+    minister_role: str | None = Field(default=None)
 
     # Personnalisation
     footer_text: str | None = Field(default="Tous droits réservés")

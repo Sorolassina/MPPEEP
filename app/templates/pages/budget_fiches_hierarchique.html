@@ -19,29 +19,29 @@
     ]
 ) }}
 
-<div class="page-grid">
+<div class="page-grid budget-fiches-page">
 
   <!-- Info fiches -->
-  <div class="card" style="padding: 1rem;">
-    <span style="color: #7f8c8d; font-size: 0.95rem; font-weight: 600;">{{ fiches|length }} fiche(s) chargée(s)</span>
+  <div class="card summary-card">
+    <span class="summary-text">{{ fiches|length }} fiche(s) chargée(s)</span>
   </div>
 
   <!-- Filtres -->
-  <div class="card">
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; align-items: end;">
+  <div class="card filters-panel compact">
+    <div class="filters-header">
+      <div class="filters-heading">
+        <span class="filters-icon">🧰</span>
+        <div class="filters-text">
+          <h3>Filtres des fiches</h3>
+          <p>Ajustez l'année budgétaire et le programme pour affiner la liste.</p>
+        </div>
+      </div>
+    </div>
+    <div class="filters-row">
       <!-- Filtre Année -->
-      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <label style="font-weight: 600; color: #2c3e50;">📅 Année</label>
-        <select id="filter-annee" onchange="filtrerFiches()" style="
-          padding: 0.75rem 1rem; 
-          border: 2px solid #e0e0e0; 
-          border-radius: 10px; 
-          cursor: pointer; 
-          font-weight: 500;
-          background: white;
-          font-size: 1rem;
-          width: 100%;
-        ">
+      <div class="filter-group">
+        <label class="filter-label" for="filter-annee">📅 Année</label>
+        <select id="filter-annee" class="filter-select" onchange="filtrerFiches()">
           <option value="toutes" {{ 'selected' if annee == 'toutes' else '' }}>📋 Toutes</option>
           {% for a in annees_disponibles %}
           <option value="{{ a }}" {{ 'selected' if annee|string == a|string else '' }}>{{ a }}</option>
@@ -50,18 +50,9 @@
       </div>
 
       <!-- Filtre Programme -->
-      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <label style="font-weight: 600; color: #2c3e50;">📊 Programme</label>
-        <select id="filter-programme" onchange="filtrerFiches()" style="
-          padding: 0.75rem 1rem; 
-          border: 2px solid #e0e0e0; 
-          border-radius: 10px; 
-          cursor: pointer; 
-          font-weight: 500;
-          background: white;
-          font-size: 1rem;
-          width: 100%;
-        ">
+      <div class="filter-group">
+        <label class="filter-label" for="filter-programme">📊 Programme</label>
+        <select id="filter-programme" class="filter-select" onchange="filtrerFiches()">
           <option value="tous" {{ 'selected' if programme_id == 'tous' else '' }}>📋 Tous</option>
           {% for p in programmes_list %}
           <option value="{{ p.id }}" {{ 'selected' if programme_id|string == p.id|string else '' }}>{{ p.code }} - {{ p.libelle[:30] }}...</option>
@@ -72,12 +63,12 @@
   </div>
 
   <!-- Liste des fiches -->
-  <div class="card">
-    <h3 style="margin-bottom: 1.5rem;">📊 Fiches Techniques {% if annee == 'toutes' %}(Toutes années){% else %}{{ annee }}{% endif %}</h3>
+  <div class="card table-card">
+    <h3 class="table-title">📊 Fiches Techniques {% if annee == 'toutes' %}(Toutes années){% else %}{{ annee }}{% endif %}</h3>
     
     {% if fiches %}
-    <div class="data-table" style="font-size: 0.9rem;">
-      <table>
+    <div class="table-container">
+      <table class="data-table table-compact">
         <thead>
           <tr>
             <th>Numéro</th>
@@ -98,12 +89,12 @@
             <td>
               {% if f.programme_id in programmes %}
                 <strong>{{ programmes[f.programme_id].libelle }}</strong><br>
-                <small style="color: #6c757d;">({{ programmes[f.programme_id].code }})</small>
+                <span class="text-muted">({{ programmes[f.programme_id].code }})</span>
               {% else %}
                 -
               {% endif %}
             </td>
-            <td><strong style="color: #27ae60;">{{ "{:,.0f}".format(f.budget_total_demande) }} FCFA</strong></td>
+            <td><strong class="text-success">{{ "{:,.0f}".format(f.budget_total_demande) }} FCFA</strong></td>
             <td><span class="badge badge-info">{{ f.phase }}</span></td>
             <td>
               {% if f.statut == 'Brouillon' %}
@@ -118,20 +109,20 @@
             </td>
             <td>{{ f.date_creation.strftime('%d/%m/%Y') }}</td>
             <td>
-              <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                <button onclick="voirFiche({{ f.id }})" class="btn-action" title="Voir structure">
+              <div class="table-actions table-actions-compact">
+                <button type="button" class="btn-action btn-premium btn-primary btn-compact" data-fiche-action="voir" data-fiche-id="{{ f.id }}" title="Voir structure">
                   👁️
                 </button>
-                <button onclick="exporterExcel({{ f.id }})" class="btn-action" title="Exporter Excel">
+                <button type="button" class="btn-action btn-premium btn-success btn-compact" data-fiche-action="excel" data-fiche-id="{{ f.id }}" title="Exporter Excel">
                   📊
                 </button>
-                <button onclick="exporterPDF({{ f.id }})" class="btn-action" title="Exporter PDF">
+                <button type="button" class="btn-action btn-premium btn-info btn-compact" data-fiche-action="pdf" data-fiche-id="{{ f.id }}" title="Exporter PDF">
                   📄
                 </button>
-                <button onclick="gererDocumentsFiche({{ f.id }})" class="btn-action" title="Gérer documents">
+                <button type="button" class="btn-action btn-premium btn-secondary btn-compact" data-fiche-action="documents" data-fiche-id="{{ f.id }}" title="Gérer documents">
                   📎
                 </button>
-                <button onclick="supprimerFiche({{ f.id }})" class="btn-action btn-action-danger" title="Supprimer">
+                <button type="button" class="btn-action btn-premium btn-danger btn-compact" data-fiche-action="supprimer" data-fiche-id="{{ f.id }}" title="Supprimer">
                   🗑️
                 </button>
               </div>
@@ -154,120 +145,109 @@
 
 <!-- Modal Charger Fiche -->
 <div id="chargerModal" class="modal-xl">
-  <div class="modal-content" style="max-width: 700px;">
+  <div class="modal-content modal-medium">
     <div class="modal-header">
       <h2>📂 Charger une Fiche Technique</h2>
       <button class="modal-close" onclick="closeChargerModal()">&times;</button>
     </div>
-    
-    <form id="chargerForm" onsubmit="handleChargerFiche(event)" enctype="multipart/form-data">
-      
-      <!-- Bouton pour télécharger le modèle -->
-      <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #2196F3;">
-        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: space-between;">
-          <div>
-            <h4 style="margin: 0 0 0.25rem 0; color: #1976D2; font-size: 1rem;">📥 Besoin d'un modèle ?</h4>
-            <p style="margin: 0; color: #424242; font-size: 0.9rem;">Téléchargez notre modèle Excel pré-formaté avec des exemples</p>
+    <div class="modal-body">
+      <form id="chargerForm" onsubmit="handleChargerFiche(event)" enctype="multipart/form-data">
+        <!-- Bouton pour télécharger le modèle -->
+        <div class="info-banner">
+          <div class="info-banner-content">
+            <div>
+              <h4>📥 Besoin d'un modèle ?</h4>
+              <p>Téléchargez notre modèle Excel pré-formaté avec des exemples</p>
+            </div>
+            <button type="button"
+               onclick="telechargerTemplate()" 
+               class="btn btn-info">
+              📥 Télécharger le modèle Excel
+            </button>
           </div>
-          <button type="button"
-             onclick="telechargerTemplate()" 
-             class="btn btn-info" 
-             style="white-space: nowrap;">
-            📥 Télécharger le modèle Excel
-          </button>
         </div>
-      </div>
-      
-      <div class="form-group">
-        <label class="required">Programme</label>
-        <select name="programme_id" required style="padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
-          <option value="">-- Sélectionner un programme --</option>
-          {% for p in programmes_list %}
-          <option value="{{ p.id }}">{{ p.code }} - {{ p.libelle }}</option>
-          {% endfor %}
-        </select>
-        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
-          Programme budgétaire auquel rattacher cette fiche
-        </small>
-      </div>
-      
-      <div class="form-group">
-        <label class="required">Année budgétaire (N+1)</label>
-        <input type="number" name="annee" min="2020" max="2050" required 
-               value="{{ annee if annee != 'toutes' else '' }}" 
-               placeholder="Ex: 2025"
-               style="padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
-        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
-          📅 Année du budget à préparer (N+1). Ex: Pour préparer le budget 2025, saisissez 2025
-        </small>
-      </div>
-      
-      <div class="form-group">
-        <label>Fichier de la fiche technique (.xlsx, .xls, .pdf)</label>
-        <input type="file" name="fichier" accept=".xlsx,.xls,.pdf" required>
-        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
-          Formats supportés : Excel (.xlsx, .xls) ou PDF (.pdf)<br>
-          <strong>💡 Utilisez le modèle Excel ci-dessus pour garantir la conformité</strong>
-        </small>
-      </div>
-      
-      <div class="form-group">
-        <label>Nom de la fiche (optionnel)</label>
-        <input type="text" name="nom_fiche" placeholder="Ex: Fiche DOUANE 2025">
-        <small style="color: #6c757d; margin-top: 0.5rem; display: block;">
-          Si non renseigné, le nom sera généré automatiquement
-        </small>
-      </div>
-      
-      <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid #e0e0e0;">
-        <button type="button" class="btn btn-secondary" onclick="closeChargerModal()">Annuler</button>
-        <button type="submit" class="btn btn-primary">📂 Charger et Analyser</button>
-      </div>
-    </form>
-    
-    <div id="chargerResult" style="display: none; margin-top: 1rem; padding: 1rem; border-radius: 10px;"></div>
+
+        <div class="form-group">
+          <label class="required" for="programme_upload">Programme</label>
+          <select id="programme_upload" name="programme_id" required class="filter-select">
+            <option value="">-- Sélectionner un programme --</option>
+            {% for p in programmes_list %}
+            <option value="{{ p.id }}">{{ p.code }} - {{ p.libelle }}</option>
+            {% endfor %}
+          </select>
+          <span class="form-help">Programme budgétaire auquel rattacher cette fiche</span>
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="annee_upload">Année budgétaire (N+1)</label>
+          <input id="annee_upload" type="number" name="annee" min="2020" max="2050" required 
+                 value="{{ annee if annee != 'toutes' else '' }}" 
+                 placeholder="Ex: 2025">
+          <span class="form-help">📅 Année du budget à préparer (N+1). Ex: Pour préparer le budget 2025, saisissez 2025</span>
+        </div>
+
+        <div class="form-group">
+          <label for="fichier_upload">Fichier de la fiche technique (.xlsx, .xls, .pdf)</label>
+          <input id="fichier_upload" type="file" name="fichier" accept=".xlsx,.xls,.pdf" required>
+          <span class="form-help">
+            Formats supportés : Excel (.xlsx, .xls) ou PDF (.pdf)<br>
+            <strong>💡 Utilisez le modèle Excel ci-dessus pour garantir la conformité</strong>
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="nom_fiche">Nom de la fiche (optionnel)</label>
+          <input id="nom_fiche" type="text" name="nom_fiche" placeholder="Ex: Fiche DOUANE 2025">
+          <span class="form-help">Si non renseigné, le nom sera généré automatiquement</span>
+        </div>
+
+        <div class="modal-actions bordered">
+          <button type="button" class="btn btn-secondary" onclick="closeChargerModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-block">📂 Charger et Analyser</button>
+        </div>
+      </form>
+
+      <div id="chargerResult" class="upload-result"></div>
+    </div>
   </div>
 </div>
 
 <!-- Modal Gérer Documents Fiche -->
-<div id="modalDocumentsFiche" class="modal">
-  <div class="modal-content" style="max-width: 900px;">
+<div id="modalDocumentsFiche" class="modal-xl">
+  <div class="modal-content modal-large">
     <div class="modal-header">
       <h2>📎 Documents de la Fiche Technique</h2>
       <button class="modal-close" onclick="closeModal('modalDocumentsFiche')">&times;</button>
     </div>
-    
-    <div style="padding: 1rem; background: #e3f2fd; border-radius: 10px; margin-bottom: 1rem;">
-      <strong>ℹ️ Information :</strong> Gérez les documents attachés à cette fiche technique (justificatifs, annexes, etc.)
-    </div>
-    
-    <!-- Formulaire Upload -->
-    <form id="formUploadDocumentFiche" onsubmit="handleUploadDocumentFiche(event)" enctype="multipart/form-data" style="margin-bottom: 2rem;">
-      <input type="hidden" id="doc_fiche_id" name="fiche_id">
-      
-      <div class="form-group">
-        <label class="required">Fichier</label>
-        <input type="file" name="fichier" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
-        <small style="color: #6c757d; display: block; margin-top: 0.5rem;">
-          Formats acceptés : PDF, Word, Excel, Images (max 10 MB)
-        </small>
+    <div class="modal-body">
+      <div class="info-banner soft">
+        <strong>ℹ️ Information :</strong> Gérez les documents attachés à cette fiche technique (justificatifs, annexes, etc.)
       </div>
-      
-      <div class="form-group">
-        <label>Description</label>
-        <input type="text" name="description" placeholder="Description du document (optionnel)" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 10px;">
-      </div>
-      
-      <button type="submit" class="btn btn-primary" style="width: 100%;">
-        📤 Uploader le Document
-      </button>
-    </form>
-    
-    <!-- Liste des documents -->
-    <div style="border-top: 2px solid #e0e0e0; padding-top: 1rem;">
-      <h3 style="margin-bottom: 1rem;">📋 Documents existants</h3>
-      <div id="listeDocumentsFiche" style="max-height: 400px; overflow-y: auto;">
-        <!-- Sera rempli dynamiquement -->
+
+      <!-- Formulaire Upload -->
+      <form id="formUploadDocumentFiche" onsubmit="handleUploadDocumentFiche(event)" enctype="multipart/form-data" class="modal-form">
+        <input type="hidden" id="doc_fiche_id" name="fiche_id">
+
+        <div class="form-group">
+          <label class="required" for="document_upload">Fichier</label>
+          <input id="document_upload" type="file" name="fichier" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+          <span class="form-help">Formats acceptés : PDF, Word, Excel, Images (max 10 MB)</span>
+        </div>
+
+        <div class="form-group">
+          <label for="document_description">Description</label>
+          <input id="document_description" type="text" name="description" placeholder="Description du document (optionnel)">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+          📤 Uploader le Document
+        </button>
+      </form>
+
+      <!-- Liste des documents -->
+      <div class="documents-list">
+        <h3>📋 Documents existants</h3>
+        <div id="listeDocumentsFiche" class="documents-scroll"></div>
       </div>
     </div>
   </div>
@@ -283,6 +263,10 @@ document.addEventListener('DOMContentLoaded', function() {
   hideGlobalLoading();
 });
 
+function focusOverlay() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function filtrerFiches() {
   const annee = document.getElementById('filter-annee').value;
   const programmeId = document.getElementById('filter-programme').value;
@@ -293,6 +277,7 @@ function filtrerFiches() {
     url += `&programme_id=${programmeId}`;
   }
   
+  focusOverlay();
   showGlobalLoading('Filtrage...', 'Chargement des fiches');
   setTimeout(() => {
     window.location.href = url;
@@ -300,6 +285,7 @@ function filtrerFiches() {
 }
 
 function reinitialiserFiltres() {
+  focusOverlay();
   showGlobalLoading('Réinitialisation...', 'Chargement de toutes les fiches');
   setTimeout(() => {
     window.location.href = "{{ url_for('budget_fiches_hierarchique') }}" + '?annee=toutes';
@@ -307,6 +293,7 @@ function reinitialiserFiltres() {
 }
 
 function voirFiche(ficheId) {
+  focusOverlay();
   showGlobalLoading('Chargement...', 'Ouverture de la fiche');
   setTimeout(() => {
     window.location.href = "{{ url_for('budget_fiche_structure', fiche_id=0) }}".replace('/0', `/${ficheId}`);
@@ -314,6 +301,7 @@ function voirFiche(ficheId) {
 }
 
 function exporterExcel(ficheId) {
+  focusOverlay();
   showGlobalLoading('Génération Excel...', 'Création du fichier Excel');
   
   // Créer un lien temporaire pour le téléchargement
@@ -331,6 +319,7 @@ function exporterExcel(ficheId) {
 }
 
 function exporterPDF(ficheId) {
+  focusOverlay();
   showGlobalLoading('Génération PDF...', 'Veuillez patienter');
   
   // Créer un lien temporaire pour le téléchargement
@@ -366,28 +355,28 @@ async function chargerDocumentsFiche(ficheId) {
     
     if (response.ok && result.documents && result.documents.length > 0) {
       listeDiv.innerHTML = result.documents.map(doc => `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8f9fa; border-radius: 10px; margin-bottom: 0.5rem;">
-          <div style="flex: 1;">
+        <div class="document-item">
+          <div class="document-item-body">
             <strong>📄 ${doc.filename || doc.nom_fichier || 'Document'}</strong>
-            ${doc.description ? `<br><small style="color: #6c757d;">${doc.description}</small>` : ''}
-            <br><small style="color: #6c757d;">Uploadé le ${new Date(doc.date_upload || doc.created_at).toLocaleDateString('fr-FR')}</small>
+            ${doc.description ? `<br><span class="text-muted">${doc.description}</span>` : ''}
+            <br><span class="text-muted">Uploadé le ${new Date(doc.date_upload || doc.created_at).toLocaleDateString('fr-FR')}</span>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button onclick="telechargerDocument(${ficheId}, ${doc.id})" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+          <div class="document-item-actions">
+            <button type="button" class="btn btn-secondary btn-sm" data-document-action="download" data-fiche-id="${ficheId}" data-document-id="${doc.id}">
               📥 Télécharger
             </button>
-            <button onclick="supprimerDocumentFiche(${ficheId}, ${doc.id})" class="btn btn-danger" style="padding: 0.5rem 1rem;">
+            <button type="button" class="btn btn-danger btn-sm" data-document-action="delete" data-fiche-id="${ficheId}" data-document-id="${doc.id}">
               🗑️ Supprimer
             </button>
           </div>
         </div>
       `).join('');
     } else {
-      listeDiv.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 2rem;">Aucun document attaché à cette fiche.</p>';
+      listeDiv.innerHTML = '<p class="documents-empty">Aucun document attaché à cette fiche.</p>';
     }
   } catch (error) {
     console.error('Erreur chargement documents:', error);
-    document.getElementById('listeDocumentsFiche').innerHTML = '<p style="text-align: center; color: #e74c3c; padding: 2rem;">Erreur lors du chargement des documents.</p>';
+    document.getElementById('listeDocumentsFiche').innerHTML = '<p class="documents-error">Erreur lors du chargement des documents.</p>';
   }
 }
 
@@ -396,6 +385,7 @@ async function handleUploadDocumentFiche(event) {
   const formData = new FormData(event.target);
   const ficheId = formData.get('fiche_id');
   
+  focusOverlay();
   showGlobalLoading('Upload...', 'Upload du document en cours');
   
   try {
@@ -427,6 +417,7 @@ function telechargerDocument(ficheId, documentId) {
 async function supprimerDocumentFiche(ficheId, documentId) {
   if (!confirm('⚠️ Supprimer ce document ?')) return;
   
+  focusOverlay();
   showGlobalLoading('Suppression...', 'Suppression du document');
   
   try {
@@ -454,6 +445,7 @@ async function supprimerDocumentFiche(ficheId, documentId) {
 async function supprimerFiche(ficheId) {
   if (!confirm('⚠️ Supprimer cette fiche technique ?\n\nCette action est irréversible.')) return;
   
+  focusOverlay();
   showGlobalLoading('Suppression...', 'Veuillez patienter');
   
   try {
@@ -477,6 +469,59 @@ async function supprimerFiche(ficheId) {
   }
 }
 
+// Délégation de clic sur les boutons d'actions des fiches/documents
+document.addEventListener('click', (event) => {
+  let target = event.target;
+  while (target && !(target instanceof Element)) {
+    target = target.parentElement;
+  }
+
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  const ficheButton = target.closest('[data-fiche-action]');
+  if (ficheButton) {
+    const ficheId = Number(ficheButton.dataset.ficheId);
+    switch (ficheButton.dataset.ficheAction) {
+      case 'voir':
+        voirFiche(ficheId);
+        break;
+      case 'excel':
+        exporterExcel(ficheId);
+        break;
+      case 'pdf':
+        exporterPDF(ficheId);
+        break;
+      case 'documents':
+        gererDocumentsFiche(ficheId);
+        break;
+      case 'supprimer':
+        supprimerFiche(ficheId);
+        break;
+      default:
+        break;
+    }
+    return;
+  }
+
+  const documentButton = target.closest('[data-document-action]');
+  if (documentButton) {
+    const ficheId = Number(documentButton.dataset.ficheId);
+    const documentId = Number(documentButton.dataset.documentId);
+    switch (documentButton.dataset.documentAction) {
+      case 'download':
+        telechargerDocument(ficheId, documentId);
+        break;
+      case 'delete':
+        supprimerDocumentFiche(ficheId, documentId);
+        break;
+      default:
+        break;
+    }
+  }
+});
+
 function telechargerTemplate() {
   // Récupérer l'année depuis le filtre (ou utiliser 2025 par défaut)
   const anneeFilter = document.getElementById('filter-annee');
@@ -487,6 +532,7 @@ function telechargerTemplate() {
     annee = '2025';
   }
   
+  focusOverlay();
   // Afficher l'overlay pendant le téléchargement
   showGlobalLoading('Génération du modèle...', 'Téléchargement en cours');
   
@@ -505,6 +551,7 @@ function telechargerTemplate() {
 async function handleChargerFiche(event) {
   event.preventDefault();
   
+  focusOverlay();
   showGlobalLoading('Analyse en cours...', 'Chargement et analyse du fichier');
   
   const formData = new FormData(event.target);
@@ -516,9 +563,7 @@ async function handleChargerFiche(event) {
     
     if (response.ok && result.ok) {
       const resultDiv = document.getElementById('chargerResult');
-      resultDiv.style.display = 'block';
-      resultDiv.style.background = '#d4edda';
-      resultDiv.style.color = '#155724';
+      resultDiv.className = 'upload-result success show';
       resultDiv.innerHTML = `
         <strong>✅ Fiche chargée avec succès !</strong><br>
         <strong>Fiche créée :</strong> ${result.fiche_numero}<br>
@@ -547,7 +592,9 @@ async function handleChargerFiche(event) {
 function closeChargerModal() {
   document.getElementById('chargerModal').classList.remove('show');
   document.getElementById('chargerForm').reset();
-  document.getElementById('chargerResult').style.display = 'none';
+  const resultDiv = document.getElementById('chargerResult');
+  resultDiv.className = 'upload-result';
+  resultDiv.textContent = '';
 }
 
 function openModal(modalId) {
@@ -557,57 +604,6 @@ function openModal(modalId) {
 function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('show');
 }
-
-// Styles modal
-const style = document.createElement('style');
-style.textContent = `
-
-  .modal-overlay.show {
-    display: flex;
-  }
-
-  .modal-header h2 {
-    margin: 0;
-    color: #333;
-  }
-
-  .modal-close:hover {
-    color: #dc3545;
-  }
-  
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1rem;
-  }
-  
-  .form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-  
-  .form-group input[type="file"] {
-    padding: 0.75rem;
-    border: 2px dashed var(--secondary-color);
-    border-radius: 10px;
-    background: #f8f9fa;
-  }
-  
-  .form-group input[type="text"] {
-    padding: 0.75rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-  }
-  
-  .modal-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-  }
-  
-  /* Les styles de boutons sont centralisés dans buttons.css */
-`;
-document.head.appendChild(style);
 
 console.log('✅ Page fiches techniques hiérarchiques chargée');
 </script>

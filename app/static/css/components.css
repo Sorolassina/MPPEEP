@@ -153,15 +153,6 @@
     font-size: 0.875rem;
 }
 
-[data-theme="dark"] .loading-overlay {
-    background-color: rgba(0, 0, 0, 0.85);
-}
-
-[data-theme="dark"] .loading-content {
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
-    background-color: rgba(31, 32, 39, 0.95);
-}
-
 /* ========================================
    5. ANIMATIONS
    ======================================== */

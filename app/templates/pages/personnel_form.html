@@ -4,179 +4,7 @@
 {% block title %}{{ 'Nouvel Agent' if mode == 'create' else 'Modifier Agent' }} - {{ app_name }}
 {% endblock %}
 
-{% block styles %}
-<style>
-/* ========== PERSONNEL FORM PAGE STYLES ========== */
-.personnel-form-container {
-    padding: 2rem 0;
-    background: #f8f9fa;
-    min-height: 100vh;
-}
-
-/* Formulaire */
-.form-container {
-    background: white;
-    border-radius: 15px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    animation: slideIn 0.5s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Sections du formulaire */
-.form-section {
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
-    transition: all 0.3s;
-}
-
-.form-section:hover {
-    background: #fafbfc;
-    border-radius: 10px;
-    padding: 1rem;
-    margin: -1rem -1rem 1rem -1rem;
-}
-
-.form-section:last-child {
-    border-bottom: none;
-}
-
-.form-section-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #000000;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Grille du formulaire */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-}
-
-.form-group label {
-    font-weight: 600;
-    color: #000000;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.form-group label.required::after {
-    content: " *";
-    color: #dc3545;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 0.75rem 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    background: #fff;
-    color: #000000;
-    font-size: 1rem;
-    transition: all 0.3s;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-    background: #fafbfc;
-}
-
-/* Upload de photo */
-.file-input-group {
-    background: #f8f9fa;
-    border: 2px dashed #dee2e6;
-    border-radius: 10px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.3s;
-    cursor: pointer;
-}
-
-.file-input-group:hover {
-    background: #e9ecef;
-    border-color: var(--primary-color);
-}
-
-.file-input-group input[type="file"] {
-    display: none;
-}
-
-.file-input-label {
-    display: block;
-    cursor: pointer;
-    color: #666;
-    font-weight: 500;
-}
-
-/* Actions du formulaire */
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e0e0e0;
-}
-
-/* Photo de l'agent */
-.photo-preview {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #f8f9fa;
-    border: 3px solid #e0e0e0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.photo-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.photo-placeholder {
-    font-size: 4rem;
-    color: #dee2e6;
-}
-
-/* Info box */
-.info-box {
-    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-    color: #0c5460;
-    padding: 1rem;
-    border-radius: 10px;
-    margin-bottom: 1.5rem;
-    border-left: 5px solid #17a2b8;
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-</style>
-{% endblock %}
+{% block styles %}{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -192,23 +20,30 @@
     ]
 ) }}
 
-<div class="personnel-form-container container">
+<div class="personnel-form-page">
 
-  <!-- Info box -->
-  <div class="info-box">
-    ℹ️ Les champs marqués d'un astérisque (*) sont obligatoires
-  </div>
+  <section class="form-notice">
+    <span class="banner-icon">ℹ️</span>
+    <div class="banner-content">
+      <strong>Champs obligatoires</strong>
+      <p>Les champs marqués d'un astérisque (*) doivent être renseignés avant la sauvegarde.</p>
+    </div>
+  </section>
 
   <!-- Formulaire -->
-  <div class="form-container">
+  <section class="agent-form-card">
 
     <form method="POST" action="{{ url_for('api_update_agent', agent_id=agent.id) if mode == 'edit' else url_for('api_create_agent') }}" enctype="multipart/form-data" id="agentForm" data-mode="{{ mode }}" {% if mode == 'edit' %}data-agent-id="{{ agent.id }}"{% endif %}>
       
       <!-- IDENTIFICATION -->
-      <div class="form-section">
-        <div class="form-section-title">
-          🆔 Identification
-        </div>
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">🆔</span>
+          <div>
+            <h3>Identification</h3>
+            <p>Informations administratives principales</p>
+          </div>
+        </header>
         <div class="form-grid">
           <div class="form-group">
             <label for="matricule" class="required">Matricule</label>
@@ -229,13 +64,17 @@
                    placeholder="Ex: A1234567" value="{{ agent.numero_passeport or '' if mode == 'edit' else '' }}">
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- ÉTAT CIVIL -->
-      <div class="form-section">
-        <div class="form-section-title">
-          👤 État Civil
-        </div>
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">👤</span>
+          <div>
+            <h3>État civil</h3>
+            <p>Identité et informations personnelles</p>
+          </div>
+        </header>
         <div class="form-grid">
           <div class="form-group">
             <label for="nom" class="required">Nom</label>
@@ -297,41 +136,42 @@
                    min="0" value="{{ agent.nombre_enfants if mode == 'edit' else '0' }}">
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- PHOTO -->
-      <div class="form-section">
-        <div class="form-section-title">
-          📸 Photo de l'agent
-        </div>
-        <div style="display: flex; align-items: center; gap: 2rem;">
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">📸</span>
+          <div>
+            <h3>Photo de l'agent</h3>
+            <p>ajoutez ou mettez à jour la photo officielle</p>
+          </div>
+        </header>
+        <div class="photo-section">
           <div class="photo-preview" id="photoPreview">
             <div class="photo-placeholder" id="photoPlaceholder">👤</div>
-            <img id="photoImage" style="display: none;" alt="Photo de l'agent">
+            <img id="photoImage" alt="Photo de l'agent" style="display: none;">
           </div>
-          
-          <div>
-            <div class="file-input-wrapper">
-              <input type="file" id="photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
-              <label for="photo" class="file-input-label">
-                📷 Choisir une photo
-              </label>
-            </div>
-            <small style="display: block; margin-top: 0.5rem; color: #6c757d;">
-              Formats acceptés : JPG, PNG, GIF (max 5 MB)
-            </small>
-            <button type="button" onclick="clearPhoto()" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; display: none;" id="clearPhotoBtn">
-              🗑️ Supprimer
-            </button>
+          <div class="photo-actions">
+            <label for="photo" class="file-input-label">
+              📷 Choisir une photo
+            </label>
+            <input type="file" id="photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
+            <small>Formats acceptés : JPG, PNG, GIF (max 5 MB)</small>
+            <button type="button" class="btn btn-secondary" id="clearPhotoBtn" onclick="clearPhoto()">🗑️ Supprimer</button>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- COORDONNÉES -->
-      <div class="form-section">
-        <div class="form-section-title">
-          📞 Coordonnées
-        </div>
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">📞</span>
+          <div>
+            <h3>Coordonnées</h3>
+            <p>Contacts professionnels et personnels</p>
+          </div>
+        </header>
         <div class="form-grid">
           <div class="form-group">
             <label for="email_professionnel">Email professionnel</label>
@@ -377,21 +217,25 @@
                    placeholder="Ex: 12500" value="{{ agent.code_postal or '' if mode == 'edit' else '' }}">
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- CARRIÈRE -->
-      <div class="form-section">
-        <div class="form-section-title">
-          💼 Carrière
-        </div>
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">💼</span>
+          <div>
+            <h3>Carrière</h3>
+            <p>Parcours et statut administratif</p>
+          </div>
+        </header>
         <div class="form-grid">
           <div class="form-group">
-            <label for="date_recrutement">Date de recrutement <span style="color: #dc3545;">*</span></label>
+            <label for="date_recrutement">Date de recrutement <span class="required-asterisk">*</span></label>
             <input type="date" id="date_recrutement" name="date_recrutement" value="{{ agent.date_recrutement if mode == 'edit' else '' }}" required>
           </div>
           
           <div class="form-group">
-            <label for="date_prise_service">Date de prise de service <span style="color: #dc3545;">*</span></label>
+            <label for="date_prise_service">Date de prise de service <span class="required-asterisk">*</span></label>
             <input type="date" id="date_prise_service" name="date_prise_service" value="{{ agent.date_prise_service if mode == 'edit' else '' }}" required>
           </div>
           
@@ -411,16 +255,20 @@
             </select>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- AFFECTATION -->
-      <div class="form-section">
-        <div class="form-section-title">
-          🏢 Affectation actuelle
-        </div>
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">🏢</span>
+          <div>
+            <h3>Affectation actuelle</h3>
+            <p>Rattachements hiérarchiques et fonctionnels</p>
+          </div>
+        </header>
         <div class="form-grid">
           <div class="form-group">
-            <label for="grade_id">Grade <span style="color: #dc3545;">*</span></label>
+            <label for="grade_id">Grade <span class="required-asterisk">*</span></label>
             <select id="grade_id" name="grade_id" required>
               <option value="">-- Sélectionner --</option>
               {% for grade in grades %}
@@ -450,7 +298,7 @@
           </div>
           
           <div class="form-group">
-            <label for="programme_id">Programme <span style="color: #dc3545;">*</span></label>
+            <label for="programme_id">Programme <span class="required-asterisk">*</span></label>
             <select id="programme_id" name="programme_id" required>
               <option value="">-- Sélectionner --</option>
               {% for prog in programmes %}
@@ -467,7 +315,7 @@
           </div>
           
           <div class="form-group">
-            <label for="direction_id">Direction <span style="color: #dc3545;">*</span></label>
+            <label for="direction_id">Direction <span class="required-asterisk">*</span></label>
             <select id="direction_id" name="direction_id" required>
               <option value="">-- Sélectionner --</option>
               {% for dir in directions %}
@@ -486,7 +334,7 @@
           </div>
           
           <div class="form-group">
-            <label for="service_id">Service <span style="color: #dc3545;">*</span></label>
+            <label for="service_id">Service <span class="required-asterisk">*</span></label>
             <select id="service_id" name="service_id" required>
               <option value="">-- Sélectionner --</option>
               {% for serv in services %}
@@ -505,18 +353,22 @@
           </div>
           
           <div class="form-group" style="grid-column: 1 / -1;">
-            <label for="fonction">Fonction <span style="color: #dc3545;">*</span></label>
+            <label for="fonction">Fonction <span class="required-asterisk">*</span></label>
             <input type="text" id="fonction" name="fonction" 
                    placeholder="Ex: Chef de division comptabilité" value="{{ agent.fonction if mode == 'edit' else '' }}" required>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- CONGÉS -->
-      <div class="form-section">
-        <div class="form-section-title">
-          🏖️ Congés annuels
-        </div>
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">🏖️</span>
+          <div>
+            <h3>Congés annuels</h3>
+            <p>Suivi des droits et soldes</p>
+          </div>
+        </header>
         <div class="form-grid">
           <div class="form-group">
             <label for="solde_conges_annuel">Solde de congés restant</label>
@@ -532,19 +384,22 @@
             <small>Nombre de jours de congé par an</small>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- NOTES -->
-      <div class="form-section">
-        <div class="form-section-title">
-          📝 Notes et remarques
-        </div>
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="section-icon">📝</span>
+          <div>
+            <h3>Notes et remarques</h3>
+          </div>
+        </header>
         <div class="form-group">
           <label for="notes">Notes</label>
           <textarea id="notes" name="notes" 
                     placeholder="Informations complémentaires...">{{ agent.notes or '' if mode == 'edit' else '' }}</textarea>
         </div>
-      </div>
+      </section>
 
       <!-- ACTIONS -->
       <div class="form-actions">
@@ -555,7 +410,7 @@
       </div>
       
     </form>
-  </div>
+  </section>
 
 </div>
 

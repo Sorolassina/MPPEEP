@@ -6,9 +6,11 @@ Système de gestion de la performance organisationnelle
 
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
+from uuid import uuid4
 from typing import Any
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, File as FastAPIFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from sqlmodel import Session, select
 
@@ -24,8 +26,10 @@ from app.models.performance import (
     StatutObjectif,
 )
 from app.services.activity_service import ActivityService
+from app.core.path_config import path_config
 from app.services.performance_service import PerformanceService
 from app.services.engagement_letter_service import EngagementLetterGenerator
+from app.services.performance_engagement_letter_service import PerformanceEngagementLetterGenerator
 from app.services.report_generator import ReportGenerator
 
 logger = get_logger(__name__)
@@ -126,6 +130,60 @@ def performance_home(
             total_rapports = 12
 
         context = get_template_context(request)
+
+        # Récupérer les paramètres système pour les valeurs par défaut
+        from app.services.system_settings_service import SystemSettingsService
+        system_settings = SystemSettingsService.get_settings(db)
+
+        current_year = datetime.now().year
+        today_formatted = datetime.now().strftime("%d/%m/%Y")
+        engagement_defaults = {
+            "annee": EngagementLetterGenerator.DEFAULT_DATA.get("annee", current_year),
+            "pays": EngagementLetterGenerator.DEFAULT_DATA.get("pays", ""),
+            "devise": EngagementLetterGenerator.DEFAULT_DATA.get("devise", ""),
+            "ministere": "Ministère du Patrimoine, du Portefeuille de l'État et des Entreprises Publiques",
+            "ville": "Abidjan",
+            "date": today_formatted,
+            "programme": EngagementLetterGenerator.DEFAULT_DATA.get("programme_intitule", ""),
+            "bop": EngagementLetterGenerator.DEFAULT_DATA.get("bop_intitule", ""),
+            "rprog_nom": EngagementLetterGenerator.DEFAULT_DATA.get("rprog_nom", ""),
+            "rprog_fonction": EngagementLetterGenerator.DEFAULT_DATA.get("rprog_fonction", ""),
+            "rprog_photo": EngagementLetterGenerator.DEFAULT_DATA.get("rprog_photo", ""),
+            "rbop_nom": EngagementLetterGenerator.DEFAULT_DATA.get("rbop_nom", ""),
+            "rbop_fonction": EngagementLetterGenerator.DEFAULT_DATA.get("rbop_fonction", ""),
+            "rbop_photo": EngagementLetterGenerator.DEFAULT_DATA.get("rbop_photo", ""),
+            "decret_org_num": "",
+            "decret_org_date": "",
+            "decret_resp_num": "",
+            "decret_resp_date": "",
+            "logo_path": EngagementLetterGenerator.DEFAULT_DATA.get("logo_path", ""),
+        }
+        
+        # Valeurs par défaut pour la lettre d'engagement de performance
+        # Récupérer les valeurs du ministre depuis SystemSettings
+        minister_civility_from_settings = system_settings.minister_civility or ""
+        minister_name_from_settings = system_settings.minister_name or ""
+        minister_role_from_settings = system_settings.minister_role or ""
+        minister_photo_from_settings = system_settings.minister_photo or ""
+        logo_path_from_settings = system_settings.logo_path or ""
+        
+        performance_engagement_defaults = {
+            "annee": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("annee", current_year),
+            "pays": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("pays", ""),
+            "devise": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("devise", ""),
+            "programme": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("programme_intitule", ""),
+            "minister_civility": minister_civility_from_settings if minister_civility_from_settings else PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("minister_civility", ""),
+            "minister_nom": minister_name_from_settings.upper() if minister_name_from_settings else PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("minister_nom", ""),
+            "minister_fonction": minister_role_from_settings.upper() if minister_role_from_settings else PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("minister_fonction", ""),
+            "minister_photo": minister_photo_from_settings if minister_photo_from_settings else PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("minister_photo", ""),
+            "rprog_nom": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("rprog_nom", ""),
+            "rprog_fonction": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("rprog_fonction", ""),
+            "rprog_photo": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("rprog_photo", ""),
+            "logo_path": logo_path_from_settings if logo_path_from_settings else PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("logo_path", ""),
+            "ville": PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("ville_signature", "Abidjan"),
+            "date": today_formatted,
+        }
+
         context.update(
             {
                 "page_title": "Performance",
@@ -143,6 +201,8 @@ def performance_home(
                     "total_rapports": total_rapports,
                 },
                 "current_user": current_user,
+                "engagement_defaults": engagement_defaults,
+                "performance_engagement_defaults": performance_engagement_defaults,
             }
         )
 
@@ -225,6 +285,112 @@ def generate_lettre_engagement_pdf(
     except Exception as exc:
         logger.exception("Erreur génération lettre d'engagement: %s", exc)
         raise HTTPException(status_code=500, detail="Erreur lors de la génération de la lettre d'engagement")
+
+
+@router.get(
+    "/lettres-engagement-performance/pdf",
+    response_class=StreamingResponse,
+    name="performance_lettres_engagement_performance_pdf",
+)
+def generate_lettre_engagement_performance_pdf(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Génère la lettre d'engagement de performance."""
+    try:
+        data: dict[str, Any] = {}
+
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            data[target_key] = transform(value) if transform else value
+
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("pays", "pays")
+        optional_param("devise", "devise")
+        optional_param("programme", "programme_intitule")
+        optional_param("minister_civility", "minister_civility")
+        optional_param("minister_nom", "minister_nom")
+        optional_param("minister_fonction", "minister_fonction")
+        optional_param("minister_photo", "minister_photo")
+        optional_param("dg_nom", "dg_nom")
+        optional_param("dg_fonction", "dg_fonction")
+        optional_param("rprog_nom", "rprog_nom")
+        optional_param("rprog_fonction", "rprog_fonction")
+        optional_param("rprog_photo", "rprog_photo")
+        optional_param("logo_path", "logo_path")
+        optional_param("ville", "ville_signature")
+        optional_param("date", "date_signature")
+
+        pdf_buffer = PerformanceEngagementLetterGenerator.generate_pdf(data)
+
+        year = data.get("annee", PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("annee", "2025"))
+
+        headers = {
+            "Content-Disposition": f"inline; filename=lettre_engagement_performance_{year}.pdf",
+        }
+        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers=headers)
+    except Exception as exc:
+        logger.exception("Erreur génération lettre d'engagement de performance: %s", exc)
+        raise HTTPException(status_code=500, detail="Erreur lors de la génération de la lettre d'engagement de performance")
+
+
+@router.post("/api/lettres-engagement/upload-photo", name="upload_engagement_photo")
+async def upload_engagement_photo(
+    photo: UploadFile = FastAPIFile(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload d'une photo (responsable programme, responsable BOP ou logo) pour la lettre d'engagement."""
+
+    allowed_content_types = {"image/jpeg", "image/png", "image/jpg", "image/webp"}
+    max_size_bytes = 5 * 1024 * 1024  # 5 MB
+
+    if photo.content_type not in allowed_content_types:
+        raise HTTPException(status_code=400, detail="Formats acceptés : JPG, PNG ou WEBP")
+
+    content = await photo.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Le fichier est vide.")
+
+    if len(content) > max_size_bytes:
+        raise HTTPException(status_code=400, detail="La photo dépasse la taille maximale de 5 MB.")
+
+    extension = Path(photo.filename or "").suffix.lower()
+    if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
+        extension = ".jpg" if photo.content_type in {"image/jpeg", "image/jpg"} else ".png"
+
+    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}{extension}"
+    photos_dir = path_config.UPLOADS_DIR / "performance" / "engagement"
+    path_config.ensure_directory_exists(photos_dir)
+
+    destination = photos_dir / filename
+    destination.write_bytes(content)
+
+    relative_path = f"uploads/performance/engagement/{filename}"
+    file_url = path_config.get_file_url("uploads", f"performance/engagement/{filename}")
+
+    ActivityService.log_activity(
+        db_session=session,
+        user_id=current_user.id,
+        user_email=current_user.email,
+        user_full_name=current_user.full_name,
+        action_type="upload",
+        target_type="lettre_engagement_photo",
+        description=f"Upload d'une photo pour la lettre d'engagement ({photo.filename})",
+        icon="🖼️",
+    )
+
+    return JSONResponse(
+        {
+            "success": True,
+            "message": "Photo importée avec succès",
+            "path": relative_path,
+            "relative_path": relative_path,  # Alias pour compatibilité
+            "url": file_url,
+        }
+    )
 
 
 @router.get("/objectifs", response_class=HTMLResponse, name="performance_objectifs")

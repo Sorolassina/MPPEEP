@@ -5,13 +5,564 @@ Accueil
 {% endblock %}
 
 
+{% block styles %}
+<style>
+.form-page-premium {
+    background: linear-gradient(135deg, #f9fafb 0%, #f4f7fb 50%, #f8fafc 100%);
+    padding: 2.5rem 1.75rem 3.5rem;
+    min-height: calc(100vh - 140px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.dashboard-grid {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+}
+
+.hero-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+    gap: 2rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 28px 52px rgba(15, 23, 42, 0.18);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+
+.hero-minister {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.hero-minister img {
+    width: clamp(82px, 9vw, 110px);
+    height: clamp(82px, 9vw, 110px);
+    border-radius: 24px;
+    object-fit: cover;
+    object-position: top center;
+    box-shadow: 0 22px 40px rgba(15, 23, 42, 0.18);
+    border: 4px solid rgba(255, 255, 255, 0.85);
+}
+
+.hero-minister .minister-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.hero-minister .minister-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.hero-minister .minister-role {
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+.hero-content h1 {
+    font-size: clamp(2rem, 2.6vw, 2.75rem);
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-weight: 800;
+    position: relative;
+}
+
+.hero-content h1::after {
+    content: '';
+    display: block;
+    width: 140px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent-color) 0%, rgba(232, 106, 10, 0.2) 45%, rgba(255, 255, 255, 0) 100%);
+    margin-top: 0.85rem;
+}
+
+.hero-content p {
+    font-size: 1.05rem;
+    color: #374151;
+    line-height: 1.65;
+    margin-bottom: 1.5rem;
+}
+
+.hero-highlight {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.hero-actions .btn-primary {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    color: #ffffff;
+    padding: 0.85rem 1.75rem;
+    border-radius: 999px;
+    font-weight: 600;
+    box-shadow: 0 18px 32px rgba(15, 23, 42, 0.22);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-actions .btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 26px 48px rgba(15, 23, 42, 0.26);
+}
+
+.hero-actions .btn-secondary {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    color: var(--secondary-color);
+    background: rgba(255, 255, 255, 0.92);
+    padding: 0.85rem 1.75rem;
+    border-radius: 999px;
+    font-weight: 600;
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.hero-actions .btn-secondary:hover {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.hero-illustration {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.9) 100%);
+    border-radius: 20px;
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.hero-stat {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.04);
+    box-shadow: 0 20px 30px rgba(15, 23, 42, 0.12);
+}
+
+.hero-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.85) 0%, var(--accent-color) 100%);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.16);
+}
+
+.hero-stat-content strong {
+    display: block;
+    font-size: 1.2rem;
+    color: var(--accent-color);
+}
+
+.hero-stat-content span {
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.quick-card {
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    box-shadow: 0 24px 42px rgba(15, 23, 42, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    position: relative;
+}
+
+.quick-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    border-radius: 14px 14px 0 0;
+    background: linear-gradient(90deg, var(--accent-color) 0%, rgba(232, 106, 10, 0.35) 55%, rgba(255, 255, 255, 0) 100%);
+}
+
+.quick-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quick-card-header span {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    color: var(--secondary-color);
+}
+
+.quick-card-value {
+    font-size: clamp(1.8rem, 2.5vw, 2.2rem);
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.quick-card-value.accent {
+    color: var(--accent-color);
+}
+
+.quick-card-trend {
+    font-size: 0.95rem;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+}
+
+.quick-card-trend.positive { color: #047857; }
+.quick-card-trend.neutral { color: #92400e; }
+.quick-card-trend.negative { color: #b91c1c; }
+
+.quick-alerts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.alert-card {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-left: 4px solid var(--accent-color);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.16);
+}
+
+.alert-card-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+}
+
+.alert-card-content h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #1f2937;
+}
+
+.alert-card-content p {
+    margin: 0.4rem 0 0;
+    color: #4b5563;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.alert-card.warning .alert-card-icon {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.alert-card.info .alert-card-icon {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+}
+
+.card.quick-actions,
+.activity-section {
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 18px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    padding: 0;
+}
+
+.card.quick-actions .card-header,
+.activity-section .card-header {
+    padding: 1.5rem 1.75rem 1.25rem;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.88) 100%);
+    border-radius: 18px 18px 0 0;
+}
+
+.card.quick-actions .card-header h3,
+.activity-section .card-header h3 {
+    color: var(--primary-color);
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.card.quick-actions .card-body,
+.activity-section .card-body {
+    padding: 1.75rem;
+    background: transparent;
+}
+
+.card.quick-actions .actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.card.quick-actions .action-button {
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.96) 0%,
+        rgba(255, 255, 255, 0.9) 100%
+    ),
+    linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    background-blend-mode: lighten;
+    color: #1f2937;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+}
+
+.card.quick-actions .action-button:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 22px 45px rgba(15, 23, 42, 0.2);
+    border-color: var(--primary-color);
+}
+
+.card.quick-actions .action-icon {
+    color: var(--primary-color);
+}
+
+.card.quick-actions .action-button:hover .action-icon {
+    color: #ffffff;
+}
+
+.card.quick-actions .action-button:hover .action-text {
+    color: #ffffff;
+}
+
+.activity-section {
+    padding-bottom: 1.75rem;
+}
+
+.activity-list {
+    max-height: 260px;
+    padding-right: 0.25rem;
+}
+
+.activity-item {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 14px;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.activity-item:hover {
+    background: rgba(255, 255, 255, 0.96);
+    border-color: var(--primary-color);
+}
+
+.activity-icon {
+    color: var(--accent-color);
+}
+
+.activity-badge {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.activity-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    color: var(--primary-color);
+}
+
+.empty-state {
+    margin: 0;
+    padding: 1.25rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.75);
+    color: #4b5563;
+    text-align: center;
+    font-weight: 500;
+}
+
+@media (max-width: 1024px) {
+    .form-page-premium {
+        padding: 2.25rem 1.5rem 3rem;
+    }
+
+    .dashboard-grid {
+        gap: 2rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .form-page-premium {
+        padding: 2rem 1rem 2.5rem;
+    }
+
+    .card.quick-actions .actions-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
-<body class="form-page-premium">
+<section class="form-page-premium">
 <div class="dashboard-grid">
-       
-   
-    
+
+    {% set performance_rate = stats.get('performance_rate', 72) if stats is not none else 72 %}
+    {% set objectifs_atteints = stats.get('objectifs_atteints', 18) if stats is not none else 18 %}
+    {% set budget_progress = stats.get('budget_progress', 72) if stats is not none else 72 %}
+    {% set budget_alerts = stats.get('budget_alerts', 2) if stats is not none else 2 %}
+    {% set rh_requests = stats.get('rh_requests', 5) if stats is not none else 5 %}
+    {% set rh_overdue = stats.get('rh_overdue', 1) if stats is not none else 1 %}
+    {% set civility = system_settings.minister_civility %}
+    {% set minister_name_value = system_settings.minister_name or 'Ministre du MPPEEP' %}
+    {% set minister_role_value = system_settings.minister_role or 'Ministre du Patrimoine, du Portefeuille de l\'État et des Entreprises Publiques' %}
+
+    <div class="hero-section">
+        <div class="hero-content">
+            <div class="hero-minister">
+                <img src="{{ static_versioned_url(static_url(system_settings.minister_photo or 'images/utilisateur.png')) }}" alt="Ministre du MPPEEP">
+                <div class="minister-info">
+                    <span class="minister-name">
+                        {{ (civility ~ ' ') if civility else '' }}{{ minister_name_value }}
+                    </span>
+                    <span class="minister-role">{{ minister_role_value }}</span>
+                </div>
+            </div>
+            <h1>Bienvenue {{ current_user.full_name or current_user.email }} 👋</h1>
+            <p>
+                Retrouvez en un coup d’œil les <span class="hero-highlight">modules et informations clés</span> pour piloter le Ministère du Patrimoine,
+                du Portefeuille de l'État et des Entreprises Publiques. Nos <span class="hero-highlight">indicateurs dynamiques</span> suivent vos objectifs de
+                performance, vos budgets et la mobilisation des équipes au quotidien.
+            </p>
+            <div class="hero-actions">
+                <a href="{{ url_for('performance_home') }}" class="btn btn-primary">
+                    📊 Suivre la performance
+                </a>
+                <a href="{{ url_for('aide_performance') }}" class="btn btn-secondary">
+                    ❓ Besoin d'aide
+                </a>
+            </div>
+        </div>
+        <div class="hero-illustration">
+            <div class="hero-stat">
+                <div class="hero-stat-icon">🏛️</div>
+                <div class="hero-stat-content">
+                    <strong>{{ stats.users_count or 0 }}</strong>
+                    <span>Collaborateurs connectés</span>
+                </div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-icon">📂</div>
+                <div class="hero-stat-content">
+                    <strong>{{ stats.items_count or 0 }}</strong>
+                    <span>Dossiers actifs en suivi</span>
+                </div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-icon">✅</div>
+                <div class="hero-stat-content">
+                    <strong>{{ stats.completed_count or 0 }}</strong>
+                    <span>Actions validées ce mois</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-stats">
+        <div class="quick-card">
+            <div class="quick-card-header">
+                <span>Performance</span>
+                <small>Objectifs annuels</small>
+            </div>
+            <div class="quick-card-value accent">{{ performance_rate }}%</div>
+            <div class="quick-card-trend positive">
+                ▲ {{ objectifs_atteints }} objectifs atteints
+            </div>
+        </div>
+        <div class="quick-card">
+            <div class="quick-card-header">
+                <span>Budget</span>
+                <small>Exécution</small>
+            </div>
+            <div class="quick-card-value accent">{{ budget_progress }}%</div>
+            <div class="quick-card-trend neutral">
+                ● {{ budget_alerts }} alertes en suivi
+            </div>
+        </div>
+        <div class="quick-card">
+            <div class="quick-card-header">
+                <span>RH</span>
+                <small>Mobilisation</small>
+            </div>
+            <div class="quick-card-value">{{ rh_requests }}</div>
+            <div class="quick-card-trend negative">
+                ▼ {{ rh_overdue }} demandes en retard
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-alerts">
+        <div class="alert-card warning">
+            <div class="alert-card-icon">⚠️</div>
+            <div class="alert-card-content">
+                <h4>Réunion de performance à planifier</h4>
+                <p>Le rapport du Programme 2 n'a pas encore été validé. Prévoir une revue avec les responsables cette semaine.</p>
+            </div>
+        </div>
+        <div class="alert-card info">
+            <div class="alert-card-icon">ℹ️</div>
+            <div class="alert-card-content">
+                <h4>Nouveaux documents budgétaires</h4>
+                <p>3 fiches techniques ont été déposées ce matin. Pensez à les valider avant transmission au Cabinet.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Modules accessibles selon les permissions -->
     {% if current_user %}  
     <div class="card quick-actions">
@@ -38,6 +589,14 @@ Accueil
             </a>
             {% endif %}
 
+            <!-- Module Plannification -->
+            {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdb' %}
+            <a href="#" class="action-button" title="Module Plannification (bientôt disponible)">
+                <span class="action-icon">🗓️</span>
+                <span class="action-text">Plannification</span>
+            </a>
+            {% endif %}
+
              <!-- Module RH -->
              {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdrh' or current_user.type_user == 'cs' or current_user.type_user == 'agent' %}
              <a href="{{ url_for('rh_home') }}" class="action-button">
@@ -45,14 +604,6 @@ Accueil
                  <span class="action-text">Ressources Humaines</span>
              </a>
              {% endif %}
-
-            <!-- Module Personnel -->
-            {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdrh' or current_user.type_user == 'cs' %}
-            <a href="{{ url_for('personnel_home') }}" class="action-button">
-                <span class="action-icon">👤</span>
-                <span class="action-text">Personnel</span>
-            </a>
-            {% endif %}
 
             <!-- Module Stocks -->
             {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdc' %}
@@ -129,6 +680,6 @@ Accueil
     </div>
 
 </div>
-</body>
+</section>
 {% endblock %}
 
