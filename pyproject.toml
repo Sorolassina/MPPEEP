@@ -27,6 +27,7 @@ dependencies = [
     "psycopg2>=2.9.11",
     "apscheduler>=3.10.4",
     "concurrent-log-handler>=0.9.28",
+    "sendgrid>=6.12.5",
 ]
 
 [project.optional-dependencies]

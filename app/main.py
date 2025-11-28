@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from pickle import TRUE
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.exceptions import RequestValidationError
@@ -216,7 +217,37 @@ def accueil(request: Request, current_user: User = Depends(get_current_user)):
     )
 
 
-# 8) Monter la sous-application avec le bon préfixe
+# 8) Middleware de redirection pour forcer l'utilisation du préfixe en production
+if root_path:
+    from starlette.middleware.base import BaseHTTPMiddleware
+    
+    class RootPathRedirectMiddleware(BaseHTTPMiddleware):
+        """
+        Middleware qui redirige toutes les requêtes sans préfixe vers le chemin avec préfixe
+        En mode production, toutes les routes doivent passer par /mppeep
+        """
+        async def dispatch(self, request: Request, call_next):
+            path = request.url.path
+            
+            # Si le chemin ne commence pas par root_path, rediriger
+            if not path.startswith(root_path):
+                # Ignorer les requêtes pour les ressources statiques si elles sont déjà bien préfixées
+                # Construire la nouvelle URL avec le préfixe
+                new_path = f"{root_path}{path}" if path != "/" else root_path
+                new_url = f"{request.url.scheme}://{request.url.netloc}{new_path}"
+                if request.url.query:
+                    new_url = f"{new_url}?{request.url.query}"
+                
+                logger.warning(f"⚠️  Accès direct refusé: {path} → redirection vers {new_path}")
+                return RedirectResponse(url=new_url, status_code=301)
+            
+            # Si le chemin commence déjà par root_path, continuer normalement
+            return await call_next(request)
+    
+    # Ajouter le middleware AVANT le montage (il s'exécutera en premier)
+    app.add_middleware(RootPathRedirectMiddleware)
+
+# 9) Monter la sous-application avec le bon préfixe
 mount_path = root_path if root_path else "/"
 app.mount(mount_path, subapp)
 
@@ -229,7 +260,7 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=9000,
-        reload=False,
+        reload=True,
         log_config=None,  # ⬅️ laisse ta config régner
         # log_level="info"  # facultatif : n’influe pas ta config Python
     )

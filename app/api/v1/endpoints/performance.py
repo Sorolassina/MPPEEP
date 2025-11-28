@@ -30,6 +30,7 @@ from app.core.path_config import path_config
 from app.services.performance_service import PerformanceService
 from app.services.engagement_letter_service import EngagementLetterGenerator
 from app.services.performance_engagement_letter_service import PerformanceEngagementLetterGenerator
+from app.services.rapport_annuel_performance_service import RapportAnnuelPerformanceGenerator
 from app.services.report_generator import ReportGenerator
 
 logger = get_logger(__name__)
@@ -184,6 +185,20 @@ def performance_home(
             "date": today_formatted,
         }
 
+        # Valeurs par défaut pour le rapport annuel de performance
+        rapport_annuel_defaults = {
+            "annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("annee", current_year - 1),
+            "section": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("section", "SECTION 376"),
+            "ministere": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("ministere", ""),
+            "titre_rapport": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_rapport", ""),
+            "titre_annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE"),
+            "date_publication": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("date_publication", ""),
+            "logo_path": logo_path_from_settings if logo_path_from_settings else RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("logo_path", ""),
+        }
+        # Générer la date de publication si non définie
+        if not rapport_annuel_defaults.get("date_publication"):
+            rapport_annuel_defaults["date_publication"] = f"Mai {current_year}"
+
         context.update(
             {
                 "page_title": "Performance",
@@ -203,6 +218,7 @@ def performance_home(
                 "current_user": current_user,
                 "engagement_defaults": engagement_defaults,
                 "performance_engagement_defaults": performance_engagement_defaults,
+                "rapport_annuel_defaults": rapport_annuel_defaults,
             }
         )
 
@@ -336,6 +352,129 @@ def generate_lettre_engagement_performance_pdf(
         raise HTTPException(status_code=500, detail="Erreur lors de la génération de la lettre d'engagement de performance")
 
 
+@router.get(
+    "/rapport-annuel-performance/pdf-simpledoc",
+    response_class=StreamingResponse,
+    name="performance_rapport_annuel_pdf_simpledoc",
+)
+def generate_rapport_annuel_performance_pdf_simpledoc(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Génère le rapport annuel de performance en mode paysage avec SimpleDocTemplate (VERSION TEST)."""
+    try:
+        from app.services.rapport_annuel_performance_service_simpledoc import (
+            RapportAnnuelPerformanceGeneratorSimpleDoc
+        )
+        
+        data: dict[str, Any] = {}
+        
+        # Pour l'instant, utiliser les données par défaut
+        pdf_buffer = RapportAnnuelPerformanceGeneratorSimpleDoc.generate_pdf(data, session=db)
+        
+        year = data.get("annee", 2024)
+        
+        headers = {
+            "Content-Disposition": f"inline; filename=rapport_annuel_performance_simpledoc_{year}.pdf",
+        }
+        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers=headers)
+    except Exception as exc:
+        logger.exception("Erreur génération rapport annuel de performance (SimpleDocTemplate): %s", exc)
+        raise HTTPException(
+            status_code=500, 
+            detail="Erreur lors de la génération du rapport annuel de performance avec SimpleDocTemplate"
+        )
+
+
+@router.get(
+    "/rapport-annuel-performance/pdf",
+    response_class=StreamingResponse,
+    name="performance_rapport_annuel_pdf",
+)
+def generate_rapport_annuel_performance_pdf(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Génère le rapport annuel de performance en mode paysage."""
+    try:
+        data: dict[str, Any] = {}
+
+        def optional_param(param: str, target_key: str, transform=None, target_dict: dict[str, Any] | None = None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            final_value = transform(value) if transform else value
+            if target_dict is not None:
+                target_dict[target_key] = final_value
+            else:
+                data[target_key] = final_value
+
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("pays", "pays")
+        optional_param("devise", "devise")
+        optional_param("section", "section")
+        optional_param("ministere", "ministere")
+        optional_param("titre_rapport", "titre_rapport")
+        optional_param("titre_annee", "titre_annee")
+        optional_param("date_publication", "date_publication")
+        optional_param("logo_path", "logo_path")
+        
+        # Paramètres d'introduction générale
+        intro_data: dict[str, Any] = {}
+        optional_param("intro_ministre_nom", "ministre_nom", target_dict=intro_data)
+        optional_param("intro_ministre_date_nomination", "ministre_date_nomination", target_dict=intro_data)
+        optional_param("intro_decret_attribution_numero", "decret_attribution_numero", target_dict=intro_data)
+        optional_param("intro_decret_attribution_date", "decret_attribution_date", target_dict=intro_data)
+        optional_param("intro_structure_cabinet", "structure_cabinet", target_dict=intro_data)
+        optional_param("intro_structure_directions_centrales", "structure_directions_centrales", lambda v: int(v) if v.isdigit() else None, target_dict=intro_data)
+        optional_param("intro_structure_services", "structure_services", lambda v: int(v) if v.isdigit() else None, target_dict=intro_data)
+        optional_param("intro_structure_directions_generales", "structure_directions_generales", lambda v: int(v) if v.isdigit() else None, target_dict=intro_data)
+        optional_param("intro_decret_organisation_numero", "decret_organisation_numero", target_dict=intro_data)
+        optional_param("intro_decret_organisation_date", "decret_organisation_date", target_dict=intro_data)
+        optional_param("intro_contexte_texte", "contexte_texte", target_dict=intro_data)
+        
+        if intro_data:
+            data["introduction"] = intro_data
+        
+        # Paramètres pour le financement global (interprétations personnalisées)
+        financement_interpretations: dict[str, Any] = {}
+        optional_param("financement_intro", "intro", target_dict=financement_interpretations)
+        optional_param("financement_raison_1", "raison_1", target_dict=financement_interpretations)
+        optional_param("financement_raison_2", "raison_2", target_dict=financement_interpretations)
+        optional_param("financement_evolution_intro", "evolution_intro", target_dict=financement_interpretations)
+        optional_param("financement_evolution_personnel", "evolution_personnel", target_dict=financement_interpretations)
+        optional_param("financement_evolution_biens", "evolution_biens", target_dict=financement_interpretations)
+        optional_param("financement_evolution_transferts", "evolution_transferts", target_dict=financement_interpretations)
+        optional_param("financement_evolution_investissements", "evolution_investissements", target_dict=financement_interpretations)
+        optional_param("financement_note_comparaison", "note_comparaison", target_dict=financement_interpretations)
+        
+        # Construire la liste des raisons si fournies
+        if financement_interpretations:
+            raisons = []
+            if "raison_1" in financement_interpretations:
+                raisons.append(financement_interpretations["raison_1"])
+            if "raison_2" in financement_interpretations:
+                raisons.append(financement_interpretations["raison_2"])
+            if raisons:
+                financement_interpretations["raisons_augmentation"] = raisons
+            data["financement_interpretations"] = financement_interpretations
+
+        # Passer la session de base de données pour charger les données budgétaires
+        pdf_buffer = RapportAnnuelPerformanceGenerator.generate_pdf(data, session=db)
+
+        year = data.get("annee", RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("annee", "2024"))
+
+        headers = {
+            "Content-Disposition": f"inline; filename=rapport_annuel_performance_{year}.pdf",
+        }
+        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers=headers)
+    except Exception as exc:
+        logger.exception("Erreur génération rapport annuel de performance: %s", exc)
+        raise HTTPException(status_code=500, detail="Erreur lors de la génération du rapport annuel de performance")
+
+
 @router.post("/api/lettres-engagement/upload-photo", name="upload_engagement_photo")
 async def upload_engagement_photo(
     photo: UploadFile = FastAPIFile(...),
@@ -442,13 +581,36 @@ def performance_rapports(request: Request, db: Session = Depends(get_session)):
     """Rapports de performance"""
     try:
         from app.templates import get_template_context, templates
+        from app.services.system_settings_service import SystemSettingsService
+        from datetime import datetime
 
         context = get_template_context(request)
+        
+        # Récupérer les paramètres système
+        system_settings = SystemSettingsService.get_settings_as_dict(db)
+        logo_path_from_settings = system_settings.get("logo_path", "")
+        current_year = datetime.now().year
+        
+        # Valeurs par défaut pour le rapport annuel de performance
+        rapport_annuel_defaults = {
+            "annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("annee", current_year - 1),
+            "section": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("section", "SECTION 376"),
+            "ministere": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("ministere", ""),
+            "titre_rapport": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_rapport", ""),
+            "titre_annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE"),
+            "date_publication": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("date_publication", ""),
+            "logo_path": logo_path_from_settings if logo_path_from_settings else RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("logo_path", ""),
+        }
+        # Générer la date de publication si non définie
+        if not rapport_annuel_defaults.get("date_publication"):
+            rapport_annuel_defaults["date_publication"] = f"Mai {current_year}"
+        
         context.update(
             {
                 "page_title": "Rapports de Performance",
                 "module_name": "Performance",
                 "module_description": "Analyse et reporting des performances",
+                "rapport_annuel_defaults": rapport_annuel_defaults,
             }
         )
 
@@ -791,6 +953,7 @@ def get_indicateurs_api(
         indicateurs_dict = [
             {
                 "id": ind.id,
+                "objectif_id": ind.objectif_id,
                 "nom": ind.nom,
                 "description": ind.description,
                 "categorie": ind.categorie,
@@ -827,6 +990,7 @@ def get_indicateur_api(indicateur_id: int, db: Session = Depends(get_session)):
 
         indicateur_dict = {
             "id": indicateur.id,
+            "objectif_id": indicateur.objectif_id,
             "nom": indicateur.nom,
             "description": indicateur.description,
             "categorie": indicateur.categorie,
@@ -851,6 +1015,7 @@ def get_indicateur_api(indicateur_id: int, db: Session = Depends(get_session)):
 
 @router.post("/api/indicateurs", response_class=JSONResponse, name="create_indicateur_api")
 def create_indicateur_api(
+    objectif_id: int = Form(...),
     nom: str = Form(...),
     description: str | None = Form(None),
     categorie: str = Form("OPERATIONNEL"),
@@ -870,6 +1035,7 @@ def create_indicateur_api(
     """API: Crée un nouvel indicateur"""
     try:
         indicateur_data = {
+            "objectif_id": objectif_id,
             "nom": nom,
             "description": description,
             "categorie": categorie,
@@ -915,6 +1081,7 @@ def create_indicateur_api(
 @router.put("/api/indicateurs/{indicateur_id}", response_class=JSONResponse)
 def update_indicateur_api(
     indicateur_id: int,
+    objectif_id: int | None = Form(None),
     nom: str | None = Form(None),
     description: str | None = Form(None),
     categorie: str | None = Form(None),
@@ -935,6 +1102,8 @@ def update_indicateur_api(
     try:
         indicateur_data = {}
 
+        if objectif_id is not None:
+            indicateur_data["objectif_id"] = objectif_id
         if nom is not None:
             indicateur_data["nom"] = nom
         if description is not None:

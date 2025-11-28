@@ -271,6 +271,21 @@ async def delete_user(
             description=f"Suppression de l'utilisateur {full_name or email} ({email})",
         )
 
+        # Supprimer physiquement toutes les sessions de l'utilisateur (actives et inactives)
+        # pour éviter les violations de clé étrangère
+        from app.models.session import UserSession
+        
+        statement = select(UserSession).where(UserSession.user_id == user_id)
+        all_sessions = session.exec(statement).all()
+        sessions_count = 0
+        for user_session in all_sessions:
+            session.delete(user_session)
+            sessions_count += 1
+        
+        if sessions_count > 0:
+            logger.info(f"🗑️  {sessions_count} session(s) supprimée(s) pour l'utilisateur {email}")
+
+        # Maintenant, supprimer l'utilisateur
         session.delete(user)
         session.commit()
 
@@ -278,7 +293,8 @@ async def delete_user(
 
         return JSONResponse(content={"success": True, "message": f"Utilisateur {email} supprimé avec succès"})
     except Exception as e:
-        logger.error(f"❌ Erreur suppression utilisateur: {e}")
+        logger.error(f"❌ Erreur suppression utilisateur: {e}", exc_info=True)
+        session.rollback()
         return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
 
 

@@ -94,6 +94,14 @@
             <input type="hidden" id="indicatorId" name="indicator_id">
             
             <div class="form-group">
+                <label for="objectif_id" class="form-label">Objectif associé *</label>
+                <select id="objectif_id" name="objectif_id" class="form-control" required>
+                    <option value="">Chargement des objectifs...</option>
+                </select>
+                <small class="form-help-text">Un indicateur doit être rattaché à un objectif de performance</small>
+            </div>
+            
+            <div class="form-group">
                 <label for="nom" class="form-label">Nom de l'indicateur *</label>
                 <input type="text" id="nom" name="nom" class="form-control" required>
             </div>
@@ -202,6 +210,7 @@ let currentIndicateurs = [];
 let editingIndicateurId = null;
 let allUsers = []; // Stocker tous les utilisateurs
 let allServices = []; // Stocker tous les services avec leurs IDs
+let allObjectifs = []; // Stocker tous les objectifs
 
 // Charger les indicateurs au démarrage
 document.addEventListener('DOMContentLoaded', function() {
@@ -212,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadIndicateurs();
     loadUsers();
     loadServices();
+    loadObjectifs();
 });
 
 // Charger la liste des indicateurs
@@ -311,6 +321,35 @@ async function loadServices() {
     }
 }
 
+// Charger la liste des objectifs
+async function loadObjectifs() {
+    try {
+        const response = await fetch("{{ url_for('get_objectifs_api') }}");
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            allObjectifs = result.data;
+            
+            const select = document.getElementById('objectif_id');
+            select.innerHTML = '<option value="">Sélectionner un objectif...</option>';
+            
+            if (result.data && Array.isArray(result.data)) {
+                result.data.forEach(objectif => {
+                    const option = document.createElement('option');
+                    option.value = objectif.id;
+                    option.textContent = `${objectif.titre} (${objectif.periode || 'Période non définie'})`;
+                    select.appendChild(option);
+                });
+            }
+        } else {
+            document.getElementById('objectif_id').innerHTML = '<option value="">Aucun objectif disponible</option>';
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des objectifs:', error);
+        document.getElementById('objectif_id').innerHTML = '<option value="">Erreur de chargement</option>';
+    }
+}
+
 // Afficher les indicateurs
 function displayIndicateurs(indicateurs) {
     const container = document.getElementById('indicators-list');
@@ -391,7 +430,15 @@ function openCreateModal() {
     editingIndicateurId = null;
     document.getElementById('modalTitle').textContent = 'Nouvel Indicateur';
     document.getElementById('indicatorForm').reset();
-    showModal('indicatorModal');
+    
+    // S'assurer que les objectifs sont chargés
+    if (allObjectifs.length === 0) {
+        loadObjectifs().then(() => {
+            showModal('indicatorModal');
+        });
+    } else {
+        showModal('indicatorModal');
+    }
 }
 
 // Modifier un indicateur
@@ -404,6 +451,7 @@ function editIndicateur(id) {
     
     // Remplir le formulaire
     document.getElementById('indicatorId').value = indicateur.id;
+    document.getElementById('objectif_id').value = indicateur.objectif_id || '';
     document.getElementById('nom').value = indicateur.nom;
     document.getElementById('description').value = indicateur.description || '';
     document.getElementById('categorie').value = indicateur.categorie;

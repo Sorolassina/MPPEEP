@@ -133,7 +133,7 @@
                 </p>
                 <span class="template-badge badge-executif">Exécutif</span>
             </div>
-            <div class="template-card" onclick="useTemplate('RAP')">
+            <div class="template-card" onclick="openRapportAnnuelModal()">
                 <div class="template-icon">📘</div>
                 <div class="template-name">Rapport Annuel de Performance (RAP)</div>
                 <p class="template-description">
@@ -177,6 +177,83 @@
             <!-- Les rapports seront chargés dynamiquement -->
         </div>
     </section>
+</div>
+
+<!-- Modal pour le rapport annuel de performance -->
+<div id="rapportAnnuelModal" class="modal-xl performance-modal">
+    <div class="modal-content performance-engagement-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Préparer le rapport annuel de performance</h2>
+            <button type="button" class="modal-close" onclick="closeRapportAnnuelModal()">&times;</button>
+        </div>
+        <form id="rapportAnnuelForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_rapport_annuel_pdf') }}" data-endpoint-simpledoc="{{ url_for('performance_rapport_annuel_pdf_simpledoc') }}">
+            <p class="performance-engagement-intro">
+                Renseignez les informations ci-dessous pour générer le rapport annuel de performance (format paysage).
+            </p>
+            <button type="button" class="link-button performance-engagement-reset" onclick="applyRapportAnnuelDefaults()">
+                ↺ Remettre les valeurs de référence
+            </button>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>📄</span> Informations générales
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="rap_annee" class="form-label">Année du rapport *</label>
+                        <input type="number" id="rap_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rap_section" class="form-label">Section *</label>
+                        <input type="text" id="rap_section" name="section" class="form-control" placeholder="SECTION 376" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rap_ministere" class="form-label">Ministère *</label>
+                        <input type="text" id="rap_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rap_titre_rapport" class="form-label">Titre du rapport *</label>
+                        <textarea id="rap_titre_rapport" name="titre_rapport" class="form-control" rows="3" placeholder="RAPPORT ANNUEL DE PERFORMANCE DU MINISTERE..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="rap_titre_annee" class="form-label">Titre année</label>
+                        <input type="text" id="rap_titre_annee" name="titre_annee" class="form-control" placeholder="AU TITRE DE L'ANNÉE">
+                    </div>
+                    <div class="form-group">
+                        <label for="rap_date_publication" class="form-label">Date de publication</label>
+                        <input type="text" id="rap_date_publication" name="date_publication" class="form-control" placeholder="Mai 2025">
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>📑</span> Références et visuels
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="performance-upload-group">
+                        <label for="rap_logo_path" class="form-label">Logo/Emblème</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="rap_logo_path" name="logo_path" class="form-control" placeholder="images/logo.webp">
+                            <label class="performance-upload-button">
+                                <input type="file" id="rap_logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('rap_logo_path')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5 MB)</span>
+                        <div class="performance-upload-preview" id="rap_logo_path_preview_wrapper">
+                            <img id="rap_logo_path_preview" alt="Prévisualisation du logo">
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </form>
+        <div class="modal-footer performance-engagement-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeRapportAnnuelModal()">Annuler</button>
+            <button type="button" class="btn btn-info" onclick="generateRapportAnnuelSimpleDoc()">🧪 Tester SimpleDocTemplate</button>
+            <button type="submit" form="rapportAnnuelForm" class="btn btn-primary">Générer le PDF</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -533,6 +610,300 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.classList.remove('show');
     }
     loadReports();
+    
+    // Initialisation de la modal du rapport annuel
+    initRapportAnnuelModal();
 });
+
+// ============================================
+// RAPPORT ANNUEL DE PERFORMANCE - MODAL
+// ============================================
+
+const rapportAnnuelDefaults = JSON.parse('{{ rapport_annuel_defaults | tojson | safe }}');
+const ENGAGEMENT_PHOTO_MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+const engagementPhotoUploadUrl = "{{ url_for('upload_engagement_photo') }}";
+
+// Fonction pour normaliser les URLs d'assets avec root_path
+function normalizeEngagementAssetUrl(rawValue) {
+    if (!rawValue) {
+        return "";
+    }
+
+    // URLs absolues (http/https/data) : retourner tel quel
+    if (/^(https?:\/\/|data:)/i.test(rawValue)) {
+        return rawValue;
+    }
+
+    let url = rawValue.trim();
+    
+    // Helper pour ajouter root_path si nécessaire
+    const prefixWithRootPath = (path) => {
+        // Si le chemin commence déjà par root_path, le retourner tel quel
+        if (window.root_path && path.startsWith(window.root_path)) {
+            return path;
+        }
+        // Sinon, ajouter le préfixe root_path si disponible
+        return window.root_path ? window.root_path + path : path;
+    };
+
+    // URL absolue commençant par "/"
+    if (url.startsWith("/")) {
+        return prefixWithRootPath(url);
+    }
+
+    // Chemins relatifs
+    if (url.startsWith("uploads/")) {
+        return prefixWithRootPath(`/${url}`);
+    }
+
+    if (url.startsWith("static/")) {
+        return prefixWithRootPath(`/${url}`);
+    }
+
+    if (url.startsWith("images/")) {
+        return prefixWithRootPath(`/static/${url}`);
+    }
+
+    // Par défaut, considérer comme fichier statique
+    return prefixWithRootPath(`/static/${url}`);
+}
+
+// Fonction pour mettre à jour la prévisualisation des photos
+function updateEngagementPhotoPreview(field, explicitUrl) {
+    const wrapper = document.getElementById(`${field}_preview_wrapper`);
+    const img = document.getElementById(`${field}_preview`);
+    if (!wrapper || !img) {
+        return;
+    }
+
+    const input = document.getElementById(field);
+    const value = explicitUrl || input?.value || "";
+
+    if (!value) {
+        wrapper.classList.remove("show");
+        img.src = "";
+        return;
+    }
+
+    const url = normalizeEngagementAssetUrl(value);
+    img.src = url;
+    wrapper.classList.add("show");
+}
+
+// Fonction pour uploader une photo
+async function uploadEngagementPhoto(field) {
+    const fileInput = document.getElementById(`${field}_file`);
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return;
+    }
+
+    const file = fileInput.files[0];
+    if (file.size > ENGAGEMENT_PHOTO_MAX_SIZE) {
+        if (typeof showError === "function") {
+            showError("La photo dépasse la taille maximale de 5 MB.");
+        }
+        fileInput.value = "";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Téléversement en cours...", "Import de la photo");
+    }
+
+    try {
+        const response = await fetch(engagementPhotoUploadUrl, {
+            method: "POST",
+            body: formData,
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result?.success) {
+            const message = result?.detail || result?.error || "Erreur lors du téléversement de la photo.";
+            if (typeof showError === "function") {
+                showError(message);
+            }
+            return;
+        }
+
+        const input = document.getElementById(field);
+        if (input) {
+            input.value = result.path || result.relative_path || result.url || "";
+        }
+
+        updateEngagementPhotoPreview(field, result.url || input?.value);
+        
+        if (typeof showSuccess === "function") {
+            showSuccess("Photo importée avec succès");
+        }
+    } catch (error) {
+        console.error("Erreur upload photo lettre engagement:", error);
+        if (typeof showError === "function") {
+            showError("Erreur lors du téléversement de la photo.");
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+    }
+}
+
+// Fonctions pour ouvrir/fermer la modal
+function openRapportAnnuelModal() {
+    const modal = document.getElementById('rapportAnnuelModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+    applyRapportAnnuelDefaults();
+}
+
+function closeRapportAnnuelModal() {
+    const modal = document.getElementById('rapportAnnuelModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+}
+
+// Fonction pour appliquer les valeurs par défaut
+function applyRapportAnnuelDefaults() {
+    const form = document.getElementById('rapportAnnuelForm');
+    if (!form || !rapportAnnuelDefaults) {
+        return;
+    }
+    form.reset();
+    Object.entries(rapportAnnuelDefaults).forEach(([key, value]) => {
+        const field = form.querySelector(`[name="${key}"]`);
+        if (!field) {
+            return;
+        }
+        field.value = value ?? "";
+    });
+
+    // Mettre à jour la prévisualisation du logo
+    updateEngagementPhotoPreview('rap_logo_path');
+}
+
+// Fonction pour soumettre le formulaire
+function handleRapportAnnuelSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Impossible de déterminer l'URL de génération du PDF.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    for (const [key, rawValue] of formData.entries()) {
+        let value = (rawValue || "").toString().trim();
+        if (!value) {
+            continue;
+        }
+
+        if (key === "annee") {
+            value = value.replace(/[^\d]/g, "");
+        }
+
+        if (!value) {
+            continue;
+        }
+
+        params.append(key, value);
+    }
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Génération du PDF...", "Veuillez patienter");
+    }
+
+    closeRapportAnnuelModal();
+    window.location.assign(targetUrl);
+}
+
+// Fonction pour tester la version SimpleDocTemplate
+function generateRapportAnnuelSimpleDoc() {
+    const form = document.getElementById('rapportAnnuelForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+    
+    const endpoint = form.dataset.endpointSimpledoc;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint SimpleDocTemplate introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    for (const [key, rawValue] of formData.entries()) {
+        let value = (rawValue || "").toString().trim();
+        if (!value) {
+            continue;
+        }
+
+        if (key === "annee") {
+            value = value.replace(/[^\d]/g, "");
+        }
+
+        if (!value) {
+            continue;
+        }
+
+        params.append(key, value);
+    }
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Génération du PDF (SimpleDocTemplate)...", "Veuillez patienter, cette version utilise SimpleDocTemplate pour gérer automatiquement le découpage des tableaux.");
+    }
+
+    closeRapportAnnuelModal();
+    window.location.assign(targetUrl);
+}
+
+// Initialisation de la modal
+function initRapportAnnuelModal() {
+    const rapportForm = document.getElementById('rapportAnnuelForm');
+    if (rapportForm) {
+        rapportForm.addEventListener('submit', handleRapportAnnuelSubmit);
+    }
+
+    // Prévisualisation du logo
+    const logoInput = document.getElementById('rap_logo_path');
+    if (logoInput) {
+        logoInput.addEventListener('change', () => updateEngagementPhotoPreview('rap_logo_path'));
+        logoInput.addEventListener('blur', () => updateEngagementPhotoPreview('rap_logo_path'));
+    }
+
+    const rapportModal = document.getElementById('rapportAnnuelModal');
+    if (rapportModal) {
+        rapportModal.addEventListener('click', function(event) {
+            if (event.target === rapportModal) {
+                closeRapportAnnuelModal();
+            }
+        });
+    }
+}
 </script>
 {% endblock %}

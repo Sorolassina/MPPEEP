@@ -14,7 +14,6 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -314,6 +313,89 @@ class ForwardProtoMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class CustomTrustedHostMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware personnalisé pour vérifier les hôtes autorisés
+    Supporte les wildcards (ex: *.skpartners.consulting) et X-Forwarded-Host depuis Cloudflare
+    """
+    
+    def __init__(self, app, allowed_hosts: list[str]):
+        super().__init__(app)
+        self.allowed_hosts = allowed_hosts or ["*"]
+    
+    def _match_host(self, host: str) -> bool:
+        """
+        Vérifie si le host correspond à un des hôtes autorisés
+        Supporte les wildcards (*.domain.com)
+        """
+        if "*" in self.allowed_hosts:
+            return True
+        
+        # Retirer le port si présent
+        host_without_port = host.split(":")[0].lower().strip()
+        
+        for allowed_host in self.allowed_hosts:
+            allowed = allowed_host.lower().strip()
+            
+            # Correspondance exacte
+            if allowed == host_without_port:
+                logger.debug(f"✅ Match exact: '{host_without_port}' == '{allowed}'")
+                return True
+            
+            # Support wildcard (*.domain.com)
+            if allowed.startswith("*."):
+                domain = allowed[2:]  # Enlever "*."
+                # Match si le host est exactement le domaine ou un sous-domaine
+                if host_without_port == domain or host_without_port.endswith(f".{domain}"):
+                    logger.debug(f"✅ Match wildcard: '{host_without_port}' match avec '{allowed}' (domain: {domain})")
+                    return True
+        
+        logger.debug(f"❌ Aucun match trouvé pour '{host_without_port}' dans {self.allowed_hosts}")
+        return False
+    
+    async def dispatch(self, request: Request, call_next):
+        # Récupérer l'en-tête Host (ou X-Forwarded-Host depuis Cloudflare)
+        forwarded_host = request.headers.get("X-Forwarded-Host", "")
+        host_header = request.headers.get("Host", "")
+        host = forwarded_host or host_header
+        
+        # Log des en-têtes pour diagnostic (INFO pour toujours voir en prod)
+        logger.info(f"🔍 [TrustedHost] X-Forwarded-Host: '{forwarded_host}' | Host: '{host_header}' | Utilisé: '{host}'")
+        logger.info(f"🔍 [TrustedHost] Hôtes autorisés: {self.allowed_hosts}")
+        
+        if not host:
+            logger.warning("⚠️  Requête sans en-tête Host ni X-Forwarded-Host")
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Missing Host header"}
+            )
+        
+        # Vérifier si le host est autorisé
+        is_allowed = self._match_host(host)
+        logger.info(f"🔍 [TrustedHost] Host '{host}' autorisé: {is_allowed}")
+        
+        if not is_allowed:
+            logger.error(f"🚫 En-tête d'hôte invalide: {host}")
+            logger.error(f"🚫 Hôtes autorisés: {self.allowed_hosts}")
+            logger.error(f"🚫 Headers complets - X-Forwarded-Host: '{forwarded_host}', Host: '{host_header}'")
+            # Log de tous les headers pour diagnostic
+            all_headers = dict(request.headers)
+            logger.error(f"🚫 Tous les headers reçus: {all_headers}")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "detail": f"Invalid host header",
+                    "received_host": host,
+                    "x_forwarded_host": forwarded_host,
+                    "host_header": host_header,
+                    "allowed_hosts": self.allowed_hosts,
+                    "tip": "Vérifiez que le domaine est dans ALLOWED_HOSTS et que Cloudflare envoie bien X-Forwarded-Host"
+                }
+            )
+        
+        return await call_next(request)
+
+
 class CloudflareMiddleware(BaseHTTPMiddleware):
     """
     Capture et enrichit les requêtes avec les informations Cloudflare
@@ -394,18 +476,20 @@ def setup_middlewares(app, settings):
     # MIDDLEWARES DANS L'ORDRE D'EXÉCUTION
     # ==========================================
 
+    
+
+    # 2. Trusted Hosts (personnalisé pour supporter wildcards et Cloudflare)
+    if not settings.DEBUG:
+        app.add_middleware(CustomTrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
+        logger.info(f"✅ Trusted Hosts (custom avec wildcards) : {settings.ALLOWED_HOSTS}")
+    else:
+        # Dev : accepter tous les hôtes
+        app.add_middleware(CustomTrustedHostMiddleware, allowed_hosts=["*"])
+
     # 1. Redirection HTTPS en production
     if settings.should_enable_https_redirect:
         app.add_middleware(HTTPSRedirectMiddleware)
         logger.info("🔒 HTTPS Redirect activé")
-
-    # 2. Trusted Hosts
-    if not settings.DEBUG:
-        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
-        logger.info(f"✅ Trusted Hosts : {settings.ALLOWED_HOSTS}")
-    else:
-        # Dev : accepter tous les hôtes
-        app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
     # 3. CORS - Cross-Origin Resource Sharing
     if settings.ENABLE_CORS:

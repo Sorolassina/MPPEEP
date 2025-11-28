@@ -54,6 +54,7 @@ body {
     background-color: var(--surface-color);
     min-height: calc(100vh - 120px);
     overflow: hidden;
+    width: 100%;
 }
 
 /* Animation de fade-in pour les pages */

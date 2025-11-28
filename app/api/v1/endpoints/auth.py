@@ -7,6 +7,7 @@ from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, st
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlmodel import Session
 
+from app.core.config import settings
 from app.core.logging_config import get_logger
 from app.db.session import get_session
 from app.models.user import User
@@ -14,6 +15,7 @@ from app.services.activity_service import ActivityService
 from app.services.session_service import SESSION_COOKIE_NAME, SessionService
 from app.services.user_service import UserService
 from app.templates import get_template_context, templates
+from app.utils.email import send_password_reset_email
 
 # Logger pour ce module
 logger = get_logger(__name__)
@@ -159,8 +161,21 @@ async def forgot_password_post(request: Request, email: str = Form(...), session
         # Stocker le code avec expiration de 15 minutes
         recovery_codes[email] = {"code": code, "expires_at": datetime.now() + timedelta(minutes=15), "attempts": 0}
 
-        # TODO: Envoyer le code par email
-        print(f"🔑 Code de récupération pour {email}: {code}")
+        # Envoyer le code par email
+        try:
+            email_sent = await send_password_reset_email(email, code)
+            if email_sent:
+                logger.info(f"✅ Email de récupération envoyé à {email}")
+            else:
+                logger.error(f"❌ Échec de l'envoi de l'email de récupération à {email}")
+                # Continuer quand même, le code est stocké (pour debug, on peut l'afficher en dev)
+                if settings.DEBUG:
+                    logger.warning(f"🔑 Code de récupération (dev seulement) pour {email}: {code}")
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de l'envoi de l'email de récupération à {email}: {e}")
+            # En mode debug, afficher le code pour faciliter les tests
+            if settings.DEBUG:
+                logger.warning(f"🔑 Code de récupération (dev seulement) pour {email}: {code}")
 
     # Rediriger vers la page de vérification
     verify_url = request.url_for("verify_recovery_code_get").include_query_params(email=email, success=True)

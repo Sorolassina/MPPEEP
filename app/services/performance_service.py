@@ -262,6 +262,7 @@ class PerformanceService:
         """Crée un nouvel indicateur de performance"""
         try:
             indicateur = IndicateurPerformance(
+                objectif_id=indicateur_data["objectif_id"],
                 nom=indicateur_data["nom"],
                 description=indicateur_data.get("description"),
                 formule_calcul=indicateur_data.get("formule_calcul"),

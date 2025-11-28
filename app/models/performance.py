@@ -107,6 +107,9 @@ class IndicateurPerformance(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
 
+    # Relation avec l'objectif (OBLIGATOIRE)
+    objectif_id: int = Field(foreign_key="objectif_performance.id", index=True)
+
     # Informations générales
     nom: str = Field(max_length=200, index=True)
     description: str | None = None

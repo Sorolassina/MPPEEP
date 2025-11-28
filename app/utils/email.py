@@ -4,6 +4,8 @@ Fonctions utilitaires pour l'envoi d'emails
 
 import logging
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,15 +18,15 @@ async def send_email(
     from_name: str | None = None,
 ) -> bool:
     """
-    Envoie un email
+    Envoie un email via SendGrid (si configuré) ou en mode simulation
 
     Args:
         to_email: Email(s) destinataire(s)
         subject: Sujet de l'email
         body: Contenu texte brut
         html_body: Contenu HTML (optionnel)
-        from_email: Email expéditeur
-        from_name: Nom expéditeur
+        from_email: Email expéditeur (utilise SENDGRID_FROM_EMAIL si non fourni)
+        from_name: Nom expéditeur (utilise SENDGRID_FROM_NAME si non fourni)
 
     Returns:
         True si envoyé avec succès, False sinon
@@ -36,21 +38,117 @@ async def send_email(
             "Contenu de l'email"
         )
     """
+    # Normaliser les emails (toujours une liste)
+    if isinstance(to_email, str):
+        to_email_list = [to_email]
+    else:
+        to_email_list = to_email
+
+    # Déterminer l'expéditeur
+    from_email_final = from_email or settings.SENDGRID_FROM_EMAIL
+    from_name_final = from_name or settings.SENDGRID_FROM_NAME
+
+    # Priorité 1: SendGrid si configuré
+    if settings.SENDGRID_API_KEY:
+        return await _send_via_sendgrid(
+            to_email_list=to_email_list,
+            subject=subject,
+            body=body,
+            html_body=html_body,
+            from_email=from_email_final,
+            from_name=from_name_final,
+        )
+
+    # Priorité 2: SMTP si configuré (TODO: implémenter SMTP)
+    if settings.SMTP_HOST and settings.SMTP_USER and settings.SMTP_PASSWORD:
+        logger.warning("⚠️  SMTP configuré mais non implémenté, passage en mode simulation")
+        # TODO: Implémenter l'envoi SMTP
+        # return await _send_via_smtp(...)
+
+    # Mode simulation (pour dev/debug)
+    logger.info(f"📧 [SIMULATION] Email envoyé à {', '.join(to_email_list)}: {subject}")
+    if settings.DEBUG:
+        print("=" * 60)
+        print("📧 EMAIL SIMULÉ (mode développement)")
+        print("=" * 60)
+        print(f"De: {from_name_final} <{from_email_final or 'non configuré'}>")
+        print(f"À: {', '.join(to_email_list)}")
+        print(f"Sujet: {subject}")
+        print(f"Corps texte:\n{body[:200]}...")
+        if html_body:
+            print(f"Corps HTML: [présent, {len(html_body)} caractères]")
+        print("=" * 60)
+    return True
+
+
+async def _send_via_sendgrid(
+    to_email_list: list[str],
+    subject: str,
+    body: str,
+    html_body: str | None = None,
+    from_email: str = "",
+    from_name: str = "",
+) -> bool:
+    """
+    Envoie un email via SendGrid API
+
+    Args:
+        to_email_list: Liste des emails destinataires
+        subject: Sujet de l'email
+        body: Contenu texte brut
+        html_body: Contenu HTML (optionnel)
+        from_email: Email expéditeur
+        from_name: Nom expéditeur
+
+    Returns:
+        True si envoyé avec succès, False sinon
+    """
     try:
-        # TODO: Implémenter l'envoi réel d'email
-        # Options : SMTP, SendGrid, AWS SES, Mailgun, etc.
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail, Email, Content
 
-        # Pour l'instant, juste logger
-        logger.info(f"📧 Email envoyé à {to_email}: {subject}")
-        print("📧 Email simulé:")
-        print(f"   To: {to_email}")
-        print(f"   Subject: {subject}")
-        print(f"   Body: {body[:100]}...")
+        # Vérifier que l'email expéditeur est configuré
+        if not from_email:
+            logger.error("❌ SENDGRID_FROM_EMAIL non configuré dans les paramètres")
+            return False
 
-        return True
+        # Créer le client SendGrid
+        sg = SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
 
+        # Préparer l'email
+        from_email_obj = Email(from_email, from_name) if from_name else Email(from_email)
+
+        # Créer l'objet Mail
+        message = Mail(
+            from_email=from_email_obj,
+            to_emails=to_email_list,
+            subject=subject,
+            plain_text_content=body,
+        )
+
+        # Ajouter le contenu HTML si présent
+        if html_body:
+            message.html_content = html_body
+
+        # Envoyer l'email
+        response = sg.send(message)
+
+        # Vérifier le statut de la réponse
+        if 200 <= response.status_code < 300:
+            logger.info(f"✅ Email envoyé via SendGrid à {', '.join(to_email_list)}: {subject}")
+            logger.debug(f"   Status: {response.status_code}")
+            return True
+        else:
+            logger.error(
+                f"❌ Erreur SendGrid (status {response.status_code}): {response.body.decode('utf-8') if response.body else 'Pas de détails'}"
+            )
+            return False
+
+    except ImportError:
+        logger.error("❌ Package sendgrid non installé. Installez-le avec: pip install sendgrid")
+        return False
     except Exception as e:
-        logger.error(f"❌ Erreur envoi email: {e}")
+        logger.error(f"❌ Erreur lors de l'envoi via SendGrid: {e}", exc_info=True)
         return False
 
 

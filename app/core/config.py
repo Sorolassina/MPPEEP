@@ -92,6 +92,9 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
+   
+    SENDGRID_FROM_EMAIL: str = "noreply@votre-domaine.com"
+    SENDGRID_FROM_NAME: str = "MPPEEP"
 
     # ============================================
     # MONITORING & LOGS
@@ -171,6 +174,9 @@ class Settings(BaseSettings):
         - Dev/Debug : vide (accès direct sans préfixe)
         - Prod : /mppeep (derrière reverse proxy)
         """
+        # Si ROOT_PATH est défini explicitement dans l'environnement, l'utiliser
+        if self.ROOT_PATH:
+            return self.ROOT_PATH
 
         # Sinon, automatique selon DEBUG
         if self.DEBUG:
