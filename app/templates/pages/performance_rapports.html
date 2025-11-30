@@ -3,7 +3,71 @@
 
 {% block title %}Rapports de Performance - {{ app_name }}{% endblock %}
 
-{% block styles %}{% endblock %}
+{% block styles %}
+<style>
+/* Styles pour les onglets RAP */
+.rap-tabs {
+    margin-top: 1.5rem;
+}
+
+.rap-tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid rgba(232, 106, 10, 0.2);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0;
+}
+
+.rap-tab-btn {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: rgba(15, 23, 42, 0.6);
+    font-weight: 500;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    top: 2px;
+}
+
+.rap-tab-btn:hover {
+    color: rgba(232, 106, 10, 0.8);
+    background: rgba(232, 106, 10, 0.05);
+}
+
+.rap-tab-btn.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    font-weight: 600;
+    background: rgba(232, 106, 10, 0.08);
+}
+
+.rap-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.rap-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -180,78 +244,326 @@
 </div>
 
 <!-- Modal pour le rapport annuel de performance -->
-<div id="rapportAnnuelModal" class="modal-xl performance-modal">
+<div id="rapportAnnuelModal" class="modal-fullscreen">
     <div class="modal-content performance-engagement-modal">
         <div class="modal-header">
-            <h2 class="modal-title">Préparer le rapport annuel de performance</h2>
+            <h2 class="modal-title">Révision du rapport annuel de performance</h2>
             <button type="button" class="modal-close" onclick="closeRapportAnnuelModal()">&times;</button>
         </div>
         <form id="rapportAnnuelForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_rapport_annuel_pdf') }}" data-endpoint-simpledoc="{{ url_for('performance_rapport_annuel_pdf_simpledoc') }}">
             <p class="performance-engagement-intro">
                 Renseignez les informations ci-dessous pour générer le rapport annuel de performance (format paysage).
             </p>
-            <button type="button" class="link-button performance-engagement-reset" onclick="applyRapportAnnuelDefaults()">
-                ↺ Remettre les valeurs de référence
-            </button>
-
-            <section>
-                <h3 class="performance-engagement-title">
-                    <span>📄</span> Informations générales
-                </h3>
-                <div class="performance-engagement-grid">
-                    <div class="form-group">
-                        <label for="rap_annee" class="form-label">Année du rapport *</label>
-                        <input type="number" id="rap_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="rap_section" class="form-label">Section *</label>
-                        <input type="text" id="rap_section" name="section" class="form-control" placeholder="SECTION 376" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="rap_ministere" class="form-label">Ministère *</label>
-                        <input type="text" id="rap_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="rap_titre_rapport" class="form-label">Titre du rapport *</label>
-                        <textarea id="rap_titre_rapport" name="titre_rapport" class="form-control" rows="3" placeholder="RAPPORT ANNUEL DE PERFORMANCE DU MINISTERE..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="rap_titre_annee" class="form-label">Titre année</label>
-                        <input type="text" id="rap_titre_annee" name="titre_annee" class="form-control" placeholder="AU TITRE DE L'ANNÉE">
-                    </div>
-                    <div class="form-group">
-                        <label for="rap_date_publication" class="form-label">Date de publication</label>
-                        <input type="text" id="rap_date_publication" name="date_publication" class="form-control" placeholder="Mai 2025">
+            
+            <!-- Système d'onglets -->
+            <div class="rap-tabs">
+                <div class="rap-tabs-nav">
+                    <button type="button" class="rap-tab-btn active" onclick="switchRapTab('infos-generales')" data-tab="infos-generales">
+                        <span>📄</span> Informations Générales
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRapTab('intro-generale')" data-tab="intro-generale">
+                        <span>📝</span> Introduction Générale
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRapTab('financement')" data-tab="financement">
+                        <span>🏛️</span> Ministère
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRapTab('conclusion')" data-tab="conclusion">
+                        <span>📊</span> Programme
+                    </button>
+                </div>
+                
+                <!-- Onglet 1: Informations Générales -->
+                <div id="tab-infos-generales" class="rap-tab-content active">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <!-- Ligne 1: Année | Section | Date publication -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_annee" class="form-label">Année du rapport *</label>
+                                <input type="number" id="rap_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_section" class="form-label">Section *</label>
+                                <input type="text" id="rap_section" name="section" class="form-control" placeholder="SECTION 376" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_date_publication" class="form-label">Date de publication</label>
+                                <input type="month" id="rap_date_publication" name="date_publication" class="form-control">
+                                <span class="performance-engagement-hint">Mois et année de publication (MM/AAAA).</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 2: Ministère -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_ministere" class="form-label">Ministère *</label>
+                                <input type="text" id="rap_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required style="width: 100%;">
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 3: Titre | Sous-titre -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="rap_titre_rapport" class="form-label">Titre du rapport *</label>
+                                <textarea id="rap_titre_rapport" name="titre_rapport" class="form-control" rows="4" placeholder="RAPPORT ANNUEL DE PERFORMANCE DU MINISTERE..." style="min-height: 100px; width: 100%;" required></textarea>
+                                <span class="performance-engagement-hint">Titre complet du rapport tel qu'il apparaîtra sur la page de couverture.</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_titre_annee" class="form-label">Sous-titre année</label>
+                                <input type="text" id="rap_titre_annee" name="titre_annee" class="form-control" placeholder="AU TITRE DE L'ANNÉE">
+                                <span class="performance-engagement-hint">Sous-titre optionnel pour l'année (ex: "AU TITRE DE L'ANNÉE 2024").</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Section Références (déplacée depuis l'onglet Références) -->
+                        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid rgba(232, 106, 10, 0.2);">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 1rem;">
+                                📑 Références
+                            </h3>
+                            <div class="performance-upload-group">
+                                <label for="rap_logo_path" class="form-label">Logo/Emblème</label>
+                                <div class="performance-upload-row">
+                                    <input type="text" id="rap_logo_path" name="logo_path" class="form-control" placeholder="images/logo.webp">
+                                    <label class="performance-upload-button">
+                                        <input type="file" id="rap_logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('rap_logo_path')">
+                                        📁 Joindre
+                                    </label>
+                                </div>
+                                <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5 MB)</span>
+                                <div class="performance-upload-preview" id="rap_logo_path_preview_wrapper">
+                                    <img id="rap_logo_path_preview" alt="Prévisualisation du logo">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </section>
-
-            <section>
-                <h3 class="performance-engagement-title">
-                    <span>📑</span> Références et visuels
-                </h3>
-                <div class="performance-engagement-grid">
-                    <div class="performance-upload-group">
-                        <label for="rap_logo_path" class="form-label">Logo/Emblème</label>
-                        <div class="performance-upload-row">
-                            <input type="text" id="rap_logo_path" name="logo_path" class="form-control" placeholder="images/logo.webp">
-                            <label class="performance-upload-button">
-                                <input type="file" id="rap_logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('rap_logo_path')">
-                                📁 Joindre
-                            </label>
+                
+                <!-- Onglet 2: Ministère -->
+                <div id="tab-financement" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>🏛️ Section III : FINANCEMENT GLOBAL DU MINISTÈRE</strong><br>
+                                Personnalisez les textes d'interprétation du financement. Les montants budgétaires sont chargés automatiquement depuis la base de données.
+                            </p>
                         </div>
-                        <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5 MB)</span>
-                        <div class="performance-upload-preview" id="rap_logo_path_preview_wrapper">
-                            <img id="rap_logo_path_preview" alt="Prévisualisation du logo">
+                        
+                        <!-- Raisons de variation -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_financement_raisons" class="form-label">Raisons de la variation budgétaire</label>
+                                <textarea id="rap_financement_raisons" name="rap_financement_raisons" class="form-control" rows="4" placeholder="le rattachement en cours de gestion des crédits de la SONAPIE...&#10;la création en cours de gestion du projet de recensement..." style="min-height: 100px; width: 100%;"></textarea>
+                                <span class="performance-engagement-hint">Liste des raisons expliquant la variation budgétaire (augmentation ou diminution). Une raison par ligne. Si vide, ce champ ne sera pas affiché dans le rapport.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Note de comparaison -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_financement_note_comparaison" class="form-label">Note (NB) - Comparaison N-1 et N</label>
+                                <textarea id="rap_financement_note_comparaison" name="rap_financement_note_comparaison" class="form-control" rows="6" placeholder="NB : Toute comparaison entre le financement global du ministère pour {annee-1} et {annee}..." style="min-height: 150px; width: 100%;"></textarea>
+                                <span class="performance-engagement-hint">Note explicative sur la difficulté de comparer les budgets entre années. Utilisez {annee-1}, {annee}, {sigle} comme variables.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Commentaires d'analyse d'exécution par type de dépense -->
+                        <div style="background: rgba(0, 123, 255, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #007bff; margin-top: 1rem;">
+                            <p style="margin: 0 0 1rem 0; color: rgba(15, 23, 42, 0.8); font-weight: bold;">
+                                📊 Commentaires d'analyse d'exécution budgétaire
+                            </p>
+                            <p style="margin: 0 0 1rem 0; color: rgba(15, 23, 42, 0.7); font-size: 0.9rem;">
+                                Personnalisez les commentaires pour chaque type de dépense dans l'analyse d'exécution. Si vide, un texte générique sera utilisé.
+                            </p>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <!-- Commentaire Personnel -->
+                                <div class="form-group">
+                                    <label for="rap_financement_analyse_personnel" class="form-label">Commentaire - Dépenses de personnel</label>
+                                    <textarea id="rap_financement_analyse_personnel" name="rap_financement_analyse_personnel" class="form-control" rows="2" placeholder="Cette exécution de presque 100%, témoigne d'une promptitude dans la gestion des dépenses de personnel au sein du ministère." style="min-height: 60px;"></textarea>
+                                </div>
+                                
+                                <!-- Commentaire Biens et services -->
+                                <div class="form-group">
+                                    <label for="rap_financement_analyse_biens" class="form-label">Commentaire - Biens et services</label>
+                                    <textarea id="rap_financement_analyse_biens" name="rap_financement_analyse_biens" class="form-control" rows="2" placeholder="Commentaire sur l'exécution des biens et services..." style="min-height: 60px;"></textarea>
+                                </div>
+                                
+                                <!-- Commentaire Transferts -->
+                                <div class="form-group">
+                                    <label for="rap_financement_analyse_transferts" class="form-label">Commentaire - Transferts</label>
+                                    <textarea id="rap_financement_analyse_transferts" name="rap_financement_analyse_transferts" class="form-control" rows="2" placeholder="ce qui reflète une gestion rigoureuse des engagements financiers." style="min-height: 60px;"></textarea>
+                                </div>
+                                
+                                <!-- Commentaire Investissements -->
+                                <div class="form-group">
+                                    <label for="rap_financement_analyse_investissements" class="form-label">Commentaire - Investissements</label>
+                                    <textarea id="rap_financement_analyse_investissements" name="rap_financement_analyse_investissements" class="form-control" rows="2" placeholder="Commentaire sur l'exécution des investissements..." style="min-height: 60px;"></textarea>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
+                
+                <!-- Onglet 4: Programme -->
+                <div id="tab-conclusion" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>📊 Section IV : Points Positifs, Difficultés, Recommandations et Conclusion</strong><br>
+                                Personnalisez les textes pour les sections finales du rapport <strong>par programme</strong>.
+                            </p>
+                        </div>
+                        
+                        <!-- Sélecteur de programme -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_conclusion_programme" class="form-label">Sélectionner le programme *</label>
+                                <select id="rap_conclusion_programme" name="rap_conclusion_programme" class="form-control" required onchange="loadProgrammeConclusionData()">
+                                    <option value="">-- Sélectionner un programme --</option>
+                                </select>
+                                <span class="performance-engagement-hint">Sélectionnez le programme pour lequel vous souhaitez saisir les données.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Points positifs -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_points_positifs" class="form-label">Points positifs tirés de l'exercice</label>
+                                <textarea id="rap_points_positifs" name="rap_points_positifs" class="form-control" rows="8" placeholder="la coordination et la planification rigoureuse des activités&#10;l'importance de la sécurisation du patrimoine immobilier de l'Etat&#10;la gestion optimisée des ressources humaines..." style="min-height: 200px; width: 100%;"></textarea>
+                                <span class="performance-engagement-hint">Liste des points positifs (un point par ligne). Utilisez {annee} comme variable.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Difficultés rencontrées -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_difficultes" class="form-label">Difficultés rencontrées</label>
+                                <textarea id="rap_difficultes" name="rap_difficultes" class="form-control" rows="4" placeholder="La principale difficulté rencontrée concerne le manque de formations continues adaptées..." style="min-height: 120px; width: 100%;"></textarea>
+                                <span class="performance-engagement-hint">Description des difficultés rencontrées au cours de l'exercice.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Recommandations -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_recommandations" class="form-label">Recommandations</label>
+                                <textarea id="rap_recommandations" name="rap_recommandations" class="form-control" rows="4" placeholder="Il est recommandé de mettre en place, des programmes de formation continue adaptés..." style="min-height: 120px; width: 100%;"></textarea>
+                                <span class="performance-engagement-hint">Recommandations pour améliorer les performances futures.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Conclusion -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_conclusion" class="form-label">Conclusion</label>
+                                <textarea id="rap_conclusion" name="rap_conclusion" class="form-control" rows="8" placeholder="L'année {annee} a été marquée par la mise en œuvre rigoureuse du programme..." style="min-height: 200px; width: 100%;"></textarea>
+                                <span class="performance-engagement-hint">Texte de conclusion du rapport. Utilisez {annee}, {titre_programme}, {taux_execution}, etc. comme variables.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet 2: Introduction Générale -->
+                <div id="tab-intro-generale" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <!-- Ligne 1: Nom du ministre | Date nomination | Structure cabinet -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="rap_ministre_nom" class="form-label">Nom du ministre *</label>
+                                <input type="text" id="rap_ministre_nom" name="rap_ministre_nom" class="form-control" placeholder="Monsieur Moussa SANOGO" required>
+                                <span class="performance-engagement-hint">Nom complet du ministre (civilité + nom).</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_ministre_date_nomination" class="form-label">Date de nomination *</label>
+                                <input type="date" id="rap_ministre_date_nomination" name="rap_ministre_date_nomination" class="form-control" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_structure_cabinet" class="form-label">Structure du Cabinet</label>
+                                <input type="text" id="rap_structure_cabinet" name="rap_structure_cabinet" class="form-control" placeholder="Cabinet du Ministre">
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 2: Décret attribution numéro | Date -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_decret_attribution_numero" class="form-label">Décret d'attribution - Numéro *</label>
+                                <input type="text" id="rap_decret_attribution_numero" name="rap_decret_attribution_numero" class="form-control" placeholder="n° 2023-820" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_decret_attribution_date" class="form-label">Décret d'attribution - Date *</label>
+                                <input type="date" id="rap_decret_attribution_date" name="rap_decret_attribution_date" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 3: Mission du ministère -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_mission_ministere" class="form-label">Mission du ministère *</label>
+                                <textarea id="rap_mission_ministere" name="rap_mission_ministere" class="form-control" rows="6" placeholder="Mettre en œuvre la politique du Gouvernement en matière de..." required style="min-height: 120px; width: 100%;"></textarea>
+                                <span class="performance-engagement-hint">Mission principale du ministère telle que définie dans le décret d'attribution.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 4: Structure organisationnelle -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_nb_directions_centrales" class="form-label">Nombre de Directions Centrales</label>
+                                <input type="number" id="rap_nb_directions_centrales" name="rap_nb_directions_centrales" class="form-control" min="0" step="1" placeholder="3" readonly>
+                                <span class="performance-engagement-hint">Calculé automatiquement.</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_nb_services" class="form-label">Nombre de Services</label>
+                                <input type="number" id="rap_nb_services" name="rap_nb_services" class="form-control" min="0" step="1" placeholder="5" readonly>
+                                <span class="performance-engagement-hint">Calculé automatiquement.</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_nb_directions_generales" class="form-label">Nombre de Directions Générales</label>
+                                <input type="number" id="rap_nb_directions_generales" name="rap_nb_directions_generales" class="form-control" min="0" step="1" placeholder="2" readonly>
+                                <span class="performance-engagement-hint">Calculé automatiquement.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 5: Décret organisation -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_decret_organisation_numero" class="form-label">Décret d'organisation - Numéro *</label>
+                                <input type="text" id="rap_decret_organisation_numero" name="rap_decret_organisation_numero" class="form-control" placeholder="n° 2023-963" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_decret_organisation_date" class="form-label">Décret d'organisation - Date *</label>
+                                <input type="date" id="rap_decret_organisation_date" name="rap_decret_organisation_date" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 6: Texte de contexte -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rap_contexte_texte" class="form-label">Contexte du rapport *</label>
+                                <textarea id="rap_contexte_texte" name="rap_contexte_texte" class="form-control" rows="8" placeholder="En 2024, les activités du ministère se sont déroulées dans un environnement..." style="min-height: 180px; width: 100%;" required></textarea>
+                                <span class="performance-engagement-hint">Texte de contexte pour l'introduction générale du rapport. Utilisez {annee}, {ministere}, {decret_organisation_numero}, {decret_organisation_date} comme variables.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 7: Structures du rapport -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_rapport_structure_premiere_partie" class="form-label">Structure Première Partie *</label>
+                                <textarea id="rap_rapport_structure_premiere_partie" name="rap_rapport_structure_premiere_partie" class="form-control" rows="5" placeholder='faire la présentation générale des programmes&#10;rappeler la performance générale&#10;analyse de la performance ministérielle' style="min-height: 120px; width: 100%;" required></textarea>
+                                <span class="performance-engagement-hint">Liste des éléments de la première partie du rapport (un élément par ligne, ou séparés par ";").</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_rapport_structure_seconde_partie" class="form-label">Structure Seconde Partie *</label>
+                                <textarea id="rap_rapport_structure_seconde_partie" name="rap_rapport_structure_seconde_partie" class="form-control" rows="5" placeholder='la présentation de la stratégie&#10;les réalisations du programme&#10;l&#39;analyse de la performance' style="min-height: 120px; width: 100%;" required></textarea>
+                                <span class="performance-engagement-hint">Liste des éléments de la seconde partie du rapport (un élément par ligne, ou séparés par ";").</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </form>
         <div class="modal-footer performance-engagement-footer">
             <button type="button" class="btn btn-secondary" onclick="closeRapportAnnuelModal()">Annuler</button>
-            <button type="button" class="btn btn-info" onclick="generateRapportAnnuelSimpleDoc()">🧪 Tester SimpleDocTemplate</button>
-            <button type="submit" form="rapportAnnuelForm" class="btn btn-primary">Générer le PDF</button>
+            <button type="button" class="btn btn-info" onclick="generateRapportAnnuelSimpleDoc('brouillon')">📝 Générer brouillon</button>
+            <button type="button" class="btn btn-primary" onclick="generateRapportAnnuelSimpleDoc('final')">📄 Générer le rapport final</button>
         </div>
     </div>
 </div>
@@ -752,23 +1064,530 @@ async function uploadEngagementPhoto(field) {
 }
 
 // Fonctions pour ouvrir/fermer la modal
-function openRapportAnnuelModal() {
+async function openRapportAnnuelModal() {
     const modal = document.getElementById('rapportAnnuelModal');
     if (!modal) {
         return;
     }
     modal.classList.add('show');
     document.body.classList.add('modal-open');
-    applyRapportAnnuelDefaults();
+    
+    // Afficher le premier onglet
+    switchRapTab('infos-generales');
+    
+    // Charger les données RAP depuis la base de données
+    try {
+        showGlobalLoading('Chargement des données...', 'Récupération des informations depuis la base de données');
+        const response = await fetch("{{ url_for('get_rap_data_api') }}");
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const data = result.data;
+            const form = document.getElementById('rapportAnnuelForm');
+            if (form) {
+                // Remplir les champs de l'introduction générale
+                setFieldValue('rap_ministre_nom', data.ministre_nom);
+                setFieldValue('rap_ministre_date_nomination', data.ministre_date_nomination);
+                setFieldValue('rap_decret_attribution_numero', data.decret_attribution_numero);
+                setFieldValue('rap_decret_attribution_date', data.decret_attribution_date);
+                setFieldValue('rap_mission_ministere', data.mission_ministere);
+                setFieldValue('rap_structure_cabinet', data.structure_cabinet);
+                setFieldValue('rap_nb_directions_centrales', data.nb_directions_centrales);
+                setFieldValue('rap_nb_services', data.nb_services);
+                setFieldValue('rap_nb_directions_generales', data.nb_directions_generales);
+                setFieldValue('rap_decret_organisation_numero', data.decret_organisation_numero);
+                setFieldValue('rap_decret_organisation_date', data.decret_organisation_date);
+                setFieldValue('rap_contexte_texte', data.contexte_texte);
+                
+                // Gérer les structures (convertir JSON vers format simple pour l'affichage)
+                if (data.rapport_structure_premiere_partie) {
+                    const premierePartie = convertJsonArrayToSimpleList(data.rapport_structure_premiere_partie);
+                    setFieldValue('rap_rapport_structure_premiere_partie', premierePartie);
+                }
+                
+                if (data.rapport_structure_seconde_partie) {
+                    const secondePartie = convertJsonArrayToSimpleList(data.rapport_structure_seconde_partie);
+                    setFieldValue('rap_rapport_structure_seconde_partie', secondePartie);
+                }
+                
+                // Remplir les champs des informations générales
+                setFieldValue('rap_annee', data.annee);
+                setFieldValue('rap_section', data.section);
+                setFieldValue('rap_ministere', data.ministere);
+                setFieldValue('rap_titre_rapport', data.titre_rapport);
+                setFieldValue('rap_titre_annee', data.titre_annee);
+                setFieldValue('rap_date_publication', data.date_publication);
+                setFieldValue('rap_logo_path', data.logo_path);
+                
+                // Mettre à jour la prévisualisation du logo si présent
+                if (data.logo_path) {
+                    updateEngagementPhotoPreview('rap_logo_path', data.logo_path);
+                }
+                
+                // Remplir les champs de financement
+                setFieldValue('rap_financement_raisons', data.financement_raisons || '');
+                setFieldValue('rap_financement_note_comparaison', data.financement_note_comparaison || '');
+                setFieldValue('rap_financement_analyse_personnel', data.financement_analyse_personnel || '');
+                setFieldValue('rap_financement_analyse_biens', data.financement_analyse_biens || '');
+                setFieldValue('rap_financement_analyse_transferts', data.financement_analyse_transferts || '');
+                setFieldValue('rap_financement_analyse_investissements', data.financement_analyse_investissements || '');
+                
+                // Charger la liste des programmes pour le sélecteur
+                await loadProgrammesForConclusion();
+                
+                // Réinitialiser le code du programme actuellement chargé
+                currentLoadedProgrammeCode = null;
+            }
+        } else {
+            console.warn("Les données RAP n'ont pas pu être chargées depuis la base de données");
+            // Si le chargement échoue, appliquer les valeurs par défaut
+            applyRapportAnnuelDefaults();
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement des données RAP:", error);
+        if (typeof showError === "function") {
+            showError('Erreur lors du chargement des données depuis la base de données. Les valeurs par défaut seront utilisées.');
+        }
+        // En cas d'erreur, appliquer les valeurs par défaut
+        applyRapportAnnuelDefaults();
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+    }
 }
 
-function closeRapportAnnuelModal() {
+// Charger la liste des programmes pour le sélecteur de conclusion
+async function loadProgrammesForConclusion() {
+    try {
+        const response = await fetch("{{ url_for('api_list_programmes_ref') }}");
+        const programmes = await response.json();
+        
+        const select = document.getElementById('rap_conclusion_programme');
+        if (select) {
+            // Vider le sélecteur sauf l'option par défaut
+            select.innerHTML = '<option value="">-- Sélectionner un programme --</option>';
+            
+            // Ajouter chaque programme
+            programmes.forEach(prog => {
+                if (prog.actif !== false) { // Afficher seulement les programmes actifs
+                    const option = document.createElement('option');
+                    option.value = prog.code; // Utiliser le code comme identifiant
+                    option.textContent = `${prog.code} - ${prog.libelle}`;
+                    select.appendChild(option);
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement des programmes:", error);
+    }
+}
+
+// Variable pour stocker le code du programme actuellement chargé
+let currentLoadedProgrammeCode = null;
+
+// Charger les données de conclusion pour un programme sélectionné
+async function loadProgrammeConclusionData() {
+    const select = document.getElementById('rap_conclusion_programme');
+    const programmeCode = select ? select.value : '';
+    
+    // Sauvegarder automatiquement les données du programme précédent avant de changer
+    if (currentLoadedProgrammeCode && currentLoadedProgrammeCode !== programmeCode) {
+        // Afficher un message de sauvegarde en cours
+        const previousOption = select.querySelector(`option[value="${currentLoadedProgrammeCode}"]`);
+        if (previousOption && typeof showGlobalLoading === "function") {
+            showGlobalLoading('Sauvegarde en cours...', `Enregistrement des données pour ${previousOption.textContent}`);
+        }
+        
+        await saveCurrentProgrammeConclusionData(currentLoadedProgrammeCode);
+        
+        // Masquer le message de chargement
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+    }
+    
+    if (!programmeCode) {
+        // Vider les champs si aucun programme n'est sélectionné
+        setFieldValue('rap_points_positifs', '');
+        setFieldValue('rap_difficultes', '');
+        setFieldValue('rap_recommandations', '');
+        setFieldValue('rap_conclusion', '');
+        currentLoadedProgrammeCode = null;
+        return;
+    }
+    
+    try {
+        const response = await fetch("{{ url_for('get_rap_data_api') }}");
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const data = result.data;
+            // Les données de conclusion sont organisées par programme
+            const conclusionData = data.conclusion_interpretations || {};
+            const programmeData = conclusionData[programmeCode] || {};
+            
+            // Charger les données du programme sélectionné
+            setFieldValue('rap_points_positifs', programmeData.points_positifs ? programmeData.points_positifs.join('\n') : '');
+            setFieldValue('rap_difficultes', programmeData.difficultes || '');
+            setFieldValue('rap_recommandations', programmeData.recommandations || '');
+            setFieldValue('rap_conclusion', programmeData.conclusion || '');
+            
+            // Mettre à jour le code du programme actuellement chargé
+            currentLoadedProgrammeCode = programmeCode;
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement des données de conclusion:", error);
+    }
+}
+
+// Sauvegarder les données de conclusion du programme actuel
+async function saveCurrentProgrammeConclusionData(programmeCode) {
+    if (!programmeCode) {
+        return;
+    }
+    
+    try {
+        const form = document.getElementById('rapportAnnuelForm');
+        if (!form) {
+            return;
+        }
+        
+        const formData = new FormData(form);
+        const saveData = new FormData();
+        
+        // Collecter uniquement les données de conclusion pour ce programme
+        const pointsPositifs = formData.get('rap_points_positifs') || '';
+        const difficultes = formData.get('rap_difficultes') || '';
+        const recommandations = formData.get('rap_recommandations') || '';
+        const conclusion = formData.get('rap_conclusion') || '';
+        
+        // Ne sauvegarder que si au moins un champ est rempli
+        if (pointsPositifs.trim() || difficultes.trim() || recommandations.trim() || conclusion.trim()) {
+            saveData.append('rap_conclusion_programme_code', programmeCode);
+            if (pointsPositifs.trim()) {
+                saveData.append('rap_conclusion_points_positifs', pointsPositifs);
+            }
+            if (difficultes.trim()) {
+                saveData.append('rap_conclusion_difficultes', difficultes);
+            }
+            if (recommandations.trim()) {
+                saveData.append('rap_conclusion_recommandations', recommandations);
+            }
+            if (conclusion.trim()) {
+                saveData.append('rap_conclusion_conclusion', conclusion);
+            }
+            
+            // Envoyer uniquement les données de conclusion (sans les autres champs)
+            const response = await fetch("{{ url_for('save_rap_data_api') }}", {
+                method: 'POST',
+                body: saveData
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                console.log(`✅ Données de conclusion sauvegardées pour le programme ${programmeCode}`);
+                
+                // Afficher un message de confirmation discret
+                const select = document.getElementById('rap_conclusion_programme');
+                if (select) {
+                    const option = select.querySelector(`option[value="${programmeCode}"]`);
+                    if (option) {
+                        // Ajouter un indicateur visuel temporaire
+                        showProgrammeSaveIndicator(programmeCode, option.textContent);
+                    }
+                }
+            } else {
+                console.warn(`⚠️ Erreur lors de la sauvegarde automatique pour le programme ${programmeCode}:`, result.error);
+                if (typeof showError === "function") {
+                    showError(`Erreur lors de la sauvegarde du programme ${programmeCode}`);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Erreur lors de la sauvegarde automatique des données de conclusion:", error);
+    }
+}
+
+// Afficher un indicateur visuel de sauvegarde pour un programme
+function showProgrammeSaveIndicator(programmeCode, programmeName) {
+    // Créer ou récupérer l'élément d'indicateur
+    let indicator = document.getElementById('programme-save-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'programme-save-indicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: slideInRight 0.3s ease;
+            max-width: 350px;
+        `;
+        document.body.appendChild(indicator);
+        
+        // Ajouter l'animation CSS si elle n'existe pas
+        if (!document.getElementById('programme-save-indicator-style')) {
+            const style = document.createElement('style');
+            style.id = 'programme-save-indicator-style';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes slideOutRight {
+                    from {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    // Mettre à jour le contenu
+    indicator.innerHTML = `
+        <span style="font-size: 1.2rem;">✓</span>
+        <span>Données sauvegardées pour<br><strong>${programmeName}</strong></span>
+    `;
+    
+    // Afficher l'indicateur
+    indicator.style.display = 'flex';
+    indicator.style.animation = 'slideInRight 0.3s ease';
+    
+    // Masquer après 3 secondes
+    setTimeout(() => {
+        indicator.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 300);
+    }, 3000);
+}
+
+// Fonction pour convertir une date française (ex: "17 octobre 2023") vers format ISO (YYYY-MM-DD)
+function convertFrenchDateToISO(frenchDate) {
+    if (!frenchDate || frenchDate.trim() === '') {
+        return '';
+    }
+    
+    const moisFr = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    
+    try {
+        // Nettoyer la chaîne
+        const dateStr = frenchDate.trim().toLowerCase();
+        
+        // Pattern: "17 octobre 2023" ou "17 oct 2023" ou "17/10/2023" ou "2023-10-17"
+        // Si c'est déjà en format ISO, le retourner tel quel
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            return dateStr;
+        }
+        
+        // Si c'est au format DD/MM/YYYY
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+            const parts = dateStr.split('/');
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        
+        // Si c'est au format "DD mois YYYY"
+        const parts = dateStr.split(' ');
+        if (parts.length >= 3) {
+            const jour = parseInt(parts[0], 10);
+            const moisNom = parts[1].toLowerCase();
+            const annee = parseInt(parts[2], 10);
+            
+            const moisIndex = moisFr.findIndex(m => m.startsWith(moisNom.substring(0, 3)));
+            if (moisIndex !== -1) {
+                const mois = (moisIndex + 1).toString().padStart(2, '0');
+                const jourStr = jour.toString().padStart(2, '0');
+                return `${annee}-${mois}-${jourStr}`;
+            }
+        }
+    } catch (error) {
+        console.warn(`Impossible de convertir la date "${frenchDate}" vers ISO:`, error);
+    }
+    
+    return '';
+}
+
+// Fonction pour convertir une date ISO (YYYY-MM-DD) vers format français (ex: "17 octobre 2023")
+function convertISOToFrenchDate(isoDate) {
+    if (!isoDate || isoDate.trim() === '') {
+        return '';
+    }
+    
+    const moisFr = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    
+    try {
+        // Si c'est déjà en format français, le retourner tel quel
+        if (/\d{1,2}\s+\w+\s+\d{4}/.test(isoDate)) {
+            return isoDate;
+        }
+        
+        // Parser ISO: YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+            const parts = isoDate.split('-');
+            const annee = parseInt(parts[0], 10);
+            const mois = parseInt(parts[1], 10) - 1;
+            const jour = parseInt(parts[2], 10);
+            
+            if (mois >= 0 && mois < 12) {
+                return `${jour} ${moisFr[mois]} ${annee}`;
+            }
+        }
+    } catch (error) {
+        console.warn(`Impossible de convertir la date ISO "${isoDate}" vers français:`, error);
+    }
+    
+    return isoDate; // Retourner la valeur originale si la conversion échoue
+}
+
+// Fonction pour convertir un mois/année (YYYY-MM) vers format français (ex: "Mai 2025")
+function convertMonthToFrench(monthDate) {
+    if (!monthDate || monthDate.trim() === '') {
+        return '';
+    }
+    
+    const moisFr = [
+        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    
+    try {
+        // Si c'est déjà en format français, le retourner tel quel
+        if (/^\w+\s+\d{4}$/.test(monthDate)) {
+            return monthDate;
+        }
+        
+        // Parser format mois: YYYY-MM
+        if (/^\d{4}-\d{2}$/.test(monthDate)) {
+            const parts = monthDate.split('-');
+            const annee = parseInt(parts[0], 10);
+            const mois = parseInt(parts[1], 10) - 1;
+            
+            if (mois >= 0 && mois < 12) {
+                return `${moisFr[mois]} ${annee}`;
+            }
+        }
+    } catch (error) {
+        console.warn(`Impossible de convertir le mois "${monthDate}" vers français:`, error);
+    }
+    
+    return monthDate; // Retourner la valeur originale si la conversion échoue
+}
+
+// Fonction pour convertir un mois/année français (ex: "Mai 2025") vers format ISO (YYYY-MM)
+function convertFrenchMonthToISO(frenchMonth) {
+    if (!frenchMonth || frenchMonth.trim() === '') {
+        return '';
+    }
+    
+    const moisFr = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    
+    try {
+        // Si c'est déjà en format ISO, le retourner tel quel
+        if (/^\d{4}-\d{2}$/.test(frenchMonth)) {
+            return frenchMonth;
+        }
+        
+        // Parser format français: "Mai 2025"
+        const parts = frenchMonth.trim().split(' ');
+        if (parts.length >= 2) {
+            const moisNom = parts[0].toLowerCase();
+            const annee = parseInt(parts[1], 10);
+            
+            const moisIndex = moisFr.findIndex(m => m.startsWith(moisNom.substring(0, 3)));
+            if (moisIndex !== -1) {
+                const mois = (moisIndex + 1).toString().padStart(2, '0');
+                return `${annee}-${mois}`;
+            }
+        }
+    } catch (error) {
+        console.warn(`Impossible de convertir le mois français "${frenchMonth}" vers ISO:`, error);
+    }
+    
+    return '';
+}
+
+function setFieldValue(id, value) {
+    const field = document.getElementById(id);
+    if (field && value !== undefined && value !== null) {
+        // Convertir les dates françaises vers ISO pour les champs date
+        if (field.type === 'date' && value) {
+            field.value = convertFrenchDateToISO(value) || '';
+        } else if (field.type === 'month' && value) {
+            field.value = convertFrenchMonthToISO(value) || '';
+        } else {
+            field.value = value;
+        }
+    }
+}
+
+function switchRapTab(tabName) {
+    // Masquer tous les contenus d'onglets
+    const allTabs = document.querySelectorAll('.rap-tab-content');
+    allTabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Désactiver tous les boutons d'onglets
+    const allButtons = document.querySelectorAll('.rap-tab-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // Afficher l'onglet sélectionné
+    const selectedTab = document.getElementById(`tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Activer le bouton correspondant
+    const selectedButton = document.querySelector(`.rap-tab-btn[data-tab="${tabName}"]`);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+}
+
+async function closeRapportAnnuelModal() {
+    // Sauvegarder automatiquement les données du programme actuellement sélectionné avant de fermer
+    if (currentLoadedProgrammeCode) {
+        await saveCurrentProgrammeConclusionData(currentLoadedProgrammeCode);
+    }
+    
     const modal = document.getElementById('rapportAnnuelModal');
     if (!modal) {
         return;
     }
     modal.classList.remove('show');
     document.body.classList.remove('modal-open');
+    
+    // Réinitialiser le code du programme actuellement chargé
+    currentLoadedProgrammeCode = null;
 }
 
 // Fonction pour appliquer les valeurs par défaut
@@ -790,11 +1609,166 @@ function applyRapportAnnuelDefaults() {
     updateEngagementPhotoPreview('rap_logo_path');
 }
 
-// Fonction pour soumettre le formulaire
-function handleRapportAnnuelSubmit(event) {
+// Fonction pour convertir un JSON array vers format simple (éléments séparés par \n ou ;)
+function convertJsonArrayToSimpleList(jsonValue) {
+    if (!jsonValue || jsonValue.trim() === '') {
+        return '';
+    }
+    
+    try {
+        // Si c'est déjà une chaîne JSON, la parser
+        let array;
+        if (typeof jsonValue === 'string') {
+            // Tester si c'est un JSON array
+            const trimmed = jsonValue.trim();
+            if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                array = JSON.parse(trimmed);
+            } else {
+                // Si ce n'est pas du JSON, retourner tel quel (format simple déjà)
+                return jsonValue;
+            }
+        } else if (Array.isArray(jsonValue)) {
+            array = jsonValue;
+        } else {
+            return jsonValue;
+        }
+        
+        // Convertir le tableau en format simple (une ligne par élément)
+        return array.join('\n');
+    } catch (error) {
+        // Si l'analyse JSON échoue, retourner la valeur originale
+        console.warn('Erreur conversion JSON vers format simple:', error);
+        return jsonValue;
+    }
+}
+
+// Fonction pour convertir le format simple vers JSON array
+function convertSimpleListToJsonArray(simpleValue) {
+    if (!simpleValue || simpleValue.trim() === '') {
+        return '[]';
+    }
+    
+    try {
+        // Si c'est déjà du JSON, le retourner tel quel
+        const trimmed = simpleValue.trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            // Valider que c'est du JSON valide
+            JSON.parse(trimmed);
+            return trimmed;
+        }
+        
+        // Sinon, convertir le format simple (séparateurs: \n ou ;)
+        let items = [];
+        
+        // Diviser par retours à la ligne d'abord
+        const lines = trimmed.split('\n');
+        
+        for (const line of lines) {
+            // Si une ligne contient des ";", la diviser aussi
+            if (line.includes(';')) {
+                const parts = line.split(';').map(p => p.trim()).filter(p => p);
+                items.push(...parts);
+            } else {
+                const trimmedLine = line.trim();
+                if (trimmedLine) {
+                    items.push(trimmedLine);
+                }
+            }
+        }
+        
+        // Filtrer les éléments vides et retourner en JSON
+        items = items.filter(item => item && item.trim());
+        return JSON.stringify(items);
+    } catch (error) {
+        console.warn('Erreur conversion format simple vers JSON:', error);
+        // En cas d'erreur, retourner un tableau vide
+        return '[]';
+    }
+}
+
+// Fonction pour sauvegarder les données dans la base
+async function saveRapData() {
+    const form = document.getElementById('rapportAnnuelForm');
+    if (!form) {
+        return { success: false, error: "Formulaire introuvable" };
+    }
+
+    const formData = new FormData(form);
+    const saveData = new FormData();
+
+    // Collecter tous les champs rap_* et les autres champs nécessaires
+    for (const [key, value] of formData.entries()) {
+        if (key.startsWith('rap_') || key === 'annee' || key === 'section' || key === 'ministere' || 
+            key === 'titre_rapport' || key === 'titre_annee' || key === 'date_publication' || key === 'logo_path' ||
+            key.startsWith('rap_financement_')) {
+            
+            // Exclure les champs de conclusion qui seront traités séparément par programme
+            if (key === 'rap_points_positifs' || key === 'rap_difficultes' || key === 'rap_recommandations' || key === 'rap_conclusion' || key === 'rap_conclusion_programme') {
+                continue;
+            }
+            
+            // Convertir les dates ISO vers format français pour la sauvegarde
+            let finalValue = value;
+            const field = form.querySelector(`[name="${key}"]`);
+            if (field) {
+                if (field.type === 'date' && value) {
+                    // Convertir ISO vers français pour l'affichage dans la base
+                    finalValue = convertISOToFrenchDate(value);
+                } else if (field.type === 'month' && value) {
+                    // Convertir YYYY-MM vers format français "Mois AAAA"
+                    finalValue = convertMonthToFrench(value);
+                } else if ((key === 'rap_rapport_structure_premiere_partie' || key === 'rap_rapport_structure_seconde_partie') && value) {
+                    // Convertir le format simple vers JSON pour la sauvegarde
+                    finalValue = convertSimpleListToJsonArray(value);
+                }
+            }
+            saveData.append(key, finalValue);
+        }
+    }
+    
+    // Traiter les données de conclusion par programme
+    const programmeCode = formData.get('rap_conclusion_programme');
+    if (programmeCode) {
+        // Construire l'objet de données pour ce programme
+        const pointsPositifs = formData.get('rap_points_positifs') || '';
+        const difficultes = formData.get('rap_difficultes') || '';
+        const recommandations = formData.get('rap_recommandations') || '';
+        const conclusion = formData.get('rap_conclusion') || '';
+        
+        // Envoyer les données avec le code du programme comme préfixe
+        saveData.append('rap_conclusion_programme_code', programmeCode);
+        if (pointsPositifs.trim()) {
+            saveData.append('rap_conclusion_points_positifs', pointsPositifs);
+        }
+        if (difficultes.trim()) {
+            saveData.append('rap_conclusion_difficultes', difficultes);
+        }
+        if (recommandations.trim()) {
+            saveData.append('rap_conclusion_recommandations', recommandations);
+        }
+        if (conclusion.trim()) {
+            saveData.append('rap_conclusion_conclusion', conclusion);
+        }
+    }
+
+    try {
+        const response = await fetch("{{ url_for('save_rap_data_api') }}", {
+            method: 'POST',
+            body: saveData
+        });
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error("Erreur lors de la sauvegarde:", error);
+        return { success: false, error: "Erreur lors de la sauvegarde des données" };
+    }
+}
+
+// Fonction pour soumettre le formulaire (sauvegarde + génération)
+async function handleRapportAnnuelSubmit(event) {
     event.preventDefault();
     const form = event.target;
-    const endpoint = form.dataset.endpoint;
+    const endpoint = form.dataset.endpointSimpledoc || form.dataset.endpoint;
     if (!endpoint) {
         if (typeof showWarning === "function") {
             showWarning("Impossible de déterminer l'URL de génération du PDF.");
@@ -802,39 +1776,62 @@ function handleRapportAnnuelSubmit(event) {
         return;
     }
 
+    // 1. Sauvegarder automatiquement les données du programme actuellement sélectionné
+    if (currentLoadedProgrammeCode) {
+        await saveCurrentProgrammeConclusionData(currentLoadedProgrammeCode);
+    }
+    
+    // 2. Sauvegarder toutes les autres données dans la base
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Sauvegarde des données...", "Enregistrement dans la base de données");
+    }
+
+    const saveResult = await saveRapData();
+    
+    if (!saveResult.success) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showError === "function") {
+            showError(saveResult.error || "Erreur lors de la sauvegarde des données");
+        }
+        return;
+    }
+
+    // 2. Préparer les paramètres pour la génération (uniquement les paramètres généraux)
     const params = new URLSearchParams();
     const formData = new FormData(form);
 
-    for (const [key, rawValue] of formData.entries()) {
-        let value = (rawValue || "").toString().trim();
-        if (!value) {
-            continue;
+    // Seulement les paramètres généraux (pas les données d'introduction qui sont maintenant en DB)
+    const generalParams = ['annee', 'section', 'ministere', 'titre_rapport', 'titre_annee', 'date_publication', 'logo_path'];
+    
+    for (const key of generalParams) {
+        const value = formData.get(key);
+        if (value && value.toString().trim()) {
+            let finalValue = value.toString().trim();
+            if (key === "annee") {
+                finalValue = finalValue.replace(/[^\d]/g, "");
+            }
+            if (finalValue) {
+                params.append(key, finalValue);
+            }
         }
+    }
 
-        if (key === "annee") {
-            value = value.replace(/[^\d]/g, "");
-        }
-
-        if (!value) {
-            continue;
-        }
-
-        params.append(key, value);
+    // 3. Générer le rapport (les données d'introduction seront chargées depuis la DB)
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Génération du PDF...", "Création du rapport avec les données sauvegardées");
     }
 
     const query = params.toString();
     const targetUrl = query ? `${endpoint}?${query}` : endpoint;
 
-    if (typeof showGlobalLoading === "function") {
-        showGlobalLoading("Génération du PDF...", "Veuillez patienter");
-    }
-
     closeRapportAnnuelModal();
     window.location.assign(targetUrl);
 }
 
-// Fonction pour tester la version SimpleDocTemplate
-function generateRapportAnnuelSimpleDoc() {
+// Fonction pour générer le rapport (brouillon ou final)
+async function generateRapportAnnuelSimpleDoc(mode = 'brouillon') {
     const form = document.getElementById('rapportAnnuelForm');
     if (!form) {
         if (typeof showWarning === "function") {
@@ -842,9 +1839,35 @@ function generateRapportAnnuelSimpleDoc() {
         }
         return;
     }
+
+    // 1. Sauvegarder automatiquement les données du programme actuellement sélectionné
+    if (currentLoadedProgrammeCode) {
+        await saveCurrentProgrammeConclusionData(currentLoadedProgrammeCode);
+    }
     
+    // 2. Sauvegarder toutes les autres données dans la base
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Sauvegarde des données...", "Enregistrement dans la base de données");
+    }
+
+    const saveResult = await saveRapData();
+    
+    if (!saveResult.success) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showError === "function") {
+            showError(saveResult.error || "Erreur lors de la sauvegarde des données");
+        }
+        return;
+    }
+    
+    // Préparer les paramètres pour la génération (uniquement les paramètres généraux)
     const endpoint = form.dataset.endpointSimpledoc;
     if (!endpoint) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
         if (typeof showWarning === "function") {
             showWarning("Endpoint SimpleDocTemplate introuvable.");
         }
@@ -854,29 +1877,32 @@ function generateRapportAnnuelSimpleDoc() {
     const params = new URLSearchParams();
     const formData = new FormData(form);
 
-    for (const [key, rawValue] of formData.entries()) {
-        let value = (rawValue || "").toString().trim();
-        if (!value) {
-            continue;
+    // Seulement les paramètres généraux (les données d'introduction sont maintenant en DB)
+    const generalParams = ['annee', 'section', 'ministere', 'titre_rapport', 'titre_annee', 'date_publication', 'logo_path'];
+    
+    for (const key of generalParams) {
+        const value = formData.get(key);
+        if (value && value.toString().trim()) {
+            let finalValue = value.toString().trim();
+            if (key === "annee") {
+                finalValue = finalValue.replace(/[^\d]/g, "");
+            }
+            if (finalValue) {
+                params.append(key, finalValue);
+            }
         }
+    }
+    
+    // Ajouter le paramètre mode (brouillon ou final)
+    params.append('mode', mode);
 
-        if (key === "annee") {
-            value = value.replace(/[^\d]/g, "");
-        }
-
-        if (!value) {
-            continue;
-        }
-
-        params.append(key, value);
+    // Générer le rapport (les données d'introduction seront chargées depuis la DB)
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Génération du PDF...", "Création du rapport avec les données sauvegardées");
     }
 
     const query = params.toString();
     const targetUrl = query ? `${endpoint}?${query}` : endpoint;
-
-    if (typeof showGlobalLoading === "function") {
-        showGlobalLoading("Génération du PDF (SimpleDocTemplate)...", "Veuillez patienter, cette version utilise SimpleDocTemplate pour gérer automatiquement le découpage des tableaux.");
-    }
 
     closeRapportAnnuelModal();
     window.location.assign(targetUrl);

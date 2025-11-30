@@ -1,0 +1,447 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Résultats Stratégiques - {{ app_name }}{% endblock %}
+
+{% block styles %}{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📊 Résultats Stratégiques',
+    breadcrumbs=[
+        {'name': 'Performance', 'url': url_for('performance_home')},
+        {'name': 'Résultats Stratégiques'}
+    ],
+    actions=[
+        {'label': '← Retour Performance', 'url': url_for('performance_home'), 'primary': False},
+        {'label': '➕ Nouveau Résultat', 'onclick': 'openCreateModal()', 'primary': True}
+    ]
+) }}
+
+<div class="performance-objectives-page">
+    <section class="objectives-actions">
+        <div class="objectives-cta">
+            <div class="objectives-cta-text">
+                <h2>Définir les résultats stratégiques</h2>
+                <p>Centralisez les résultats stratégiques liés aux orientations stratégiques et aux objectifs globaux.</p>
+            </div>
+            <div class="objectives-cta-actions">
+                <button type="button" class="btn btn-premium btn-primary" onclick="openCreateModal()">➕ Nouveau résultat</button>
+                <button type="button" class="btn btn-premium btn-secondary" onclick="loadResultats()">🔄 Actualiser</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="objectives-filters card filters-panel compact">
+        <div class="filters-header">
+            <div class="filters-heading">
+                <span class="filters-icon">🧭</span>
+                <div class="filters-text">
+                    <h3>Affiner l'affichage</h3>
+                    <p>Filtrez les résultats stratégiques pour une vue ciblée.</p>
+                </div>
+            </div>
+        </div>
+        <div class="filters-row">
+            <div class="filter-group">
+                <label class="filter-label" for="search-input">🔍 Recherche</label>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    class="form-control" 
+                    placeholder="Rechercher un résultat..." 
+                    oninput="filterResultats()"
+                >
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="filter-orientation">🎯 Orientation</label>
+                <select id="filter-orientation" class="form-control" onchange="filterResultats()">
+                    <option value="">Toutes</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="filter-actif">📌 Statut</label>
+                <select id="filter-actif" class="form-control" onchange="filterResultats()">
+                    <option value="">Tous</option>
+                    <option value="true">Actif</option>
+                    <option value="false">Inactif</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <section class="objectives-list-section">
+        <div id="resultats-list" class="objectives-grid">
+            <!-- resultats dynamiques -->
+        </div>
+    </section>
+</div>
+
+<!-- Modal de création/modification -->
+<div id="resultatModal" class="modal-md">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" class="modal-title">Nouveau Résultat Stratégique</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <form id="resultatForm" class="modal-body">
+            <input type="hidden" id="resultatId" name="resultat_id">
+            
+            <div class="form-group">
+                <label for="orientation_id" class="form-label">Orientation Stratégique *</label>
+                <select id="orientation_id" name="orientation_id" class="form-control" required>
+                    <option value="">Sélectionner une orientation...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="libelle" class="form-label">Libellé *</label>
+                <input type="text" id="libelle" name="libelle" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="4"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ordre" class="form-label">Ordre d'affichage</label>
+                    <input type="number" id="ordre" name="ordre" class="form-control" min="0" step="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="actif" class="form-label">Statut</label>
+                    <select id="actif" name="actif" class="form-control">
+                        <option value="true">Actif</option>
+                        <option value="false">Inactif</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// URLs générées par le serveur
+const API_URLS = {
+    list: "{{ url_for('get_resultats_api') }}",
+    create: "{{ url_for('create_resultat_api') }}",
+    detail: (id) => "{{ url_for('get_resultat_api', resultat_id=0) }}".replace('/0', `/${id}`),
+    update: (id) => "{{ url_for('update_resultat_api', resultat_id=0) }}".replace('/0', `/${id}`),
+    delete: (id) => "{{ url_for('delete_resultat_api', resultat_id=0) }}".replace('/0', `/${id}`),
+    orientations: "{{ url_for('get_orientations_api') }}"
+};
+
+let currentResultats = [];
+let currentOrientations = [];
+let editingResultatId = null;
+
+// Charger les données au démarrage
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+    loadOrientations();
+    loadResultats();
+});
+
+// Charger la liste des orientations stratégiques
+async function loadOrientations() {
+    try {
+        const response = await fetch(API_URLS.orientations);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentOrientations = result.data.filter(o => o.actif);
+            
+            // Remplir le select du modal
+            const selectModal = document.getElementById('orientation_id');
+            selectModal.innerHTML = '<option value="">Sélectionner une orientation...</option>';
+            currentOrientations.forEach(orient => {
+                const option = document.createElement('option');
+                option.value = orient.id;
+                option.textContent = orient.libelle;
+                selectModal.appendChild(option);
+            });
+            
+            // Remplir le select du filtre
+            const selectFilter = document.getElementById('filter-orientation');
+            selectFilter.innerHTML = '<option value="">Toutes</option>';
+            currentOrientations.forEach(orient => {
+                const option = document.createElement('option');
+                option.value = orient.id;
+                option.textContent = orient.libelle;
+                selectFilter.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des orientations:', error);
+    }
+}
+
+// Charger la liste des résultats stratégiques
+async function loadResultats() {
+    try {
+        showGlobalLoading('Chargement des résultats stratégiques...', 'Veuillez patienter');
+        
+        const response = await fetch(API_URLS.list);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentResultats = result.data;
+            displayResultats(result.data);
+        } else {
+            showError('Erreur lors du chargement des résultats stratégiques');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors du chargement des résultats stratégiques');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// Obtenir le libellé d'une orientation par son ID
+function getOrientationLibelle(orientationId) {
+    const orient = currentOrientations.find(o => o.id === orientationId);
+    return orient ? orient.libelle : 'Orientation inconnue';
+}
+
+// Afficher les résultats
+function displayResultats(resultats) {
+    const container = document.getElementById('resultats-list');
+    
+    if (resultats.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
+                <h3 class="empty-state-title">Aucun résultat stratégique</h3>
+                <p class="empty-state-message">
+                    Vous n'avez pas encore défini de résultats stratégiques.<br>
+                    Commencez par créer votre premier résultat stratégique pour structurer votre performance.
+                </p>
+                <button class="btn btn-premium btn-primary" onclick="openCreateModal()">
+                    ➕ Créer mon premier résultat
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    // Trier par orientation puis par ordre puis par libellé
+    const sortedResultats = [...resultats].sort((a, b) => {
+        if (a.orientation_id !== b.orientation_id) return a.orientation_id - b.orientation_id;
+        const orderA = a.ordre !== null ? a.ordre : 999;
+        const orderB = b.ordre !== null ? b.ordre : 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.libelle || '').localeCompare(b.libelle || '');
+    });
+    
+    container.innerHTML = sortedResultats.map(resultat => `
+        <article class="objective-card" data-id="${resultat.id}">
+            <div class="objective-top">
+                <div class="objective-icon">📊</div>
+                <span class="objective-status status-badge ${resultat.actif ? 'status-en-cours' : 'status-annule'}">
+                    ${resultat.actif ? 'Actif' : 'Inactif'}
+                </span>
+            </div>
+
+            <div class="objective-header">
+                <h3 class="objective-title">${resultat.libelle || 'Sans libellé'}</h3>
+                <div class="objective-actions">
+                    <button type="button" class="btn-action btn-premium btn-secondary btn-compact" onclick="editResultat(${resultat.id})" title="Modifier">✏️</button>
+                    <button type="button" class="btn-action btn-premium btn-danger btn-compact" onclick="deleteResultat(${resultat.id}, '${(resultat.libelle || '').replace(/'/g, '&#39;')}')" title="Supprimer">🗑️</button>
+                </div>
+            </div>
+
+            <p class="objective-description">${resultat.description || 'Aucune description'}</p>
+
+            <div class="objective-meta">
+                <div class="meta-item">
+                    <div class="meta-label">Orientation</div>
+                    <div class="meta-value">${getOrientationLibelle(resultat.orientation_id)}</div>
+                </div>
+                ${resultat.ordre !== null ? `
+                <div class="meta-item">
+                    <div class="meta-label">Ordre</div>
+                    <div class="meta-value">${resultat.ordre}</div>
+                </div>
+                ` : ''}
+                <div class="meta-item">
+                    <div class="meta-label">Créé le</div>
+                    <div class="meta-value">${new Date(resultat.created_at).toLocaleDateString('fr-FR')}</div>
+                </div>
+            </div>
+        </article>
+    `).join('');
+}
+
+// Filtrer les résultats
+function filterResultats() {
+    const searchInput = document.getElementById('search-input').value.toLowerCase();
+    const orientationFilter = document.getElementById('filter-orientation').value;
+    const actifFilter = document.getElementById('filter-actif').value;
+    
+    let filtered = currentResultats;
+    
+    if (searchInput) {
+        filtered = filtered.filter(resultat => 
+            (resultat.libelle || '').toLowerCase().includes(searchInput) || 
+            (resultat.description || '').toLowerCase().includes(searchInput)
+        );
+    }
+    
+    if (orientationFilter) {
+        filtered = filtered.filter(resultat => resultat.orientation_id === parseInt(orientationFilter));
+    }
+    
+    if (actifFilter) {
+        const actifValue = actifFilter === 'true';
+        filtered = filtered.filter(resultat => resultat.actif === actifValue);
+    }
+    
+    displayResultats(filtered);
+}
+
+// Fonctions pour gérer les modales
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+    }
+}
+
+// Ouvrir le modal de création
+function openCreateModal() {
+    editingResultatId = null;
+    document.getElementById('modalTitle').textContent = 'Nouveau Résultat Stratégique';
+    document.getElementById('resultatForm').reset();
+    document.getElementById('actif').value = 'true';
+    showModal('resultatModal');
+}
+
+// Modifier un résultat
+function editResultat(id) {
+    const resultat = currentResultats.find(r => r.id === id);
+    if (!resultat) return;
+    
+    editingResultatId = id;
+    document.getElementById('modalTitle').textContent = 'Modifier le Résultat Stratégique';
+    
+    document.getElementById('resultatId').value = resultat.id;
+    document.getElementById('orientation_id').value = resultat.orientation_id;
+    document.getElementById('libelle').value = resultat.libelle || '';
+    document.getElementById('description').value = resultat.description || '';
+    document.getElementById('ordre').value = resultat.ordre !== null ? resultat.ordre : '';
+    document.getElementById('actif').value = resultat.actif ? 'true' : 'false';
+    
+    showModal('resultatModal');
+}
+
+// Supprimer un résultat
+async function deleteResultat(id, libelle) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le résultat stratégique "${libelle}" ?\n\nCette action est irréversible.`)) {
+        return;
+    }
+    
+    try {
+        showGlobalLoading('Suppression en cours...', 'Veuillez patienter');
+        
+        const response = await fetch(API_URLS.delete(id), {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            loadResultats();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la suppression');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// Fermer le modal
+function closeModal() {
+    hideModal('resultatModal');
+    document.getElementById('resultatForm').reset();
+    editingResultatId = null;
+}
+
+// Soumettre le formulaire
+document.getElementById('resultatForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    try {
+        showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
+        
+        const formData = new FormData(this);
+        const resultatData = {
+            orientation_id: parseInt(formData.get('orientation_id')),
+            libelle: formData.get('libelle'),
+            description: formData.get('description') || null,
+            ordre: formData.get('ordre') ? parseInt(formData.get('ordre')) : null,
+            actif: formData.get('actif') === 'true'
+        };
+        
+        let url, method;
+        if (editingResultatId) {
+            url = API_URLS.update(editingResultatId);
+            method = 'POST';
+        } else {
+            url = API_URLS.create;
+            method = 'POST';
+        }
+        
+        const submitFormData = new FormData();
+        submitFormData.append('orientation_id', resultatData.orientation_id.toString());
+        submitFormData.append('libelle', resultatData.libelle);
+        if (resultatData.description) submitFormData.append('description', resultatData.description);
+        if (resultatData.ordre !== null) submitFormData.append('ordre', resultatData.ordre.toString());
+        submitFormData.append('actif', resultatData.actif.toString());
+        
+        const response = await fetch(url, {
+            method: method,
+            body: submitFormData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            closeModal();
+            loadResultats();
+        } else {
+            showError(result.error || 'Erreur lors de l\'enregistrement');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de l\'enregistrement');
+    } finally {
+        hideGlobalLoading();
+    }
+});
+</script>
+{% endblock %}
+

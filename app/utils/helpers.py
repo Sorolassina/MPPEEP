@@ -273,3 +273,193 @@ def safe_int(value: Any, default: int = 0) -> int:
         return int(float(value))
     except (ValueError, TypeError):
         return default
+
+
+def convert_french_date_to_iso_str(french_date: str) -> str | None:
+    """
+    Convertit une date française (ex: "17 octobre 2023") vers format ISO (ex: "2023-10-17")
+    
+    Args:
+        french_date: Date au format français (ex: "17 octobre 2023", "17/10/2023")
+        
+    Returns:
+        Date au format ISO "YYYY-MM-DD" ou None si conversion impossible
+        
+    Example:
+        convert_french_date_to_iso_str("17 octobre 2023") → "2023-10-17"
+        convert_french_date_to_iso_str("17/10/2023") → "2023-10-17"
+    """
+    if not french_date or not french_date.strip():
+        return None
+    
+    mois_fr = [
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ]
+    
+    try:
+        date_str = french_date.strip()
+        
+        # Si c'est déjà en format ISO, le retourner tel quel
+        if re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+            return date_str
+        
+        # Si c'est au format DD/MM/YYYY
+        if re.match(r'^\d{2}/\d{2}/\d{4}$', date_str):
+            parts = date_str.split('/')
+            return f"{parts[2]}-{parts[1]}-{parts[0]}"
+        
+        # Si c'est au format "DD mois YYYY"
+        parts = date_str.split()
+        if len(parts) >= 3:
+            jour = int(parts[0])
+            mois_nom = parts[1].lower()
+            annee = int(parts[2])
+            
+            # Trouver l'index du mois
+            mois_index = -1
+            for i, mois in enumerate(mois_fr):
+                if mois_nom.startswith(mois[:3]) or mois_nom == mois:
+                    mois_index = i
+                    break
+            
+            if mois_index != -1:
+                mois_str = str(mois_index + 1).zfill(2)
+                jour_str = str(jour).zfill(2)
+                return f"{annee}-{mois_str}-{jour_str}"
+    except (ValueError, IndexError, AttributeError) as e:
+        pass
+    
+    return None
+
+
+def convert_iso_to_french_date_str(iso_date: str) -> str | None:
+    """
+    Convertit une date ISO (ex: "2023-10-17") vers format français (ex: "17 octobre 2023")
+    
+    Args:
+        iso_date: Date au format ISO "YYYY-MM-DD"
+        
+    Returns:
+        Date au format français "DD mois YYYY" ou None si conversion impossible
+        
+    Example:
+        convert_iso_to_french_date_str("2023-10-17") → "17 octobre 2023"
+    """
+    if not iso_date or not iso_date.strip():
+        return None
+    
+    mois_fr = [
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ]
+    
+    try:
+        # Si c'est déjà en format français, le retourner tel quel
+        if re.match(r'\d{1,2}\s+\w+\s+\d{4}', iso_date):
+            return iso_date
+        
+        # Parser ISO: YYYY-MM-DD
+        if re.match(r'^\d{4}-\d{2}-\d{2}$', iso_date):
+            parts = iso_date.split('-')
+            annee = int(parts[0])
+            mois = int(parts[1]) - 1
+            jour = int(parts[2])
+            
+            if 0 <= mois < 12:
+                return f"{jour} {mois_fr[mois]} {annee}"
+    except (ValueError, IndexError) as e:
+        pass
+    
+    return None
+
+
+def convert_french_month_to_iso_str(french_month: str) -> str | None:
+    """
+    Convertit un mois français (ex: "Mai 2025") vers format ISO (ex: "2025-05")
+    
+    Args:
+        french_month: Mois au format français (ex: "Mai 2025", "mai 2025")
+        
+    Returns:
+        Mois au format ISO "YYYY-MM" ou None si conversion impossible
+        
+    Example:
+        convert_french_month_to_iso_str("Mai 2025") → "2025-05"
+        convert_french_month_to_iso_str("mai 2025") → "2025-05"
+    """
+    if not french_month or not french_month.strip():
+        return None
+    
+    mois_fr = [
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ]
+    
+    try:
+        month_str = french_month.strip()
+        
+        # Si c'est déjà en format ISO, le retourner tel quel
+        if re.match(r'^\d{4}-\d{2}$', month_str):
+            return month_str
+        
+        # Parser format français: "Mois AAAA" ou "mois AAAA"
+        parts = month_str.split()
+        if len(parts) >= 2:
+            mois_nom = parts[0].lower()
+            annee = int(parts[1])
+            
+            # Trouver l'index du mois
+            mois_index = -1
+            for i, mois in enumerate(mois_fr):
+                if mois_nom.startswith(mois[:3]) or mois_nom == mois:
+                    mois_index = i
+                    break
+            
+            if mois_index != -1:
+                mois_str = str(mois_index + 1).zfill(2)
+                return f"{annee}-{mois_str}"
+    except (ValueError, IndexError) as e:
+        pass
+    
+    return None
+
+
+def convert_iso_month_to_french_str(iso_month: str) -> str | None:
+    """
+    Convertit un mois ISO (ex: "2025-05") vers format français (ex: "Mai 2025")
+    
+    Args:
+        iso_month: Mois au format ISO "YYYY-MM"
+        
+    Returns:
+        Mois au format français "Mois AAAA" ou None si conversion impossible
+        
+    Example:
+        convert_iso_month_to_french_str("2025-05") → "Mai 2025"
+    """
+    if not iso_month or not iso_month.strip():
+        return None
+    
+    mois_fr = [
+        "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+        "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ]
+    
+    try:
+        # Si c'est déjà en format français, le retourner tel quel
+        if re.match(r'\w+\s+\d{4}', iso_month):
+            return iso_month
+        
+        # Parser ISO: YYYY-MM
+        if re.match(r'^\d{4}-\d{2}$', iso_month):
+            parts = iso_month.split('-')
+            annee = int(parts[0])
+            mois = int(parts[1]) - 1
+            
+            if 0 <= mois < 12:
+                return f"{mois_fr[mois]} {annee}"
+    except (ValueError, IndexError) as e:
+        pass
+    
+    return None

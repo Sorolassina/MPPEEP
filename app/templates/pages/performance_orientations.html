@@ -1,0 +1,378 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Orientations Stratégiques - {{ app_name }}{% endblock %}
+
+{% block styles %}{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='🎯 Orientations Stratégiques',
+    breadcrumbs=[
+        {'name': 'Performance', 'url': url_for('performance_home')},
+        {'name': 'Orientations Stratégiques'}
+    ],
+    actions=[
+        {'label': '← Retour Performance', 'url': url_for('performance_home'), 'primary': False},
+        {'label': '➕ Nouvelle Orientation', 'onclick': 'openCreateModal()', 'primary': True}
+    ]
+) }}
+
+<div class="performance-objectives-page">
+    <section class="objectives-actions">
+        <div class="objectives-cta">
+            <div class="objectives-cta-text">
+                <h2>Définir les orientations stratégiques</h2>
+                <p>Centralisez les orientations stratégiques du ministère qui guident les résultats et objectifs.</p>
+            </div>
+            <div class="objectives-cta-actions">
+                <button type="button" class="btn btn-premium btn-primary" onclick="openCreateModal()">➕ Nouvelle orientation</button>
+                <button type="button" class="btn btn-premium btn-secondary" onclick="loadOrientations()">🔄 Actualiser</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="objectives-filters card filters-panel compact">
+        <div class="filters-header">
+            <div class="filters-heading">
+                <span class="filters-icon">🧭</span>
+                <div class="filters-text">
+                    <h3>Affiner l'affichage</h3>
+                    <p>Filtrez les orientations stratégiques pour une vue ciblée.</p>
+                </div>
+            </div>
+        </div>
+        <div class="filters-row">
+            <div class="filter-group">
+                <label class="filter-label" for="search-input">🔍 Recherche</label>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    class="form-control" 
+                    placeholder="Rechercher une orientation..." 
+                    oninput="filterOrientations()"
+                >
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="filter-actif">📌 Statut</label>
+                <select id="filter-actif" class="form-control" onchange="filterOrientations()">
+                    <option value="">Tous</option>
+                    <option value="true">Actif</option>
+                    <option value="false">Inactif</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <section class="objectives-list-section">
+        <div id="orientations-list" class="objectives-grid">
+            <!-- orientations dynamiques -->
+        </div>
+    </section>
+</div>
+
+<!-- Modal de création/modification -->
+<div id="orientationModal" class="modal-md">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" class="modal-title">Nouvelle Orientation Stratégique</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <form id="orientationForm" class="modal-body">
+            <input type="hidden" id="orientationId" name="orientation_id">
+            
+            <div class="form-group">
+                <label for="libelle" class="form-label">Libellé *</label>
+                <input type="text" id="libelle" name="libelle" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="4"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ordre" class="form-label">Ordre d'affichage</label>
+                    <input type="number" id="ordre" name="ordre" class="form-control" min="0" step="1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="actif" class="form-label">Statut</label>
+                    <select id="actif" name="actif" class="form-control">
+                        <option value="true">Actif</option>
+                        <option value="false">Inactif</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// URLs générées par le serveur
+const API_URLS = {
+    list: "{{ url_for('get_orientations_api') }}",
+    create: "{{ url_for('create_orientation_api') }}",
+    detail: (id) => "{{ url_for('get_orientation_api', orientation_id=0) }}".replace('/0', `/${id}`),
+    update: (id) => "{{ url_for('update_orientation_api', orientation_id=0) }}".replace('/0', `/${id}`),
+    delete: (id) => "{{ url_for('delete_orientation_api', orientation_id=0) }}".replace('/0', `/${id}`)
+};
+
+let currentOrientations = [];
+let editingOrientationId = null;
+
+// Charger les orientations au démarrage
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+    loadOrientations();
+});
+
+// Charger la liste des orientations
+async function loadOrientations() {
+    try {
+        showGlobalLoading('Chargement des orientations stratégiques...', 'Veuillez patienter');
+        
+        const response = await fetch(API_URLS.list);
+        const result = await response.json();
+        
+        if (result.success) {
+            currentOrientations = result.data;
+            displayOrientations(result.data);
+        } else {
+            showError('Erreur lors du chargement des orientations stratégiques');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors du chargement des orientations stratégiques');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// Afficher les orientations
+function displayOrientations(orientations) {
+    const container = document.getElementById('orientations-list');
+    
+    if (orientations.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🎯</div>
+                <h3 class="empty-state-title">Aucune orientation stratégique</h3>
+                <p class="empty-state-message">
+                    Vous n'avez pas encore défini d'orientations stratégiques.<br>
+                    Commencez par créer votre première orientation stratégique pour structurer votre performance.
+                </p>
+                <button class="btn btn-premium btn-primary" onclick="openCreateModal()">
+                    ➕ Créer ma première orientation
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    // Trier par ordre puis par libellé
+    const sortedOrientations = [...orientations].sort((a, b) => {
+        const orderA = a.ordre !== null ? a.ordre : 999;
+        const orderB = b.ordre !== null ? b.ordre : 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.libelle || '').localeCompare(b.libelle || '');
+    });
+    
+    container.innerHTML = sortedOrientations.map(orient => `
+        <article class="objective-card" data-id="${orient.id}">
+            <div class="objective-top">
+                <div class="objective-icon">🎯</div>
+                <span class="objective-status status-badge ${orient.actif ? 'status-en-cours' : 'status-annule'}">
+                    ${orient.actif ? 'Actif' : 'Inactif'}
+                </span>
+            </div>
+
+            <div class="objective-header">
+                <h3 class="objective-title">${orient.libelle || 'Sans libellé'}</h3>
+                <div class="objective-actions">
+                    <button type="button" class="btn-action btn-premium btn-secondary btn-compact" onclick="editOrientation(${orient.id})" title="Modifier">✏️</button>
+                    <button type="button" class="btn-action btn-premium btn-danger btn-compact" onclick="deleteOrientation(${orient.id}, '${(orient.libelle || '').replace(/'/g, '&#39;')}')" title="Supprimer">🗑️</button>
+                </div>
+            </div>
+
+            <p class="objective-description">${orient.description || 'Aucune description'}</p>
+
+            <div class="objective-meta">
+                ${orient.ordre !== null ? `
+                <div class="meta-item">
+                    <div class="meta-label">Ordre</div>
+                    <div class="meta-value">${orient.ordre}</div>
+                </div>
+                ` : ''}
+                <div class="meta-item">
+                    <div class="meta-label">Créé le</div>
+                    <div class="meta-value">${new Date(orient.created_at).toLocaleDateString('fr-FR')}</div>
+                </div>
+            </div>
+        </article>
+    `).join('');
+}
+
+// Filtrer les orientations
+function filterOrientations() {
+    const searchInput = document.getElementById('search-input').value.toLowerCase();
+    const actifFilter = document.getElementById('filter-actif').value;
+    
+    let filtered = currentOrientations;
+    
+    if (searchInput) {
+        filtered = filtered.filter(orient => 
+            (orient.libelle || '').toLowerCase().includes(searchInput) || 
+            (orient.description || '').toLowerCase().includes(searchInput)
+        );
+    }
+    
+    if (actifFilter) {
+        const actifValue = actifFilter === 'true';
+        filtered = filtered.filter(orient => orient.actif === actifValue);
+    }
+    
+    displayOrientations(filtered);
+}
+
+// Fonctions pour gérer les modales
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('show');
+        document.body.classList.add('modal-open');
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.classList.remove('modal-open');
+    }
+}
+
+// Ouvrir le modal de création
+function openCreateModal() {
+    editingOrientationId = null;
+    document.getElementById('modalTitle').textContent = 'Nouvelle Orientation Stratégique';
+    document.getElementById('orientationForm').reset();
+    document.getElementById('actif').value = 'true';
+    showModal('orientationModal');
+}
+
+// Modifier une orientation
+function editOrientation(id) {
+    const orientation = currentOrientations.find(orient => orient.id === id);
+    if (!orientation) return;
+    
+    editingOrientationId = id;
+    document.getElementById('modalTitle').textContent = 'Modifier l\'Orientation Stratégique';
+    
+    document.getElementById('orientationId').value = orientation.id;
+    document.getElementById('libelle').value = orientation.libelle || '';
+    document.getElementById('description').value = orientation.description || '';
+    document.getElementById('ordre').value = orientation.ordre !== null ? orientation.ordre : '';
+    document.getElementById('actif').value = orientation.actif ? 'true' : 'false';
+    
+    showModal('orientationModal');
+}
+
+// Supprimer une orientation
+async function deleteOrientation(id, libelle) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer l'orientation stratégique "${libelle}" ?\n\nCette action est irréversible.`)) {
+        return;
+    }
+    
+    try {
+        showGlobalLoading('Suppression en cours...', 'Veuillez patienter');
+        
+        const response = await fetch(API_URLS.delete(id), {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            loadOrientations();
+        } else {
+            showError(result.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la suppression');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// Fermer le modal
+function closeModal() {
+    hideModal('orientationModal');
+    document.getElementById('orientationForm').reset();
+    editingOrientationId = null;
+}
+
+// Soumettre le formulaire
+document.getElementById('orientationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    try {
+        showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
+        
+        const formData = new FormData(this);
+        const orientationData = {
+            libelle: formData.get('libelle'),
+            description: formData.get('description') || null,
+            ordre: formData.get('ordre') ? parseInt(formData.get('ordre')) : null,
+            actif: formData.get('actif') === 'true'
+        };
+        
+        let url, method;
+        if (editingOrientationId) {
+            url = API_URLS.update(editingOrientationId);
+            method = 'POST';
+        } else {
+            url = API_URLS.create;
+            method = 'POST';
+        }
+        
+        const submitFormData = new FormData();
+        submitFormData.append('libelle', orientationData.libelle);
+        if (orientationData.description) submitFormData.append('description', orientationData.description);
+        if (orientationData.ordre !== null) submitFormData.append('ordre', orientationData.ordre.toString());
+        submitFormData.append('actif', orientationData.actif.toString());
+        
+        const response = await fetch(url, {
+            method: method,
+            body: submitFormData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess(result.message);
+            closeModal();
+            loadOrientations();
+        } else {
+            showError(result.error || 'Erreur lors de l\'enregistrement');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de l\'enregistrement');
+    } finally {
+        hideGlobalLoading();
+    }
+});
+</script>
+{% endblock %}
+

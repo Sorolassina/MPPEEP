@@ -13,7 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
-        extra="forbid",  # on verrouille
+        extra="ignore",  # ignore les variables non définies (mais utilise celles définies)
         case_sensitive=False,  # accepte MIN/maj dans .env
         env_nested_delimiter="__",
     )
@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
-   
+    SENDGRID_API: str = ""
     SENDGRID_FROM_EMAIL: str = "noreply@votre-domaine.com"
     SENDGRID_FROM_NAME: str = "MPPEEP"
 

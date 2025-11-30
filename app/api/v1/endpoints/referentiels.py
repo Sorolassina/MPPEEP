@@ -129,6 +129,7 @@ def api_list_programmes_ref(session: Session = Depends(get_session)):
                 "code": p.code,
                 "libelle": p.libelle,
                 "description": p.description,
+                "missions": p.missions,  # JSON string
                 "responsable_id": p.responsable_id,
                 "responsable_nom": responsable_nom,
                 "actif": p.actif,
@@ -143,18 +144,32 @@ def api_create_programme(
     code: str = Form(...),
     libelle: str = Form(...),
     description: str | None = Form(None),
+    missions: str | None = Form(None),
     responsable_id: int | None = Form(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Créer un nouveau programme"""
+    import json
+    
     # Vérifier si le code existe déjà
     existing = session.exec(select(Programme).where(Programme.code == code)).first()
     if existing:
         raise HTTPException(400, f"Le code '{code}' existe déjà")
 
+    # Convertir les missions (une par ligne) en JSON
+    missions_json = None
+    if missions and missions.strip():
+        missions_list = [m.strip() for m in missions.split('\n') if m.strip()]
+        if missions_list:
+            missions_json = json.dumps(missions_list, ensure_ascii=False)
+
     programme = Programme(
-        code=code, libelle=libelle, description=description, responsable_id=responsable_id if responsable_id else None
+        code=code,
+        libelle=libelle,
+        description=description,
+        missions=missions_json,
+        responsable_id=responsable_id if responsable_id else None
     )
     session.add(programme)
     session.commit()
@@ -170,12 +185,15 @@ def api_update_programme(
     code: str = Form(...),
     libelle: str = Form(...),
     description: str | None = Form(None),
+    missions: str | None = Form(None),
     responsable_id: int | None = Form(None),
     actif: bool = Form(True),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     """Modifier un programme"""
+    import json
+    
     programme = session.get(Programme, programme_id)
     if not programme:
         raise HTTPException(404, "Programme non trouvé")
@@ -186,9 +204,17 @@ def api_update_programme(
         if existing:
             raise HTTPException(400, f"Le code '{code}' existe déjà")
 
+    # Convertir les missions (une par ligne) en JSON
+    missions_json = None
+    if missions and missions.strip():
+        missions_list = [m.strip() for m in missions.split('\n') if m.strip()]
+        if missions_list:
+            missions_json = json.dumps(missions_list, ensure_ascii=False)
+
     programme.code = code
     programme.libelle = libelle
     programme.description = description
+    programme.missions = missions_json
     programme.responsable_id = responsable_id if responsable_id else None
     programme.actif = actif
     programme.updated_at = datetime.utcnow()
@@ -282,6 +308,7 @@ def api_list_directions_ref(session: Session = Depends(get_session)):
                 "programme_libelle": programme_libelle,
                 "directeur_id": d.directeur_id,
                 "directeur_nom": directeur_nom,
+                "type": d.type or "",  # Type de direction (CENTRALE, GENERALE, etc.)
             }
         )
 
@@ -298,6 +325,7 @@ def api_create_direction(
     description: str | None = Form(None),
     programme_id: int | None = Form(None),
     directeur_id: int | None = Form(None),
+    type: str | None = Form(None),  # Type de direction: "CENTRALE", "GENERALE", etc.
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -312,6 +340,7 @@ def api_create_direction(
         description=description,
         programme_id=programme_id,
         directeur_id=directeur_id if directeur_id else None,
+        type=type if type else None,
     )
     session.add(direction)
     session.commit()
@@ -330,6 +359,7 @@ def api_update_direction(
     programme_id: int | None = Form(None),
     directeur_id: int | None = Form(None),
     actif: bool = Form(True),
+    type: str | None = Form(None),  # Type de direction: "CENTRALE", "GENERALE", etc.
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -344,6 +374,7 @@ def api_update_direction(
             raise HTTPException(400, f"Le code '{code}' existe déjà")
 
     direction.code = code
+    direction.type = type if type else None
     direction.libelle = libelle
     direction.description = description
     direction.programme_id = programme_id

@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from sqlmodel import Field, SQLModel
-from sqlalchemy import String
+from sqlalchemy import String, Column, Text
 
 from app.core.enums import GradeCategory, PositionAdministrative, SituationFamiliale, TypeDocument
 
@@ -30,6 +30,9 @@ class Programme(SQLModel, table=True):
 
     # Responsable du programme (optionnel)
     responsable_id: int | None = Field(default=None, foreign_key="agent_complet.id")
+    
+    # Missions du programme (JSON: liste de strings)
+    missions: str | None = Field(default=None, sa_column=Column(Text))
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -45,6 +48,7 @@ class Direction(SQLModel, table=True):
     libelle: str = Field(max_length=200)
     description: str | None = None
     actif: bool = True
+    type: str | None = Field(default=None, index=True)  # Type de direction: "CENTRALE", "GENERALE", etc.
 
     # Hiérarchie
     programme_id: int | None = Field(default=None, foreign_key="programme.id")

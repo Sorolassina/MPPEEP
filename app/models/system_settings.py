@@ -51,6 +51,23 @@ class SystemSettings(SQLModel, table=True):
     minister_civility: str | None = Field(default="Monsieur")
     minister_name: str | None = Field(default=None)
     minister_role: str | None = Field(default=None)
+    ministry_mission: str | None = Field(default=None)  # Mission du ministère
+    minister_nomination_date: str | None = Field(default=None)  # Date de nomination du ministre (ex: "17 octobre 2023")
+    decret_attribution_numero: str | None = Field(default=None)  # Numéro du décret d'attribution (ex: "n° 2023-820")
+    decret_attribution_date: str | None = Field(default=None)  # Date du décret d'attribution (ex: "25 octobre 2023")
+    
+    # Structure organisationnelle
+    structure_cabinet: str | None = Field(default=None)  # Nom du cabinet (ex: "Cabinet du Ministre")
+    nb_directions_centrales: int | None = Field(default=None)  # Nombre de directions centrales
+    nb_services: int | None = Field(default=None)  # Nombre de services
+    nb_directions_generales: int | None = Field(default=None)  # Nombre de directions générales
+    decret_organisation_numero: str | None = Field(default=None)  # Numéro du décret d'organisation (ex: "n° 2023-963")
+    decret_organisation_date: str | None = Field(default=None)  # Date du décret d'organisation (ex: "6 décembre 2023")
+    
+    # Informations pays/devise
+    pays: str | None = Field(default=None)  # Nom du pays (ex: "République de Côte d'Ivoire")
+    devise: str | None = Field(default=None)  # Devise nationale (ex: "Union – Discipline – Travail")
+    section: str | None = Field(default=None)  # Section administrative (ex: "SECTION 376")
 
     # Personnalisation
     footer_text: str | None = Field(default="Tous droits réservés")

@@ -21,8 +21,9 @@
     <!-- Messages -->
     <div id="message-container"></div>
 
-    <!-- Formulaire des paramètres -->
+    <!-- Formulaire des paramètres système -->
     <form id="settingsForm" onsubmit="saveSettings(event)">
+        <!-- Les champs RAP ne sont pas dans ce formulaire, ils seront soumis séparément -->
         
         <!-- Section: Informations Entreprise -->
         <div class="form-section settings-section">
@@ -128,8 +129,69 @@
                     <input id="minister-role" type="text" name="minister_role" class="form-control" value="{{ settings.minister_role or '' }}" placeholder="Fonction officielle">
                 </div>
                 <div class="form-group full-width">
+                    <label for="ministry-mission">Mission du Ministère</label>
+                    <textarea id="ministry-mission" name="ministry_mission" class="form-control" rows="3" placeholder="Mission du ministère">{{ settings.ministry_mission or '' }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="minister-nomination-date">Date de Nomination</label>
+                    <input id="minister-nomination-date" type="date" name="minister_nomination_date" class="form-control" value="">
+                </div>
+                <div class="form-group">
+                    <label for="decret-attribution-numero">N° Décret d'Attribution</label>
+                    <input id="decret-attribution-numero" type="text" name="decret_attribution_numero" class="form-control" value="{{ settings.decret_attribution_numero or '' }}" placeholder="Ex: n° 2023-820">
+                </div>
+                <div class="form-group">
+                    <label for="decret-attribution-date">Date Décret d'Attribution</label>
+                    <input id="decret-attribution-date" type="date" name="decret_attribution_date" class="form-control" value="">
+                </div>
+                <div class="form-group full-width">
                     <label for="footer-text">Texte du Footer</label>
                     <input id="footer-text" type="text" name="footer_text" class="form-control" value="{{ settings.footer_text or '' }}" placeholder="Tous droits réservés">
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Informations Administratives -->
+        <div class="form-section settings-section">
+            <h3 class="form-section-title">📋 Informations Administratives</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="pays">Pays</label>
+                    <input id="pays" type="text" name="pays" class="form-control" value="{{ settings.pays or '' }}" placeholder="Ex: République de Côte d'Ivoire">
+                </div>
+                <div class="form-group">
+                    <label for="devise">Devise Nationale</label>
+                    <input id="devise" type="text" name="devise" class="form-control" value="{{ settings.devise or '' }}" placeholder="Ex: Union – Discipline – Travail">
+                </div>
+                <div class="form-group">
+                    <label for="section">Section Administrative</label>
+                    <input id="section" type="text" name="section" class="form-control" value="{{ settings.section or '' }}" placeholder="Ex: SECTION 376">
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Structure Organisationnelle -->
+        <div class="form-section settings-section">
+            <h3 class="form-section-title">🏛️ Structure Organisationnelle</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="structure-cabinet">Nom du Cabinet</label>
+                    <input id="structure-cabinet" type="text" name="structure_cabinet" class="form-control" value="{{ settings.structure_cabinet or '' }}" placeholder="Ex: Cabinet du Ministre">
+                </div>
+                <div class="form-group full-width info-box">
+                    <p class="help-text">
+                        <strong>ℹ️ Information :</strong> Les nombres de directions centrales, directions générales et services sont calculés automatiquement depuis les référentiels (selon le type et le statut actif).
+                        <br>
+                        <a href="{{ url_for('referentiels_home') }}" class="link">→ Gérer les référentiels</a>
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label for="decret-organisation-numero">N° Décret d'Organisation</label>
+                    <input id="decret-organisation-numero" type="text" name="decret_organisation_numero" class="form-control" value="{{ settings.decret_organisation_numero or '' }}" placeholder="Ex: n° 2023-963">
+                </div>
+                <div class="form-group">
+                    <label for="decret-organisation-date">Date Décret d'Organisation</label>
+                    <input id="decret-organisation-date" type="date" name="decret_organisation_date" class="form-control" value="">
                 </div>
             </div>
         </div>
@@ -360,6 +422,28 @@
     margin-bottom: 1rem;
 }
 
+.info-box {
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.08) 0%, rgba(232, 106, 10, 0.08) 100%);
+    border: 1px solid rgba(5, 154, 23, 0.2);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.info-box .help-text {
+    margin: 0;
+}
+
+.info-box .help-text a.link {
+    color: var(--secondary-color);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.info-box .help-text a.link:hover {
+    color: var(--accent-color);
+}
+
 .referentiel-link {
     display: inline-flex;
     align-items: center;
@@ -385,6 +469,103 @@
 
 {% block scripts %}
 <script>
+// Fonction helper pour soumettre un formulaire en JSON (si elle n'existe pas déjà)
+if (typeof submitFormAsJson === 'undefined') {
+    async function submitFormAsJson(url, formData, method = 'POST', includeCredentials = false) {
+        const options = {
+            method: method,
+            body: formData,
+        };
+        
+        if (includeCredentials) {
+            options.credentials = 'include';
+        }
+        
+        return fetch(url, options);
+    }
+}
+
+// Fonction pour convertir une date française vers ISO
+function convertFrenchDateToISO(frenchDate) {
+    if (!frenchDate || frenchDate.trim() === '') {
+        return '';
+    }
+    
+    const moisFr = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    
+    try {
+        const dateStr = frenchDate.trim().toLowerCase();
+        
+        // Si c'est déjà en format ISO, le retourner tel quel
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            return dateStr;
+        }
+        
+        // Si c'est au format DD/MM/YYYY
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+            const parts = dateStr.split('/');
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        
+        // Si c'est au format "DD mois YYYY"
+        const parts = dateStr.split(' ');
+        if (parts.length >= 3) {
+            const jour = parseInt(parts[0], 10);
+            const moisNom = parts[1].toLowerCase();
+            const annee = parseInt(parts[2], 10);
+            
+            const moisIndex = moisFr.findIndex(m => m.startsWith(moisNom.substring(0, 3)));
+            if (moisIndex !== -1) {
+                const mois = (moisIndex + 1).toString().padStart(2, '0');
+                const jourStr = jour.toString().padStart(2, '0');
+                return `${annee}-${mois}-${jourStr}`;
+            }
+        }
+    } catch (error) {
+        console.warn(`Impossible de convertir la date "${frenchDate}" vers ISO:`, error);
+    }
+    
+    return '';
+}
+
+// Fonction pour convertir une date ISO vers français
+function convertISOToFrenchDate(isoDate) {
+    if (!isoDate || isoDate.trim() === '') {
+        return '';
+    }
+    
+    const moisFr = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    
+    try {
+        // Si c'est déjà en format français, le retourner tel quel
+        if (/\d{1,2}\s+\w+\s+\d{4}/.test(isoDate)) {
+            return isoDate;
+        }
+        
+        // Parser ISO: YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+            const parts = isoDate.split('-');
+            const annee = parseInt(parts[0], 10);
+            const mois = parseInt(parts[1], 10) - 1;
+            const jour = parseInt(parts[2], 10);
+            
+            if (mois >= 0 && mois < 12) {
+                return `${jour} ${moisFr[mois]} ${annee}`;
+            }
+        }
+    } catch (error) {
+        console.warn(`Impossible de convertir la date ISO "${isoDate}" vers français:`, error);
+    }
+    
+    return isoDate;
+}
+
 // Fonctions pour l'overlay de chargement (utilise l'overlay global de base.html)
 function showLoading(message = 'Traitement en cours...', subtext = 'Veuillez patienter') {
     const overlay = document.getElementById('globalLoadingOverlay');
@@ -403,6 +584,23 @@ function hideLoading() {
         overlay.classList.remove('show');
     }
 }
+
+// Charger les dates au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Convertir les dates françaises vers ISO pour les champs date
+    const dateFields = [
+        { id: 'minister-nomination-date', value: '{{ settings.minister_nomination_date or "" }}' },
+        { id: 'decret-attribution-date', value: '{{ settings.decret_attribution_date or "" }}' },
+        { id: 'decret-organisation-date', value: '{{ settings.decret_organisation_date or "" }}' }
+    ];
+    
+    dateFields.forEach(field => {
+        const input = document.getElementById(field.id);
+        if (input && field.value) {
+            input.value = convertFrenchDateToISO(field.value);
+        }
+    });
+});
 
 // Fonction pour recharger la page automatiquement après succès
 // L'overlay reste visible pendant la redirection et ne se ferme qu'au rechargement
@@ -435,6 +633,22 @@ async function saveSettings(event) {
     const form = event.target;
     const formData = new FormData(form);
     
+    // Convertir les dates ISO vers français avant l'envoi
+    const dateFields = [
+        { name: 'minister_nomination_date', id: 'minister-nomination-date' },
+        { name: 'decret_attribution_date', id: 'decret-attribution-date' },
+        { name: 'decret_organisation_date', id: 'decret-organisation-date' }
+    ];
+    
+    dateFields.forEach(field => {
+        const input = document.getElementById(field.id);
+        if (input && input.value) {
+            // Convertir ISO vers français pour l'envoi au serveur
+            const frenchDate = convertISOToFrenchDate(input.value);
+            formData.set(field.name, frenchDate);
+        }
+    });
+    
     showLoading('Sauvegarde...', 'Enregistrement des paramètres en cours');
     
     try {
@@ -447,13 +661,16 @@ async function saveSettings(event) {
             reloadAfterSuccess(data.message);
         } else {
             hideLoading();
-            showMessage(data.message, 'error');
+            showMessage(data.message || 'Erreur lors de la sauvegarde', 'error');
         }
     } catch (error) {
         hideLoading();
-        showMessage('Erreur lors de la sauvegarde', 'error');
+        console.error('Erreur sauvegarde:', error);
+        showMessage('Erreur lors de la sauvegarde: ' + (error.message || 'Erreur réseau'), 'error');
     }
 }
+
+// Fonction saveRapData supprimée car la section RAP a été déplacée dans le modal RAP
 
 // Upload du logo
 async function uploadLogo(input) {

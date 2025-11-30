@@ -45,6 +45,65 @@ class TypeObjectif(str, Enum):
 
 
 # ============================================
+# ORIENTATIONS STRATÉGIQUES
+# ============================================
+
+
+class OrientationStrategique(SQLModel, table=True):
+    """Orientations stratégiques du ministère"""
+
+    __tablename__ = "orientation_strategique"
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    # Informations générales
+    libelle: str = Field(max_length=500, index=True)  # Libellé de l'orientation stratégique
+    description: str | None = None
+
+    # Ordre d'affichage
+    ordre: int | None = Field(default=None, index=True)  # Ordre d'affichage
+
+    # Statut
+    actif: bool = Field(default=True, index=True)
+
+    # Traçabilité
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    created_by_id: int = Field(foreign_key="user.id")
+
+
+# ============================================
+# RÉSULTATS STRATÉGIQUES
+# ============================================
+
+
+class ResultatStrategique(SQLModel, table=True):
+    """Résultats stratégiques liés aux orientations stratégiques"""
+
+    __tablename__ = "resultat_strategique"
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    # Relation avec l'orientation stratégique
+    orientation_id: int = Field(foreign_key="orientation_strategique.id", index=True)
+
+    # Informations générales
+    libelle: str = Field(max_length=500, index=True)  # Libellé du résultat stratégique
+    description: str | None = None
+
+    # Ordre d'affichage
+    ordre: int | None = Field(default=None, index=True)  # Ordre d'affichage au sein de l'orientation
+
+    # Statut
+    actif: bool = Field(default=True, index=True)
+
+    # Traçabilité
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
+    created_by_id: int = Field(foreign_key="user.id")
+
+
+# ============================================
 # OBJECTIFS DE PERFORMANCE
 # ============================================
 
@@ -63,6 +122,12 @@ class ObjectifPerformance(SQLModel, table=True):
     # Classification
     type_objectif: TypeObjectif = Field(default=TypeObjectif.OPERATIONNEL)
     priorite: PrioriteObjectif = Field(default=PrioriteObjectif.NORMALE)
+
+    # Relations hiérarchiques
+    # Pour les objectifs globaux (type STRATEGIQUE) : lié à un résultat stratégique
+    resultat_strategique_id: int | None = Field(default=None, foreign_key="resultat_strategique.id", index=True)
+    # Pour les objectifs spécifiques (type OPERATIONNEL) : lié à un objectif global (STRATEGIQUE)
+    objectif_global_id: int | None = Field(default=None, foreign_key="objectif_performance.id", index=True)
 
     # Période et échéances
     date_debut: date = Field(default_factory=date.today)
@@ -119,10 +184,19 @@ class IndicateurPerformance(SQLModel, table=True):
     categorie: str = Field(max_length=100)  # "Qualité", "Efficacité", "RH", "Commercial"
     type_indicateur: str = Field(max_length=50)  # "Pourcentage", "Nombre", "Montant", "Temps"
 
+    # Année de référence (permet d'avoir des valeurs historiques : N, N-1, N-2, etc.)
+    annee: int = Field(index=True)  # Année de l'indicateur (ex: 2024, 2023, 2022)
+
     # Valeurs et seuils
-    valeur_cible: Decimal | None = Field(default=None, max_digits=15, decimal_places=2)
-    valeur_actuelle: Decimal | None = Field(default=0, max_digits=15, decimal_places=2)
+    valeur_cible: Decimal | None = Field(default=None, max_digits=15, decimal_places=2)  # Prévision pour cette année
+    valeur_actuelle: Decimal | None = Field(default=0, max_digits=15, decimal_places=2)  # Réalisation pour cette année
     unite: str = Field(max_length=50)
+
+    # Nombre d'activités (optionnel, pour certains indicateurs comme le taux de réalisation du PTA)
+    nb_activites: int | None = Field(default=None)  # Nombre d'activités réalisées (ex: 15)
+
+    # Valeurs cibles futures (format texte : "100% en 2024, 100% en 2025, 100% en 2026")
+    valeurs_cibles_futures: str | None = Field(default=None, max_length=500)
 
     # Seuils d'alerte
     seuil_alerte_bas: Decimal | None = Field(default=None, max_digits=15, decimal_places=2)
@@ -143,38 +217,6 @@ class IndicateurPerformance(SQLModel, table=True):
 
     # Statut
     actif: bool = Field(default=True)
-
-    # Traçabilité
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
-    created_by_id: int = Field(foreign_key="user.id")
-
-
-# ============================================
-# PROGRAMMES DE PERFORMANCE
-# ============================================
-
-
-class ProgrammePerformance(SQLModel, table=True):
-    """Programmes de performance organisationnelle"""
-
-    __tablename__ = "programme_performance"
-
-    id: int | None = Field(default=None, primary_key=True)
-
-    # Informations générales
-    nom: str = Field(max_length=200, index=True)
-    description: str | None = None
-
-    # Période
-    date_debut: date = Field(default_factory=date.today)
-    date_fin: date | None = None
-
-    # Statut
-    statut: str = Field(max_length=50, default="ACTIF")  # "ACTIF", "TERMINE", "SUSPENDU"
-
-    # Responsabilité
-    responsable_id: int = Field(foreign_key="user.id")
 
     # Traçabilité
     created_at: datetime = Field(default_factory=datetime.now)

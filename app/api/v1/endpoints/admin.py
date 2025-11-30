@@ -84,8 +84,12 @@ def parametres_systeme(
 
     # Récupérer les paramètres actuels
     settings = SystemSettingsService.get_settings_as_dict(session)
+    
+    # Récupérer les données RAP
+    from app.services.rap_data_service import RapDataService
+    rap_data = RapDataService.get_rap_data(session)
 
-    return templates.TemplateResponse("pages/parametres_systeme.html", get_template_context(request, settings=settings))
+    return templates.TemplateResponse("pages/parametres_systeme.html", get_template_context(request, settings=settings, rap_data=rap_data))
 
 
 @router.get("/gestion-utilisateurs/aide", response_class=HTMLResponse, name="aide_utilisateurs")
@@ -435,6 +439,16 @@ async def update_system_settings(
     minister_civility: str | None = Form(None),
     minister_name: str | None = Form(None),
     minister_role: str | None = Form(None),
+    ministry_mission: str | None = Form(None),
+    minister_nomination_date: str | None = Form(None),
+    decret_attribution_numero: str | None = Form(None),
+    decret_attribution_date: str | None = Form(None),
+    structure_cabinet: str | None = Form(None),
+    decret_organisation_numero: str | None = Form(None),
+    decret_organisation_date: str | None = Form(None),
+    pays: str | None = Form(None),
+    devise: str | None = Form(None),
+    section: str | None = Form(None),
     footer_text: str | None = Form(None),
     maintenance_mode: str | None = Form(None),
     allow_registration: str | None = Form(None),
@@ -457,6 +471,16 @@ async def update_system_settings(
             "minister_civility": minister_civility,
             "minister_name": minister_name,
             "minister_role": minister_role,
+            "ministry_mission": ministry_mission,
+            "minister_nomination_date": minister_nomination_date,
+            "decret_attribution_numero": decret_attribution_numero,
+            "decret_attribution_date": decret_attribution_date,
+            "structure_cabinet": structure_cabinet,
+            "decret_organisation_numero": decret_organisation_numero,
+            "decret_organisation_date": decret_organisation_date,
+            "pays": pays,
+            "devise": devise,
+            "section": section,
             "footer_text": footer_text,
             "maintenance_mode": (maintenance_mode == "on"),
             "allow_registration": (allow_registration == "on"),
@@ -483,6 +507,49 @@ async def update_system_settings(
         return JSONResponse(content={"success": True, "message": "Paramètres système mis à jour avec succès"})
     except Exception as e:
         logger.error(f"❌ Erreur mise à jour paramètres: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
+
+
+@router.post("/settings/rap-data/update", name="update_rap_data_api")
+async def update_rap_data(
+    contexte_texte: str | None = Form(None),
+    rapport_structure_premiere_partie: str | None = Form(None),
+    rapport_structure_seconde_partie: str | None = Form(None),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_roles("admin")),
+):
+    """Mettre à jour les données du Rapport Annuel de Performance (RAP)"""
+    try:
+        from app.services.rap_data_service import RapDataService
+        
+        rap_data_params = {
+            "contexte_texte": contexte_texte,
+            "rapport_structure_premiere_partie": rapport_structure_premiere_partie,
+            "rapport_structure_seconde_partie": rapport_structure_seconde_partie,
+        }
+        
+        # Retirer les valeurs None ou vides
+        rap_data_params = {k: v for k, v in rap_data_params.items() if v is not None and (not isinstance(v, str) or v.strip())}
+        
+        RapDataService.update_rap_data(db_session=session, user_id=current_user.id, **rap_data_params)
+        
+        # Logger l'activité
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="settings",
+            target_type="rap_data",
+            description="Mise à jour des données du Rapport Annuel de Performance",
+            icon="📊",
+        )
+        
+        logger.info(f"📊 Données RAP mises à jour par {current_user.email}")
+        
+        return JSONResponse(content={"success": True, "message": "Données RAP mises à jour avec succès"})
+    except Exception as e:
+        logger.error(f"❌ Erreur mise à jour données RAP: {e}")
         return JSONResponse(status_code=500, content={"success": False, "message": str(e)})
 
 

@@ -201,12 +201,20 @@
             </div>
         </div>
         <div class="performance-actions-grid">
+            <a href="{{ url_for('performance_orientations') }}" class="action-button">
+                <span class="action-icon">🎯</span>
+                <span class="action-text">Orientations stratégiques</span>
+            </a>
+            <a href="{{ url_for('performance_resultats') }}" class="action-button">
+                <span class="action-icon">📊</span>
+                <span class="action-text">Résultats stratégiques</span>
+            </a>
             <a href="{{ url_for('performance_objectifs') }}" class="action-button">
                 <span class="action-icon">🎯</span>
                 <span class="action-text">Gérer les objectifs</span>
             </a>
             <a href="{{ url_for('performance_indicateurs') }}" class="action-button">
-                <span class="action-icon">📊</span>
+                <span class="action-icon">📈</span>
                 <span class="action-text">Configurer les indicateurs</span>
             </a>
             <a href="{{ url_for('performance_rapports') }}" class="action-button">

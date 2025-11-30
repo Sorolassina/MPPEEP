@@ -91,35 +91,66 @@ def create_tables():
         return False
 
 def check_schema_migrations():
-    """Vérifie et applique les migrations de schéma si nécessaire"""
+    """Vérifie et applique automatiquement les migrations de schéma si nécessaire"""
     try:
         from scripts.migrate_schema import SchemaMigrator
         
         migrator = SchemaMigrator()
         
-        # Vérification en mode dry-run d'abord
+        # Récupérer les schémas pour vérifier s'il y a des différences
         logger.info("🔍 Vérification des migrations de schéma...")
-        success = migrator.run_migration_check(dry_run=True)
+        current_schema = migrator.get_current_schema()
+        expected_schema = migrator.get_expected_schema()
+        
+        if not current_schema or not expected_schema:
+            logger.error("❌ Impossible de récupérer les schémas")
+            return False
+        
+        # Comparer les schémas pour détecter les différences
+        differences = migrator.compare_schemas(current_schema, expected_schema)
+        
+        # Vérifier s'il y a des différences
+        has_differences = any([
+            differences.get('missing_tables', []),
+            differences.get('missing_columns', {}),
+            differences.get('extra_columns', {}),
+            differences.get('modified_columns', {}),
+            differences.get('type_changes', {})
+        ])
+        
+        if not has_differences:
+            logger.info("✅ Aucune migration nécessaire - Schéma à jour")
+            return True
+        
+        # Afficher les différences détectées
+        logger.info("📊 Différences détectées:")
+        if differences.get('missing_tables'):
+            logger.info(f"   📋 Tables manquantes: {differences['missing_tables']}")
+        if differences.get('missing_columns'):
+            logger.info("   📋 Colonnes manquantes:")
+            for table, cols in differences['missing_columns'].items():
+                logger.info(f"      {table}: {cols}")
+        if differences.get('type_changes'):
+            logger.info("   📋 Changements de type:")
+            for table, changes in differences['type_changes'].items():
+                for col, change in changes.items():
+                    logger.info(f"      {table}.{col}: {change.get('current', '?')} → {change.get('expected', '?')}")
+        
+        # Appliquer automatiquement les migrations nécessaires
+        logger.info("🔄 Application automatique des migrations...")
+        success = migrator.apply_migrations(differences, dry_run=False)
         
         if success:
-            logger.info("✅ Schéma de base de données à jour")
+            logger.info("✅ Migrations appliquées avec succès")
             return True
         else:
-            logger.warning("⚠️  Des migrations sont nécessaires")
-            logger.info("🔄 Application automatique des migrations...")
-            
-            # Appliquer les migrations automatiquement
-            success = migrator.run_migration_check(dry_run=False)
-            
-            if success:
-                logger.info("✅ Migrations appliquées avec succès")
-                return True
-            else:
-                logger.error("❌ Erreur lors de l'application des migrations")
-                return False
+            logger.error("❌ Erreur lors de l'application des migrations")
+            return False
                 
     except Exception as e:
         logger.error(f"❌ Erreur lors de la vérification des migrations: {e}")
+        import traceback
+        logger.debug(f"   Traceback: {traceback.format_exc()}")
         logger.warning("⚠️  Continuons sans migration automatique")
         return True  # Continue quand même pour ne pas bloquer le démarrage
 
@@ -127,12 +158,30 @@ def initialize_system_settings():
     """Initialise les paramètres système par défaut"""
     try:
         with Session(engine) as session:
-            settings = SystemSettingsService.get_settings(session)
-            logger.info(f"✅ Paramètres système initialisés/vérifiés")
-            logger.info(f"   Entreprise: {settings.company_name}")
-            return True
+            try:
+                settings = SystemSettingsService.get_settings(session)
+                logger.info(f"✅ Paramètres système initialisés/vérifiés")
+                logger.info(f"   Entreprise: {settings.company_name}")
+                return True
+            except Exception as inner_error:
+                # Si une erreur se produit, faire un rollback avant de relancer
+                logger.warning(f"⚠️ Erreur lors de la récupération des paramètres: {inner_error}")
+                try:
+                    session.rollback()
+                    logger.info("   🔄 Rollback effectué, nouvelle tentative...")
+                    # Réessayer avec une nouvelle session propre
+                    with Session(engine) as new_session:
+                        settings = SystemSettingsService.get_settings(new_session)
+                        logger.info(f"✅ Paramètres système initialisés/vérifiés (après rollback)")
+                        logger.info(f"   Entreprise: {settings.company_name}")
+                        return True
+                except Exception as retry_error:
+                    logger.error(f"❌ Erreur même après rollback: {retry_error}")
+                    raise inner_error  # Re-lever l'erreur originale
     except Exception as e:
         logger.error(f"❌ Erreur initialisation paramètres système: {e}")
+        import traceback
+        logger.debug(f"   Traceback complet: {traceback.format_exc()}")
         return False
 
 def initialize_personnel_data():

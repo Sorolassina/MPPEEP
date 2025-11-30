@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -42,8 +43,173 @@ class RapportAnnuelPerformanceGenerator:
     LIGHT_2_ORANGE = colors.HexColor("#ee863d")
     DARK_TEXT = colors.HexColor("#1F1F1F")
     
+    # Couleurs pour le styling des sources de données
+    COLOR_USER = colors.HexColor("#00AA00")  # Vert pour données utilisateur
+    COLOR_DEFAULT = colors.HexColor("#FF0000")  # Rouge pour données par défaut
+    COLOR_DB = colors.HexColor("#0066CC")  # Bleu pour données de la base de données
+    
     # Variable de classe pour stocker la position de la ligne pointillée du bas
     _dotted_line_bottom_y: float | None = None
+    
+    # Variable de classe pour stocker les données par défaut originales (avant modification)
+    _original_default_data: dict[str, Any] | None = None
+    
+    # Variable de classe pour stocker les données provenant de la DB
+    _db_data_keys: set[str] = set()
+    
+    # Variable de classe pour stocker les clés des données fournies par l'utilisateur via le modal
+    _user_data_keys: set[str] = set()
+    
+    # Variable de classe pour stocker la session de base de données
+    _db_session: Session | None = None
+    
+    # ============================================================
+    # FONCTIONS HELPER POUR LE STYLING DES DONNÉES
+    # ============================================================
+    
+    @classmethod
+    def _determine_data_source_for_canvas(cls, key: str, value: Any, db_value: Any = None, is_user_explicit: bool = False) -> tuple[Any, str]:
+        """
+        Détermine la source d'une donnée pour Canvas et retourne la valeur avec sa source.
+        
+        Priorité : USER (via modal) > DB > DEFAULT
+        
+        Args:
+            key: Clé de la donnée
+            value: Valeur actuelle dans cls.data
+            db_value: Valeur provenant de la base de données (None si pas de valeur DB)
+            is_user_explicit: True si la donnée est explicitement fournie par l'utilisateur via modal
+            
+        Returns:
+            Tuple (valeur, source: "user", "db", ou "default")
+        """
+        # Priorité 1: USER (données fournies via modal)
+        if is_user_explicit or key in cls._user_data_keys:
+            logger.debug(f"🔍 Source déterminée pour '{key}': USER")
+            return value, "user"
+        
+        # Priorité 2: DB (données provenant de la base de données)
+        if key in cls._db_data_keys:
+            logger.debug(f"🔍 Source déterminée pour '{key}': DB (clé dans _db_data_keys)")
+            return value, "db"
+        
+        if db_value is not None and value == db_value:
+            logger.debug(f"🔍 Source déterminée pour '{key}': DB (valeur correspond à db_value)")
+            return value, "db"
+        
+        # Priorité 3: DEFAULT (données par défaut)
+        logger.debug(f"🔍 Source déterminée pour '{key}': DEFAULT (pas dans _user_data_keys ni _db_data_keys)")
+        return value, "default"
+    
+    @classmethod
+    def _get_color_for_source(cls, source: str) -> colors.HexColor:
+        """
+        Retourne la couleur appropriée selon la source pour Canvas.
+        
+        Args:
+            source: "user", "db", ou "default"
+            
+        Returns:
+            Couleur HexColor appropriée
+        """
+        if source == "user":
+            return cls.COLOR_USER
+        elif source == "db":
+            return cls.COLOR_DB  # Bleu pour données de la base de données
+        else:  # default
+            return cls.COLOR_DEFAULT
+    
+    @classmethod
+    def _format_text_for_canvas(cls, pdf: canvas.Canvas, text: str, key: str, db_value: Any = None, x: float = 0, y: float = 0, centered: bool = False) -> None:
+        """
+        Dessine le texte avec la couleur appropriée selon sa source pour Canvas.
+        
+        Args:
+            pdf: Canvas PDF
+            text: Texte à dessiner
+            key: Clé de la donnée
+            db_value: Valeur provenant de la base de données
+            x: Position X
+            y: Position Y
+            centered: Si True, dessine centré
+        """
+        value, source = cls._determine_data_source_for_canvas(key, text, db_value)
+        color = cls._get_color_for_source(source)
+        
+        pdf.saveState()
+        pdf.setFillColor(color)
+        
+        # Pour DB, on garde la couleur noire (sera bold+italique dans Paragraph)
+        # Mais pour Canvas, on peut aussi mettre en italique/bold si nécessaire
+        if source == "db":
+            pdf.setFont("Helvetica-Bold", pdf._fontname, pdf._fontsize)
+            # Note: Canvas ne supporte pas facilement l'italique, donc on garde bold seulement
+        
+        if centered:
+            pdf.drawCentredString(x, y, text)
+        else:
+            pdf.drawString(x, y, text)
+        
+        pdf.restoreState()
+    
+    @staticmethod
+    def _format_default_data(text: str) -> str:
+        """Formate le texte pour les données par défaut (en rouge) - pour Paragraph."""
+        return f'<font color="#FF0000">{text}</font>'
+    
+    @staticmethod
+    def _format_db_data(text: str) -> str:
+        """Formate le texte pour les données provenant de la base de données (en bleu, bold + italique) - pour Paragraph."""
+        return f'<font color="#0066CC"><b><i>{text}</i></b></font>'
+    
+    @staticmethod
+    def _format_user_data(text: str) -> str:
+        """Formate le texte pour les données insérées par l'utilisateur (en vert) - pour Paragraph."""
+        return f'<font color="#00AA00">{text}</font>'
+    
+    @classmethod
+    def _format_data_by_source(cls, text: str, key: str, db_value: Any = None) -> str:
+        """
+        Formate le texte selon sa source pour Paragraph.
+        
+        Args:
+            text: Texte à formater
+            key: Clé de la donnée
+            db_value: Valeur provenant de la base de données
+            
+        Returns:
+            Texte formaté avec balises HTML selon la source
+        """
+        value, source = cls._determine_data_source_for_canvas(key, text, db_value)
+        
+        if source == "user":
+            return cls._format_user_data(text)
+        elif source == "db":
+            return cls._format_db_data(text)
+        else:  # default
+            return cls._format_default_data(text)
+    
+    @classmethod
+    def _format_data_value(cls, key: str, db_value: Any = None, default_value: Any = None) -> str:
+        """
+        Récupère une valeur depuis cls.data et retourne le texte formaté selon sa source pour Paragraph.
+        
+        Args:
+            key: Clé de la donnée dans cls.data
+            db_value: Valeur provenant de la base de données (optionnel)
+            default_value: Valeur par défaut si absente (optionnel)
+            
+        Returns:
+            Texte formaté avec balises HTML selon la source (USER > DB > DEFAULT)
+        """
+        value = cls.data.get(key, default_value)
+        if value is None:
+            return ""
+        
+        # Convertir en string si nécessaire
+        text = str(value) if not isinstance(value, str) else value
+        
+        return cls._format_data_by_source(text, key, db_value)
 
     DEFAULT_DATA = {
         "annee": 2024,
@@ -160,6 +326,7 @@ class RapportAnnuelPerformanceGenerator:
             "ministre_date_nomination": "17 octobre 2023",
             "decret_attribution_numero": "n° 2023-820",
             "decret_attribution_date": "25 octobre 2023",
+            "mission_ministere": "mettre en œuvre la politique du Gouvernement en matière de gestion du patrimoine, du portefeuille de l'État et des entreprises publiques",
             "structure_cabinet": "Cabinet du Ministre",
             "structure_directions_centrales": 3,
             "structure_services": 5,
@@ -228,6 +395,106 @@ class RapportAnnuelPerformanceGenerator:
                 return str(images_path)
         
         return None
+
+    @classmethod
+    def load_system_settings_data(cls, session: Session | None) -> dict[str, Any]:
+        """
+        Charge les données depuis SystemSettings et les marque comme DB.
+        
+        Args:
+            session: Session de base de données
+            
+        Returns:
+            Dictionnaire contenant les données DB récupérées
+        """
+        db_data: dict[str, Any] = {}
+        
+        if not session:
+            logger.warning("⚠️ Pas de session DB, impossible de charger SystemSettings")
+            return db_data
+        
+        try:
+            from app.services.system_settings_service import SystemSettingsService
+            from app.db.session import engine
+            from sqlmodel import Session as SQLModelSession
+            
+            # Essayer avec la session fournie
+            settings = None
+            try:
+                settings = SystemSettingsService.get_settings(session)
+            except Exception as session_error:
+                logger.warning(f"⚠️ Erreur avec la session fournie: {session_error}, création d'une nouvelle session...")
+                # Créer une nouvelle session propre pour récupérer SystemSettings
+                try:
+                    with SQLModelSession(engine) as new_session:
+                        settings = SystemSettingsService.get_settings(new_session)
+                        logger.info("✅ SystemSettings récupéré avec une nouvelle session")
+                except Exception as new_session_error:
+                    logger.error(f"❌ Impossible de récupérer SystemSettings même avec une nouvelle session: {new_session_error}")
+                    return db_data
+            if not settings:
+                logger.warning("⚠️ SystemSettings non trouvé dans la base de données")
+                return db_data
+            
+            logger.info(f"✅ SystemSettings récupéré: minister_role={settings.minister_role[:50] if settings.minister_role else None}, minister_name={settings.minister_name}, ministry_mission={settings.ministry_mission[:50] if settings.ministry_mission else None}")
+            
+            # 1. Nom du ministère : peut provenir de minister_role ou company_name
+            if settings.minister_role:
+                # Extraire le nom du ministère depuis minister_role
+                minister_role_upper = settings.minister_role.upper().strip()
+                if "MINISTRE" in minister_role_upper or "MINISTERE" in minister_role_upper:
+                    ministere_name = minister_role_upper.replace("MINISTRE", "MINISTERE")
+                    ministere_name = re.sub(r'\s+', ' ', ministere_name).strip()
+                    db_data["ministere"] = ministere_name
+                    cls._db_data_keys.add("ministere")
+                    logger.debug(f"✅ Nom du ministère récupéré depuis minister_role: {ministere_name[:50]}...")
+            
+            # Si company_name contient le nom du ministère, l'utiliser aussi (si pas déjà récupéré)
+            if not db_data.get("ministere") and settings.company_name:
+                company_name_upper = settings.company_name.upper().strip()
+                if "MINISTERE" in company_name_upper or "MPPEEP" in company_name_upper:
+                    db_data["ministere"] = company_name_upper
+                    cls._db_data_keys.add("ministere")
+                    logger.debug(f"✅ Nom du ministère récupéré depuis company_name: {company_name_upper[:50]}...")
+            
+            # 2. Logo path
+            if settings.logo_path:
+                db_data["logo_path"] = settings.logo_path
+                cls._db_data_keys.add("logo_path")
+                logger.debug(f"✅ Logo path récupéré depuis SystemSettings: {settings.logo_path}")
+            
+            # 3. Données d'introduction
+            intro_data: dict[str, Any] = {}
+            
+            # Nom du ministre
+            if settings.minister_civility and settings.minister_name:
+                intro_data["ministre_nom"] = f"{settings.minister_civility} {settings.minister_name}"
+            elif settings.minister_name:
+                intro_data["ministre_nom"] = settings.minister_name
+            
+            # Mission du ministère
+            if settings.ministry_mission:
+                intro_data["mission_ministere"] = settings.ministry_mission
+            
+            # Stocker les données d'introduction
+            if intro_data:
+                db_data["introduction"] = intro_data
+                # Marquer chaque clé comme provenant de la DB
+                for key in intro_data:
+                    cls._db_data_keys.add(f"introduction.{key}")
+                    logger.debug(f"✅ Donnée DB récupérée: introduction.{key} = {intro_data[key][:50]}...")
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.warning(f"⚠️ Impossible de récupérer les données depuis SystemSettings: {error_msg}")
+            logger.debug(f"   Type d'erreur: {type(e).__name__}")
+            # Si c'est une erreur de transaction, on peut essayer de rollback
+            if "transaction" in error_msg.lower() or "InFailedSqlTransaction" in error_msg:
+                logger.warning("   💡 Erreur de transaction détectée, les données DB ne seront pas chargées")
+            import traceback
+            logger.debug(f"   Traceback: {traceback.format_exc()}")
+        
+        return db_data
 
     @classmethod
     def load_budget_data(cls, session: Session | None, annee: int) -> dict[str, Any]:
@@ -418,34 +685,55 @@ class RapportAnnuelPerformanceGenerator:
             
             # 3. Charger les données de performance (objectifs et indicateurs)
             from app.models.performance import ObjectifPerformance, IndicateurPerformance, StatutObjectif
+            from sqlalchemy.exc import ProgrammingError
             
             # Compter les objectifs globaux et spécifiques
             # Les objectifs globaux sont généralement ceux de type STRATEGIQUE
             # Les objectifs spécifiques sont ceux de type OPERATIONNEL
-            objectifs_globaux = session.exec(
-                select(ObjectifPerformance).where(ObjectifPerformance.type_objectif == "STRATEGIQUE")
-            ).all()
-            
-            objectifs_specifiques = session.exec(
-                select(ObjectifPerformance).where(ObjectifPerformance.type_objectif == "OPERATIONNEL")
-            ).all()
-            
-            nb_objectifs_globaux = len(objectifs_globaux)
-            nb_objectifs_specifiques = len(objectifs_specifiques)
-            
-            # Compter les indicateurs
-            indicateurs = session.exec(
-                select(IndicateurPerformance).where(IndicateurPerformance.actif)
-            ).all()
-            
-            nb_indicateurs = len(indicateurs)
-            
-            # Compter les cibles atteintes (indicateurs avec valeur_actuelle >= valeur_cible)
+            nb_objectifs_globaux = 0
+            nb_objectifs_specifiques = 0
+            nb_indicateurs = 0
             cibles_atteintes = 0
-            for ind in indicateurs:
-                if ind.valeur_actuelle and ind.valeur_cible:
-                    if float(ind.valeur_actuelle) >= float(ind.valeur_cible):
-                        cibles_atteintes += 1
+            
+            try:
+                objectifs_globaux = session.exec(
+                    select(ObjectifPerformance).where(ObjectifPerformance.type_objectif == "STRATEGIQUE")
+                ).all()
+                
+                objectifs_specifiques = session.exec(
+                    select(ObjectifPerformance).where(ObjectifPerformance.type_objectif == "OPERATIONNEL")
+                ).all()
+                
+                nb_objectifs_globaux = len(objectifs_globaux)
+                nb_objectifs_specifiques = len(objectifs_specifiques)
+                
+                # Compter les indicateurs - gérer le cas où objectif_id n'existe pas encore
+                try:
+                    indicateurs = session.exec(
+                        select(IndicateurPerformance).where(IndicateurPerformance.actif)
+                    ).all()
+                    nb_indicateurs = len(indicateurs)
+                    
+                    # Compter les cibles atteintes (indicateurs avec valeur_actuelle >= valeur_cible)
+                    for ind in indicateurs:
+                        if ind.valeur_actuelle and ind.valeur_cible:
+                            if float(ind.valeur_actuelle) >= float(ind.valeur_cible):
+                                cibles_atteintes += 1
+                except (ProgrammingError, AttributeError) as ind_error:
+                    logger.warning(f"⚠️ Erreur lors du chargement des indicateurs (colonne manquante ?): {ind_error}")
+                    try:
+                        session.rollback()
+                    except Exception:
+                        pass
+                    nb_indicateurs = 0
+                    cibles_atteintes = 0
+                    
+            except Exception as perf_error:
+                logger.warning(f"⚠️ Erreur lors du chargement des données de performance: {perf_error}")
+                try:
+                    session.rollback()
+                except Exception:
+                    pass
             
             nb_cibles = nb_indicateurs  # Une cible par indicateur
             
@@ -482,23 +770,32 @@ class RapportAnnuelPerformanceGenerator:
                 
                 if objectifs_prog:
                     # Compter les indicateurs liés à cet objectif
-                    indicateurs_os = session.exec(
-                        select(IndicateurPerformance).where(IndicateurPerformance.objectif_id == objectifs_prog.id)
-                    ).all()
-                    
-                    nb_cibles_os = len(indicateurs_os)
-                    nb_cibles_atteintes_os = sum(
-                        1 for ind in indicateurs_os
-                        if ind.valeur_actuelle and ind.valeur_cible and float(ind.valeur_actuelle) >= float(ind.valeur_cible)
-                    )
-                    
-                    if nb_cibles_os > 0:
-                        realisations.append({
-                            "programme": f"P{prog_num}: {prog_titre}",
-                            "objectif_specifique": f"OS {prog_num}: Améliorer...",  # À améliorer avec les vraies données
-                            "nb_cibles": nb_cibles_os,
-                            "nb_cibles_atteintes": nb_cibles_atteintes_os,
-                        })
+                    try:
+                        indicateurs_os = session.exec(
+                            select(IndicateurPerformance).where(IndicateurPerformance.objectif_id == objectifs_prog.id)
+                        ).all()
+                        
+                        nb_cibles_os = len(indicateurs_os)
+                        nb_cibles_atteintes_os = sum(
+                            1 for ind in indicateurs_os
+                            if ind.valeur_actuelle and ind.valeur_cible and float(ind.valeur_actuelle) >= float(ind.valeur_cible)
+                        )
+                        
+                        if nb_cibles_os > 0:
+                            realisations.append({
+                                "programme": f"P{prog_num}: {prog_titre}",
+                                "objectif_specifique": f"OS {prog_num}: Améliorer...",  # À améliorer avec les vraies données
+                                "nb_cibles": nb_cibles_os,
+                                "nb_cibles_atteintes": nb_cibles_atteintes_os,
+                            })
+                    except (ProgrammingError, AttributeError) as os_error:
+                        logger.warning(f"⚠️ Erreur lors du chargement des indicateurs pour l'objectif (colonne objectif_id manquante ?): {os_error}")
+                        try:
+                            session.rollback()
+                        except Exception:
+                            pass
+                        # Ignorer cette erreur et continuer avec le programme suivant
+                        pass
             
             if realisations:
                 budget_data["performance"]["realisations"] = realisations
@@ -515,7 +812,44 @@ class RapportAnnuelPerformanceGenerator:
     def generate_pdf(cls, data: dict[str, Any], session: Session | None = None) -> BytesIO:
         """Génère le PDF du rapport annuel de performance."""
         logger.info("🚀 DÉBUT génération PDF rapport annuel de performance")
-        cls.data = {**cls.DEFAULT_DATA, **(data or {})}
+        
+        # Sauvegarder les données par défaut pour comparaison
+        cls._original_default_data = cls.DEFAULT_DATA.copy()
+        
+        # Initialiser les sets pour tracker les sources de données
+        cls._user_data_keys = set()
+        cls._db_data_keys = set()
+        
+        # Stocker la session pour utilisation dans les méthodes de dessin
+        cls._db_session = session
+        
+        # ⚠️ IMPORTANT : Charger les données DB AVANT de marquer les données USER
+        # pour que la priorité USER > DB soit respectée
+        db_data = cls.load_system_settings_data(session)
+        logger.info(f"📊 Données DB chargées: {list(db_data.keys())}")
+        logger.info(f"📊 Clés marquées comme DB: {list(cls._db_data_keys)}")
+        
+        # Identifier les clés USER (fournies via modal, présentes dans data mais différentes de DEFAULT_DATA)
+        user_data = data or {}
+        for key, value in user_data.items():
+            default_value = cls.DEFAULT_DATA.get(key)
+            if default_value is None or value != default_value:
+                # Si la valeur diffère de la valeur par défaut, c'est une donnée USER
+                cls._user_data_keys.add(key)
+        
+        logger.info(f"📊 Clés marquées comme USER: {list(cls._user_data_keys)}")
+        
+        # Fusionner les données dans l'ordre de priorité : DEFAULT < DB < USER
+        # L'ordre de fusion garantit que USER écrase DB et DB écrase DEFAULT
+        cls.data = {**cls.DEFAULT_DATA, **db_data, **user_data}
+        
+        # Fusionner aussi les données d'introduction si présentes
+        if "introduction" in db_data:
+            if "introduction" not in cls.data:
+                cls.data["introduction"] = {}
+            cls.data["introduction"] = {**cls.data.get("introduction", {}), **db_data["introduction"]}
+        
+        logger.info(f"📊 Données finales dans cls.data: ministere={cls.data.get('ministere', 'N/A')[:50]}, logo_path={cls.data.get('logo_path', 'N/A')}")
         
         # Charger les données budgétaires si une session est fournie
         annee = cls.data.get("annee", 2024)
@@ -1050,6 +1384,10 @@ class RapportAnnuelPerformanceGenerator:
         section = cls.data.get("section", "SECTION 376")
         ministere = cls.data.get("ministere", "")
         
+        # Déterminer la source de chaque donnée pour le styling
+        _, section_source = cls._determine_data_source_for_canvas("section", section)
+        _, ministere_source = cls._determine_data_source_for_canvas("ministere", ministere)
+        
         # Calculer la hauteur du contenu
         section_height = 20  # Hauteur de la section (texte + espace)
         ministere_height = 0
@@ -1082,17 +1420,25 @@ class RapportAnnuelPerformanceGenerator:
         
         # ---------- SECTION ----------
         pdf.setFont("Helvetica-Bold", 12)
+        section_color = cls._get_color_for_source(section_source)
+        pdf.saveState()
+        pdf.setFillColor(section_color)
         pdf.drawCentredString(center_x, content_current_y, section + " :")
+        pdf.restoreState()
         content_current_y -= 20  # Espace après la section
 
         # ---------- MINISTÈRE ----------
         if ministere:
             pdf.setFont("Helvetica-Bold", 11)
+            ministere_color = cls._get_color_for_source(ministere_source)
             lines = wrap(ministere, width=80)
             line_height = 16
+            pdf.saveState()
+            pdf.setFillColor(ministere_color)
             for line in lines:
                 pdf.drawCentredString(center_x, content_current_y, line)
                 content_current_y -= line_height
+            pdf.restoreState()
         
         # Ligne pointillée en dessous
         pdf.setLineWidth(1)
@@ -1156,9 +1502,14 @@ class RapportAnnuelPerformanceGenerator:
         pdf.rect(box_x, box_y, box_width, box_height, stroke=1, fill=1)
 
         # Texte du rapport dans la boîte avec marges appropriées
-        pdf.setFillColor(cls.DARK_TEXT)
         titre_rapport = cls.data.get("titre_rapport", "")
         titre_annee = cls.data.get("titre_annee", "")
+        annee = cls.data.get("annee", "")
+        
+        # Déterminer la source de chaque donnée pour le styling
+        _, titre_rapport_source = cls._determine_data_source_for_canvas("titre_rapport", titre_rapport)
+        _, titre_annee_source = cls._determine_data_source_for_canvas("titre_annee", titre_annee)
+        _, annee_source = cls._determine_data_source_for_canvas("annee", annee)
         
         # Marges intérieures de la boîte (réduites)
         padding_top = 0.5 * cm
@@ -1223,6 +1574,9 @@ class RapportAnnuelPerformanceGenerator:
         # Calculer la largeur maximale pour le texte
         max_text_width = text_area_width
         
+        # Déterminer la couleur du titre selon sa source
+        titre_color = cls._get_color_for_source(titre_rapport_source)
+        
         # Découper le titre en lignes
         if titre_rapport:
             lines = wrap_text_to_width(pdf, titre_rapport.upper(), font_name, font_size, max_text_width)
@@ -1241,26 +1595,35 @@ class RapportAnnuelPerformanceGenerator:
             # Positionner le texte en haut de la zone disponible
             text_y = text_area_top - 0.8 * cm
             
-            # Dessiner chaque ligne centrée
+            # Dessiner chaque ligne centrée avec la couleur appropriée
+            pdf.saveState()
+            pdf.setFillColor(titre_color)
             for i, line in enumerate(lines):
                 pdf.drawCentredString(center_x, text_y - (i * line_height), line)
+            pdf.restoreState()
             
             text_y = text_y - (len(lines) * line_height)
         else:
             text_y = text_area_top - 0.8 * cm
         
         # Année sous le titre (sur une ligne séparée)
-        annee = cls.data.get("annee", "")
         if titre_annee and annee:
             text_y -= 15
             # Vérifier qu'on ne dépasse pas le bas de la boîte
             if text_y >= text_area_bottom:
                 year_text = f"{titre_annee.upper()} {annee}"
+                # Déterminer la couleur de l'année (utiliser la source de l'année si titre_annee est par défaut)
+                # Si titre_annee est USER, utiliser sa source, sinon utiliser celle de l'année
+                year_color = cls._get_color_for_source(annee_source) if titre_annee_source == "default" else cls._get_color_for_source(titre_annee_source)
+                
                 # Vérifier que l'année rentre aussi dans la largeur
                 if pdf.stringWidth(year_text, font_name, font_size) > max_text_width:
                     # Réduire la taille pour l'année si nécessaire
                     pdf.setFont(font_name, 14)
+                pdf.saveState()
+                pdf.setFillColor(year_color)
                 pdf.drawCentredString(center_x, text_y, year_text)
+                pdf.restoreState()
 
         pdf.restoreState()
 
@@ -1271,10 +1634,18 @@ class RapportAnnuelPerformanceGenerator:
 
         # ---------- BOÎTE DATE EN BAS À DROITE ----------
         date_publication = cls.data.get("date_publication", "")
+        date_is_generated = False
         if not date_publication:
             # Générer la date à partir de l'année si non fournie
             annee = cls.data.get("annee", "")
             date_publication = f"Mai {int(annee) + 1}" if annee else "Mai 2025"
+            date_is_generated = True
+        
+        # Déterminer la source de la date de publication pour le styling
+        if date_is_generated:
+            date_source = "default"
+        else:
+            _, date_source = cls._determine_data_source_for_canvas("date_publication", date_publication)
 
         box_width = 4 * cm
         box_height = 1.2 * cm
@@ -1287,8 +1658,9 @@ class RapportAnnuelPerformanceGenerator:
         pdf.setLineWidth(1.5)
         pdf.roundRect(box_x, box_y, box_width, box_height, radius=5, stroke=1, fill=1)
 
-        # Texte de la date centré
-        pdf.setFillColor(colors.white)
+        # Texte de la date centré avec couleur selon la source
+        date_color = cls._get_color_for_source(date_source)
+        pdf.setFillColor(date_color)
         pdf.setFont("Helvetica-Bold", 12)
         pdf.drawCentredString(
             box_x + box_width / 2,
@@ -2027,9 +2399,18 @@ class RapportAnnuelPerformanceGenerator:
         
         # Récupérer les sigles depuis les données (ou valeurs par défaut)
         sigles = cls.data.get("sigles", [])
+        default_sigles = cls.DEFAULT_DATA.get("sigles", [])
+        
+        # Déterminer si les sigles viennent de l'utilisateur ou sont par défaut
+        is_sigles_user = "sigles" in cls._user_data_keys
+        
         if not sigles:
             # Utiliser les sigles par défaut si aucun n'est fourni
-            sigles = cls.DEFAULT_DATA.get("sigles", [])
+            sigles = default_sigles
+            is_sigles_user = False
+        
+        # Créer un set des sigles par défaut pour vérification rapide
+        default_sigles_set = {entry.get("sigle"): entry.get("definition") for entry in default_sigles}
         
         # Fonction pour dessiner le footer avec numéro de page
         def draw_footer(page_number: int):
@@ -2103,15 +2484,27 @@ class RapportAnnuelPerformanceGenerator:
             
             pdf.restoreState()
 
-        # Fonction pour dessiner une entrée sigle/définition
-        def draw_sigle_entry(sigle: str, definition: str, x: float, y: float, max_width: float) -> float:
-            """Dessine une entrée sigle/définition et retourne la nouvelle position Y."""
+        # Fonction pour dessiner une entrée sigle/définition avec styling selon la source
+        def draw_sigle_entry(sigle: str, definition: str, x: float, y: float, max_width: float, source: str = "default") -> float:
+            """
+            Dessine une entrée sigle/définition et retourne la nouvelle position Y.
+            
+            Args:
+                sigle: Le sigle à afficher
+                definition: La définition du sigle
+                x: Position X de départ
+                y: Position Y de départ
+                max_width: Largeur maximale disponible
+                source: Source de la donnée ("user", "db", ou "default")
+            """
             pdf.saveState()
             
-            # Style du texte (en noir, sans soulignement)
+            # Déterminer la couleur selon la source
+            sigle_color = cls._get_color_for_source(source)
+            
             font_size = 10
             pdf.setFont("Helvetica-Bold", font_size)
-            pdf.setFillColor(cls.DARK_TEXT)
+            pdf.setFillColor(sigle_color)
             
             # Calculer la largeur du sigle pour savoir où placer la définition
             sigle_width = pdf.stringWidth(sigle + " :", "Helvetica-Bold", font_size)
@@ -2131,14 +2524,14 @@ class RapportAnnuelPerformanceGenerator:
                     definition_to_draw = definition_to_draw[:-1]
                 definition_to_draw = definition_to_draw + "..."
             
-            # Dessiner le sigle
+            # Dessiner le sigle avec la couleur appropriée
             pdf.setFont("Helvetica-Bold", font_size)
-            pdf.setFillColor(cls.DARK_TEXT)
+            pdf.setFillColor(sigle_color)
             pdf.drawString(x, y, sigle + " :")
             
-            # Dessiner la définition en noir
+            # Dessiner la définition avec la même couleur que le sigle
             pdf.setFont("Helvetica", font_size)
-            pdf.setFillColor(cls.DARK_TEXT)
+            pdf.setFillColor(sigle_color)
             pdf.drawString(definition_start_x, y, definition_to_draw)
             
             pdf.restoreState()
@@ -2181,13 +2574,24 @@ class RapportAnnuelPerformanceGenerator:
                 sigle = sigle_entry.get("sigle", "")
                 definition = sigle_entry.get("definition", "")
                 
+                # Déterminer la source de ce sigle spécifique
+                # Priorité : USER (via modal) > DEFAULT
+                # Si les sigles sont fournis via le modal (is_sigles_user), ils sont tous USER
+                # Sinon, ce sont des sigles par défaut
+                if is_sigles_user:
+                    # Les sigles viennent de l'utilisateur via le modal = USER (vert)
+                    sigle_source = "user"
+                else:
+                    # Les sigles sont par défaut = DEFAULT (rouge)
+                    sigle_source = "default"
+                
                 # Vérifier si on a assez d'espace vertical pour une nouvelle ligne
                 if current_y - line_spacing < content_bottom:
                     # Plus d'espace sur cette page, passer à la page suivante
                     break
                 
-                # Dessiner l'entrée
-                current_y = draw_sigle_entry(sigle, definition, current_x, current_y, max_col_width)
+                # Dessiner l'entrée avec le styling selon la source
+                current_y = draw_sigle_entry(sigle, definition, current_x, current_y, max_col_width, sigle_source)
                 
                 items_to_remove.append(sigle_entry)
             
@@ -2295,6 +2699,9 @@ class RapportAnnuelPerformanceGenerator:
             first_page = False
 
         return current_page
+    
+    
+    
     @classmethod
     def _draw_introduction_generale(cls, pdf: canvas.Canvas, width: float, height: float, start_page: int) -> int:
         """Dessine la page d'introduction générale avec support multi-pages, justification et puces."""
@@ -2387,22 +2794,80 @@ class RapportAnnuelPerformanceGenerator:
         if not intro_data:
             intro_data = cls.DEFAULT_DATA.get("introduction", {})
         
-        # Préparer les variables pour le formatage
-        ministere = cls.data.get("ministere", "")
-        annee = cls.data.get("annee", 2024)
-        ministre_nom = intro_data.get("ministre_nom", "")
-        ministre_date = intro_data.get("ministre_date_nomination", "")
-        decret_attr_num = intro_data.get("decret_attribution_numero", "")
-        decret_attr_date = intro_data.get("decret_attribution_date", "")
-        structure_cabinet = intro_data.get("structure_cabinet", "")
-        nb_directions = intro_data.get("structure_directions_centrales", 0)
-        nb_services = intro_data.get("structure_services", 0)
-        nb_dg = intro_data.get("structure_directions_generales", 0)
-        decret_org_num = intro_data.get("decret_organisation_numero", "")
-        decret_org_date = intro_data.get("decret_organisation_date", "")
-        contexte_texte = intro_data.get("contexte_texte", "")
-        premiere_partie_items = intro_data.get("rapport_structure_premiere_partie", [])
-        seconde_partie_items = intro_data.get("rapport_structure_seconde_partie", [])
+        # Les données DB sont déjà chargées au début dans generate_pdf()
+        # Utiliser directement _db_data_keys pour déterminer les sources
+        
+        # Récupérer les valeurs par défaut pour comparaison
+        default_intro_data = cls.DEFAULT_DATA.get("introduction", {})
+        
+        # Fonction helper pour récupérer une valeur principale (ministere, annee, etc.) avec priorité USER > DB > DEFAULT
+        def get_main_value(key: str, default_value: Any = None) -> tuple[Any, str]:
+            """
+            Récupère une valeur principale avec priorité USER > DB > DEFAULT.
+            Utilise _db_data_keys qui est déjà initialisé au début de generate_pdf().
+            
+            Returns:
+                Tuple (valeur, source) où source est "user", "db", ou "default"
+            """
+            value = cls.data.get(key, cls.DEFAULT_DATA.get(key, default_value))
+            
+            # Priorité 1: USER (via modal)
+            if key in cls._user_data_keys:
+                return value, "user"
+            
+            # Priorité 2: DB (SystemSettings - déjà chargé au début)
+            if key in cls._db_data_keys:
+                return value, "db"
+            
+            # Priorité 3: DEFAULT
+            return value, "default"
+        
+        # Fonction helper pour récupérer une valeur d'introduction avec priorité USER > DB > DEFAULT
+        def get_intro_value(key: str, default_value: Any = None) -> tuple[Any, str]:
+            """
+            Récupère une valeur d'introduction avec priorité USER > DB > DEFAULT.
+            Utilise _db_data_keys qui est déjà initialisé au début de generate_pdf().
+            
+            Returns:
+                Tuple (valeur, source) où source est "user", "db", ou "default"
+            """
+            value = intro_data.get(key, default_intro_data.get(key, default_value))
+            intro_key = f"introduction.{key}"
+            
+            # Priorité 1: USER (via modal)
+            if "introduction" in cls._user_data_keys:
+                user_value = intro_data.get(key)
+                if user_value is not None and user_value != "":
+                    default_value_for_key = default_intro_data.get(key)
+                    if default_value_for_key is None or user_value != default_value_for_key:
+                        return user_value, "user"
+            
+            # Priorité 2: DB (SystemSettings - déjà chargé au début)
+            if intro_key in cls._db_data_keys:
+                return value, "db"
+            
+            # Priorité 3: DEFAULT
+            return value, "default"
+        
+        # Récupérer toutes les valeurs avec leur source
+        ministre_nom, ministre_nom_source = get_intro_value("ministre_nom", "")
+        ministre_date, ministre_date_source = get_intro_value("ministre_date_nomination", "")
+        decret_attr_num, decret_attr_num_source = get_intro_value("decret_attribution_numero", "")
+        decret_attr_date, decret_attr_date_source = get_intro_value("decret_attribution_date", "")
+        mission_ministere, mission_source = get_intro_value(
+            "mission_ministere",
+            "mettre en œuvre la politique du Gouvernement en matière de gestion du patrimoine, du portefeuille de l'État et des entreprises publiques"
+        )
+        # Récupérer toutes les autres valeurs avec leur source
+        structure_cabinet, structure_cabinet_source = get_intro_value("structure_cabinet", "")
+        nb_directions, nb_directions_source = get_intro_value("structure_directions_centrales", 0)
+        nb_services, nb_services_source = get_intro_value("structure_services", 0)
+        nb_dg, nb_dg_source = get_intro_value("structure_directions_generales", 0)
+        decret_org_num, decret_org_num_source = get_intro_value("decret_organisation_numero", "")
+        decret_org_date, decret_org_date_source = get_intro_value("decret_organisation_date", "")
+        contexte_texte, contexte_texte_source = get_intro_value("contexte_texte", "")
+        premiere_partie_items, premiere_partie_items_source = get_intro_value("rapport_structure_premiere_partie", [])
+        seconde_partie_items, seconde_partie_items_source = get_intro_value("rapport_structure_seconde_partie", [])
         
         # Construire la story avec Paragraph et puces
         story: list[Any] = []
@@ -2411,21 +2876,48 @@ class RapportAnnuelPerformanceGenerator:
         story.append(Paragraph("INTRODUCTION GÉNÉRALE", title_style))
         story.append(Spacer(1, 0.3 * cm))
         
-        # Paragraphe 1 : Présentation du ministère
+        # Formater chaque valeur selon sa source déterminée par get_intro_value
+        def format_by_source(value: Any, source: str) -> str:
+            """Formate une valeur selon sa source."""
+            if not value:
+                return ""
+            if source == "user":
+                return cls._format_user_data(str(value))
+            elif source == "db":
+                return cls._format_db_data(str(value))
+            else:  # default
+                return cls._format_default_data(str(value))
+        
+        # Récupérer le nom du ministère avec sa source
+        ministere_value, ministere_source = get_main_value("ministere", "MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES")
+        formatted_ministere = format_by_source(ministere_value, ministere_source)
+        
+        formatted_ministre_nom = format_by_source(ministre_nom, ministre_nom_source)
+        formatted_ministre_date = format_by_source(ministre_date, ministre_date_source)
+        formatted_decret_attr_num = format_by_source(decret_attr_num, decret_attr_num_source)
+        formatted_decret_attr_date = format_by_source(decret_attr_date, decret_attr_date_source)
+        formatted_mission = format_by_source(mission_ministere, mission_source)
+        
         para1 = (
-            f"Le {ministere} (MPPEEP) est dirigé par {ministre_nom} depuis le {ministre_date}. "
-            f"Sa mission est de mettre en œuvre la politique du Gouvernement en matière de gestion "
-            f"du patrimoine, du portefeuille de l'État et des entreprises publiques. Cette mission "
-            f"lui a été confiée conformément au décret {decret_attr_num} du {decret_attr_date} "
+            f"Le {formatted_ministere} (MPPEEP) est dirigé par {formatted_ministre_nom} depuis le {formatted_ministre_date}. "
+            f"Sa mission est de {formatted_mission}. Cette mission "
+            f"lui a été confiée conformément au décret {formatted_decret_attr_num} du {formatted_decret_attr_date} "
             f"portant attributions des membres du Gouvernement."
         )
         story.append(Paragraph(para1, body_style))
         
-        # Paragraphe 2 : Structure organisationnelle
-        structure_desc = f"{structure_cabinet}" if structure_cabinet else "Cabinet du Ministre"
-        directions_text = f"{nb_directions} Direction{'s' if nb_directions > 1 else ''} centrale{'s' if nb_directions > 1 else ''}" if nb_directions > 0 else ""
-        services_text = f"{nb_services} Service{'s' if nb_services > 1 else ''}" if nb_services > 0 else ""
-        dg_text = f"{nb_dg} Direction{'s' if nb_dg > 1 else ''} Générale{'s' if nb_dg > 1 else ''}" if nb_dg > 0 else ""
+        # Paragraphe 2 : Structure organisationnelle (avec styling selon la source)
+        formatted_structure_cabinet = format_by_source(structure_cabinet, structure_cabinet_source) if structure_cabinet else cls._format_default_data("Cabinet du Ministre")
+        structure_desc = formatted_structure_cabinet if structure_cabinet else cls._format_default_data("Cabinet du Ministre")
+        
+        # Formater les nombres selon la source
+        formatted_nb_directions = format_by_source(str(nb_directions), nb_directions_source) if nb_directions > 0 else ""
+        formatted_nb_services = format_by_source(str(nb_services), nb_services_source) if nb_services > 0 else ""
+        formatted_nb_dg = format_by_source(str(nb_dg), nb_dg_source) if nb_dg > 0 else ""
+        
+        directions_text = f"{formatted_nb_directions} Direction{'s' if nb_directions > 1 else ''} centrale{'s' if nb_directions > 1 else ''}" if nb_directions > 0 else ""
+        services_text = f"{formatted_nb_services} Service{'s' if nb_services > 1 else ''}" if nb_services > 0 else ""
+        dg_text = f"{formatted_nb_dg} Direction{'s' if nb_dg > 1 else ''} Générale{'s' if nb_dg > 1 else ''}" if nb_dg > 0 else ""
         
         structure_parts = [structure_desc]
         if directions_text:
@@ -2441,42 +2933,60 @@ class RapportAnnuelPerformanceGenerator:
         else:
             structure_list = structure_parts[0]
         
+        formatted_decret_org_num = format_by_source(decret_org_num, decret_org_num_source)
+        formatted_decret_org_date = format_by_source(decret_org_date, decret_org_date_source)
+        
         para2 = (
-            f"Pour mener efficacement ses missions, le {ministere} s'appuie sur une organisation "
+            f"Pour mener efficacement ses missions, le {formatted_ministere} s'appuie sur une organisation "
             f"administrative structurée autour du {structure_list}, conformément au décret "
-            f"{decret_org_num} du {decret_org_date} portant organisation du ministère."
+            f"{formatted_decret_org_num} du {formatted_decret_org_date} portant organisation du ministère."
         )
         story.append(Paragraph(para2, body_style))
         
-        # Paragraphe 3 : Contexte
+        # Paragraphe 3 : Contexte (avec styling selon la source)
         if contexte_texte:
-            para3 = contexte_texte.format(
-                annee=annee,
-                ministere=ministere,
-                decret_organisation_numero=decret_org_num,
-                decret_organisation_date=decret_org_date
+            annee_value, annee_source = get_main_value("annee", 2024)
+            formatted_annee_para3 = format_by_source(str(annee_value), annee_source)
+            formatted_decret_org_num_para3 = format_by_source(decret_org_num, decret_org_num_source)
+            formatted_decret_org_date_para3 = format_by_source(decret_org_date, decret_org_date_source)
+            
+            formatted_contexte = format_by_source(contexte_texte, contexte_texte_source)
+            
+            para3 = formatted_contexte.format(
+                annee=formatted_annee_para3,
+                ministere=formatted_ministere,
+                decret_organisation_numero=formatted_decret_org_num_para3,
+                decret_organisation_date=formatted_decret_org_date_para3
             )
             story.append(Paragraph(para3, body_style))
         
-        # Paragraphe 4 : Structure du rapport
+        # Paragraphe 4 : Structure du rapport (avec styling selon la source)
+        annee_value, annee_source = get_main_value("annee", 2024)
+        formatted_annee_para4 = format_by_source(str(annee_value), annee_source)
+        
         para4_intro = (
-            f"Le présent rapport détaille les activités du {ministere} pour l'exercice {annee} "
+            f"Le présent rapport détaille les activités du {formatted_ministere} pour l'exercice {formatted_annee_para4} "
             f"et s'articule autour de deux grandes parties."
         )
         story.append(Paragraph(para4_intro, body_style))
         
-        # Première partie avec puces
+        # Première partie avec puces (avec styling selon la source de la liste)
         if premiere_partie_items:
             story.append(Paragraph("La première partie permettra de :", body_style))
             for item in premiere_partie_items:
-                story.append(Paragraph(item, bullet_style, bulletText="•"))
+                # Tous les items de la liste ont la même source que la liste
+                formatted_item = format_by_source(item, premiere_partie_items_source)
+                story.append(Paragraph(formatted_item, bullet_style, bulletText="•"))
         
-        # Seconde partie avec puces
+        # Seconde partie avec puces (avec styling selon la source de la liste)
         if seconde_partie_items:
             story.append(Paragraph("La seconde partie abordera la performance de chaque programme à travers :", body_style))
             for item in seconde_partie_items:
-                formatted_item = item.format(annee=annee) if "{annee}" in item else item
-                story.append(Paragraph(formatted_item, bullet_style, bulletText="•"))
+                formatted_annee_in_item = cls._format_data_value("annee")
+                formatted_item = item.format(annee=formatted_annee_in_item) if "{annee}" in item else item
+                # Tous les items de la liste ont la même source que la liste
+                formatted_item_final = format_by_source(formatted_item, seconde_partie_items_source)
+                story.append(Paragraph(formatted_item_final, bullet_style, bulletText="•"))
         
         # Créer la première page
         pdf.showPage()

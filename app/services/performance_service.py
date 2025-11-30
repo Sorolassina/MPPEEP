@@ -14,7 +14,9 @@ from app.core.logging_config import get_logger
 from app.models.performance import (
     IndicateurPerformance,
     ObjectifPerformance,
+    OrientationStrategique,
     PrioriteObjectif,
+    ResultatStrategique,
     StatutObjectif,
     TypeObjectif,
 )
@@ -402,4 +404,240 @@ class PerformanceService:
         except Exception as e:
             session.rollback()
             logger.error(f"Erreur lors de la suppression de l'indicateur {indicateur_id}: {e}")
+            return False
+
+    # ============================================
+    # ORIENTATIONS STRATÉGIQUES
+    # ============================================
+
+    @staticmethod
+    def creer_orientation_strategique(
+        session: Session, orientation_data: dict[str, Any], created_by_id: int
+    ) -> OrientationStrategique:
+        """Crée une nouvelle orientation stratégique"""
+        try:
+            orientation = OrientationStrategique(
+                libelle=orientation_data["libelle"],
+                description=orientation_data.get("description"),
+                ordre=orientation_data.get("ordre"),
+                actif=orientation_data.get("actif", True),
+                created_by_id=created_by_id,
+            )
+
+            session.add(orientation)
+            session.commit()
+            session.refresh(orientation)
+
+            logger.info(f"Orientation stratégique créée: {orientation.libelle} (ID: {orientation.id})")
+            return orientation
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Erreur lors de la création de l'orientation stratégique: {e}")
+            raise
+
+    @staticmethod
+    def get_orientation_strategique(session: Session, orientation_id: int) -> OrientationStrategique | None:
+        """Récupère une orientation stratégique par son ID"""
+        try:
+            return session.exec(
+                select(OrientationStrategique).where(OrientationStrategique.id == orientation_id)
+            ).first()
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération de l'orientation stratégique {orientation_id}: {e}")
+            return None
+
+    @staticmethod
+    def get_orientations_strategiques(
+        session: Session,
+        skip: int = 0,
+        limit: int = 100,
+        actif: bool | None = None,
+    ) -> list[OrientationStrategique]:
+        """Récupère la liste des orientations stratégiques avec filtres"""
+        try:
+            query = select(OrientationStrategique)
+
+            if actif is not None:
+                query = query.where(OrientationStrategique.actif == actif)
+
+            query = query.order_by(OrientationStrategique.ordre.asc(), OrientationStrategique.libelle.asc())
+            query = query.offset(skip).limit(limit)
+
+            return list(session.exec(query))
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des orientations stratégiques: {e}")
+            return []
+
+    @staticmethod
+    def modifier_orientation_strategique(
+        session: Session, orientation_id: int, orientation_data: dict[str, Any]
+    ) -> OrientationStrategique | None:
+        """Modifie une orientation stratégique existante"""
+        try:
+            orientation = session.exec(
+                select(OrientationStrategique).where(OrientationStrategique.id == orientation_id)
+            ).first()
+            if not orientation:
+                return None
+
+            for field, value in orientation_data.items():
+                if hasattr(orientation, field) and value is not None:
+                    setattr(orientation, field, value)
+
+            orientation.updated_at = datetime.now()
+            session.add(orientation)
+            session.commit()
+            session.refresh(orientation)
+
+            logger.info(f"Orientation stratégique modifiée: {orientation.libelle} (ID: {orientation_id})")
+            return orientation
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Erreur lors de la modification de l'orientation stratégique {orientation_id}: {e}")
+            return None
+
+    @staticmethod
+    def supprimer_orientation_strategique(session: Session, orientation_id: int) -> bool:
+        """Supprime une orientation stratégique"""
+        try:
+            orientation = session.exec(
+                select(OrientationStrategique).where(OrientationStrategique.id == orientation_id)
+            ).first()
+            if not orientation:
+                return False
+
+            session.delete(orientation)
+            session.commit()
+
+            logger.info(f"Orientation stratégique supprimée: {orientation.libelle} (ID: {orientation_id})")
+            return True
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Erreur lors de la suppression de l'orientation stratégique {orientation_id}: {e}")
+            return False
+
+    # ============================================
+    # RÉSULTATS STRATÉGIQUES
+    # ============================================
+
+    @staticmethod
+    def creer_resultat_strategique(
+        session: Session, resultat_data: dict[str, Any], created_by_id: int
+    ) -> ResultatStrategique:
+        """Crée un nouveau résultat stratégique"""
+        try:
+            resultat = ResultatStrategique(
+                orientation_id=resultat_data["orientation_id"],
+                libelle=resultat_data["libelle"],
+                description=resultat_data.get("description"),
+                ordre=resultat_data.get("ordre"),
+                actif=resultat_data.get("actif", True),
+                created_by_id=created_by_id,
+            )
+
+            session.add(resultat)
+            session.commit()
+            session.refresh(resultat)
+
+            logger.info(f"Résultat stratégique créé: {resultat.libelle} (ID: {resultat.id})")
+            return resultat
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Erreur lors de la création du résultat stratégique: {e}")
+            raise
+
+    @staticmethod
+    def get_resultat_strategique(session: Session, resultat_id: int) -> ResultatStrategique | None:
+        """Récupère un résultat stratégique par son ID"""
+        try:
+            return session.exec(
+                select(ResultatStrategique).where(ResultatStrategique.id == resultat_id)
+            ).first()
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération du résultat stratégique {resultat_id}: {e}")
+            return None
+
+    @staticmethod
+    def get_resultats_strategiques(
+        session: Session,
+        skip: int = 0,
+        limit: int = 100,
+        orientation_id: int | None = None,
+        actif: bool | None = None,
+    ) -> list[ResultatStrategique]:
+        """Récupère la liste des résultats stratégiques avec filtres"""
+        try:
+            query = select(ResultatStrategique)
+
+            conditions = []
+            if orientation_id is not None:
+                conditions.append(ResultatStrategique.orientation_id == orientation_id)
+            if actif is not None:
+                conditions.append(ResultatStrategique.actif == actif)
+
+            if conditions:
+                query = query.where(and_(*conditions))
+
+            query = query.order_by(ResultatStrategique.ordre.asc(), ResultatStrategique.libelle.asc())
+            query = query.offset(skip).limit(limit)
+
+            return list(session.exec(query))
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des résultats stratégiques: {e}")
+            return []
+
+    @staticmethod
+    def modifier_resultat_strategique(
+        session: Session, resultat_id: int, resultat_data: dict[str, Any]
+    ) -> ResultatStrategique | None:
+        """Modifie un résultat stratégique existant"""
+        try:
+            resultat = session.exec(
+                select(ResultatStrategique).where(ResultatStrategique.id == resultat_id)
+            ).first()
+            if not resultat:
+                return None
+
+            for field, value in resultat_data.items():
+                if hasattr(resultat, field) and value is not None:
+                    setattr(resultat, field, value)
+
+            resultat.updated_at = datetime.now()
+            session.add(resultat)
+            session.commit()
+            session.refresh(resultat)
+
+            logger.info(f"Résultat stratégique modifié: {resultat.libelle} (ID: {resultat_id})")
+            return resultat
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Erreur lors de la modification du résultat stratégique {resultat_id}: {e}")
+            return None
+
+    @staticmethod
+    def supprimer_resultat_strategique(session: Session, resultat_id: int) -> bool:
+        """Supprime un résultat stratégique"""
+        try:
+            resultat = session.exec(
+                select(ResultatStrategique).where(ResultatStrategique.id == resultat_id)
+            ).first()
+            if not resultat:
+                return False
+
+            session.delete(resultat)
+            session.commit()
+
+            logger.info(f"Résultat stratégique supprimé: {resultat.libelle} (ID: {resultat_id})")
+            return True
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Erreur lors de la suppression du résultat stratégique {resultat_id}: {e}")
             return False

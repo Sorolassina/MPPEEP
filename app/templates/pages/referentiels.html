@@ -618,6 +618,11 @@ function openModal(type, id = null) {
         <textarea name="description" id="field-description" rows="3" class="form-control"></textarea>
       </div>
       <div class="form-group">
+        <label>Missions du Programme</label>
+        <textarea name="missions" id="field-missions" rows="5" class="form-control" placeholder="Entrez une mission par ligne. Exemple:&#10;Mission 1&#10;Mission 2&#10;Mission 3"></textarea>
+        <small class="form-text text-muted">Entrez une mission par ligne. Elles seront utilisées dans le rapport annuel de performance.</small>
+      </div>
+      <div class="form-group">
         <label>Responsable du Programme</label>
         <select name="responsable_id" id="field-responsable_id" class="form-control">
           <option value="">-- Aucun responsable --</option>
@@ -626,6 +631,29 @@ function openModal(type, id = null) {
       </div>
       ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
     `;
+    
+    // Charger les données si on édite
+    if (id) {
+      const programme = programmes.find(p => p.id === id);
+      if (programme) {
+        document.getElementById('field-code').value = programme.code || '';
+        document.getElementById('field-libelle').value = programme.libelle || '';
+        document.getElementById('field-description').value = programme.description || '';
+        document.getElementById('field-responsable_id').value = programme.responsable_id || '';
+        
+        // Charger les missions (convertir JSON en texte ligne par ligne)
+        if (programme.missions) {
+          try {
+            const missionsList = JSON.parse(programme.missions);
+            if (Array.isArray(missionsList)) {
+              document.getElementById('field-missions').value = missionsList.join('\n');
+            }
+          } catch (e) {
+            console.warn('Erreur parsing missions:', e);
+          }
+        }
+      }
+    }
   } else if (type === 'direction') {
     formContent.innerHTML = `
       <div class="form-group">

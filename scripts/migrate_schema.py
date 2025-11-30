@@ -198,6 +198,9 @@ class SchemaMigrator:
         """
         try:
             with Session(self.engine) as session:
+                applied_columns = 0
+                failed_columns = 0
+                
                 # Tables manquantes
                 if differences['missing_tables']:
                     logger.info(f"📋 Tables manquantes: {differences['missing_tables']}")
@@ -207,26 +210,40 @@ class SchemaMigrator:
                         logger.info("✅ Tables manquantes créées")
                 
                 # Colonnes manquantes
-                for table_name, missing_cols in differences['missing_columns'].items():
-                    logger.info(f"📋 Colonnes manquantes dans {table_name}: {missing_cols}")
-                    if not dry_run:
-                        for col_name in missing_cols:
-                            # Récupérer la définition de la colonne depuis les métadonnées
-                            table = SQLModel.metadata.tables[table_name]
-                            column = table.columns[col_name]
-                            
-                            # Générer l'ALTER TABLE
-                            alter_sql = f"ALTER TABLE {table_name} ADD COLUMN {col_name} {column.type}"
-                            if not column.nullable:
-                                alter_sql += " NOT NULL"
-                            if column.default is not None:
-                                alter_sql += f" DEFAULT {column.default}"
-                            
-                            try:
-                                session.execute(text(alter_sql))
-                                logger.info(f"✅ Colonne {col_name} ajoutée à {table_name}")
-                            except Exception as e:
-                                logger.error(f"❌ Erreur ajout colonne {col_name}: {e}")
+                if differences['missing_columns']:
+                    for table_name, missing_cols in differences['missing_columns'].items():
+                        logger.info(f"📋 Colonnes manquantes dans {table_name}: {missing_cols}")
+                        if not dry_run:
+                            for col_name in missing_cols:
+                                # Récupérer la définition de la colonne depuis les métadonnées
+                                table = SQLModel.metadata.tables[table_name]
+                                column = table.columns[col_name]
+                                
+                                # Générer l'ALTER TABLE avec IF NOT EXISTS pour éviter les erreurs si la colonne existe déjà
+                                alter_sql = f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {col_name} {column.type}"
+                                if not column.nullable and column.default is None:
+                                    # Ne pas ajouter NOT NULL si pas de default pour éviter les erreurs
+                                    pass
+                                elif not column.nullable:
+                                    alter_sql += " NOT NULL"
+                                if column.default is not None:
+                                    alter_sql += f" DEFAULT {column.default}"
+                                
+                                try:
+                                    session.execute(text(alter_sql))
+                                    session.commit()  # Commiter immédiatement après chaque colonne réussie
+                                    logger.info(f"✅ Colonne {col_name} ajoutée à {table_name}")
+                                    applied_columns += 1
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Erreur ajout colonne {col_name} (peut-être existe déjà): {e}")
+                                    # Rollback et continuer avec la colonne suivante
+                                    try:
+                                        session.rollback()
+                                    except Exception:
+                                        pass
+                                    failed_columns += 1
+                                    # Continuer avec la colonne suivante même si celle-ci échoue
+                                    continue
                 
                 # Colonnes en trop (optionnel - généralement on ne les supprime pas)
                 if differences['extra_columns']:
@@ -241,14 +258,28 @@ class SchemaMigrator:
                         for col_name, change_info in changes.items():
                             logger.warning(f"   {table_name}.{col_name}: {change_info['current']} → {change_info['expected']}")
                 
+                # Les commits sont déjà faits individuellement après chaque colonne
                 if not dry_run:
-                    session.commit()
-                    logger.info("✅ Migrations appliquées avec succès")
+                    if applied_columns > 0:
+                        logger.info(f"✅ {applied_columns} colonne(s) ajoutée(s) avec succès")
+                    if failed_columns > 0:
+                        logger.warning(f"⚠️ {failed_columns} colonne(s) n'ont pas pu être ajoutée(s)")
+                    if applied_columns == 0 and failed_columns == 0 and not differences.get('missing_tables'):
+                        # Rien n'a été appliqué car seuls des changements de type sont détectés
+                        logger.info("✅ Aucune migration structurelle à appliquer (seuls changements de type détectés, non appliqués pour sécurité)")
+                    else:
+                        logger.info("✅ Migrations appliquées avec succès")
                 
                 return True
                 
         except Exception as e:
             logger.error(f"❌ Erreur lors de l'application des migrations: {e}")
+            # Tenter un rollback si la session existe encore
+            try:
+                with Session(self.engine) as session:
+                    session.rollback()
+            except Exception:
+                pass
             return False
     
     def run_migration_check(self, dry_run: bool = True) -> bool:

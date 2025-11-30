@@ -30,15 +30,31 @@ class SystemSettingsService:
         Returns:
             Les paramètres système
         """
-        SystemSettingsService.ensure_schema(db_session)
+        # Essayer de mettre à jour le schéma si nécessaire, mais ne pas bloquer si ça échoue
+        try:
+            SystemSettingsService.ensure_schema(db_session)
+        except Exception as schema_error:
+            logger.warning(f"⚠️ Erreur lors de la mise à jour du schéma (ignorée): {schema_error}")
+            # Faire un rollback pour nettoyer l'état de la session
+            try:
+                db_session.rollback()
+            except Exception:
+                pass
 
         try:
             settings = db_session.get(SystemSettings, 1)
         except (OperationalError, ProgrammingError) as exc:
-            if "minister_photo" in str(exc).lower():
+            # Faire un rollback avant de réessayer
+            try:
+                db_session.rollback()
+            except Exception:
+                pass
+            
+            if "minister_photo" in str(exc).lower() or "minister_" in str(exc).lower():
                 SystemSettingsService.ensure_schema(db_session, force=True)
                 settings = db_session.get(SystemSettings, 1)
             else:
+                # Re-raise l'erreur après le rollback
                 raise
 
         if not settings:
@@ -157,6 +173,16 @@ class SystemSettingsService:
                 "minister_photo": settings.minister_photo,
                 "minister_name": settings.minister_name,
                 "minister_role": settings.minister_role,
+                "ministry_mission": getattr(settings, "ministry_mission", None),
+                "minister_nomination_date": getattr(settings, "minister_nomination_date", None),
+                "decret_attribution_numero": getattr(settings, "decret_attribution_numero", None),
+                "decret_attribution_date": getattr(settings, "decret_attribution_date", None),
+                "structure_cabinet": getattr(settings, "structure_cabinet", None),
+                "decret_organisation_numero": getattr(settings, "decret_organisation_numero", None),
+                "decret_organisation_date": getattr(settings, "decret_organisation_date", None),
+                "pays": getattr(settings, "pays", None),
+                "devise": getattr(settings, "devise", None),
+                "section": getattr(settings, "section", None),
                 # Calculer les couleurs dérivées
                 "primary_dark": SystemSettingsService.darken_color(settings.primary_color, 0.1),
                 "primary_light": SystemSettingsService.lighten_color(settings.primary_color, 0.2),
@@ -183,36 +209,67 @@ class SystemSettingsService:
     def ensure_schema(db_session: Session, force: bool = False) -> None:
         """
         Vérifie et applique les ajustements mineurs de schéma nécessaires aux paramètres système.
+        Gère les erreurs individuellement pour chaque colonne pour éviter de bloquer toute la transaction.
         """
         try:
             engine = db_session.get_bind()
             inspector = inspect(engine)
+            
+            # Vérifier que la table existe avant d'inspecter les colonnes
+            if not inspector.has_table("system_settings"):
+                logger.warning("⚠️ La table system_settings n'existe pas encore")
+                return
+            
             columns = {col["name"] for col in inspector.get_columns("system_settings")}
 
-            if force or "minister_photo" not in columns:
-                db_session.exec(
-                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_photo VARCHAR(255)")
-                )
-                db_session.commit()
-            if force or "minister_civility" not in columns:
-                db_session.exec(
-                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_civility VARCHAR(50)")
-                )
-                db_session.commit()
+            # Liste des colonnes à ajouter avec leur type
+            columns_to_add = [
+                ("minister_photo", "VARCHAR(255)"),
+                ("minister_civility", "VARCHAR(50)"),
+                ("minister_name", "VARCHAR(255)"),
+                ("minister_role", "VARCHAR(255)"),
+                ("ministry_mission", "VARCHAR"),
+                # Colonnes pour les informations du ministre
+                ("minister_nomination_date", "VARCHAR(255)"),
+                ("decret_attribution_numero", "VARCHAR(255)"),
+                ("decret_attribution_date", "VARCHAR(255)"),
+                # Colonnes pour la structure organisationnelle
+                ("structure_cabinet", "VARCHAR(255)"),
+                ("nb_directions_centrales", "INTEGER"),
+                ("nb_services", "INTEGER"),
+                ("nb_directions_generales", "INTEGER"),
+                ("decret_organisation_numero", "VARCHAR(255)"),
+                ("decret_organisation_date", "VARCHAR(255)"),
+                # Colonnes pour les informations pays/devise
+                ("pays", "VARCHAR(255)"),
+                ("devise", "VARCHAR(255)"),
+                ("section", "VARCHAR(100)"),
+            ]
 
-            if force or "minister_name" not in columns:
-                db_session.exec(
-                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_name VARCHAR(255)")
-                )
-                db_session.commit()
-
-            if force or "minister_role" not in columns:
-                db_session.exec(
-                    text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS minister_role VARCHAR(255)")
-                )
-                db_session.commit()
+            for col_name, col_type in columns_to_add:
+                if force or col_name not in columns:
+                    try:
+                        db_session.exec(
+                            text(f"ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS {col_name} {col_type}")
+                        )
+                        db_session.commit()
+                        logger.debug(f"✅ Colonne {col_name} ajoutée ou déjà existante")
+                    except Exception as col_error:
+                        # Si une colonne échoue, rollback et continuer avec les autres
+                        logger.warning(f"⚠️ Impossible d'ajouter la colonne {col_name}: {col_error}")
+                        try:
+                            db_session.rollback()
+                        except Exception:
+                            pass
+                        # Continuer avec la colonne suivante même si celle-ci a échoué
+                        continue
         except Exception as exc:
             logger.warning(f"⚠️ Impossible de vérifier/mettre à jour le schéma system_settings: {exc}")
+            # Rollback de la transaction en cas d'erreur pour éviter les états d'erreur persistants
+            try:
+                db_session.rollback()
+            except Exception as rollback_error:
+                logger.warning(f"⚠️ Erreur lors du rollback: {rollback_error}")
 
     @staticmethod
     def lighten_color(hex_color: str, percent: float = 0.15) -> str:

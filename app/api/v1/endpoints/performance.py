@@ -22,7 +22,9 @@ from app.models.user import User
 from app.models.performance import (
     IndicateurPerformance,
     ObjectifPerformance,
+    OrientationStrategique,
     RapportPerformance,
+    ResultatStrategique,
     StatutObjectif,
 )
 from app.services.activity_service import ActivityService
@@ -353,6 +355,368 @@ def generate_lettre_engagement_performance_pdf(
 
 
 @router.get(
+    "/api/rapport-annuel-performance/rap-data",
+    response_class=JSONResponse,
+    name="get_rap_data_api",
+)
+def get_rap_data_api(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Récupère toutes les données du Rapport Annuel de Performance (RAP) depuis la base de données"""
+    try:
+        import json
+        from app.services.rap_data_service import RapDataService
+        from app.services.system_settings_service import SystemSettingsService
+        
+        def _parse_financement_interpretations(financement_json: str | None) -> dict:
+            """Parse les interprétations de financement depuis JSON"""
+            if not financement_json:
+                return {}
+            try:
+                return json.loads(financement_json)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        
+        def _parse_conclusion_interpretations(conclusion_json: str | None) -> dict:
+            """Parse les interprétations de conclusion depuis JSON"""
+            if not conclusion_json:
+                return {}
+            try:
+                return json.loads(conclusion_json)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        
+        # Charger RapData
+        rap_data = RapDataService.get_rap_data(db)
+        
+        # Parser les interprétations de financement
+        financement_data = _parse_financement_interpretations(rap_data.financement_interpretations)
+        
+        # Parser les interprétations de conclusion
+        conclusion_data = _parse_conclusion_interpretations(rap_data.conclusion_interpretations)
+        
+        # Charger SystemSettings pour les données d'introduction
+        settings = SystemSettingsService.get_settings(db)
+        
+        # Construire le nom complet du ministre
+        ministre_nom = ""
+        if settings.minister_civility and settings.minister_name:
+            ministre_nom = f"{settings.minister_civility} {settings.minister_name}"
+        elif settings.minister_name:
+            ministre_nom = settings.minister_name
+        
+        # Calculer la structure organisationnelle
+        structure_org = RapDataService.calculate_organization_structure(db)
+        
+        # Extraire le nom du ministère
+        ministere = ""
+        if settings.minister_role:
+            minister_role_upper = settings.minister_role.upper().strip()
+            if "MINISTRE" in minister_role_upper or "MINISTERE" in minister_role_upper:
+                ministere = minister_role_upper.replace("MINISTRE", "MINISTERE")
+                import re
+                ministere = re.sub(r'\s+', ' ', ministere).strip()
+        elif settings.company_name:
+            company_name_upper = settings.company_name.upper().strip()
+            if "MINISTERE" in company_name_upper or "MPPEEP" in company_name_upper:
+                ministere = company_name_upper
+        
+        # Générer l'année par défaut (année en cours ou précédente)
+        from datetime import datetime
+        current_year = datetime.now().year
+        default_annee = current_year
+        
+        # Récupérer l'année depuis les paramètres si disponible (à implémenter si nécessaire)
+        # Pour l'instant, on utilise l'année en cours comme défaut
+        
+        # Générer la date de publication par défaut (mois actuel et année)
+        mois_fr = [
+            "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+            "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+        ]
+        mois_actuel = mois_fr[datetime.now().month - 1]
+        default_date_publication = f"{mois_actuel} {current_year}"
+        
+        # Récupérer les informations générales du rapport depuis RapData
+        if rap_data.annee:
+            default_annee = rap_data.annee
+        
+        if rap_data.date_publication:
+            # Convertir ISO "YYYY-MM" vers format français "Mois AAAA"
+            from app.utils.helpers import convert_iso_month_to_french_str
+            date_pub_fr = convert_iso_month_to_french_str(rap_data.date_publication)
+            if date_pub_fr:
+                default_date_publication = date_pub_fr
+            else:
+                default_date_publication = rap_data.date_publication
+        
+        return {
+            "success": True,
+            "data": {
+                # Données RapData
+                "contexte_texte": rap_data.contexte_texte or "",
+                "rapport_structure_premiere_partie": rap_data.rapport_structure_premiere_partie or "",
+                "rapport_structure_seconde_partie": rap_data.rapport_structure_seconde_partie or "",
+                
+                # Données d'introduction depuis SystemSettings
+                "ministre_nom": ministre_nom,
+                "ministre_date_nomination": getattr(settings, "minister_nomination_date", "") or "",
+                "decret_attribution_numero": getattr(settings, "decret_attribution_numero", "") or "",
+                "decret_attribution_date": getattr(settings, "decret_attribution_date", "") or "",
+                "mission_ministere": settings.ministry_mission or "",
+                "structure_cabinet": getattr(settings, "structure_cabinet", "") or "",
+                "decret_organisation_numero": getattr(settings, "decret_organisation_numero", "") or "",
+                "decret_organisation_date": getattr(settings, "decret_organisation_date", "") or "",
+                
+                # Structure organisationnelle calculée automatiquement
+                "nb_directions_centrales": structure_org.get("nb_directions_centrales", 0),
+                "nb_services": structure_org.get("nb_services", 0),
+                "nb_directions_generales": structure_org.get("nb_directions_generales", 0),
+                
+                # Informations générales
+                "ministere": ministere,
+                "section": getattr(settings, "section", "") or "",
+                "annee": default_annee,  # Année depuis DB ou année en cours
+                "pays": getattr(settings, "pays", "") or "",
+                "devise": getattr(settings, "devise", "") or "",
+                "logo_path": settings.logo_path or "",
+                "date_publication": default_date_publication,  # Date de publication depuis RapData ou mois actuel
+                "titre_rapport": rap_data.titre_rapport or "",  # Titre depuis RapData
+                "titre_annee": rap_data.titre_annee or "AU TITRE DE L'ANNÉE",  # Titre année depuis RapData
+                
+                # Données de financement (interprétations personnalisées)
+                "financement_interpretations": financement_data,
+                "financement_raisons": "\n".join(financement_data.get("raisons_augmentation", [])),
+                "financement_note_comparaison": financement_data.get("note_comparaison", ""),
+                "financement_analyse_personnel": financement_data.get("analyse_personnel_commentaire", ""),
+                "financement_analyse_biens": financement_data.get("analyse_biens_commentaire", ""),
+                "financement_analyse_transferts": financement_data.get("analyse_transferts_commentaire", ""),
+                "financement_analyse_investissements": financement_data.get("analyse_investissements_commentaire", ""),
+                # Données de conclusion par programme (structure: { "code_programme": { "points_positifs": [...], ... } })
+                "conclusion_interpretations": conclusion_data,
+            }
+        }
+    except Exception as e:
+        logger.error(f"❌ Erreur récupération données RAP: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+
+@router.post(
+    "/api/rapport-annuel-performance/save",
+    response_class=JSONResponse,
+    name="save_rap_data_api",
+)
+def save_rap_data_api(
+    # Données RapData
+    rap_contexte_texte: str | None = Form(None),
+    rap_rapport_structure_premiere_partie: str | None = Form(None),
+    rap_rapport_structure_seconde_partie: str | None = Form(None),
+    # Données d'introduction pour SystemSettings
+    rap_ministre_nom: str | None = Form(None),
+    rap_ministre_date_nomination: str | None = Form(None),
+    rap_decret_attribution_numero: str | None = Form(None),
+    rap_decret_attribution_date: str | None = Form(None),
+    rap_mission_ministere: str | None = Form(None),
+    rap_structure_cabinet: str | None = Form(None),
+    rap_decret_organisation_numero: str | None = Form(None),
+    rap_decret_organisation_date: str | None = Form(None),
+    # Informations générales pour SystemSettings
+    rap_section: str | None = Form(None),
+    rap_ministere: str | None = Form(None),
+    rap_logo_path: str | None = Form(None),
+    # Informations générales pour le rapport lui-même (non SystemSettings)
+    annee: int | None = Form(None),
+    titre_rapport: str | None = Form(None),
+    titre_annee: str | None = Form(None),
+    date_publication: str | None = Form(None),
+    # Données de financement (interprétations personnalisées)
+    rap_financement_raisons: str | None = Form(None),
+    rap_financement_note_comparaison: str | None = Form(None),
+    rap_financement_analyse_personnel: str | None = Form(None),
+    rap_financement_analyse_biens: str | None = Form(None),
+    rap_financement_analyse_transferts: str | None = Form(None),
+    rap_financement_analyse_investissements: str | None = Form(None),
+    # Données de conclusion par programme (points positifs, difficultés, recommandations, conclusion)
+    rap_conclusion_programme_code: str | None = Form(None),
+    rap_conclusion_points_positifs: str | None = Form(None),
+    rap_conclusion_difficultes: str | None = Form(None),
+    rap_conclusion_recommandations: str | None = Form(None),
+    rap_conclusion_conclusion: str | None = Form(None),
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Sauvegarde toutes les données du RAP dans la base de données (RapData + SystemSettings)"""
+    try:
+        from app.services.rap_data_service import RapDataService
+        from app.services.system_settings_service import SystemSettingsService
+        from app.services.activity_service import ActivityService
+        
+        user_id = current_user.id if hasattr(current_user, "id") else 1
+        
+        # 1. Sauvegarder dans RapData
+        rap_data_params = {}
+        if rap_contexte_texte is not None and rap_contexte_texte.strip():
+            rap_data_params["contexte_texte"] = rap_contexte_texte.strip()
+        if rap_rapport_structure_premiere_partie is not None and rap_rapport_structure_premiere_partie.strip():
+            rap_data_params["rapport_structure_premiere_partie"] = rap_rapport_structure_premiere_partie.strip()
+        if rap_rapport_structure_seconde_partie is not None and rap_rapport_structure_seconde_partie.strip():
+            rap_data_params["rapport_structure_seconde_partie"] = rap_rapport_structure_seconde_partie.strip()
+        
+        # Ajouter les informations générales du rapport dans RapData
+        if annee is not None:
+            rap_data_params["annee"] = annee
+        if titre_rapport is not None and titre_rapport.strip():
+            rap_data_params["titre_rapport"] = titre_rapport.strip()
+        if titre_annee is not None and titre_annee.strip():
+            rap_data_params["titre_annee"] = titre_annee.strip()
+        if date_publication is not None and date_publication.strip():
+            # Convertir le format français "Mois AAAA" vers ISO "AAAA-MM" si nécessaire
+            from app.utils.helpers import convert_french_month_to_iso_str
+            iso_date = convert_french_month_to_iso_str(date_publication.strip())
+            if iso_date:
+                rap_data_params["date_publication"] = iso_date
+            else:
+                rap_data_params["date_publication"] = date_publication.strip()
+        elif date_publication is None or not date_publication.strip():
+            # Si vide, utiliser le mois et l'année actuels
+            from datetime import datetime
+            now = datetime.now()
+            rap_data_params["date_publication"] = now.strftime("%Y-%m")
+        
+        # Construire le dictionnaire des interprétations de financement
+        import json
+        financement_interpretations = {}
+        if rap_financement_raisons and rap_financement_raisons.strip():
+            # Convertir la liste de raisons (une par ligne) en tableau
+            raisons_list = [r.strip() for r in rap_financement_raisons.strip().split("\n") if r.strip()]
+            if raisons_list:
+                financement_interpretations["raisons_augmentation"] = raisons_list
+        if rap_financement_note_comparaison and rap_financement_note_comparaison.strip():
+            financement_interpretations["note_comparaison"] = rap_financement_note_comparaison.strip()
+        if rap_financement_analyse_personnel and rap_financement_analyse_personnel.strip():
+            financement_interpretations["analyse_personnel_commentaire"] = rap_financement_analyse_personnel.strip()
+        if rap_financement_analyse_biens and rap_financement_analyse_biens.strip():
+            financement_interpretations["analyse_biens_commentaire"] = rap_financement_analyse_biens.strip()
+        if rap_financement_analyse_transferts and rap_financement_analyse_transferts.strip():
+            financement_interpretations["analyse_transferts_commentaire"] = rap_financement_analyse_transferts.strip()
+        if rap_financement_analyse_investissements and rap_financement_analyse_investissements.strip():
+            financement_interpretations["analyse_investissements_commentaire"] = rap_financement_analyse_investissements.strip()
+        
+        # Sauvegarder les interprétations de financement en JSON
+        if financement_interpretations:
+            rap_data_params["financement_interpretations"] = json.dumps(financement_interpretations, ensure_ascii=False)
+        
+        # Construire les interprétations de conclusion par programme
+        # Charger les données existantes pour préserver les autres programmes
+        existing_conclusion_data = {}
+        rap_data_existing = RapDataService.get_rap_data(db)
+        if rap_data_existing.conclusion_interpretations:
+            try:
+                existing_conclusion_data = json.loads(rap_data_existing.conclusion_interpretations) if isinstance(rap_data_existing.conclusion_interpretations, str) else rap_data_existing.conclusion_interpretations
+            except (json.JSONDecodeError, TypeError):
+                existing_conclusion_data = {}
+        
+        # Ajouter/mettre à jour les données pour le programme sélectionné
+        if rap_conclusion_programme_code:
+            programme_data = {}
+            if rap_conclusion_points_positifs and rap_conclusion_points_positifs.strip():
+                # Convertir la liste de points positifs (une par ligne) en tableau
+                points_list = [p.strip() for p in rap_conclusion_points_positifs.strip().split("\n") if p.strip()]
+                if points_list:
+                    programme_data["points_positifs"] = points_list
+            if rap_conclusion_difficultes and rap_conclusion_difficultes.strip():
+                programme_data["difficultes"] = rap_conclusion_difficultes.strip()
+            if rap_conclusion_recommandations and rap_conclusion_recommandations.strip():
+                programme_data["recommandations"] = rap_conclusion_recommandations.strip()
+            if rap_conclusion_conclusion and rap_conclusion_conclusion.strip():
+                programme_data["conclusion"] = rap_conclusion_conclusion.strip()
+            
+            # Mettre à jour les données pour ce programme
+            if programme_data:
+                existing_conclusion_data[rap_conclusion_programme_code] = programme_data
+        
+        # Sauvegarder les interprétations de conclusion en JSON (structure par programme)
+        if existing_conclusion_data:
+            rap_data_params["conclusion_interpretations"] = json.dumps(existing_conclusion_data, ensure_ascii=False)
+        
+        if rap_data_params:
+            RapDataService.update_rap_data(db_session=db, user_id=user_id, **rap_data_params)
+            logger.info(f"✅ Données RapData sauvegardées par {current_user.email}")
+        
+        # 2. Sauvegarder dans SystemSettings (données d'introduction)
+        settings_params = {}
+        
+        # Parser le nom du ministre (civilité + nom)
+        if rap_ministre_nom and rap_ministre_nom.strip():
+            ministre_parts = rap_ministre_nom.strip().split(" ", 1)
+            if len(ministre_parts) >= 2:
+                settings_params["minister_civility"] = ministre_parts[0]
+                settings_params["minister_name"] = ministre_parts[1]
+            else:
+                settings_params["minister_name"] = rap_ministre_nom.strip()
+        
+        if rap_ministre_date_nomination and rap_ministre_date_nomination.strip():
+            settings_params["minister_nomination_date"] = rap_ministre_date_nomination.strip()
+        if rap_decret_attribution_numero and rap_decret_attribution_numero.strip():
+            settings_params["decret_attribution_numero"] = rap_decret_attribution_numero.strip()
+        if rap_decret_attribution_date and rap_decret_attribution_date.strip():
+            settings_params["decret_attribution_date"] = rap_decret_attribution_date.strip()
+        if rap_mission_ministere and rap_mission_ministere.strip():
+            settings_params["ministry_mission"] = rap_mission_ministere.strip()
+        if rap_structure_cabinet and rap_structure_cabinet.strip():
+            settings_params["structure_cabinet"] = rap_structure_cabinet.strip()
+        if rap_decret_organisation_numero and rap_decret_organisation_numero.strip():
+            settings_params["decret_organisation_numero"] = rap_decret_organisation_numero.strip()
+        if rap_decret_organisation_date and rap_decret_organisation_date.strip():
+            settings_params["decret_organisation_date"] = rap_decret_organisation_date.strip()
+        
+        # Informations générales
+        if rap_section and rap_section.strip():
+            settings_params["section"] = rap_section.strip()
+        if rap_ministere and rap_ministere.strip():
+            # Extraire le nom du ministère pour minister_role ou company_name
+            ministere_upper = rap_ministere.strip().upper()
+            if "MINISTERE" in ministere_upper:
+                settings_params["minister_role"] = ministere_upper.replace("MINISTERE", "MINISTRE")
+                settings_params["company_name"] = ministere_upper
+        if rap_logo_path and rap_logo_path.strip():
+            settings_params["logo_path"] = rap_logo_path.strip()
+        
+        if settings_params:
+            SystemSettingsService.update_settings(db_session=db, user_id=user_id, **settings_params)
+            logger.info(f"✅ Données SystemSettings sauvegardées par {current_user.email}")
+        
+        # Logger l'activité
+        ActivityService.log_activity(
+            db_session=db,
+            user_id=user_id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="update",
+            target_type="rap_data",
+            description="Sauvegarde des données du Rapport Annuel de Performance",
+            icon="💾",
+        )
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Données sauvegardées avec succès. Le rapport sera généré avec ces données."
+            }
+        )
+    except Exception as e:
+        logger.error(f"❌ Erreur sauvegarde données RAP: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+
+@router.get(
     "/rapport-annuel-performance/pdf-simpledoc",
     response_class=StreamingResponse,
     name="performance_rapport_annuel_pdf_simpledoc",
@@ -362,7 +726,8 @@ def generate_rapport_annuel_performance_pdf_simpledoc(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Génère le rapport annuel de performance en mode paysage avec SimpleDocTemplate (VERSION TEST)."""
+    """Génère le rapport annuel de performance en mode paysage avec SimpleDocTemplate.
+    Les données sont chargées depuis la base de données (RapData + SystemSettings)."""
     try:
         from app.services.rapport_annuel_performance_service_simpledoc import (
             RapportAnnuelPerformanceGeneratorSimpleDoc
@@ -370,13 +735,39 @@ def generate_rapport_annuel_performance_pdf_simpledoc(
         
         data: dict[str, Any] = {}
         
-        # Pour l'instant, utiliser les données par défaut
+        # Récupérer uniquement les paramètres généraux du formulaire (année, titre, etc.)
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            final_value = transform(value) if transform else value
+            data[target_key] = final_value
+        
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("pays", "pays")
+        optional_param("devise", "devise")
+        optional_param("section", "section")
+        optional_param("ministere", "ministere")
+        optional_param("titre_rapport", "titre_rapport")
+        optional_param("titre_annee", "titre_annee")
+        optional_param("date_publication", "date_publication")
+        optional_param("logo_path", "logo_path")
+        
+        # Récupérer le mode depuis les paramètres de requête (brouillon ou final)
+        mode_param = request.query_params.get("mode", "brouillon")
+        data["mode"] = mode_param if mode_param in ["brouillon", "final"] else "brouillon"
+        
+        # Les données d'introduction et RAP sont chargées automatiquement depuis la base
+        # via load_system_settings_data() dans generate_pdf()
+        
+        # Générer le PDF avec les données (chargées depuis la DB)
         pdf_buffer = RapportAnnuelPerformanceGeneratorSimpleDoc.generate_pdf(data, session=db)
         
         year = data.get("annee", 2024)
+        mode_label = "brouillon" if data.get("mode") == "brouillon" else "final"
         
         headers = {
-            "Content-Disposition": f"inline; filename=rapport_annuel_performance_simpledoc_{year}.pdf",
+            "Content-Disposition": f"inline; filename=rapport_annuel_performance_{year}_{mode_label}.pdf",
         }
         return StreamingResponse(pdf_buffer, media_type="application/pdf", headers=headers)
     except Exception as exc:
@@ -1358,3 +1749,467 @@ def delete_rapport_api(
     except Exception as e:
         logger.error(f"Erreur API delete_rapport: {e}")
         return {"success": False, "error": f"Erreur lors de la suppression du rapport: {e!s}"}
+
+
+# ============================================
+# ROUTES HTML ORIENTATIONS STRATÉGIQUES
+# ============================================
+
+
+@router.get("/orientations", response_class=HTMLResponse, name="performance_orientations")
+def performance_orientations(request: Request, db: Session = Depends(get_session)):
+    """Gestion des orientations stratégiques"""
+    try:
+        from app.templates import get_template_context, templates
+
+        context = get_template_context(request)
+        context.update(
+            {
+                "page_title": "Orientations Stratégiques",
+                "module_name": "Performance",
+                "module_description": "Définition et suivi des orientations stratégiques",
+            }
+        )
+
+        return templates.TemplateResponse("pages/performance_orientations.html", context)
+
+    except Exception as e:
+        logger.error(f"Erreur lors du chargement des orientations stratégiques: {e}")
+        raise HTTPException(status_code=500, detail="Erreur interne du serveur")
+
+
+# ============================================
+# ROUTES HTML RÉSULTATS STRATÉGIQUES
+# ============================================
+
+
+@router.get("/resultats", response_class=HTMLResponse, name="performance_resultats")
+def performance_resultats(request: Request, db: Session = Depends(get_session)):
+    """Gestion des résultats stratégiques"""
+    try:
+        from app.templates import get_template_context, templates
+
+        context = get_template_context(request)
+        context.update(
+            {
+                "page_title": "Résultats Stratégiques",
+                "module_name": "Performance",
+                "module_description": "Définition et suivi des résultats stratégiques",
+            }
+        )
+
+        return templates.TemplateResponse("pages/performance_resultats.html", context)
+
+    except Exception as e:
+        logger.error(f"Erreur lors du chargement des résultats stratégiques: {e}")
+        raise HTTPException(status_code=500, detail="Erreur interne du serveur")
+
+
+# ============================================
+# ROUTES CRUD ORIENTATIONS STRATÉGIQUES
+# ============================================
+
+
+@router.get("/api/orientations", response_class=JSONResponse, name="get_orientations_api")
+def get_orientations_api(
+    db: Session = Depends(get_session),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    actif: bool | None = Query(None),
+):
+    """API: Récupère la liste des orientations stratégiques"""
+    try:
+        orientations = PerformanceService.get_orientations_strategiques(
+            session=db,
+            skip=skip,
+            limit=limit,
+            actif=actif,
+        )
+
+        return {
+            "success": True,
+            "data": [
+                {
+                    "id": orient.id,
+                    "libelle": orient.libelle,
+                    "description": orient.description,
+                    "ordre": orient.ordre,
+                    "actif": orient.actif,
+                    "created_at": orient.created_at.isoformat(),
+                    "updated_at": orient.updated_at.isoformat(),
+                }
+                for orient in orientations
+            ],
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API get_orientations: {e}")
+        return {"success": False, "error": "Erreur lors de la récupération des orientations stratégiques"}
+
+
+@router.get("/api/orientations/{orientation_id}", response_class=JSONResponse, name="get_orientation_api")
+def get_orientation_api(orientation_id: int, db: Session = Depends(get_session)):
+    """API: Récupère une orientation stratégique par son ID"""
+    try:
+        orientation = PerformanceService.get_orientation_strategique(session=db, orientation_id=orientation_id)
+        if not orientation:
+            return {"success": False, "error": "Orientation stratégique non trouvée"}
+
+        return {
+            "success": True,
+            "data": {
+                "id": orientation.id,
+                "libelle": orientation.libelle,
+                "description": orientation.description,
+                "ordre": orientation.ordre,
+                "actif": orientation.actif,
+                "created_at": orientation.created_at.isoformat(),
+                "updated_at": orientation.updated_at.isoformat(),
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API get_orientation: {e}")
+        return {"success": False, "error": "Erreur lors de la récupération de l'orientation stratégique"}
+
+
+@router.post("/api/orientations", response_class=JSONResponse, name="create_orientation_api")
+def create_orientation_api(
+    libelle: str = Form(...),
+    description: str | None = Form(None),
+    ordre: int | None = Form(None),
+    actif: bool = Form(True),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Crée une nouvelle orientation stratégique"""
+    try:
+        orientation_data = {
+            "libelle": libelle,
+            "description": description,
+            "ordre": ordre,
+            "actif": actif,
+        }
+
+        orientation = PerformanceService.creer_orientation_strategique(
+            session=session, orientation_data=orientation_data, created_by_id=current_user.id
+        )
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="create",
+            target_type="orientation_strategique",
+            description=f"Création de l'orientation stratégique: {orientation.libelle}",
+            icon="📋",
+        )
+
+        return {
+            "success": True,
+            "message": "Orientation stratégique créée avec succès",
+            "data": {
+                "id": orientation.id,
+                "libelle": orientation.libelle,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API create_orientation: {e}")
+        return {"success": False, "error": f"Erreur lors de la création de l'orientation stratégique: {e!s}"}
+
+
+@router.post("/api/orientations/{orientation_id}", response_class=JSONResponse, name="update_orientation_api")
+def update_orientation_api(
+    orientation_id: int,
+    libelle: str = Form(...),
+    description: str | None = Form(None),
+    ordre: int | None = Form(None),
+    actif: bool = Form(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Modifie une orientation stratégique"""
+    try:
+        orientation_data = {
+            "libelle": libelle,
+            "description": description,
+            "ordre": ordre,
+            "actif": actif,
+        }
+
+        orientation = PerformanceService.modifier_orientation_strategique(
+            session=session, orientation_id=orientation_id, orientation_data=orientation_data
+        )
+
+        if not orientation:
+            return {"success": False, "error": "Orientation stratégique non trouvée"}
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="update",
+            target_type="orientation_strategique",
+            description=f"Modification de l'orientation stratégique: {orientation.libelle}",
+            icon="📋",
+        )
+
+        return {
+            "success": True,
+            "message": "Orientation stratégique modifiée avec succès",
+            "data": {
+                "id": orientation.id,
+                "libelle": orientation.libelle,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API update_orientation: {e}")
+        return {"success": False, "error": f"Erreur lors de la modification de l'orientation stratégique: {e!s}"}
+
+
+@router.delete("/api/orientations/{orientation_id}", response_class=JSONResponse, name="delete_orientation_api")
+def delete_orientation_api(
+    orientation_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Supprime une orientation stratégique"""
+    try:
+        orientation = PerformanceService.get_orientation_strategique(session=session, orientation_id=orientation_id)
+        if not orientation:
+            return {"success": False, "error": "Orientation stratégique non trouvée"}
+
+        success = PerformanceService.supprimer_orientation_strategique(session=session, orientation_id=orientation_id)
+
+        if not success:
+            return {"success": False, "error": "Erreur lors de la suppression de l'orientation stratégique"}
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="delete",
+            target_type="orientation_strategique",
+            description=f"Suppression de l'orientation stratégique: {orientation.libelle}",
+            icon="📋",
+        )
+
+        return {"success": True, "message": "Orientation stratégique supprimée avec succès"}
+
+    except Exception as e:
+        logger.error(f"Erreur API delete_orientation: {e}")
+        return {"success": False, "error": f"Erreur lors de la suppression de l'orientation stratégique: {e!s}"}
+
+
+# ============================================
+# ROUTES CRUD RÉSULTATS STRATÉGIQUES
+# ============================================
+
+
+@router.get("/api/resultats", response_class=JSONResponse, name="get_resultats_api")
+def get_resultats_api(
+    db: Session = Depends(get_session),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    orientation_id: int | None = Query(None),
+    actif: bool | None = Query(None),
+):
+    """API: Récupère la liste des résultats stratégiques"""
+    try:
+        resultats = PerformanceService.get_resultats_strategiques(
+            session=db,
+            skip=skip,
+            limit=limit,
+            orientation_id=orientation_id,
+            actif=actif,
+        )
+
+        return {
+            "success": True,
+            "data": [
+                {
+                    "id": resultat.id,
+                    "orientation_id": resultat.orientation_id,
+                    "libelle": resultat.libelle,
+                    "description": resultat.description,
+                    "ordre": resultat.ordre,
+                    "actif": resultat.actif,
+                    "created_at": resultat.created_at.isoformat(),
+                    "updated_at": resultat.updated_at.isoformat(),
+                }
+                for resultat in resultats
+            ],
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API get_resultats: {e}")
+        return {"success": False, "error": "Erreur lors de la récupération des résultats stratégiques"}
+
+
+@router.get("/api/resultats/{resultat_id}", response_class=JSONResponse, name="get_resultat_api")
+def get_resultat_api(resultat_id: int, db: Session = Depends(get_session)):
+    """API: Récupère un résultat stratégique par son ID"""
+    try:
+        resultat = PerformanceService.get_resultat_strategique(session=db, resultat_id=resultat_id)
+        if not resultat:
+            return {"success": False, "error": "Résultat stratégique non trouvé"}
+
+        return {
+            "success": True,
+            "data": {
+                "id": resultat.id,
+                "orientation_id": resultat.orientation_id,
+                "libelle": resultat.libelle,
+                "description": resultat.description,
+                "ordre": resultat.ordre,
+                "actif": resultat.actif,
+                "created_at": resultat.created_at.isoformat(),
+                "updated_at": resultat.updated_at.isoformat(),
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API get_resultat: {e}")
+        return {"success": False, "error": "Erreur lors de la récupération du résultat stratégique"}
+
+
+@router.post("/api/resultats", response_class=JSONResponse, name="create_resultat_api")
+def create_resultat_api(
+    orientation_id: int = Form(...),
+    libelle: str = Form(...),
+    description: str | None = Form(None),
+    ordre: int | None = Form(None),
+    actif: bool = Form(True),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Crée un nouveau résultat stratégique"""
+    try:
+        resultat_data = {
+            "orientation_id": orientation_id,
+            "libelle": libelle,
+            "description": description,
+            "ordre": ordre,
+            "actif": actif,
+        }
+
+        resultat = PerformanceService.creer_resultat_strategique(
+            session=session, resultat_data=resultat_data, created_by_id=current_user.id
+        )
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="create",
+            target_type="resultat_strategique",
+            description=f"Création du résultat stratégique: {resultat.libelle}",
+            icon="📋",
+        )
+
+        return {
+            "success": True,
+            "message": "Résultat stratégique créé avec succès",
+            "data": {
+                "id": resultat.id,
+                "libelle": resultat.libelle,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API create_resultat: {e}")
+        return {"success": False, "error": f"Erreur lors de la création du résultat stratégique: {e!s}"}
+
+
+@router.post("/api/resultats/{resultat_id}", response_class=JSONResponse, name="update_resultat_api")
+def update_resultat_api(
+    resultat_id: int,
+    orientation_id: int = Form(...),
+    libelle: str = Form(...),
+    description: str | None = Form(None),
+    ordre: int | None = Form(None),
+    actif: bool = Form(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Modifie un résultat stratégique"""
+    try:
+        resultat_data = {
+            "orientation_id": orientation_id,
+            "libelle": libelle,
+            "description": description,
+            "ordre": ordre,
+            "actif": actif,
+        }
+
+        resultat = PerformanceService.modifier_resultat_strategique(
+            session=session, resultat_id=resultat_id, resultat_data=resultat_data
+        )
+
+        if not resultat:
+            return {"success": False, "error": "Résultat stratégique non trouvé"}
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="update",
+            target_type="resultat_strategique",
+            description=f"Modification du résultat stratégique: {resultat.libelle}",
+            icon="📋",
+        )
+
+        return {
+            "success": True,
+            "message": "Résultat stratégique modifié avec succès",
+            "data": {
+                "id": resultat.id,
+                "libelle": resultat.libelle,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Erreur API update_resultat: {e}")
+        return {"success": False, "error": f"Erreur lors de la modification du résultat stratégique: {e!s}"}
+
+
+@router.delete("/api/resultats/{resultat_id}", response_class=JSONResponse, name="delete_resultat_api")
+def delete_resultat_api(
+    resultat_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Supprime un résultat stratégique"""
+    try:
+        resultat = PerformanceService.get_resultat_strategique(session=session, resultat_id=resultat_id)
+        if not resultat:
+            return {"success": False, "error": "Résultat stratégique non trouvé"}
+
+        success = PerformanceService.supprimer_resultat_strategique(session=session, resultat_id=resultat_id)
+
+        if not success:
+            return {"success": False, "error": "Erreur lors de la suppression du résultat stratégique"}
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="delete",
+            target_type="resultat_strategique",
+            description=f"Suppression du résultat stratégique: {resultat.libelle}",
+            icon="📋",
+        )
+
+        return {"success": True, "message": "Résultat stratégique supprimé avec succès"}
+
+    except Exception as e:
+        logger.error(f"Erreur API delete_resultat: {e}")
+        return {"success": False, "error": f"Erreur lors de la suppression du résultat stratégique: {e!s}"}

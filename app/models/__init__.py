@@ -36,8 +36,9 @@ from app.models.performance import (
     EvaluationPerformance,
     IndicateurPerformance,
     ObjectifPerformance,
-    ProgrammePerformance,
+    OrientationStrategique,
     RapportPerformance,
+    ResultatStrategique,
 )
 from app.models.rh import Agent, Grade, HRRequest, WorkflowHistory, WorkflowStep
 from app.models.session import UserSession
@@ -58,6 +59,7 @@ from app.models.stock import (
     LigneInventaire,
     MouvementStock,
 )
+from app.models.rap_data import RapData
 from app.models.system_settings import SystemSettings
 from app.models.user import User
 
@@ -98,9 +100,11 @@ __all__ = [
     "MouvementStock",
     "NatureDepense",
     "ObjectifPerformance",
+    "OrientationStrategique",
     "Programme",
-    "ProgrammePerformance",
     "RapportPerformance",
+    "ResultatStrategique",
+    "RapData",
     "RequestTypeCustom",
     "Service",
     "ServiceBeneficiaire",
