@@ -9,6 +9,7 @@ from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 from typing import Any
+import re
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, File as FastAPIFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -19,6 +20,7 @@ from app.core.logging_config import get_logger
 from app.core.permission_decorators import require_data_access, require_module_dep
 from app.db.session import get_session
 from app.models.user import User
+from app.models.personnel import Programme
 from app.models.performance import (
     IndicateurPerformance,
     ObjectifPerformance,
@@ -32,8 +34,9 @@ from app.core.path_config import path_config
 from app.services.performance_service import PerformanceService
 from app.services.engagement_letter_service import EngagementLetterGenerator
 from app.services.performance_engagement_letter_service import PerformanceEngagementLetterGenerator
-from app.services.rapport_annuel_performance_service import RapportAnnuelPerformanceGenerator
+from app.services.rapport_annuel_performance_generator_modular import RAPPDFGenerator
 from app.services.report_generator import ReportGenerator
+from app.services.cadre_performance_generator import CadrePerformanceGenerator
 
 logger = get_logger(__name__)
 
@@ -189,17 +192,17 @@ def performance_home(
 
         # Valeurs par défaut pour le rapport annuel de performance
         rapport_annuel_defaults = {
-            "annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("annee", current_year - 1),
-            "section": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("section", "SECTION 376"),
-            "ministere": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("ministere", ""),
-            "titre_rapport": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_rapport", ""),
-            "titre_annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE"),
-            "date_publication": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("date_publication", ""),
-            "logo_path": logo_path_from_settings if logo_path_from_settings else RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("logo_path", ""),
+            "annee": RAPPDFGenerator.DEFAULT_DATA.get("annee", current_year - 1),
+            "section": RAPPDFGenerator.DEFAULT_DATA.get("section", "SECTION 376"),
+            "ministere": RAPPDFGenerator.DEFAULT_DATA.get("ministere", ""),
+            "titre_rapport": RAPPDFGenerator.DEFAULT_DATA.get("titre_rapport", ""),
+            "titre_annee": RAPPDFGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE"),
+            "date_publication": RAPPDFGenerator.DEFAULT_DATA.get("date_publication", ""),
+            "logo_path": logo_path_from_settings if logo_path_from_settings else RAPPDFGenerator.DEFAULT_DATA.get("logo_path", ""),
         }
         # Générer la date de publication si non définie
         if not rapport_annuel_defaults.get("date_publication"):
-            rapport_annuel_defaults["date_publication"] = f"Mai {current_year}"
+            rapport_annuel_defaults["date_publication"] = datetime.now().strftime("%Y-%m")
 
         context.update(
             {
@@ -306,6 +309,100 @@ def generate_lettre_engagement_pdf(
 
 
 @router.get(
+    "/lettres-engagement/docx",
+    response_class=StreamingResponse,
+    name="performance_lettres_engagement_docx",
+)
+def generate_lettre_engagement_docx(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Génère la lettre d'engagement opérationnel et la convertit en document Word (.docx).
+    
+    Cette fonctionnalité permet aux utilisateurs de modifier la lettre dans Word
+    au cas où ils souhaiteraient y apporter des modifications.
+    
+    Le processus :
+    1. Génère le PDF de la lettre (même processus que /pdf)
+    2. Convertit le PDF en Word via Adobe PDF Services
+    3. Retourne le document Word pour téléchargement
+    """
+    try:
+        from app.services.pdf_to_word_service import PDFToWordService
+        
+        # Récupérer les paramètres de conversion
+        use_ocr = request.query_params.get("ocr", "false").lower() == "true"
+        
+        data: dict[str, Any] = {}
+
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            data[target_key] = transform(value) if transform else value
+
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("pays", "pays")
+        optional_param("devise", "devise")
+        optional_param("ministere", "ministere")
+        optional_param("ville", "ville_signature")
+        optional_param("date", "date_signature")
+        optional_param("programme", "programme_intitule")
+        optional_param("bop", "bop_intitule")
+        optional_param("rprog_nom", "rprog_nom")
+        optional_param("rprog_fonction", "rprog_fonction")
+        optional_param("rprog_photo", "rprog_photo")
+        optional_param("rbop_nom", "rbop_nom")
+        optional_param("rbop_fonction", "rbop_fonction")
+        optional_param("rbop_photo", "rbop_photo")
+        optional_param("decret_org_num", "decret_org_num")
+        optional_param("decret_org_date", "decret_org_date")
+        optional_param("decret_resp_num", "decret_resp_num")
+        optional_param("decret_resp_date", "decret_resp_date")
+        optional_param("logo_path", "logo_path")
+
+        # Étape 1: Générer le PDF
+        logger.info("📄 Génération du PDF de la lettre d'engagement...")
+        pdf_buffer = EngagementLetterGenerator.generate_pdf(data)
+
+        # Étape 2: Convertir le PDF en Word
+        logger.info("🔄 Conversion PDF → Word en cours...")
+        word_buffer = PDFToWordService.convert_pdf_to_word(pdf_buffer, use_ocr=use_ocr)
+
+        year = data.get("annee", EngagementLetterGenerator.DEFAULT_DATA.get("annee", "2025"))
+
+        headers = {
+            "Content-Disposition": f"attachment; filename=lettre_engagement_{year}.docx",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        
+        logger.info("✅ Document Word généré avec succès")
+        return StreamingResponse(word_buffer, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)
+        
+    except ValueError as e:
+        # Erreur de configuration (credentials manquants)
+        logger.error(f"❌ Erreur de configuration: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration manquante pour la conversion PDF → Word: {e}"
+        )
+    except ImportError as e:
+        # SDK non installé
+        logger.error(f"❌ SDK non installé: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Le SDK Adobe PDF Services n'est pas installé. Installez-le avec: pip install pdfservices-sdk"
+        )
+    except Exception as exc:
+        logger.exception("Erreur conversion lettre d'engagement en Word: %s", exc)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erreur lors de la conversion de la lettre d'engagement en Word: {str(exc)}"
+        )
+
+
+@router.get(
     "/lettres-engagement-performance/pdf",
     response_class=StreamingResponse,
     name="performance_lettres_engagement_performance_pdf",
@@ -352,6 +449,241 @@ def generate_lettre_engagement_performance_pdf(
     except Exception as exc:
         logger.exception("Erreur génération lettre d'engagement de performance: %s", exc)
         raise HTTPException(status_code=500, detail="Erreur lors de la génération de la lettre d'engagement de performance")
+
+
+@router.get(
+    "/lettres-engagement-performance/docx",
+    response_class=StreamingResponse,
+    name="performance_lettres_engagement_performance_docx",
+)
+def generate_lettre_engagement_performance_docx(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Génère la lettre d'engagement de performance et la convertit en document Word (.docx).
+    
+    Cette fonctionnalité permet aux utilisateurs de modifier la lettre dans Word
+    au cas où ils souhaiteraient y apporter des modifications.
+    
+    Le processus :
+    1. Génère le PDF de la lettre (même processus que /pdf)
+    2. Convertit le PDF en Word via Adobe PDF Services
+    3. Retourne le document Word pour téléchargement
+    """
+    try:
+        from app.services.pdf_to_word_service import PDFToWordService
+        
+        # Récupérer les paramètres de conversion
+        use_ocr = request.query_params.get("ocr", "false").lower() == "true"
+        
+        data: dict[str, Any] = {}
+
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            data[target_key] = transform(value) if transform else value
+
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("pays", "pays")
+        optional_param("devise", "devise")
+        optional_param("programme", "programme_intitule")
+        optional_param("minister_civility", "minister_civility")
+        optional_param("minister_nom", "minister_nom")
+        optional_param("minister_fonction", "minister_fonction")
+        optional_param("minister_photo", "minister_photo")
+        optional_param("dg_nom", "dg_nom")
+        optional_param("dg_fonction", "dg_fonction")
+        optional_param("rprog_nom", "rprog_nom")
+        optional_param("rprog_fonction", "rprog_fonction")
+        optional_param("rprog_photo", "rprog_photo")
+        optional_param("logo_path", "logo_path")
+        optional_param("ville", "ville_signature")
+        optional_param("date", "date_signature")
+
+        # Étape 1: Générer le PDF
+        logger.info("📄 Génération du PDF de la lettre d'engagement de performance...")
+        pdf_buffer = PerformanceEngagementLetterGenerator.generate_pdf(data)
+
+        # Étape 2: Convertir le PDF en Word
+        logger.info("🔄 Conversion PDF → Word en cours...")
+        word_buffer = PDFToWordService.convert_pdf_to_word(pdf_buffer, use_ocr=use_ocr)
+
+        year = data.get("annee", PerformanceEngagementLetterGenerator.DEFAULT_DATA.get("annee", "2025"))
+
+        headers = {
+            "Content-Disposition": f"attachment; filename=lettre_engagement_performance_{year}.docx",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        
+        logger.info("✅ Document Word généré avec succès")
+        return StreamingResponse(word_buffer, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)
+        
+    except ValueError as e:
+        # Erreur de configuration (credentials manquants)
+        logger.error(f"❌ Erreur de configuration: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration manquante pour la conversion PDF → Word: {e}"
+        )
+    except ImportError as e:
+        # SDK non installé
+        logger.error(f"❌ SDK non installé: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Le SDK Adobe PDF Services n'est pas installé. Installez-le avec: pip install pdfservices-sdk"
+        )
+    except Exception as exc:
+        logger.exception("Erreur conversion lettre d'engagement de performance en Word: %s", exc)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erreur lors de la conversion de la lettre d'engagement de performance en Word: {str(exc)}"
+        )
+
+
+@router.get(
+    "/cadre-performance/pdf",
+    response_class=StreamingResponse,
+    name="performance_cadre_performance_pdf",
+)
+def generate_cadre_performance_pdf(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Génère le cadre de performance en PDF."""
+    try:
+        # Récupérer les paramètres
+        programme_id = request.query_params.get("programme_id")
+        programme_id = int(programme_id) if programme_id and programme_id.isdigit() else None
+        
+        annee_reference = request.query_params.get("annee_reference")
+        annee_reference = int(annee_reference) if annee_reference and annee_reference.isdigit() else None
+        
+        annee_redaction = request.query_params.get("annee_redaction")
+        annee_redaction = int(annee_redaction) if annee_redaction and annee_redaction.isdigit() else None
+        
+        titre = request.query_params.get("titre")
+        
+        mode = request.query_params.get("mode", "brouillon")
+        mode = mode if mode in ["brouillon", "final"] else "brouillon"
+        
+        # Générer le PDF
+        pdf_buffer = CadrePerformanceGenerator.generate_pdf(
+            session=db,
+            programme_id=programme_id,
+            annee_reference=annee_reference,
+            annee_redaction=annee_redaction,
+            titre=titre,
+            mode=mode
+        )
+        
+        # Nom du fichier
+        if programme_id:
+            programme = db.exec(
+                select(Programme).where(Programme.id == programme_id)
+            ).first()
+            filename = f"cadre_performance_{programme.code if programme else programme_id}.pdf"
+        else:
+            filename = "cadre_performance_ministere.pdf"
+        
+        headers = {
+            "Content-Disposition": f"inline; filename={filename}",
+        }
+        return StreamingResponse(pdf_buffer, media_type="application/pdf", headers=headers)
+    except Exception as exc:
+        logger.exception("Erreur génération cadre de performance: %s", exc)
+        raise HTTPException(status_code=500, detail="Erreur lors de la génération du cadre de performance")
+
+
+@router.get(
+    "/cadre-performance/docx",
+    response_class=StreamingResponse,
+    name="performance_cadre_performance_docx",
+)
+def generate_cadre_performance_docx(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Génère le cadre de performance et le convertit en document Word (.docx).
+    
+    Cette fonctionnalité permet aux utilisateurs de modifier le cadre dans Word
+    au cas où ils souhaiteraient y apporter des modifications.
+    """
+    try:
+        from app.services.pdf_to_word_service import PDFToWordService
+        
+        # Récupérer les paramètres de conversion
+        use_ocr = request.query_params.get("ocr", "false").lower() == "true"
+        
+        # Récupérer les paramètres
+        programme_id = request.query_params.get("programme_id")
+        programme_id = int(programme_id) if programme_id and programme_id.isdigit() else None
+        
+        annee_reference = request.query_params.get("annee_reference")
+        annee_reference = int(annee_reference) if annee_reference and annee_reference.isdigit() else None
+        
+        annee_redaction = request.query_params.get("annee_redaction")
+        annee_redaction = int(annee_redaction) if annee_redaction and annee_redaction.isdigit() else None
+        
+        titre = request.query_params.get("titre")
+        
+        mode = request.query_params.get("mode", "brouillon")
+        mode = mode if mode in ["brouillon", "final"] else "brouillon"
+        
+        # Étape 1: Générer le PDF
+        logger.info("📄 Génération du PDF du cadre de performance...")
+        pdf_buffer = CadrePerformanceGenerator.generate_pdf(
+            session=db,
+            programme_id=programme_id,
+            annee_reference=annee_reference,
+            annee_redaction=annee_redaction,
+            titre=titre,
+            mode=mode
+        )
+        
+        # Étape 2: Convertir le PDF en Word
+        logger.info("🔄 Conversion PDF → Word en cours...")
+        word_buffer = PDFToWordService.convert_pdf_to_word(pdf_buffer, use_ocr=use_ocr)
+        
+        # Nom du fichier
+        if programme_id:
+            programme = db.exec(
+                select(Programme).where(Programme.id == programme_id)
+            ).first()
+            filename = f"cadre_performance_{programme.code if programme else programme_id}.docx"
+        else:
+            filename = "cadre_performance_ministere.docx"
+        
+        headers = {
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        
+        logger.info("✅ Document Word généré avec succès")
+        return StreamingResponse(word_buffer, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)
+        
+    except ValueError as e:
+        logger.error(f"❌ Erreur de configuration: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration manquante pour la conversion PDF → Word: {e}"
+        )
+    except ImportError as e:
+        logger.error(f"❌ SDK non installé: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Le SDK Adobe PDF Services n'est pas installé. Installez-le avec: pip install pdfservices-sdk"
+        )
+    except Exception as exc:
+        logger.exception("Erreur conversion cadre de performance en Word: %s", exc)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erreur lors de la conversion du cadre de performance en Word: {str(exc)}"
+        )
 
 
 @router.get(
@@ -430,26 +762,28 @@ def get_rap_data_api(
         # Récupérer l'année depuis les paramètres si disponible (à implémenter si nécessaire)
         # Pour l'instant, on utilise l'année en cours comme défaut
         
-        # Générer la date de publication par défaut (mois actuel et année)
-        mois_fr = [
-            "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-            "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
-        ]
-        mois_actuel = mois_fr[datetime.now().month - 1]
-        default_date_publication = f"{mois_actuel} {current_year}"
+        # Générer la date de publication par défaut (mois actuel et année) en format ISO "YYYY-MM"
+        now = datetime.now()
+        default_date_publication = now.strftime("%Y-%m")
         
         # Récupérer les informations générales du rapport depuis RapData
         if rap_data.annee:
             default_annee = rap_data.annee
         
         if rap_data.date_publication:
-            # Convertir ISO "YYYY-MM" vers format français "Mois AAAA"
-            from app.utils.helpers import convert_iso_month_to_french_str
-            date_pub_fr = convert_iso_month_to_french_str(rap_data.date_publication)
-            if date_pub_fr:
-                default_date_publication = date_pub_fr
+            # Garder le format ISO "YYYY-MM" pour les champs HTML de type "month"
+            # Si la date est déjà en format ISO, l'utiliser directement
+            if re.match(r'^\d{4}-\d{2}$', rap_data.date_publication.strip()):
+                default_date_publication = rap_data.date_publication.strip()
             else:
-                default_date_publication = rap_data.date_publication
+                # Si la date est en format français, la convertir en ISO
+                from app.utils.helpers import convert_french_month_to_iso_str
+                iso_date = convert_french_month_to_iso_str(rap_data.date_publication)
+                if iso_date:
+                    default_date_publication = iso_date
+                else:
+                    # Fallback: utiliser la valeur telle quelle
+                    default_date_publication = rap_data.date_publication.strip()
         
         return {
             "success": True,
@@ -726,11 +1060,11 @@ def generate_rapport_annuel_performance_pdf_simpledoc(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Génère le rapport annuel de performance en mode paysage avec SimpleDocTemplate.
+    """Génère le rapport annuel de performance en mode paysage avec le module modulaire.
     Les données sont chargées depuis la base de données (RapData + SystemSettings)."""
     try:
-        from app.services.rapport_annuel_performance_service_simpledoc import (
-            RapportAnnuelPerformanceGeneratorSimpleDoc
+        from app.services.rapport_annuel_performance_generator_modular import (
+            RAPPDFGenerator
         )
         
         data: dict[str, Any] = {}
@@ -761,20 +1095,247 @@ def generate_rapport_annuel_performance_pdf_simpledoc(
         # via load_system_settings_data() dans generate_pdf()
         
         # Générer le PDF avec les données (chargées depuis la DB)
-        pdf_buffer = RapportAnnuelPerformanceGeneratorSimpleDoc.generate_pdf(data, session=db)
+        pdf_buffer = RAPPDFGenerator.generate_pdf(data, session=db)
         
         year = data.get("annee", 2024)
         mode_label = "brouillon" if data.get("mode") == "brouillon" else "final"
+        mode = data.get("mode", "brouillon")
+        
+        # Enregistrer dans l'historique si mode final
+        if mode == "final":
+            try:
+                from app.services.rapport_annuel_performance_generator_modular import RAPDataLoader
+                from datetime import date
+                
+                # Récupérer les statistiques depuis les données de performance
+                budget_data = RAPDataLoader.load_budget_data(db, year)
+                performance_data = budget_data.get("performance", {})
+                architecture_data = performance_data.get("architecture", {})
+                
+                # Calculer les dates de période (année complète)
+                date_debut = date(year, 1, 1)
+                date_fin = date(year, 12, 31)
+                
+                # Nom du fichier
+                filename = f"rapport_annuel_performance_{year}_final.pdf"
+                
+                # Récupérer le nom de l'utilisateur
+                user_name = (
+                    current_user.full_name
+                    if hasattr(current_user, "full_name") and current_user.full_name
+                    else current_user.email
+                    if hasattr(current_user, "email")
+                    else "Utilisateur"
+                )
+                
+                # Créer un enregistrement dans l'historique
+                rapport = RapportPerformance(
+                    titre=data.get("titre_rapport", f"Rapport Annuel de Performance {year}"),
+                    description=f"Rapport Annuel de Performance pour l'année {year}",
+                    type_rapport="RAP",  # Rapport Annuel de Performance
+                    format_fichier="PDF",
+                    periode=f"ANNEE_{year}",
+                    date_debut=date_debut,
+                    date_fin=date_fin,
+                    fichier_nom=filename,
+                    fichier_taille=len(pdf_buffer.getvalue()),
+                    nb_objectifs=architecture_data.get("nb_objectifs_globaux", 0) + architecture_data.get("nb_objectifs_specifiques", 0),
+                    nb_indicateurs=architecture_data.get("nb_indicateurs", 0),
+                    taux_realisation=performance_data.get("taux_realisation", 0),
+                    created_by_id=current_user.id if hasattr(current_user, "id") else 1,
+                    created_by_nom=user_name,
+                )
+                db.add(rapport)
+                db.commit()
+                db.refresh(rapport)
+                
+                # Logger l'activité
+                ActivityService.log_activity(
+                    db_session=db,
+                    user_id=current_user.id if hasattr(current_user, "id") else 1,
+                    user_email=current_user.email if hasattr(current_user, "email") else "user@system",
+                    user_full_name=user_name,
+                    action_type="generate",
+                    target_type="rapport_performance",
+                    description=f"Génération du Rapport Annuel de Performance (PDF) pour l'année {year}",
+                    icon="📋",
+                )
+                
+                logger.info(f"✅ Rapport Annuel de Performance enregistré dans l'historique (ID: {rapport.id})")
+            except Exception as hist_error:
+                # Ne pas bloquer la génération si l'enregistrement échoue
+                logger.warning(f"⚠️ Erreur lors de l'enregistrement dans l'historique: {hist_error}")
         
         headers = {
             "Content-Disposition": f"inline; filename=rapport_annuel_performance_{year}_{mode_label}.pdf",
         }
         return StreamingResponse(pdf_buffer, media_type="application/pdf", headers=headers)
     except Exception as exc:
-        logger.exception("Erreur génération rapport annuel de performance (SimpleDocTemplate): %s", exc)
+        logger.exception("Erreur génération rapport annuel de performance (Module modulaire): %s", exc)
         raise HTTPException(
             status_code=500, 
-            detail="Erreur lors de la génération du rapport annuel de performance avec SimpleDocTemplate"
+            detail="Erreur lors de la génération du rapport annuel de performance (Module modulaire)"
+        )
+
+
+@router.get(
+    "/rapport-annuel-performance/docx-simpledoc",
+    response_class=StreamingResponse,
+    name="performance_rapport_annuel_docx_simpledoc",
+)
+def generate_rapport_annuel_performance_docx_simpledoc(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Génère le rapport annuel de performance et le convertit en document Word (.docx).
+    
+    Cette fonctionnalité permet aux utilisateurs de modifier le rapport dans Word
+    au cas où ils souhaiteraient y apporter des modifications.
+    
+    Le processus :
+    1. Génère le PDF du rapport (même processus que /pdf-simpledoc)
+    2. Convertit le PDF en Word via Adobe PDF Services
+    3. Retourne le document Word pour téléchargement
+    """
+    try:
+        from app.services.rapport_annuel_performance_generator_modular import (
+            RAPPDFGenerator
+        )
+        from app.services.pdf_to_word_service import PDFToWordService
+        
+        # Récupérer les paramètres de conversion
+        use_ocr = request.query_params.get("ocr", "false").lower() == "true"
+        
+        data: dict[str, Any] = {}
+        
+        # Récupérer uniquement les paramètres généraux du formulaire (année, titre, etc.)
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            final_value = transform(value) if transform else value
+            data[target_key] = final_value
+        
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("pays", "pays")
+        optional_param("devise", "devise")
+        optional_param("section", "section")
+        optional_param("ministere", "ministere")
+        optional_param("titre_rapport", "titre_rapport")
+        optional_param("titre_annee", "titre_annee")
+        optional_param("date_publication", "date_publication")
+        optional_param("logo_path", "logo_path")
+        
+        # Récupérer le mode depuis les paramètres de requête (brouillon ou final)
+        mode_param = request.query_params.get("mode", "brouillon")
+        data["mode"] = mode_param if mode_param in ["brouillon", "final"] else "brouillon"
+        
+        # Étape 1: Générer le PDF
+        logger.info("📄 Génération du PDF du rapport...")
+        pdf_buffer = RAPPDFGenerator.generate_pdf(data, session=db)
+        
+        # Étape 2: Convertir le PDF en Word
+        logger.info("🔄 Conversion PDF → Word en cours...")
+        word_buffer = PDFToWordService.convert_pdf_to_word(pdf_buffer, use_ocr=use_ocr)
+        
+        year = data.get("annee", 2024)
+        mode_label = "brouillon" if data.get("mode") == "brouillon" else "final"
+        mode = data.get("mode", "brouillon")
+        
+        # Enregistrer dans l'historique si mode final
+        if mode == "final":
+            try:
+                from app.services.rapport_annuel_performance_generator_modular import RAPDataLoader
+                from datetime import date
+                
+                # Récupérer les statistiques depuis les données de performance
+                budget_data = RAPDataLoader.load_budget_data(db, year)
+                performance_data = budget_data.get("performance", {})
+                architecture_data = performance_data.get("architecture", {})
+                
+                # Calculer les dates de période (année complète)
+                date_debut = date(year, 1, 1)
+                date_fin = date(year, 12, 31)
+                
+                # Nom du fichier
+                filename = f"rapport_annuel_performance_{year}_final.docx"
+                
+                # Récupérer le nom de l'utilisateur
+                user_name = (
+                    current_user.full_name
+                    if hasattr(current_user, "full_name") and current_user.full_name
+                    else current_user.email
+                    if hasattr(current_user, "email")
+                    else "Utilisateur"
+                )
+                
+                # Créer un enregistrement dans l'historique
+                rapport = RapportPerformance(
+                    titre=data.get("titre_rapport", f"Rapport Annuel de Performance {year}"),
+                    description=f"Rapport Annuel de Performance pour l'année {year} (format Word)",
+                    type_rapport="RAP",  # Rapport Annuel de Performance
+                    format_fichier="DOCX",
+                    periode=f"ANNEE_{year}",
+                    date_debut=date_debut,
+                    date_fin=date_fin,
+                    fichier_nom=filename,
+                    fichier_taille=len(word_buffer.getvalue()),
+                    nb_objectifs=architecture_data.get("nb_objectifs_globaux", 0) + architecture_data.get("nb_objectifs_specifiques", 0),
+                    nb_indicateurs=architecture_data.get("nb_indicateurs", 0),
+                    taux_realisation=performance_data.get("taux_realisation", 0),
+                    created_by_id=current_user.id if hasattr(current_user, "id") else 1,
+                    created_by_nom=user_name,
+                )
+                db.add(rapport)
+                db.commit()
+                db.refresh(rapport)
+                
+                # Logger l'activité
+                ActivityService.log_activity(
+                    db_session=db,
+                    user_id=current_user.id if hasattr(current_user, "id") else 1,
+                    user_email=current_user.email if hasattr(current_user, "email") else "user@system",
+                    user_full_name=user_name,
+                    action_type="generate",
+                    target_type="rapport_performance",
+                    description=f"Génération du Rapport Annuel de Performance (Word) pour l'année {year}",
+                    icon="📋",
+                )
+                
+                logger.info(f"✅ Rapport Annuel de Performance (Word) enregistré dans l'historique (ID: {rapport.id})")
+            except Exception as hist_error:
+                # Ne pas bloquer la génération si l'enregistrement échoue
+                logger.warning(f"⚠️ Erreur lors de l'enregistrement dans l'historique: {hist_error}")
+        
+        headers = {
+            "Content-Disposition": f"attachment; filename=rapport_annuel_performance_{year}_{mode_label}.docx",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        
+        logger.info("✅ Document Word généré avec succès")
+        return StreamingResponse(word_buffer, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)
+        
+    except ValueError as e:
+        # Erreur de configuration (credentials manquants)
+        logger.error(f"❌ Erreur de configuration: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration manquante pour la conversion PDF → Word: {e}"
+        )
+    except ImportError as e:
+        # SDK non installé
+        logger.error(f"❌ SDK non installé: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Le SDK Adobe PDF Services n'est pas installé. Installez-le avec: pip install pdfservices-sdk"
+        )
+    except Exception as exc:
+        logger.exception("Erreur conversion rapport annuel de performance en Word: %s", exc)
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Erreur lors de la conversion du rapport en Word: {str(exc)}"
         )
 
 
@@ -853,9 +1414,9 @@ def generate_rapport_annuel_performance_pdf(
             data["financement_interpretations"] = financement_interpretations
 
         # Passer la session de base de données pour charger les données budgétaires
-        pdf_buffer = RapportAnnuelPerformanceGenerator.generate_pdf(data, session=db)
+        pdf_buffer = RAPPDFGenerator.generate_pdf(data, session=db)
 
-        year = data.get("annee", RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("annee", "2024"))
+        year = data.get("annee", RAPPDFGenerator.DEFAULT_DATA.get("annee", "2024"))
 
         headers = {
             "Content-Disposition": f"inline; filename=rapport_annuel_performance_{year}.pdf",
@@ -984,17 +1545,26 @@ def performance_rapports(request: Request, db: Session = Depends(get_session)):
         
         # Valeurs par défaut pour le rapport annuel de performance
         rapport_annuel_defaults = {
-            "annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("annee", current_year - 1),
-            "section": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("section", "SECTION 376"),
-            "ministere": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("ministere", ""),
-            "titre_rapport": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_rapport", ""),
-            "titre_annee": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE"),
-            "date_publication": RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("date_publication", ""),
-            "logo_path": logo_path_from_settings if logo_path_from_settings else RapportAnnuelPerformanceGenerator.DEFAULT_DATA.get("logo_path", ""),
+            "annee": RAPPDFGenerator.DEFAULT_DATA.get("annee", current_year - 1),
+            "section": RAPPDFGenerator.DEFAULT_DATA.get("section", "SECTION 376"),
+            "ministere": RAPPDFGenerator.DEFAULT_DATA.get("ministere", ""),
+            "titre_rapport": RAPPDFGenerator.DEFAULT_DATA.get("titre_rapport", ""),
+            "titre_annee": RAPPDFGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE"),
+            "date_publication": RAPPDFGenerator.DEFAULT_DATA.get("date_publication", ""),
+            "logo_path": logo_path_from_settings if logo_path_from_settings else RAPPDFGenerator.DEFAULT_DATA.get("logo_path", ""),
         }
         # Générer la date de publication si non définie
         if not rapport_annuel_defaults.get("date_publication"):
-            rapport_annuel_defaults["date_publication"] = f"Mai {current_year}"
+            rapport_annuel_defaults["date_publication"] = datetime.now().strftime("%Y-%m")
+        
+        # Récupérer la liste des programmes pour le cadre de performance
+        programmes = db.exec(
+            select(Programme).where(Programme.actif == True).order_by(Programme.code)
+        ).all()
+        programmes_list = [
+            {"id": prog.id, "code": prog.code, "libelle": prog.libelle or prog.code}
+            for prog in programmes
+        ]
         
         context.update(
             {
@@ -1002,6 +1572,7 @@ def performance_rapports(request: Request, db: Session = Depends(get_session)):
                 "module_name": "Performance",
                 "module_description": "Analyse et reporting des performances",
                 "rapport_annuel_defaults": rapport_annuel_defaults,
+                "programmes": programmes_list,
             }
         )
 

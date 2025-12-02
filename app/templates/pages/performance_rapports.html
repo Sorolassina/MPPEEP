@@ -86,117 +86,13 @@
     <section class="report-generator">
         <h2 class="generator-title">📊 Générateur de Rapports</h2>
         <p class="generator-subtitle">Créez un rapport personnalisé en sélectionnant vos critères</p>
-        
-        <div class="generator-form">
-            <div class="form-field">
-                <label for="report-type">Type de rapport</label>
-                <select id="report-type">
-                    <option value="GLOBAL">📊 Global</option>
-                    <option value="OBJECTIFS">🎯 Objectifs</option>
-                    <option value="INDICATEURS">📈 Indicateurs</option>
-                    <option value="SYNTHESE">📋 Synthèse</option>
-                </select>
-            </div>
-            
-            <div class="form-field">
-                <label for="report-period">Période</label>
-                <select id="report-period">
-                    <option value="CURRENT_MONTH">Mois en cours</option>
-                    <option value="LAST_MONTH">Mois dernier</option>
-                    <option value="CURRENT_QUARTER">Trimestre en cours</option>
-                    <option value="LAST_QUARTER">Trimestre dernier</option>
-                    <option value="CURRENT_YEAR">Année en cours</option>
-                    <option value="LAST_YEAR">Année dernière</option>
-                    <option value="CUSTOM">Période personnalisée</option>
-                </select>
-            </div>
-            
-            <div class="form-field">
-                <label for="report-format">Format</label>
-                <select id="report-format">
-                    <option value="PDF">📄 PDF</option>
-                    <option value="EXCEL">📊 Excel</option>
-                    <option value="POWERPOINT">📊 PowerPoint</option>
-                    <option value="HTML">🌐 HTML</option>
-                </select>
-            </div>
-            
-            <div class="form-field" id="custom-dates" style="display: none; grid-column: 1 / -1;">
-                <label>Dates personnalisées</label>
-                <div style="display: flex; gap: 1rem;">
-                    <input type="date" id="date-debut" class="form-control" style="flex: 1;">
-                    <input type="date" id="date-fin" class="form-control" style="flex: 1;">
-                </div>
-            </div>
-            
-            <button type="button" class="btn btn-premium btn-accent generator-submit-btn" onclick="generateReport()">
-                📄 Générer le rapport
-            </button>
-        </div>
     </section>
 
     <!-- Templates de rapports -->
     <section class="report-templates">
         <h3 class="templates-title">📁 Modèles Prédéfinis</h3>
         <div class="templates-grid">
-            <div class="template-card" onclick="useTemplate('MENSUEL')">
-                <div class="template-icon">🗓️</div>
-                <div class="template-name">Rapport Mensuel</div>
-                <div class="template-description">
-                    Vue d'ensemble des performances du mois : objectifs, indicateurs, KPIs, et analyse détaillée des tendances
-                </div>
-                <div style="text-align: center;">
-                    <span class="template-badge badge-periodique">Périodique</span>
-                </div>
-                <div style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
-                    ✓ Objectifs mensuels<br>
-                    ✓ Indicateurs clés<br>
-                    ✓ Comparaison mois précédent
-                </div>
-            </div>
             
-            <div class="template-card" onclick="useTemplate('TRIMESTRIEL')">
-                <div class="template-icon">📊</div>
-                <div class="template-name">Rapport Trimestriel</div>
-                <div class="template-description">
-                    Analyse détaillée des tendances et évolutions sur 3 mois avec graphiques et recommandations stratégiques
-                </div>
-                <div style="text-align: center;">
-                    <span class="template-badge badge-periodique">Périodique</span>
-                    <span class="template-badge badge-analytique">Analytique</span>
-                </div>
-                <div style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
-                    ✓ Vue trimestrielle<br>
-                    ✓ Évolution des KPIs<br>
-                    ✓ Analyse comparative
-                </div>
-            </div>
-            
-            <div class="template-card" onclick="useTemplate('ANNUEL')">
-                <div class="template-icon">📈</div>
-                <div class="template-name">Rapport Annuel</div>
-                <div class="template-description">
-                    Bilan complet de l'année avec comparaisons historiques, réalisations majeures et perspectives stratégiques
-                </div>
-                <div style="text-align: center;">
-                    <span class="template-badge badge-periodique">Périodique</span>
-                    <span class="template-badge badge-executif">Exécutif</span>
-                </div>
-                <div style="margin-top: 1rem; font-size: 0.8rem; color: #9ca3af;">
-                    ✓ Bilan annuel complet<br>
-                    ✓ Statistiques détaillées<br>
-                    ✓ Recommandations stratégiques
-                </div>
-            </div>
-            
-            <div class="template-card" onclick="useTemplate('EXECUTIF')">
-                <div class="template-icon">📋</div>
-                <div class="template-name">Tableau de Bord Exécutif</div>
-                <p class="template-description">
-                    Vue synthétique à destination du cabinet du ministre et de la direction générale.
-                </p>
-                <span class="template-badge badge-executif">Exécutif</span>
-            </div>
             <div class="template-card" onclick="openRapportAnnuelModal()">
                 <div class="template-icon">📘</div>
                 <div class="template-name">Rapport Annuel de Performance (RAP)</div>
@@ -221,6 +117,14 @@
                 </p>
                 <span class="template-badge badge-periodique">Trimestriel</span>
             </div>
+            <div class="template-card" onclick="openCadrePerformanceModal()">
+                <div class="template-icon">💼</div>
+                <div class="template-name">Cadre de performance du ministère</div>
+                <p class="template-description">
+                    Cadre de performance du ministère, architecture du cadre de performance, composantes du cadre de performance, objectifs globaux, objectifs spécifiques, indicateurs de performance, activités majeures, effectifs, besoins en ressources humaines, besoins en biens et services, besoins en transferts, besoins en investissements.
+                </p>
+                <span class="template-badge badge-periodique">Annuel</span>
+            </div>
         </div>
     </section>
 
@@ -230,10 +134,6 @@
             <div class="history-header-text">
                 <h3 class="history-title">📚 Historique des Rapports</h3>
                 <p class="history-subtitle">Consultez les rapports générés ou planifiés récemment</p>
-            </div>
-            <div class="history-actions">
-                <button type="button" class="btn btn-secondary" onclick="loadReports()">🔄 Actualiser</button>
-                <button type="button" class="btn btn-primary" onclick="planifierRapport()">⏱️ Planifier un rapport</button>
             </div>
         </div>
 
@@ -250,7 +150,7 @@
             <h2 class="modal-title">Révision du rapport annuel de performance</h2>
             <button type="button" class="modal-close" onclick="closeRapportAnnuelModal()">&times;</button>
         </div>
-        <form id="rapportAnnuelForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_rapport_annuel_pdf') }}" data-endpoint-simpledoc="{{ url_for('performance_rapport_annuel_pdf_simpledoc') }}">
+        <form id="rapportAnnuelForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_rapport_annuel_pdf') }}" data-endpoint-simpledoc="{{ url_for('performance_rapport_annuel_pdf_simpledoc') }}" data-endpoint-word="{{ url_for('performance_rapport_annuel_docx_simpledoc') }}">
             <p class="performance-engagement-intro">
                 Renseignez les informations ci-dessous pour générer le rapport annuel de performance (format paysage).
             </p>
@@ -564,364 +464,209 @@
             <button type="button" class="btn btn-secondary" onclick="closeRapportAnnuelModal()">Annuler</button>
             <button type="button" class="btn btn-info" onclick="generateRapportAnnuelSimpleDoc('brouillon')">📝 Générer brouillon</button>
             <button type="button" class="btn btn-primary" onclick="generateRapportAnnuelSimpleDoc('final')">📄 Générer le rapport final</button>
+            <button type="button" class="btn btn-success" onclick="generateRapportAnnuelWord('final')" title="Convertir le PDF en document Word pour modifications">📝 Télécharger en Word</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour le cadre de performance -->
+<div id="cadrePerformanceModal" class="modal-fullscreen">
+    <div class="modal-content performance-engagement-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Générer le cadre de performance</h2>
+            <button type="button" class="modal-close" onclick="closeCadrePerformanceModal()">&times;</button>
+        </div>
+        <form id="cadrePerformanceForm" class="modal-body performance-engagement-body" data-endpoint-pdf="{{ url_for('performance_cadre_performance_pdf') }}" data-endpoint-word="{{ url_for('performance_cadre_performance_docx') }}">
+            <p class="performance-engagement-intro">
+                Sélectionnez les paramètres pour générer le cadre de performance. Vous pouvez générer pour un programme spécifique ou pour tout le ministère.
+            </p>
+            
+            <section>
+                <h3 class="performance-engagement-title">
+                    <span>📄</span> Paramètres de génération
+                </h3>
+                <div class="performance-engagement-grid">
+                    <div class="form-group">
+                        <label for="cadre_programme_id" class="form-label">Programme</label>
+                        <select id="cadre_programme_id" name="programme_id" class="form-control">
+                            <option value="">-- Tout le ministère --</option>
+                            {% for programme in programmes %}
+                            <option value="{{ programme.id }}">{{ programme.code }} - {{ programme.libelle }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="performance-engagement-hint">Sélectionnez un programme spécifique ou laissez vide pour tout le ministère.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadre_annee_reference" class="form-label">Année de référence *</label>
+                        <input type="number" id="cadre_annee_reference" name="annee_reference" class="form-control" min="2000" max="2100" step="1" placeholder="2021" value="2021" required>
+                        <span class="performance-engagement-hint">Année de base fixe à partir de laquelle on a commencé à mesurer la performance (ex: 2021).</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadre_annee_redaction" class="form-label">Période de rédaction (N) *</label>
+                        <input type="number" id="cadre_annee_redaction" name="annee_redaction" class="form-control" min="2000" max="2100" step="1" placeholder="2024" value="2024" required>
+                        <span class="performance-engagement-hint">Période de rédaction (N). Les valeurs de référence seront N-1, N-2 et les cibles seront N, N+1, N+2.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadre_titre" class="form-label">Titre personnalisé (optionnel)</label>
+                        <input type="text" id="cadre_titre" name="titre" class="form-control" placeholder="Cadre de Performance du Ministère">
+                        <span class="performance-engagement-hint">Titre personnalisé pour le rapport. Si vide, un titre par défaut sera utilisé.</span>
+                    </div>
+                </div>
+            </section>
+        </form>
+        <div class="modal-footer performance-engagement-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeCadrePerformanceModal()">Annuler</button>
+            <button type="button" class="btn btn-info" onclick="generateCadrePerformancePDF('brouillon')">📝 Générer brouillon</button>
+            <button type="button" class="btn btn-primary" onclick="generateCadrePerformancePDF('final')">📄 Générer le cadre final</button>
+            <button type="button" class="btn btn-success" onclick="generateCadrePerformanceWord('final')" title="Convertir le PDF en document Word pour modifications">📝 Télécharger en Word</button>
         </div>
     </div>
 </div>
 
 <script>
-// Afficher/masquer les dates personnalisées
-document.getElementById('report-period').addEventListener('change', function() {
-    const customDates = document.getElementById('custom-dates');
-    if (this.value === 'CUSTOM') {
-        customDates.style.display = 'block';
-    } else {
-        customDates.style.display = 'none';
-    }
-});
+// ============================================
+// RAPPORT ANNUEL DE PERFORMANCE - VARIABLES GLOBALES
+// ============================================
 
-// Utiliser un template
-function useTemplate(template) {
-    const reportType = document.getElementById('report-type');
-    const reportPeriod = document.getElementById('report-period');
-    
-    switch(template) {
-        case 'MENSUEL':
-            reportType.value = 'GLOBAL';
-            reportPeriod.value = 'CURRENT_MONTH';
-            break;
-        case 'TRIMESTRIEL':
-            reportType.value = 'GLOBAL';
-            reportPeriod.value = 'CURRENT_QUARTER';
-            break;
-        case 'ANNUEL':
-            reportType.value = 'GLOBAL';
-            reportPeriod.value = 'CURRENT_YEAR';
-            break;
-        case 'EXECUTIF':
-            reportType.value = 'SYNTHESE';
-            reportPeriod.value = 'CURRENT_MONTH';
-            break;
-        case 'RAP':
-            reportType.value = 'GLOBAL';
-            reportPeriod.value = 'CURRENT_YEAR';
-            break;
-        case 'RPROG': {
-            reportType.value = 'OBJECTIFS';
-            reportPeriod.value = 'CUSTOM';
-            reportPeriod.dispatchEvent(new Event('change'));
 
-            const now = new Date();
-            const year = now.getFullYear();
-            const firstHalf = now.getMonth() < 6;
-            const startDate = firstHalf ? new Date(year, 0, 1) : new Date(year, 6, 1);
-            const endDate = firstHalf ? new Date(year, 5, 30) : new Date(year, 11, 31);
+// ============================================
+// FONCTIONS UTILITAIRES POUR LE RAPPORT ANNUEL
+// ============================================
 
-            setCustomDates(startDate, endDate);
-            break;
-        }
-        case 'DAF':
-            reportType.value = 'INDICATEURS';
-            reportPeriod.value = 'CURRENT_QUARTER';
-            break;
-    }
-    
-    // Scroller vers le générateur
-    document.querySelector('.report-generator').scrollIntoView({ behavior: 'smooth' });
-    showSuccess(`Template "${getTemplateName(template)}" chargé !`);
-}
-
-function setCustomDates(startDate, endDate) {
-    const startInput = document.getElementById('date-debut');
-    const endInput = document.getElementById('date-fin');
-    if (!startInput || !endInput) {
+// Fonction pour mettre à jour la prévisualisation des photos
+function updateEngagementPhotoPreview(field, explicitUrl) {
+    const wrapper = document.getElementById(`${field}_preview_wrapper`);
+    const img = document.getElementById(`${field}_preview`);
+    if (!wrapper || !img) {
         return;
     }
 
-    const toIso = (date) => date.toISOString().split('T')[0];
-    startInput.value = toIso(startDate);
-    endInput.value = toIso(endDate);
-}
+    const input = document.getElementById(field);
+    const value = explicitUrl || input?.value || "";
 
-// Générer un rapport
-async function generateReport() {
-    const type = document.getElementById('report-type').value;
-    const period = document.getElementById('report-period').value;
-    const format = document.getElementById('report-format').value;
-    
-    let dateDebut = null;
-    let dateFin = null;
-    
-    if (period === 'CUSTOM') {
-        dateDebut = document.getElementById('date-debut').value;
-        dateFin = document.getElementById('date-fin').value;
-        
-        if (!dateDebut || !dateFin) {
-            showError('Veuillez sélectionner les dates de début et fin');
-            return;
-        }
-    }
-    
-    try {
-        showGlobalLoading('Génération du rapport...', 'Veuillez patienter');
-        
-        // Créer le FormData
-        const formData = new FormData();
-        formData.append('report_type', type);
-        formData.append('period', period);
-        formData.append('format', format);
-        if (dateDebut) formData.append('date_debut', dateDebut);
-        if (dateFin) formData.append('date_fin', dateFin);
-        
-        // Appeler l'API pour générer le rapport
-        const response = await submitFormAsJson('{{ url_for("generate_report_api") }}', formData, 'POST', true);
-        
-        if (response.ok) {
-            // Télécharger le fichier
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rapport_performance_${type.toLowerCase()}_${new Date().getTime()}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            hideGlobalLoading();
-            showSuccess(`Rapport ${getReportTypeName(type)} généré et téléchargé avec succès !`);
-            
-            // Recharger la liste des rapports
-            loadReports();
-        } else {
-            const result = await response.json();
-            hideGlobalLoading();
-            showError(result.error || 'Erreur lors de la génération du rapport');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        hideGlobalLoading();
-        showError('Erreur lors de la génération du rapport');
-    }
-}
-
-// Charger l'historique des rapports
-async function loadReports() {
-    const container = document.getElementById('reports-list');
-    
-    try {
-        const response = await fetch('{{ url_for("get_rapports_historique") }}');
-        const data = await response.json();
-        
-        if (!data.success || !data.rapports || data.rapports.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📋</div>
-                    <h3 class="empty-state-title">Aucun rapport généré</h3>
-                    <p class="empty-state-message">
-                        Vous n'avez pas encore généré de rapports.<br>
-                        Utilisez le générateur ci-dessus ou choisissez un template pour commencer.
-                    </p>
-                    <button type="button" class="btn btn-premium btn-primary" onclick="focusGenerator()">
-                        ➕ Créer un rapport
-                    </button>
-                </div>
-            `;
-            return;
-        }
-        
-        // Afficher les rapports
-        container.innerHTML = data.rapports.map(rapport => `
-            <div class="report-card">
-                <div class="report-header">
-                    <h4 class="report-title">${rapport.titre}</h4>
-                    <span class="report-type badge-${getReportTypeBadgeClass(rapport.type_rapport)}">
-                        ${getReportTypeIcon(rapport.type_rapport)} ${rapport.type_rapport}
-                    </span>
-                </div>
-                
-                <p class="report-description">${rapport.description || 'Aucune description'}</p>
-                
-                <div class="report-meta">
-                    <div class="meta-item">
-                        <p class="meta-label">Période</p>
-                        <p class="meta-value">${formatPeriode(rapport.periode)}</p>
-                    </div>
-                    <div class="meta-item">
-                        <p class="meta-label">Format</p>
-                        <p class="meta-value">${rapport.format_fichier}</p>
-                    </div>
-                    <div class="meta-item">
-                        <p class="meta-label">Taux réalisation</p>
-                        <p class="meta-value">${rapport.taux_realisation}%</p>
-                    </div>
-                </div>
-                
-                <div class="report-meta">
-                    <div class="meta-item">
-                        <p class="meta-label">Objectifs</p>
-                        <p class="meta-value">${rapport.nb_objectifs}</p>
-                    </div>
-                    <div class="meta-item">
-                        <p class="meta-label">Indicateurs</p>
-                        <p class="meta-value">${rapport.nb_indicateurs}</p>
-                    </div>
-                    <div class="meta-item">
-                        <p class="meta-label">Taille</p>
-                        <p class="meta-value">${formatFileSize(rapport.fichier_taille)}</p>
-                    </div>
-                </div>
-                
-                <div class="report-footer">
-                    <span class="report-footer-meta">📅 ${formatDate(rapport.created_at)} par ${rapport.created_by_nom}</span>
-                    <div class="report-actions">
-                        <button type="button" class="btn-action btn-premium btn-danger btn-compact" onclick="deleteReport(${rapport.id})" title="Supprimer ce rapport">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-        
-    } catch (error) {
-        console.error('Erreur lors du chargement des rapports:', error);
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">⚠️</div>
-                <h3 class="empty-state-title">Erreur de chargement</h3>
-                <p class="empty-state-message">
-                    Impossible de charger l'historique des rapports.<br>
-                    Veuillez réessayer plus tard.
-                </p>
-            </div>
-        `;
-    }
-}
-
-// Fonctions utilitaires
-function getReportTypeName(type) {
-    const names = {
-        'GLOBAL': 'Global',
-        'OBJECTIFS': 'Objectifs',
-        'INDICATEURS': 'Indicateurs',
-        'SYNTHESE': 'Synthèse'
-    };
-    return names[type] || type;
-}
-
-function getTemplateName(template) {
-    const names = {
-        'MENSUEL': 'Rapport Mensuel',
-        'TRIMESTRIEL': 'Rapport Trimestriel',
-        'ANNUEL': 'Rapport Annuel',
-        'EXECUTIF': 'Tableau de Bord Exécutif',
-        'RAP': 'Rapport Annuel de Performance (RAP)',
-        'RPROG': 'Rapport Semestriel RPROG',
-        'DAF': 'Rapport Trimestriel DAF'
-    };
-    return names[template] || template;
-}
-
-function getReportTypeBadgeClass(type) {
-    const classes = {
-        'GLOBAL': 'periodique',
-        'OBJECTIFS': 'analytique',
-        'INDICATEURS': 'analytique',
-        'SYNTHESE': 'executif'
-    };
-    return classes[type] || 'periodique';
-}
-
-function getReportTypeIcon(type) {
-    const icons = {
-        'GLOBAL': '📊',
-        'OBJECTIFS': '🎯',
-        'INDICATEURS': '📈',
-        'SYNTHESE': '📋'
-    };
-    return icons[type] || '📄';
-}
-
-function formatPeriode(periode) {
-    const periodes = {
-        'CURRENT_MONTH': 'Mois en cours',
-        'LAST_MONTH': 'Mois dernier',
-        'CURRENT_QUARTER': 'Trimestre en cours',
-        'LAST_QUARTER': 'Trimestre dernier',
-        'CURRENT_YEAR': 'Année en cours',
-        'LAST_YEAR': 'Année dernière',
-        'CUSTOM': 'Période personnalisée'
-    };
-    return periodes[periode] || periode;
-}
-
-function formatFileSize(bytes) {
-    if (!bytes) return '0 KB';
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let index = 0;
-    let size = bytes;
-    while (size >= 1024 && index < units.length - 1) {
-        size /= 1024;
-        index++;
-    }
-    return `${size.toFixed(1)} ${units[index]}`;
-}
-
-function focusGenerator() {
-    const generatorSection = document.querySelector('.report-generator');
-    if (generatorSection) {
-        generatorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    const options = { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    return date.toLocaleDateString('fr-FR', options);
-}
-
-// Supprimer un rapport
-async function deleteReport(reportId) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce rapport de l\'historique ?')) {
+    if (!value) {
+        wrapper.classList.remove("show");
+        img.src = "";
         return;
     }
+
+    const url = normalizeEngagementAssetUrl(value);
+    img.src = url;
+    wrapper.classList.add("show");
+}
+
+// Fonction pour normaliser les URLs d'assets avec root_path
+function normalizeEngagementAssetUrl(rawValue) {
+    if (!rawValue) {
+        return "";
+    }
+
+    // URLs absolues (http/https/data) : retourner tel quel
+    if (/^(https?:\/\/|data:)/i.test(rawValue)) {
+        return rawValue;
+    }
+
+    let url = rawValue.trim();
     
+    // Helper pour ajouter root_path si nécessaire
+    const prefixWithRootPath = (path) => {
+        // Si le chemin commence déjà par root_path, le retourner tel quel
+        if (window.root_path && path.startsWith(window.root_path)) {
+            return path;
+        }
+        // Sinon, ajouter le préfixe root_path si disponible
+        return window.root_path ? window.root_path + path : path;
+    };
+
+    // URL absolue commençant par "/"
+    if (url.startsWith("/")) {
+        return prefixWithRootPath(url);
+    }
+
+    // Chemins relatifs
+    if (url.startsWith("uploads/")) {
+        return prefixWithRootPath(`/${url}`);
+    }
+
+    if (url.startsWith("static/")) {
+        return prefixWithRootPath(`/${url}`);
+    }
+
+    if (url.startsWith("images/")) {
+        return prefixWithRootPath(`/static/${url}`);
+    }
+
+    // Par défaut, considérer comme fichier statique
+    return prefixWithRootPath(`/static/${url}`);
+}
+
+// Fonction pour uploader une photo
+async function uploadEngagementPhoto(field) {
+    const fileInput = document.getElementById(`${field}_file`);
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return;
+    }
+
+    const file = fileInput.files[0];
+    if (file.size > ENGAGEMENT_PHOTO_MAX_SIZE) {
+        if (typeof showError === "function") {
+            showError("La photo dépasse la taille maximale de 5 MB.");
+        }
+        fileInput.value = "";
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Téléversement en cours...", "Import de la photo");
+    }
+
     try {
-        showGlobalLoading('Suppression du rapport...', 'Veuillez patienter');
-        
-        const response = await fetch(`{{ url_for("delete_rapport_api", rapport_id=0) }}`.replace('/0', `/${reportId}`), {
-            method: 'DELETE'
+        const response = await fetch(engagementPhotoUploadUrl, {
+            method: "POST",
+            body: formData,
         });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result?.success) {
+            const message = result?.detail || result?.error || "Erreur lors du téléversement de la photo.";
+            if (typeof showError === "function") {
+                showError(message);
+            }
+            return;
+        }
+
+        const input = document.getElementById(field);
+        if (input) {
+            input.value = result.path || result.relative_path || result.url || "";
+        }
+
+        updateEngagementPhotoPreview(field, result.url || input?.value);
         
-        const result = await response.json();
-        
-        hideGlobalLoading();
-        
-        if (result.success) {
-            showSuccess('Rapport supprimé avec succès !');
-            loadReports();  // Recharger la liste
-        } else {
-            showError(result.error || 'Erreur lors de la suppression du rapport');
+        if (typeof showSuccess === "function") {
+            showSuccess("Photo importée avec succès");
         }
     } catch (error) {
-        console.error('Erreur:', error);
-        hideGlobalLoading();
-        showError('Erreur lors de la suppression du rapport');
+        console.error("Erreur upload photo lettre engagement:", error);
+        if (typeof showError === "function") {
+            showError("Erreur lors du téléversement de la photo.");
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
     }
 }
 
-// Charger les rapports au démarrage
+// Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('globalLoadingOverlay');
     if (overlay) {
         overlay.classList.remove('show');
     }
-    loadReports();
     
     // Initialisation de la modal du rapport annuel
     initRapportAnnuelModal();
@@ -931,9 +676,21 @@ document.addEventListener('DOMContentLoaded', function() {
 // RAPPORT ANNUEL DE PERFORMANCE - MODAL
 // ============================================
 
-const rapportAnnuelDefaults = JSON.parse('{{ rapport_annuel_defaults | tojson | safe }}');
+// Variables globales avec protection contre les erreurs
+let rapportAnnuelDefaults = {};
+try {
+    const defaultsJson = '{{ rapport_annuel_defaults | tojson | safe }}';
+    if (defaultsJson && defaultsJson !== 'null' && defaultsJson.trim() !== '') {
+        rapportAnnuelDefaults = JSON.parse(defaultsJson);
+    }
+} catch (e) {
+    console.warn("Impossible de parser rapport_annuel_defaults:", e);
+    rapportAnnuelDefaults = {};
+}
+
 const ENGAGEMENT_PHOTO_MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 const engagementPhotoUploadUrl = "{{ url_for('upload_engagement_photo') }}";
+let currentLoadedProgrammeCode = null; // Code du programme actuellement chargé dans la modal
 
 // Fonction pour normaliser les URLs d'assets avec root_path
 function normalizeEngagementAssetUrl(rawValue) {
@@ -1063,22 +820,63 @@ async function uploadEngagementPhoto(field) {
     }
 }
 
+// Fonction de fallback pour useTemplate (pour éviter les erreurs sur les anciennes cartes)
+function useTemplate(templateType) {
+    console.warn(`La fonction useTemplate('${templateType}') n'est plus disponible. Cette fonctionnalité sera implémentée prochainement.`);
+    if (typeof showInfo === "function") {
+        showInfo("Cette fonctionnalité sera disponible prochainement.");
+    } else if (typeof showWarning === "function") {
+        showWarning("Cette fonctionnalité sera disponible prochainement.");
+    }
+}
+
 // Fonctions pour ouvrir/fermer la modal
 async function openRapportAnnuelModal() {
+    console.log("🔵 openRapportAnnuelModal appelée");
     const modal = document.getElementById('rapportAnnuelModal');
     if (!modal) {
+        console.error("❌ Modal 'rapportAnnuelModal' non trouvé");
         return;
     }
+    console.log("✅ Modal trouvé, ajout de la classe 'show'");
     modal.classList.add('show');
     document.body.classList.add('modal-open');
     
     // Afficher le premier onglet
-    switchRapTab('infos-generales');
+    if (typeof switchRapTab === 'function') {
+        switchRapTab('infos-generales');
+    } else {
+        console.error("❌ switchRapTab n'est pas définie");
+    }
     
     // Charger les données RAP depuis la base de données
     try {
         showGlobalLoading('Chargement des données...', 'Récupération des informations depuis la base de données');
         const response = await fetch("{{ url_for('get_rap_data_api') }}");
+        
+        // Vérifier si la réponse est OK (200-299)
+        if (!response.ok) {
+            let errorMessage = `Erreur ${response.status}`;
+            if (response.status === 401) {
+                errorMessage = 'Votre session a expiré. Veuillez vous reconnecter.';
+                if (typeof showError === "function") {
+                    showError(errorMessage);
+                }
+                // Rediriger vers la page de connexion après un court délai
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('login_page') }}";
+                }, 2000);
+                return;
+            }
+            try {
+                const errorText = await response.text();
+                errorMessage = errorText || errorMessage;
+            } catch (e) {
+                // Ignorer les erreurs de parsing
+            }
+            throw new Error(errorMessage);
+        }
+        
         const result = await response.json();
         
         if (result.success && result.data) {
@@ -1139,14 +937,25 @@ async function openRapportAnnuelModal() {
                 currentLoadedProgrammeCode = null;
             }
         } else {
-            console.warn("Les données RAP n'ont pas pu être chargées depuis la base de données");
+            console.warn("Les données RAP n'ont pas pu être chargées depuis la base de données", result);
+            // Si le chargement échoue (peut-être 401), afficher un message plus explicite
+            if (typeof showWarning === "function") {
+                showWarning("Les données RAP n'ont pas pu être chargées depuis la base de données. Veuillez vous reconnecter si nécessaire.");
+            }
             // Si le chargement échoue, appliquer les valeurs par défaut
             applyRapportAnnuelDefaults();
         }
     } catch (error) {
         console.error("Erreur lors du chargement des données RAP:", error);
-        if (typeof showError === "function") {
-            showError('Erreur lors du chargement des données depuis la base de données. Les valeurs par défaut seront utilisées.');
+        // Vérifier si c'est une erreur 401 (non authentifié)
+        if (error.message && error.message.includes('401')) {
+            if (typeof showError === "function") {
+                showError('Votre session a expiré. Veuillez vous reconnecter.');
+            }
+        } else {
+            if (typeof showError === "function") {
+                showError('Erreur lors du chargement des données depuis la base de données. Les valeurs par défaut seront utilisées.');
+            }
         }
         // En cas d'erreur, appliquer les valeurs par défaut
         applyRapportAnnuelDefaults();
@@ -1182,9 +991,6 @@ async function loadProgrammesForConclusion() {
         console.error("Erreur lors du chargement des programmes:", error);
     }
 }
-
-// Variable pour stocker le code du programme actuellement chargé
-let currentLoadedProgrammeCode = null;
 
 // Charger les données de conclusion pour un programme sélectionné
 async function loadProgrammeConclusionData() {
@@ -1544,7 +1350,20 @@ function setFieldValue(id, value) {
         if (field.type === 'date' && value) {
             field.value = convertFrenchDateToISO(value) || '';
         } else if (field.type === 'month' && value) {
-            field.value = convertFrenchMonthToISO(value) || '';
+            // Convertir explicitement le format français vers ISO pour les champs month
+            const isoValue = convertFrenchMonthToISO(value);
+            if (isoValue) {
+                field.value = isoValue;
+            } else {
+                // Si la conversion échoue, essayer d'utiliser la valeur telle quelle
+                // mais seulement si c'est déjà en format ISO
+                if (/^\d{4}-\d{2}$/.test(value.trim())) {
+                    field.value = value.trim();
+                } else {
+                    console.warn(`Format de date invalide pour le champ ${id}: "${value}". Format attendu: YYYY-MM`);
+                    field.value = '';
+                }
+            }
         } else {
             field.value = value;
         }
@@ -1715,8 +1534,9 @@ async function saveRapData() {
                     // Convertir ISO vers français pour l'affichage dans la base
                     finalValue = convertISOToFrenchDate(value);
                 } else if (field.type === 'month' && value) {
-                    // Convertir YYYY-MM vers format français "Mois AAAA"
-                    finalValue = convertMonthToFrench(value);
+                    // Garder le format ISO "YYYY-MM" pour les champs month (le backend peut convertir si nécessaire)
+                    // Le backend s'attend à recevoir soit ISO soit français, mais gardons ISO pour éviter les erreurs
+                    finalValue = value; // Garder le format ISO directement du champ HTML
                 } else if ((key === 'rap_rapport_structure_premiere_partie' || key === 'rap_rapport_structure_seconde_partie') && value) {
                     // Convertir le format simple vers JSON pour la sauvegarde
                     finalValue = convertSimpleListToJsonArray(value);
@@ -1756,11 +1576,39 @@ async function saveRapData() {
             method: 'POST',
             body: saveData
         });
+        
+        // Vérifier si la réponse est OK (200-299)
+        if (!response.ok) {
+            if (response.status === 401) {
+                if (typeof showError === "function") {
+                    showError('Votre session a expiré. Veuillez vous reconnecter.');
+                }
+                // Rediriger vers la page de connexion après un court délai
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('login_page') }}";
+                }, 2000);
+                return { success: false, error: "Session expirée. Veuillez vous reconnecter." };
+            }
+            let errorMessage = `Erreur ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || errorData.error || errorMessage;
+            } catch (e) {
+                // Si ce n'est pas du JSON, essayer de lire le texte
+                try {
+                    errorMessage = await response.text();
+                } catch (e2) {
+                    // Ignorer
+                }
+            }
+            return { success: false, error: errorMessage };
+        }
+        
         const result = await response.json();
         return result;
     } catch (error) {
         console.error("Erreur lors de la sauvegarde:", error);
-        return { success: false, error: "Erreur lors de la sauvegarde des données" };
+        return { success: false, error: error.message || "Erreur lors de la sauvegarde des données" };
     }
 }
 
@@ -1908,6 +1756,128 @@ async function generateRapportAnnuelSimpleDoc(mode = 'brouillon') {
     window.location.assign(targetUrl);
 }
 
+// Fonction pour générer le rapport en format Word (.docx)
+async function generateRapportAnnuelWord(mode = 'final') {
+    const form = document.getElementById('rapportAnnuelForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+
+    // 1. Sauvegarder automatiquement les données du programme actuellement sélectionné
+    if (currentLoadedProgrammeCode) {
+        await saveCurrentProgrammeConclusionData(currentLoadedProgrammeCode);
+    }
+    
+    // 2. Sauvegarder toutes les autres données dans la base
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Sauvegarde des données...", "Enregistrement dans la base de données");
+    }
+
+    const saveResult = await saveRapData();
+    
+    if (!saveResult.success) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showError === "function") {
+            showError(saveResult.error || "Erreur lors de la sauvegarde des données");
+        }
+        return;
+    }
+    
+    // Préparer les paramètres pour la génération
+    const endpoint = form.dataset.endpointWord || "{{ url_for('performance_rapport_annuel_docx_simpledoc') }}";
+    if (!endpoint) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint Word introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    // Seulement les paramètres généraux (les données d'introduction sont maintenant en DB)
+    const generalParams = ['annee', 'section', 'ministere', 'titre_rapport', 'titre_annee', 'date_publication', 'logo_path'];
+    
+    for (const key of generalParams) {
+        const value = formData.get(key);
+        if (value && value.toString().trim()) {
+            let finalValue = value.toString().trim();
+            if (key === "annee") {
+                finalValue = finalValue.replace(/[^\d]/g, "");
+            }
+            if (finalValue) {
+                params.append(key, finalValue);
+            }
+        }
+    }
+    
+    // Ajouter le paramètre mode (brouillon ou final)
+    params.append('mode', mode);
+
+    // Générer le rapport en Word
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Conversion en Word...", "Génération du PDF puis conversion en document Word. Cela peut prendre quelques instants...");
+    }
+
+    try {
+        const query = params.toString();
+        const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+        // Fermer la modal
+        closeRapportAnnuelModal();
+
+        // Faire une requête fetch pour télécharger le fichier Word
+        const response = await fetch(targetUrl);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Erreur lors de la conversion en Word" }));
+            throw new Error(errorData.detail || `Erreur ${response.status}: ${response.statusText}`);
+        }
+
+        // Récupérer le blob
+        const blob = await response.blob();
+        
+        // Créer un lien de téléchargement
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Déterminer le nom du fichier
+        const annee = formData.get('annee') || new Date().getFullYear();
+        const modeLabel = mode === 'brouillon' ? 'brouillon' : 'final';
+        a.download = `rapport_annuel_performance_${annee}_${modeLabel}.docx`;
+        
+        // Déclencher le téléchargement
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showSuccess === "function") {
+            showSuccess("Document Word téléchargé avec succès !");
+        }
+    } catch (error) {
+        console.error("Erreur lors de la conversion en Word:", error);
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showError === "function") {
+            showError(`Erreur lors de la conversion en Word: ${error.message || error}`);
+        }
+    }
+}
+
 // Initialisation de la modal
 function initRapportAnnuelModal() {
     const rapportForm = document.getElementById('rapportAnnuelForm');
@@ -1929,6 +1899,181 @@ function initRapportAnnuelModal() {
                 closeRapportAnnuelModal();
             }
         });
+    }
+    
+    // Modal cadre de performance
+    const cadreModal = document.getElementById('cadrePerformanceModal');
+    if (cadreModal) {
+        cadreModal.addEventListener('click', function(event) {
+            if (event.target === cadreModal) {
+                closeCadrePerformanceModal();
+            }
+        });
+    }
+}
+
+// ============================================
+// FONCTIONS POUR LE CADRE DE PERFORMANCE
+// ============================================
+
+function openCadrePerformanceModal() {
+    const modal = document.getElementById('cadrePerformanceModal');
+    if (!modal) {
+        console.error("❌ Modal 'cadrePerformanceModal' non trouvé");
+        return;
+    }
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+}
+
+function closeCadrePerformanceModal() {
+    const modal = document.getElementById('cadrePerformanceModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+}
+
+async function generateCadrePerformancePDF(mode = 'brouillon') {
+    const form = document.getElementById('cadrePerformanceForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+
+    const endpoint = form.dataset.endpointPdf;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint PDF introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    // Récupérer les valeurs du formulaire
+    const programme_id = formData.get("programme_id");
+    const annee_reference = formData.get("annee_reference");
+    const annee_redaction = formData.get("annee_redaction");
+    const titre = formData.get("titre");
+
+    if (programme_id) {
+        params.append("programme_id", programme_id);
+    }
+    if (annee_reference) {
+        params.append("annee_reference", annee_reference);
+    }
+    if (annee_redaction) {
+        params.append("annee_redaction", annee_redaction);
+    }
+    if (titre && titre.trim()) {
+        params.append("titre", titre.trim());
+    }
+    
+    // Ajouter le paramètre mode (brouillon ou final)
+    params.append("mode", mode);
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    if (typeof showGlobalLoading === "function") {
+        const modeLabel = mode === 'brouillon' ? 'brouillon' : 'final';
+        showGlobalLoading(`Génération du PDF (${modeLabel})...`, "Veuillez patienter");
+    }
+
+    closeCadrePerformanceModal();
+    window.location.assign(targetUrl);
+}
+
+async function generateCadrePerformanceWord(mode = 'final') {
+    const form = document.getElementById('cadrePerformanceForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+
+    const endpoint = form.dataset.endpointWord;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint Word introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    // Récupérer les valeurs du formulaire
+    const programme_id = formData.get("programme_id");
+    const annee_reference = formData.get("annee_reference");
+    const annee_redaction = formData.get("annee_redaction");
+    const titre = formData.get("titre");
+
+    if (programme_id) {
+        params.append("programme_id", programme_id);
+    }
+    if (annee_reference) {
+        params.append("annee_reference", annee_reference);
+    }
+    if (annee_redaction) {
+        params.append("annee_redaction", annee_redaction);
+    }
+    if (titre && titre.trim()) {
+        params.append("titre", titre.trim());
+    }
+    
+    // Ajouter le paramètre mode (brouillon ou final)
+    params.append("mode", mode);
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    // Générer le cadre en Word
+    try {
+        if (typeof showGlobalLoading === "function") {
+            showGlobalLoading("Conversion en Word...", "Génération du PDF puis conversion en document Word. Cela peut prendre quelques instants...");
+        }
+
+        // Faire une requête fetch pour télécharger le fichier Word
+        const response = await fetch(targetUrl);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Erreur lors de la conversion en Word" }));
+            throw new Error(errorData.detail || `Erreur HTTP: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Déterminer le nom du fichier
+        const programme_id_val = programme_id || "ministere";
+        const annee_ref_val = annee_reference || new Date().getFullYear();
+        a.download = `cadre_performance_${programme_id_val}_${annee_ref_val}.docx`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        if (typeof showSuccess === "function") {
+            showSuccess("Document Word téléchargé avec succès !");
+        }
+    } catch (error) {
+        console.error("Erreur lors de la conversion en Word:", error);
+        if (typeof showError === "function") {
+            showError(`Erreur lors de la conversion en Word: ${error.message || error}`);
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
     }
 }
 </script>

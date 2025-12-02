@@ -37,6 +37,202 @@ from decimal import Decimal
 logger = logging.getLogger(__name__)
 
 
+class PageMarker(Flowable):
+    """
+    Flowable invisible qui enregistre la page où il est rendu.
+    Utilisé pour tracker les positions des sections dans le PDF.
+    
+    IMPORTANT : Ce marqueur enregistre la page où IL EST RENDU, pas nécessairement
+    la page où le Flowable précédent (comme un titre) a été rendu.
+    
+    Avec ReportLab, si un titre occupe toute la fin d'une page, le PageMarker
+    placé juste après sera rendu sur la page suivante.
+    
+    Pour éviter ce problème, utilisez ParagraphWithMarker ou enregistrez la page
+    AVANT le titre si vous voulez la page où le titre commence.
+    """
+    def __init__(self, key: str):
+        """
+        Args:
+            key: Clé unique pour identifier cette position (ex: "programme_1_strategie")
+        """
+        Flowable.__init__(self)
+        self.key = key
+        self.width = 0
+        self.height = 0
+    
+    def draw(self):
+        """Appelé quand le marqueur est rendu. Enregistre la page actuelle."""
+        try:
+            # Logs détaillés pour le débogage - CONTENU COMPLET DU PAGEMARKER
+            logger.info(f"🔵 PageMarker.draw() appelé pour '{self.key}'")
+            logger.info(f"🔵 PageMarker CONTENU COMPLET: key={self.key}, width={self.width}, height={self.height}")
+            logger.info(f"🔵 PageMarker TYPE: {type(self)}, ID: {id(self)}")
+            
+            # Obtenir le numéro de page depuis la variable de classe
+            # qui est mise à jour par _render_multipage_story ou SimpleDocTemplate callback
+            current_rendering_page = RapportAnnuelPerformanceGeneratorSimpleDoc._current_rendering_page
+            logger.info(f"🔵 PageMarker '{self.key}': _current_rendering_page = {current_rendering_page}")
+            
+            # Obtenir aussi depuis le canvas pour comparaison
+            canvas_page_number = getattr(self.canv, '_pageNumber', None)
+            logger.info(f"🔵 PageMarker '{self.key}': canvas._pageNumber = {canvas_page_number} (0-indexé)")
+            
+            # Informations supplémentaires sur le canvas
+            if hasattr(self, 'canv') and self.canv:
+                canvas_info = {
+                    '_pageNumber': getattr(self.canv, '_pageNumber', None),
+                    '_pageSize': getattr(self.canv, '_pagesize', None),
+                    '_pdf': getattr(self.canv, '_pdf', None),
+                }
+                logger.info(f"🔵 PageMarker '{self.key}': Canvas info = {canvas_info}")
+            
+            page_num = current_rendering_page
+            source = "_current_rendering_page"
+            
+            if page_num is None:
+                # Fallback : essayer d'obtenir depuis le canvas
+                # ReportLab stocke le numéro de page dans canvas._pageNumber (0-indexé)
+                canvas_page_0_indexed = getattr(self.canv, '_pageNumber', 0)
+                page_num = canvas_page_0_indexed + 1
+                source = "canvas._pageNumber (fallback)"
+                logger.warning(f"⚠️ PageMarker '{self.key}': _current_rendering_page non défini, utilisation du canvas: {canvas_page_0_indexed} (0-indexé) → {page_num} (1-indexé)")
+            
+            logger.info(f"🔵 PageMarker '{self.key}': page_num final = {page_num} (source: {source})")
+            
+            # Enregistrer directement dans la classe
+            RapportAnnuelPerformanceGeneratorSimpleDoc._register_page_position(self.key, page_num)
+            logger.info(f"✅ PageMarker '{self.key}' ENREGISTRÉ à la page {page_num} (source: {source})")
+            
+            # Afficher l'état actuel de _page_positions
+            all_positions = RapportAnnuelPerformanceGeneratorSimpleDoc._page_positions
+            logger.info(f"🔵 PageMarker '{self.key}': État actuel de _page_positions = {all_positions}")
+            
+            # Afficher toutes les attributs de l'objet PageMarker
+            marker_attrs = {
+                'key': self.key,
+                'width': self.width,
+                'height': self.height,
+                '__dict__': getattr(self, '__dict__', {}),
+                '__class__': self.__class__.__name__,
+                '__module__': getattr(self.__class__, '__module__', None),
+            }
+            logger.info(f"🔵 PageMarker '{self.key}': Tous les attributs = {marker_attrs}")
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de l'enregistrement de la page pour '{self.key}': {e}", exc_info=True)
+
+
+class ParagraphWithMarker(Flowable):
+    """
+    Flowable composite qui combine un Paragraph et un PageMarker.
+    Enregistre la page où le Paragraph COMMENCE à être rendu, même si
+    le Paragraph est coupé sur plusieurs pages.
+    
+    Cela garantit que la page enregistrée correspond à la page où
+    le titre (Paragraph) apparaît réellement.
+    """
+    def __init__(self, paragraph: Paragraph, key: str):
+        """
+        Args:
+            paragraph: Le Paragraph à rendre
+            key: Clé unique pour identifier cette position (ex: "programme_1_strategie")
+        """
+        Flowable.__init__(self)
+        self.paragraph = paragraph
+        self.key = key
+        # La largeur et hauteur seront celles du Paragraph
+        self.width = paragraph.width if hasattr(paragraph, 'width') else 0
+        self.height = paragraph.height if hasattr(paragraph, 'height') else 0
+        self._page_registered = False
+    
+    def wrap(self, availWidth, availHeight):
+        """Délègue au Paragraph pour déterminer l'espace nécessaire."""
+        return self.paragraph.wrap(availWidth, availHeight)
+    
+    def split(self, availWidth, availHeight):
+        """Permet au Paragraph de se diviser sur plusieurs pages si nécessaire."""
+        return self.paragraph.split(availWidth, availHeight)
+    
+    def draw(self):
+        """Dessine le Paragraph et enregistre la page si c'est la première fois."""
+        # Enregistrer la page UNE SEULE FOIS, quand le Paragraph commence à être rendu
+        if not self._page_registered:
+            try:
+                page_num = RapportAnnuelPerformanceGeneratorSimpleDoc._current_rendering_page
+                if page_num is None:
+                    page_num = getattr(self.canv, '_pageNumber', 0) + 1
+                
+                RapportAnnuelPerformanceGeneratorSimpleDoc._register_page_position(self.key, page_num)
+                logger.debug(f"📍 ParagraphWithMarker '{self.key}' enregistré à la page {page_num}")
+                self._page_registered = True
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors de l'enregistrement de la page pour {self.key}: {e}")
+        
+        # Rendre le Paragraph normalement
+        self.paragraph.drawOn(self.canv, 0, 0)
+
+
+class TableTitleFlowable(Flowable):
+    """
+    Flowable personnalisé pour gérer automatiquement la numérotation des tableaux.
+    
+    Avantages avec Platypus :
+    - Encapsule la logique de numérotation dans un composant réutilisable
+    - Peut être intégré facilement dans une story Platypus
+    - Gère automatiquement l'incrémentation du compteur
+    - Permet d'enregistrer la position de la page pour les références croisées
+    
+    Usage:
+        title = TableTitleFlowable(
+            title_text="Exécution financière par action du programme 1",
+            style=subsection_title_style,
+            generator_class=RapportAnnuelPerformanceGeneratorSimpleDoc
+        )
+        story.append(title)
+    """
+    def __init__(self, title_text: str, style: ParagraphStyle, generator_class: type):
+        """
+        Args:
+            title_text: Le texte du titre (sans le numéro, qui sera ajouté automatiquement)
+            style: Le ParagraphStyle à utiliser pour le titre
+            generator_class: La classe du générateur (pour accéder au compteur)
+        """
+        Flowable.__init__(self)
+        self.title_text = title_text
+        self.style = style
+        self.generator_class = generator_class
+        
+        # Obtenir le numéro de tableau automatiquement
+        self.tableau_numero = generator_class._get_next_tableau_numero()
+        
+        # Créer le Paragraph avec le titre complet
+        full_title = f"Tableau {self.tableau_numero}: {title_text}"
+        self.paragraph = Paragraph(full_title, style)
+        
+        # Initialiser les dimensions
+        self.width = 0
+        self.height = 0
+    
+    def wrap(self, availWidth, availHeight):
+        """Détermine l'espace nécessaire pour le titre."""
+        self.width, self.height = self.paragraph.wrap(availWidth, availHeight)
+        return self.width, self.height
+    
+    def split(self, availWidth, availHeight):
+        """Permet au titre de se diviser sur plusieurs lignes si nécessaire."""
+        # Un titre de tableau ne devrait normalement pas se diviser, mais on le permet
+        return self.paragraph.split(availWidth, availHeight)
+    
+    def draw(self):
+        """Dessine le titre du tableau."""
+        self.paragraph.drawOn(self.canv, 0, 0)
+    
+    def get_numero(self) -> int:
+        """Retourne le numéro de tableau assigné."""
+        return self.tableau_numero
+
+
 class RapportAnnuelPerformanceGeneratorSimpleDoc:
     """
     Générateur de rapport annuel de performance utilisant SimpleDocTemplate.
@@ -71,6 +267,942 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
     
     # Variable de classe pour suivre les clés de données DB (pour le styling)
     _db_data_keys: set[str] = set()
+    
+    # Variable de classe pour stocker les positions réelles des pages
+    _page_positions: dict[str, int] = {}
+    
+    # Variable de classe pour stocker le numéro de page actuel pendant le rendu
+    _current_rendering_page: int | None = None
+    
+    # Variable de classe pour compter les tableaux de manière continue dans tout le rapport
+    _tableau_counter: int = 1
+    
+    # Variable de classe pour compter les figures de manière continue dans tout le rapport
+    _figure_counter: int = 1
+    
+    @classmethod
+    def _get_next_tableau_numero(cls) -> int:
+        """
+        Retourne le prochain numéro de tableau et incrémente le compteur.
+        
+        Returns:
+            Le numéro de tableau à utiliser
+        """
+        numero = cls._tableau_counter
+        cls._tableau_counter += 1
+        return numero
+    
+    @classmethod
+    def _reset_tableau_counter(cls, start_value: int = 1):
+        """
+        Réinitialise le compteur de tableaux.
+        
+        Args:
+            start_value: Valeur de départ pour le compteur (par défaut 1)
+        """
+        cls._tableau_counter = start_value
+    
+    @classmethod
+    def _get_next_figure_numero(cls) -> int:
+        """
+        Retourne le prochain numéro de figure et incrémente le compteur.
+        
+        Returns:
+            Le numéro de figure à utiliser
+        """
+        numero = cls._figure_counter
+        cls._figure_counter += 1
+        return numero
+    
+    @classmethod
+    def _reset_figure_counter(cls, start_value: int = 1):
+        """
+        Réinitialise le compteur de figures.
+        
+        Args:
+            start_value: Valeur de départ pour le compteur (par défaut 1)
+        """
+        cls._figure_counter = start_value
+    
+    @classmethod
+    def _register_page_position(cls, key: str, page_number: int):
+        """Enregistre la position d'une page pour une section donnée."""
+        # Vérifier si la clé existe déjà
+        old_value = cls._page_positions.get(key)
+        if old_value is not None:
+            logger.warning(f"⚠️ _register_page_position: La clé '{key}' existe déjà avec la valeur {old_value}, remplacement par {page_number}")
+        else:
+            logger.info(f"📍 _register_page_position: Nouvelle clé '{key}' enregistrée avec la page {page_number}")
+        
+        cls._page_positions[key] = page_number
+        
+        # Afficher l'état complet de _page_positions après l'enregistrement
+        logger.info(f"📍 _register_page_position: État complet de _page_positions après enregistrement de '{key}' = {page_number}:")
+        logger.info(f"   {cls._page_positions}")
+    
+    @classmethod
+    def _get_page_position(cls, key: str, default: int = 0) -> int:
+        """Récupère la position d'une page pour une section donnée."""
+        return cls._page_positions.get(key, default)
+    
+    @classmethod
+    def _find_text_in_pdf(cls, pdf_reader: PdfReader, search_text: str, exact_match: bool = False) -> int | None:
+        """
+        Recherche un texte dans un PDF et retourne le numéro de page (1-indexé) où il apparaît.
+        Cherche dans l'ordre des pages et retourne la première occurrence trouvée.
+        Similaire à Word : on cherche le texte dans le PDF et on trouve sa page.
+        
+        Args:
+            pdf_reader: Le PdfReader contenant les pages du PDF
+            search_text: Le texte à rechercher (ex: "LISTE DES TABLEAUX", "PARTIE I : LE MINISTÈRE")
+            exact_match: Si True, recherche une correspondance exacte. Si False, recherche une correspondance partielle (insensible à la casse)
+        
+        Returns:
+            Le numéro de page (1-indexé) où le texte a été trouvé, ou None si non trouvé
+        """
+        # Normaliser le texte recherché
+        search_text_normalized = cls._normalize_text_for_search(search_text)
+        
+        logger.info(f"🔍 Recherche du texte: '{search_text}' (normalisé: '{search_text_normalized}') dans {len(pdf_reader.pages)} pages")
+        
+        for page_num, page in enumerate(pdf_reader.pages, start=1):
+            try:
+                page_text = page.extract_text()
+                if not page_text:
+                    continue
+                
+                # Normaliser le texte de la page
+                page_text_normalized = cls._normalize_text_for_search(page_text)
+                
+                if exact_match:
+                    # Recherche exacte (insensible à la casse)
+                    if search_text_normalized == page_text_normalized.strip():
+                        logger.info(f"✅ Texte trouvé exactement sur la page {page_num}: '{search_text}'")
+                        # Log les premiers caractères de la page pour déboguer
+                        logger.debug(f"   Contenu de la page {page_num}: {page_text_normalized[:200]}")
+                        return page_num
+                else:
+                    # Recherche partielle (le texte doit être contenu dans la page)
+                    # Chercher avec le texte normalisé
+                    if search_text_normalized in page_text_normalized:
+                        logger.info(f"✅ Texte trouvé sur la page {page_num}: '{search_text}'")
+                        # Log les premiers caractères de la page pour déboguer
+                        logger.info(f"   📄 Contenu de la page {page_num} (début): {page_text_normalized[:200]}...")
+                        return page_num
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors de l'extraction du texte de la page {page_num}: {e}")
+                continue
+        
+        logger.warning(f"⚠️ Texte non trouvé dans le PDF: '{search_text}'")
+        logger.warning(f"   Texte normalisé recherché: '{search_text_normalized}'")
+        # Log quelques pages pour aider au débogage
+        logger.info(f"   📄 Analyse des premières pages du PDF ({len(pdf_reader.pages)} pages au total):")
+        pages_to_check = min(5, len(pdf_reader.pages))
+        for i in range(pages_to_check):
+            try:
+                page = pdf_reader.pages[i]
+                page_text = page.extract_text()
+                if page_text:
+                    page_text_normalized = " ".join(page_text.lower().split())
+                    logger.info(f"      Page {i+1}: {page_text_normalized[:150]}...")
+                else:
+                    logger.info(f"      Page {i+1}: VIDE")
+            except Exception as e:
+                logger.warning(f"      Page {i+1}: ERREUR d'extraction - {e}")
+        return None
+    
+    @staticmethod
+    def _number_to_roman(n: int) -> str:
+        """Convertit un nombre en chiffres romains."""
+        val = [
+            1000, 900, 500, 400,
+            100, 90, 50, 40,
+            10, 9, 5, 4,
+            1
+        ]
+        syb = [
+            "M", "CM", "D", "CD",
+            "C", "XC", "L", "XL",
+            "X", "IX", "V", "IV",
+            "I"
+        ]
+        roman_num = ''
+        i = 0
+        while n > 0:
+            for _ in range(n // val[i]):
+                roman_num += syb[i]
+                n -= val[i]
+            i += 1
+        return roman_num
+    
+    @classmethod
+    def _find_text_in_pdf_with_range(cls, pdf_reader: PdfReader, search_text: str, start_page: int = None, end_page: int = None) -> int | None:
+        """
+        Recherche un texte dans un PDF dans une plage de pages spécifique.
+        
+        Args:
+            pdf_reader: Le PdfReader contenant les pages du PDF
+            search_text: Le texte à rechercher
+            start_page: Numéro de page de début (1-indexé, inclusif). Si None, commence à la page 1.
+            end_page: Numéro de page de fin (1-indexé, inclusif). Si None, va jusqu'à la fin.
+        
+        Returns:
+            Le numéro de page (1-indexé) où le texte a été trouvé, ou None si non trouvé
+        """
+        search_text_lower = search_text.lower().strip()
+        search_text_normalized = " ".join(search_text_lower.split())
+        
+        start_idx = (start_page - 1) if start_page else 0
+        end_idx = end_page if end_page else len(pdf_reader.pages)
+        
+        logger.debug(f"🔍 Recherche '{search_text}' dans plage pages {start_page or 1}-{end_page or len(pdf_reader.pages)} (indices {start_idx}-{end_idx})")
+        
+        for page_num, page in enumerate(pdf_reader.pages[start_idx:end_idx], start=start_idx + 1):
+            try:
+                page_text = page.extract_text()
+                if not page_text:
+                    continue
+                
+                page_text_lower = page_text.lower()
+                page_text_normalized = " ".join(page_text_lower.split())
+                
+                if search_text_normalized in page_text_normalized:
+                    logger.info(f"✅ Texte trouvé sur la page {page_num} (dans plage {start_page or 1}-{end_page or 'fin'}): '{search_text}'")
+                    logger.debug(f"   Extrait de la page {page_num}: {page_text_normalized[:200]}")
+                    return page_num
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors de l'extraction du texte de la page {page_num}: {e}")
+                continue
+        
+        logger.debug(f"⚠️ Texte '{search_text}' non trouvé dans la plage {start_page or 1}-{end_page or 'fin'}")
+        return None
+    
+    @classmethod
+    def _find_all_toc_pages(cls, pdf_reader: PdfReader, nb_pages_sommaire: int = 0) -> dict[str, int]:
+        """
+        Trouve les numéros de page pour tous les éléments du sommaire en parcourant le PDF une seule fois.
+        Approche optimisée : on parcourt le PDF du début à la fin, et à chaque fois qu'on rencontre
+        un titre du sommaire, on l'enregistre dans le dictionnaire avec son numéro de page.
+        
+        Args:
+            pdf_reader: Le PdfReader du PDF complet (sans sommaire)
+            nb_pages_sommaire: Nombre de pages du sommaire (pour ajuster les numéros de page)
+        
+        Returns:
+            Dictionnaire avec les clés et les numéros de page trouvés
+        """
+        pages_found = {}
+        
+        # Récupérer les programmes pour construire les patterns de recherche
+        programmes = cls.data.get("programmes", [])
+        if not programmes:
+            programmes = cls.DEFAULT_DATA.get("programmes", [])
+        
+        # Construire tous les patterns à rechercher avec leurs clés
+        # Format: {pattern_normalized: (key, is_program_specific)}
+        search_patterns: dict[str, tuple[str, bool]] = {}
+        
+        # Patterns pour les sections principales (hors programmes)
+        main_patterns = {
+            "LISTE DES TABLEAUX": "liste_tableaux",
+            "LISTE DES GRAPHIQUES": "liste_graphiques",
+            "SIGLES ET ABRÉVIATIONS": "sigles_abreviations",
+            "INTRODUCTION GÉNÉRALE": "introduction_generale",
+            "PARTIE I : LE MINISTÈRE": "partie_i",
+            "I. PRÉSENTATION GÉNÉRALE DU MINISTÈRE": "presentation_generale",
+            "II. PERFORMANCE GÉNÉRALE DU MINISTÈRE": "performance_generale",
+            "III. FINANCEMENT GLOBAL DU MINISTÈRE": "financement_global",
+        }
+        
+        for pattern, key in main_patterns.items():
+            pattern_normalized = cls._normalize_text_for_search(pattern)
+            search_patterns[pattern_normalized] = (key, False)
+        
+        # Construire les patterns pour chaque programme
+        annee = cls.data.get("annee", "")
+        
+        for idx, programme in enumerate(programmes):
+            numero = programme.get("numero", 1)
+            titre = programme.get("titre", "").strip().upper()
+            partie_numero = numero + 1
+            partie_romain = cls._number_to_roman(partie_numero)
+            
+            # Titre de partie (plusieurs variantes avec normalisation)
+            partie_patterns = [
+                f"PARTIE {partie_romain} : LE PROGRAMME {numero} « {titre} »",
+                f"PARTIE {partie_numero} : LE PROGRAMME {numero} « {titre} »",
+                f"PARTIE {partie_romain}: LE PROGRAMME {numero} « {titre} »",
+                f"PARTIE {partie_romain} LE PROGRAMME {numero} {titre}",  # Sans guillemets
+            ]
+            for pattern in partie_patterns:
+                pattern_normalized = cls._normalize_text_for_search(pattern)
+                if pattern_normalized not in search_patterns:
+                    search_patterns[pattern_normalized] = (f"programme_{numero}_start", True)
+            
+            # Sections du programme - chercher avec préfixes numériques pour être plus précis
+            # Les vrais titres incluent "I.", "II.", "III.", "IV." avant le texte
+            programme_sections = [
+                ("I. PRÉSENTATION DE LA STRATÉGIE DU PROGRAMME", f"programme_{numero}_strategie"),
+                ("II. RÉALISATIONS DU PROGRAMME", f"programme_{numero}_realisations"),
+                ("III. PERFORMANCE DU PROGRAMME", f"programme_{numero}_performance"),
+            ]
+            
+            # Ajouter aussi les patterns sans préfixe pour tolérance
+            programme_sections_without_prefix = [
+                ("PRÉSENTATION DE LA STRATÉGIE DU PROGRAMME", f"programme_{numero}_strategie"),
+                ("RÉALISATIONS DU PROGRAMME", f"programme_{numero}_realisations"),
+                ("PERFORMANCE DU PROGRAMME", f"programme_{numero}_performance"),
+            ]
+            
+            # Ajouter d'abord les patterns avec préfixes (plus précis)
+            for pattern, key in programme_sections:
+                pattern_normalized = cls._normalize_text_for_search(pattern)
+                if pattern_normalized not in search_patterns:
+                    search_patterns[pattern_normalized] = (key, True)
+            
+            # Ajouter aussi les patterns sans préfixe comme fallback
+            for pattern, key in programme_sections_without_prefix:
+                pattern_normalized = cls._normalize_text_for_search(pattern)
+                # Ne pas écraser les patterns avec préfixes
+                if pattern_normalized not in search_patterns:
+                    search_patterns[pattern_normalized] = (key, True)
+            
+            if numero == 2:
+                # Chercher avec préfixe "IV." d'abord, puis sans préfixe comme fallback
+                perspectives_with_prefix = cls._normalize_text_for_search("IV. PERSPECTIVES")
+                perspectives_normalized = cls._normalize_text_for_search("PERSPECTIVES")
+                if perspectives_with_prefix not in search_patterns:
+                    search_patterns[perspectives_with_prefix] = (f"programme_{numero}_perspectives", True)
+                if perspectives_normalized not in search_patterns:
+                    search_patterns[perspectives_normalized] = (f"programme_{numero}_perspectives", True)
+        
+        # Ajouter "CONCLUSION" - sera géré spécialement car elle peut apparaître plusieurs fois
+        conclusion_normalized = cls._normalize_text_for_search("CONCLUSION")
+        
+        logger.info(f"🔍 Début du parcours unique du PDF ({len(pdf_reader.pages)} pages)")
+        logger.info(f"📋 {len(search_patterns)} patterns à rechercher")
+        
+        # Structure pour stocker toutes les occurrences trouvées dans l'ordre
+        # Format: liste de tuples (page_num, key, pattern_found)
+        all_occurrences: list[tuple[int, str, str]] = []
+        
+        # Parcourir le PDF une seule fois, page par page
+        for page_num in range(1, len(pdf_reader.pages) + 1):
+            try:
+                page = pdf_reader.pages[page_num - 1]
+                page_text = page.extract_text()
+                if not page_text:
+                    continue
+                
+                # Normaliser le texte de la page (avec la même fonction que les patterns)
+                page_text_normalized = cls._normalize_text_for_search(page_text)
+                
+                # Vérifier tous les patterns
+                for pattern_normalized, (key, is_program_specific) in search_patterns.items():
+                    # Vérifier si le pattern est dans la page
+                    if pattern_normalized in page_text_normalized:
+                        # Enregistrer cette occurrence (même si on l'a déjà vue)
+                        all_occurrences.append((page_num, key, pattern_normalized))
+                        logger.debug(f"   Page {page_num}: pattern '{pattern_normalized}' trouvé (key: {key})")
+                
+                # Vérifier aussi "CONCLUSION" (pas dans search_patterns car multiple occurrences)
+                if conclusion_normalized in page_text_normalized:
+                    all_occurrences.append((page_num, "CONCLUSION", conclusion_normalized))
+                    logger.debug(f"   Page {page_num}: 'CONCLUSION' trouvé")
+            
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors du traitement de la page {page_num}: {e}")
+                continue
+        
+        logger.info(f"📋 Total occurrences trouvées: {len(all_occurrences)}")
+        
+        # Maintenant, associer chaque occurrence au bon programme en fonction de l'ordre
+        # Pour les sections qui peuvent apparaître plusieurs fois (comme "PERFORMANCE DU PROGRAMME"),
+        # on les associe au programme le plus proche dans l'ordre
+        
+        # D'abord, identifier les pages de début de chaque programme
+        programme_start_pages = {}  # {num_programme: page_num}
+        
+        for page_num, key, pattern in all_occurrences:
+            if key.startswith("programme_") and key.endswith("_start"):
+                prog_num = int(key.split("_")[1])
+                programme_start_pages[prog_num] = page_num
+                pages_found[key] = page_num + nb_pages_sommaire
+                logger.info(f"✅ {key} → page {pages_found[key]} (trouvée à {page_num})")
+        
+        # Enregistrer les sections principales (hors programmes)
+        for page_num, key, pattern in all_occurrences:
+            if not key.startswith("programme_"):
+                if key not in pages_found:
+                    pages_found[key] = page_num + nb_pages_sommaire
+                    logger.info(f"✅ {key} → page {pages_found[key]} (trouvée à {page_num})")
+        
+        # Pour chaque section de programme, trouver la bonne occurrence en fonction de l'ordre
+        # On groupe les occurrences par programme et type de section
+        # On prend la DERNIÈRE occurrence de chaque type dans la plage du programme
+        # (car les vrais titres viennent après la liste de structure du rapport)
+        sorted_programmes = sorted(programme_start_pages.items())
+        
+        # Grouper les occurrences par programme et type de section
+        programme_section_occurrences = {}  # {(prog_num, section_type): [page_num, ...]}
+        
+        for page_num, key, pattern in all_occurrences:
+            if key.startswith("programme_") and not key.endswith("_start"):
+                # Extraire le type de section depuis la clé originale
+                parts = key.split("_")
+                if len(parts) >= 3:
+                    section_type = "_".join(parts[2:])  # strategie, realisations, etc.
+                    
+                    # Trouver le programme dans lequel se trouve cette page
+                    assigned_prog_num = None
+                    for prog_idx, (prog_num, start_page) in enumerate(sorted_programmes):
+                        # Vérifier si on est après le début de ce programme
+                        if page_num >= start_page:
+                            # Vérifier si on est avant le début du programme suivant
+                            next_start_page = len(pdf_reader.pages) + 1
+                            if prog_idx < len(sorted_programmes) - 1:
+                                next_prog_num, next_start_page = sorted_programmes[prog_idx + 1]
+                            
+                            if page_num < next_start_page:
+                                assigned_prog_num = prog_num
+                                break
+                    
+                    if assigned_prog_num:
+                        key_tuple = (assigned_prog_num, section_type)
+                        if key_tuple not in programme_section_occurrences:
+                            programme_section_occurrences[key_tuple] = []
+                        programme_section_occurrences[key_tuple].append(page_num)
+        
+        # Pour chaque section, prendre la DERNIÈRE occurrence (la plus tardive)
+        for (prog_num, section_type), page_nums in programme_section_occurrences.items():
+            if page_nums:
+                # Prendre la dernière occurrence (page la plus élevée)
+                last_page = max(page_nums)
+                correct_key = f"programme_{prog_num}_{section_type}"
+                pages_found[correct_key] = last_page + nb_pages_sommaire
+                logger.info(f"✅ {correct_key} → page {pages_found[correct_key]} (trouvée à {last_page}, dernière occurrence sur {len(page_nums)} trouvées, associé au programme {prog_num})")
+        
+        # Gérer les introductions des programmes
+        # L'introduction est généralement sur la même page ou juste avant la stratégie
+        for prog_num, start_page in programme_start_pages.items():
+            strategie_key = f"programme_{prog_num}_strategie"
+            intro_key = f"programme_{prog_num}_intro"
+            
+            # Déterminer la plage de recherche : du début du programme jusqu'à la stratégie
+            strategie_page = None
+            if strategie_key in pages_found:
+                strategie_page = pages_found[strategie_key] - nb_pages_sommaire
+            else:
+                # Si pas de stratégie trouvée, chercher dans les premières pages du programme
+                strategie_page = start_page + 5  # Chercher dans les 5 premières pages
+            
+            # Chercher "INTRODUCTION" comme titre (pas juste dans le texte)
+            # Chercher dans la plage du programme jusqu'à la stratégie
+            search_start = start_page
+            search_end = min(strategie_page if strategie_page else start_page + 5, len(pdf_reader.pages) + 1)
+            
+            intro_found = False
+            for page_num in range(search_start, search_end):
+                try:
+                    page = pdf_reader.pages[page_num - 1]
+                    page_text = page.extract_text()
+                    if page_text:
+                        page_normalized = cls._normalize_text_for_search(page_text)
+                        # Chercher "INTRODUCTION" comme titre
+                        # Vérifier qu'il n'est pas suivi de "GÉNÉRALE" (pour éviter "INTRODUCTION GÉNÉRALE")
+                        if "introduction" in page_normalized:
+                            # Vérifier que ce n'est pas "INTRODUCTION GÉNÉRALE"
+                            if "introduction generale" not in page_normalized:
+                                # Prendre la première occurrence dans la plage (c'est l'intro du programme)
+                                pages_found[intro_key] = page_num + nb_pages_sommaire
+                                logger.info(f"✅ {intro_key} → page {pages_found[intro_key]} (trouvée à {page_num}, dans plage {search_start}-{search_end})")
+                                intro_found = True
+                                break
+                except:
+                    continue
+            
+            if not intro_found:
+                # Si pas trouvée, utiliser la page de début du programme comme fallback
+                pages_found[intro_key] = start_page + nb_pages_sommaire
+                logger.warning(f"⚠️ {intro_key} → page {pages_found[intro_key]} (non trouvée, utilisation de la page de début du programme {start_page} comme fallback)")
+        
+        # Gérer les conclusions (dernière occurrence dans chaque programme)
+        conclusion_occurrences = [page_num for page_num, key, pattern in all_occurrences if key == "CONCLUSION"]
+        
+        for idx, (prog_num, start_page) in enumerate(sorted_programmes):
+            conclusion_key = f"programme_{prog_num}_conclusion"
+            
+            # Déterminer la fin de la plage de ce programme
+            next_start_page = len(pdf_reader.pages) + 1
+            if idx < len(sorted_programmes) - 1:
+                next_prog_num, next_start_page = sorted_programmes[idx + 1]
+            
+            # Trouver la dernière conclusion dans cette plage
+            for page_num in conclusion_occurrences:
+                if start_page <= page_num < next_start_page:
+                    pages_found[conclusion_key] = page_num + nb_pages_sommaire
+                    logger.info(f"✅ {conclusion_key} → page {pages_found[conclusion_key]} (trouvée à {page_num}, dernière dans plage {start_page}-{next_start_page})")
+        
+        # Log des clés manquantes
+        expected_keys = [
+            "liste_tableaux", "liste_graphiques", "sigles_abreviations",
+            "introduction_generale", "partie_i", "presentation_generale",
+            "performance_generale", "financement_global",
+        ]
+        
+        # Ajouter les clés attendues pour chaque programme
+        for programme in programmes:
+            numero = programme.get("numero", 1)
+            expected_keys.extend([
+                f"programme_{numero}_start",
+                f"programme_{numero}_intro",
+                f"programme_{numero}_strategie",
+                f"programme_{numero}_realisations",
+                f"programme_{numero}_performance",
+                f"programme_{numero}_conclusion",
+            ])
+            if numero == 2:
+                expected_keys.append(f"programme_{numero}_perspectives")
+        
+        missing_keys = [k for k in expected_keys if k not in pages_found]
+        if missing_keys:
+            logger.warning(f"⚠️ Clés non trouvées dans pages_found: {missing_keys}")
+            logger.info(f"📋 Clés trouvées ({len(pages_found)}/{len(expected_keys)}): {list(pages_found.keys())}")
+        else:
+            logger.info(f"✅ Toutes les clés attendues ont été trouvées ({len(pages_found)} éléments)")
+        
+        logger.info(f"✅ Parcours terminé: {len(pages_found)} éléments trouvés")
+        return pages_found
+    
+    @classmethod
+    def _find_text_in_pdf_excluding_pages(cls, pdf_reader: PdfReader, search_text: str, exclude_pages: set[int] = None) -> int | None:
+        """
+        Recherche un texte dans un PDF en excluant certaines pages.
+        Utile pour éviter de trouver les mentions dans les listes plutôt que les occurrences réelles.
+        Utilise une recherche flexible avec regex si la recherche exacte échoue.
+        
+        Args:
+            pdf_reader: Le PdfReader contenant les pages du PDF
+            search_text: Le texte à rechercher
+            exclude_pages: Ensemble des numéros de pages (1-indexés) à exclure de la recherche
+        
+        Returns:
+            Le numéro de page (1-indexé) où le texte a été trouvé, ou None si non trouvé
+        """
+        if exclude_pages is None:
+            exclude_pages = set()
+        
+        # Normaliser le texte recherché
+        search_text_normalized = cls._normalize_text_for_search(search_text)
+        
+        logger.info(f"🔍 Recherche du texte (pages exclues: {exclude_pages}): '{search_text}' (normalisé: '{search_text_normalized}') dans {len(pdf_reader.pages)} pages")
+        
+        for page_num, page in enumerate(pdf_reader.pages, start=1):
+            # Ignorer les pages exclues
+            if page_num in exclude_pages:
+                logger.debug(f"   Page {page_num} exclue de la recherche")
+                continue
+                
+            try:
+                page_text = page.extract_text()
+                if not page_text:
+                    continue
+                
+                # Normaliser le texte de la page
+                page_text_normalized = cls._normalize_text_for_search(page_text)
+                
+                if search_text_normalized in page_text_normalized:
+                    logger.info(f"✅ Texte trouvé sur la page {page_num}: '{search_text}'")
+                    logger.info(f"   📄 Contenu de la page {page_num} (début): {page_text_normalized[:200]}...")
+                    return page_num
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors de l'extraction du texte de la page {page_num}: {e}")
+                continue
+        
+        # Si la recherche exacte a échoué, essayer une recherche plus flexible avec regex
+        # Chercher "Tableau X:" ou "Figure X:" suivi de quelques mots-clés du titre
+        import re
+        
+        # Extraire le numéro et le type (Tableau/Figure)
+        match = re.match(r'(tableau|figure)\s+(\d+):\s*(.+)', search_text_normalized, re.IGNORECASE)
+        if match:
+            type_text, numero, titre_rest = match.groups()
+            # Prendre les 2-3 premiers mots significatifs du titre pour la recherche flexible
+            mots_cles = [m for m in titre_rest.split() if len(m) > 3][:3]  # Ignorer les mots courts
+            
+            if mots_cles:
+                # Construire un pattern qui cherche "Tableau X:" ou "Figure X:" suivi des mots-clés
+                # Pattern simple : type + numéro + au moins 2 mots-clés du titre
+                # Tolérer les lettres dupliquées dans les mots-clés (ex: "cadrres" -> "cadres")
+                type_pattern = f"{type_text}\\s*{numero}\\s*:?"
+                
+                # Créer un pattern flexible pour chaque mot-clé qui tolère les lettres dupliquées
+                def make_flexible_word_pattern(word: str) -> str:
+                    """Crée un pattern regex qui tolère les lettres dupliquées."""
+                    # Pour chaque lettre, permettre 1 ou plusieurs occurrences consécutives
+                    pattern_parts = []
+                    for char in word:
+                        if char.isalnum():
+                            # Permettre 1 ou plusieurs occurrences de cette lettre/chiffre
+                            pattern_parts.append(f"{re.escape(char)}+")
+                        else:
+                            pattern_parts.append(re.escape(char))
+                    return "".join(pattern_parts)
+                
+                mots_pattern = ".*?".join([make_flexible_word_pattern(mot) for mot in mots_cles[:2]])  # Utiliser les 2 premiers mots-clés
+                search_pattern = f"{type_pattern}.*?{mots_pattern}"
+                
+                logger.info(f"🔍 Recherche flexible avec regex pour {type_text} {numero}: pattern '{search_pattern[:100]}...'")
+                
+                for page_num, page in enumerate(pdf_reader.pages, start=1):
+                    if page_num in exclude_pages:
+                        continue
+                    
+                    try:
+                        page_text = page.extract_text()
+                        if not page_text:
+                            continue
+                        
+                        page_text_normalized = cls._normalize_text_for_search(page_text)
+                        
+                        # Chercher avec le pattern regex
+                        if re.search(search_pattern, page_text_normalized, re.IGNORECASE):
+                            logger.info(f"✅ Texte trouvé (recherche flexible) sur la page {page_num}: '{search_text[:80]}...'")
+                            logger.info(f"   📄 Contenu de la page {page_num} (début): {page_text_normalized[:200]}...")
+                            return page_num
+                    except Exception as e:
+                        logger.warning(f"⚠️ Erreur lors de la recherche flexible sur la page {page_num}: {e}")
+                        continue
+        
+        logger.warning(f"⚠️ Texte non trouvé dans le PDF (pages exclues: {exclude_pages}): '{search_text}'")
+        logger.warning(f"   Texte normalisé recherché: '{search_text_normalized}'")
+        return None
+    
+    @classmethod
+    def _extract_title_from_page_text(cls, page_text: str, numero: int, type_label: str = "Tableau") -> str | None:
+        """
+        Extrait le titre complet d'un tableau ou d'une figure depuis le texte de la page.
+        
+        Args:
+            page_text: Le texte brut de la page
+            numero: Le numéro du tableau ou de la figure
+            type_label: "Tableau" ou "Figure"
+        
+        Returns:
+            Le titre extrait (sans le préfixe "Tableau X:" ou "Figure X:"), ou None si non trouvé
+        """
+        import re
+        
+        # Créer un pattern flexible qui cherche le type + numéro + ":" (insensible à la casse)
+        # Ex: "Tableau 1:", "tableau 1 :", "TABLEAU 1:", etc.
+        type_pattern = type_label.lower()
+        pattern = rf'{type_pattern}\s+{numero}\s*:'
+        
+        # Chercher le pattern dans le texte (insensible à la casse)
+        match = re.search(pattern, page_text, re.IGNORECASE)
+        if not match:
+            return None
+        
+        # Extraire le texte après le match
+        start_pos = match.end()
+        remaining_text = page_text[start_pos:].strip()
+        
+        # Le titre peut s'étendre sur plusieurs lignes
+        # On va prendre jusqu'à la fin de la ligne ou jusqu'au prochain élément
+        # Identifier où se termine le titre :
+        # - Fin de ligne suivie d'un saut de ligne important
+        # - Ou jusqu'à ce qu'on rencontre quelque chose qui ressemble à du contenu de tableau
+        # Pour l'instant, on prend jusqu'à la fin de la ligne ou jusqu'à 200 caractères max
+        
+        # D'abord, essayer de prendre jusqu'à la fin de la première ligne
+        lines = remaining_text.split('\n')
+        if lines:
+            # Prendre la première ligne complète
+            first_line = lines[0].strip()
+            
+            # Si la première ligne se termine par des points de suspension ou est très courte,
+            # peut-être que le titre continue sur la ligne suivante
+            # On va prendre jusqu'à 2-3 lignes maximum si elles sont courtes et connectées
+            title_parts = [first_line]
+            
+            # Si la première ligne est courte (moins de 50 caractères), vérifier la ligne suivante
+            if len(first_line) < 50 and len(lines) > 1:
+                second_line = lines[1].strip()
+                # Si la deuxième ligne commence par une minuscule ou est courte, c'est probablement la suite
+                if second_line and (second_line[0].islower() or len(second_line) < 60):
+                    title_parts.append(second_line)
+            
+            title = ' '.join(title_parts).strip()
+            
+            # Nettoyer le titre : enlever les espaces multiples
+            title = re.sub(r'\s+', ' ', title)
+            # Enlever les caractères de fin de ligne, de tabulation, etc.
+            title = title.rstrip('\r\n\t ')
+            
+            # Limiter la longueur du titre (en général, un titre ne dépasse pas 200 caractères)
+            if len(title) > 200:
+                title = title[:200].rstrip()
+            
+            return title if title else None
+        
+        return None
+    
+    @classmethod
+    def _find_tableaux_and_graphiques_pages(cls, pdf_reader: PdfReader) -> tuple[dict[int, tuple[int, str]], dict[int, tuple[int, str]]]:
+        """
+        Trouve les numéros de page réels et les titres des tableaux et graphiques dans le PDF.
+        Recherche uniquement les numéros ("Tableau X:" ou "Figure X:"), puis extrait
+        le titre complet et le numéro de page depuis la page trouvée.
+        Exclut les pages des listes pour éviter de trouver les mentions plutôt que les occurrences réelles.
+        
+        Args:
+            pdf_reader: Le PdfReader du PDF complet
+        
+        Returns:
+            Tuple de deux dictionnaires:
+            - tableaux_pages: {numero_tableau: (page_num, titre)}
+            - graphiques_pages: {numero_graphique: (page_num, titre)}
+        """
+        import re
+        
+        tableaux_pages = {}
+        graphiques_pages = {}
+        
+        logger.info("🔍 Recherche des pages des tableaux et graphiques dans le PDF...")
+        logger.info(f"📄 PDF contient {len(pdf_reader.pages)} pages")
+        
+        # Déterminer les pages à exclure (pages des listes)
+        # On va identifier les pages qui contiennent "LISTE DES TABLEAUX" ou "LISTE DES GRAPHIQUES"
+        exclude_pages = set()
+        for page_num, page in enumerate(pdf_reader.pages, start=1):
+            try:
+                page_text = page.extract_text()
+                if page_text:
+                    page_text_lower = page_text.lower()
+                    if "liste des tableaux" in page_text_lower or "liste des graphiques" in page_text_lower:
+                        exclude_pages.add(page_num)
+                        logger.info(f"📋 Page {page_num} identifiée comme page de liste (à exclure)")
+            except:
+                continue
+        
+        logger.info(f"📋 Pages à exclure de la recherche: {exclude_pages}")
+        
+        # Collecter TOUS les numéros de tableaux et graphiques trouvés (pas juste le maximum)
+        # Cela évite de rechercher des éléments qui n'existent pas réellement
+        tableau_numeros = set()
+        figure_numeros = set()
+        
+        logger.info("🔍 Détection de tous les numéros de tableaux et graphiques dans le PDF...")
+        
+        for page_num, page in enumerate(pdf_reader.pages, start=1):
+            if page_num in exclude_pages:
+                continue
+                
+            try:
+                page_text = page.extract_text()
+                if not page_text:
+                    continue
+                
+                page_text_normalized = cls._normalize_text_for_search(page_text)
+                
+                # Chercher tous les "tableau X:" dans cette page
+                tableau_matches = re.findall(r'tableau\s+(\d+)\s*:', page_text_normalized, re.IGNORECASE)
+                for match in tableau_matches:
+                    num = int(match)
+                    tableau_numeros.add(num)
+                
+                # Chercher tous les "figure X:" dans cette page
+                figure_matches = re.findall(r'figure\s+(\d+)\s*:', page_text_normalized, re.IGNORECASE)
+                for match in figure_matches:
+                    num = int(match)
+                    figure_numeros.add(num)
+            
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors de l'analyse de la page {page_num}: {e}")
+                continue
+        
+        # Trier les numéros pour un affichage cohérent
+        tableau_numeros_sorted = sorted(tableau_numeros)
+        figure_numeros_sorted = sorted(figure_numeros)
+        
+        logger.info(f"📊 Numéros détectés: Tableaux {tableau_numeros_sorted} ({len(tableau_numeros)}), Figures {figure_numeros_sorted} ({len(figure_numeros)})")
+        
+        # Rechercher uniquement les tableaux dont le numéro a été détecté
+        logger.info(f"📋 Recherche de {len(tableau_numeros)} tableaux dans le PDF...")
+        
+        for numero in tableau_numeros_sorted:
+            # Chercher uniquement "Tableau X:" (avec variations de format)
+            search_pattern = f"tableau\\s*{numero}\\s*:"
+            
+            logger.info(f"🔍 Recherche du Tableau {numero}: pattern '{search_pattern}'")
+            
+            for page_num, page in enumerate(pdf_reader.pages, start=1):
+                if page_num in exclude_pages:
+                    continue
+                
+                try:
+                    page_text = page.extract_text()
+                    if not page_text:
+                        continue
+                    
+                    page_text_normalized = cls._normalize_text_for_search(page_text)
+                    
+                    # Chercher le pattern dans la page
+                    if re.search(search_pattern, page_text_normalized, re.IGNORECASE):
+                        # Trouvé! Extraire le titre depuis le texte brut de la page
+                        if numero not in tableaux_pages:
+                            title = cls._extract_title_from_page_text(page_text, numero, "Tableau")
+                            if title:
+                                tableaux_pages[numero] = (page_num, title)
+                                logger.info(f"✅ Tableau {numero} trouvé à la page {page_num}: '{title[:80]}...'")
+                            else:
+                                # Si on ne peut pas extraire le titre, utiliser un titre par défaut
+                                tableaux_pages[numero] = (page_num, f"Tableau {numero}")
+                                logger.warning(f"⚠️ Tableau {numero} trouvé à la page {page_num} mais titre non extrait")
+                            break  # Passer au tableau suivant
+                
+                except Exception as e:
+                    logger.warning(f"⚠️ Erreur lors de la recherche du Tableau {numero} sur la page {page_num}: {e}")
+                    continue
+            
+            if numero not in tableaux_pages:
+                logger.warning(f"⚠️ Tableau {numero} non trouvé")
+        
+        # Rechercher uniquement les graphiques dont le numéro a été détecté
+        logger.info(f"📋 Recherche de {len(figure_numeros)} graphiques dans le PDF...")
+        
+        for numero in figure_numeros_sorted:
+            # Chercher uniquement "Figure X:" (avec variations de format)
+            search_pattern = f"figure\\s*{numero}\\s*:"
+            
+            logger.info(f"🔍 Recherche de la Figure {numero}: pattern '{search_pattern}'")
+            
+            for page_num, page in enumerate(pdf_reader.pages, start=1):
+                if page_num in exclude_pages:
+                    continue
+                
+                try:
+                    page_text = page.extract_text()
+                    if not page_text:
+                        continue
+                    
+                    page_text_normalized = cls._normalize_text_for_search(page_text)
+                    
+                    # Chercher le pattern dans la page
+                    if re.search(search_pattern, page_text_normalized, re.IGNORECASE):
+                        # Trouvé! Extraire le titre depuis le texte brut de la page
+                        if numero not in graphiques_pages:
+                            title = cls._extract_title_from_page_text(page_text, numero, "Figure")
+                            if title:
+                                graphiques_pages[numero] = (page_num, title)
+                                logger.info(f"✅ Figure {numero} trouvée à la page {page_num}: '{title[:80]}...'")
+                            else:
+                                # Si on ne peut pas extraire le titre, utiliser un titre par défaut
+                                graphiques_pages[numero] = (page_num, f"Figure {numero}")
+                                logger.warning(f"⚠️ Figure {numero} trouvée à la page {page_num} mais titre non extrait")
+                            break  # Passer à la figure suivante
+                
+                except Exception as e:
+                    logger.warning(f"⚠️ Erreur lors de la recherche de la Figure {numero} sur la page {page_num}: {e}")
+                    continue
+            
+            if numero not in graphiques_pages:
+                logger.warning(f"⚠️ Figure {numero} non trouvée")
+        
+        logger.info(f"✅ Recherche terminée: {len(tableaux_pages)}/{len(tableau_numeros)} tableaux trouvés, {len(graphiques_pages)}/{len(figure_numeros)} graphiques trouvés")
+        logger.info(f"📊 Résultat tableaux_pages: {tableaux_pages}")
+        logger.info(f"📊 Résultat graphiques_pages: {graphiques_pages}")
+        return tableaux_pages, graphiques_pages
+    
+    @classmethod
+    def _draw_page_footer(
+        cls,
+        pdf: canvas.Canvas,
+        page_number: int,
+        width: float,
+        footer_margin: float,
+        footer_height: float,
+        right_margin: float
+    ):
+        """Dessine le footer avec le numéro de page (design carte/page avec coin relevé).
+        
+        Args:
+            pdf: Le canvas PDF
+            page_number: Le numéro de page à afficher
+            width: La largeur de la page
+            footer_margin: La marge du footer depuis le bas
+            footer_height: La hauteur du footer
+            right_margin: La marge droite de la page
+        """
+        footer_y = footer_margin
+        footer_center_y = footer_y + footer_height / 2
+        
+        # Numéro de page dans le footer (design carte/page avec coin relevé)
+        page_num_box_size = 1.0 * cm
+        page_num_x = width - right_margin - page_num_box_size
+        page_num_y = footer_center_y - page_num_box_size / 2
+        
+        pdf.saveState()
+        
+        # Ombre portée
+        pdf.setFillColor(colors.HexColor("#E0E0E0"))
+        pdf.setStrokeColor(colors.HexColor("#E0E0E0"))
+        shadow_offset = 2
+        pdf.roundRect(
+            page_num_x + shadow_offset,
+            page_num_y - shadow_offset,
+            page_num_box_size,
+            page_num_box_size,
+            radius=3,
+            stroke=0,
+            fill=1
+        )
+        
+        # Carte blanche principale
+        pdf.setFillColor(colors.white)
+        pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
+        pdf.setLineWidth(0.5)
+        pdf.roundRect(
+            page_num_x,
+            page_num_y,
+            page_num_box_size,
+            page_num_box_size,
+            radius=3,
+            stroke=1,
+            fill=1
+        )
+        
+        # Coin relevé
+        corner_size = 0.3 * cm
+        corner_x = page_num_x + page_num_box_size - corner_size
+        corner_y = page_num_y + page_num_box_size - corner_size
+        
+        pdf.setFillColor(colors.HexColor("#F5F5F5"))
+        pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
+        pdf.setLineWidth(0.3)
+        corner_path = pdf.beginPath()
+        corner_path.moveTo(corner_x, page_num_y + page_num_box_size)
+        corner_path.lineTo(page_num_x + page_num_box_size, page_num_y + page_num_box_size)
+        corner_path.lineTo(page_num_x + page_num_box_size, corner_y)
+        corner_path.curveTo(corner_x + corner_size * 0.3, corner_y, corner_x, corner_y - corner_size * 0.3, corner_x, page_num_y + page_num_box_size - corner_size * 0.5)
+        corner_path.close()
+        pdf.drawPath(corner_path, stroke=1, fill=1)
+        
+        # Ligne de séparation
+        pdf.setLineWidth(0.3)
+        pdf.setStrokeColor(colors.HexColor("#AAAAAA"))
+        pdf.line(corner_x, page_num_y + page_num_box_size - corner_size * 0.5, page_num_x + page_num_box_size, corner_y)
+        
+        # Numéro de page
+        pdf.setFillColor(colors.HexColor("#666666"))
+        pdf.setFont("Helvetica", 10)
+        pdf.drawCentredString(
+            page_num_x + page_num_box_size / 2,
+            page_num_y + page_num_box_size / 2 - 3,
+            str(page_number)
+        )
+        
+        pdf.restoreState()
     
     DEFAULT_DATA = {
         "annee": 2024,
@@ -235,6 +1367,44 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         nfd = unicodedata.normalize('NFD', text)
         # Filtrer les caractères combinants (accents)
         return ''.join(char for char in nfd if unicodedata.category(char) != 'Mn')
+    
+    @classmethod
+    def _normalize_text_for_search(cls, text: str) -> str:
+        """
+        Normalise un texte pour la recherche dans le PDF.
+        Enlève les accents, les guillemets, normalise les espaces.
+        Gère aussi les caractères dupliqués consécutifs (problème d'extraction PDF).
+        
+        Args:
+            text: Texte à normaliser
+            
+        Returns:
+            Texte normalisé (minuscules, sans accents, sans guillemets, espaces normalisés, sans caractères dupliqués)
+        """
+        import re
+        # Convertir en minuscules
+        text = text.lower()
+        # Enlever les accents
+        text = cls._remove_accents(text)
+        # Remplacer les guillemets par des espaces
+        text = text.replace('«', ' ').replace('»', ' ').replace('"', ' ').replace("'", ' ')
+        # Normaliser les espaces multiples en un seul espace
+        text = re.sub(r'\s+', ' ', text)
+        # Supprimer les caractères dupliqués consécutifs (lettres uniquement, pas les chiffres)
+        # Ex: "financièree" -> "financiere", "budgett" -> "budget", "effectiifs" -> "effectifs"
+        # Mais "11" reste "11", "22" reste "22", etc.
+        # On utilise une regex qui ne supprime que les lettres (a-z, A-Z) dupliquées
+        # Itérer plusieurs fois pour gérer les cas comme "cadrres" -> "cadres" (double 'r')
+        # ou "financièree" -> "financiere" (double 'e')
+        prev_text = ""
+        while text != prev_text:
+            prev_text = text
+            text = re.sub(r'([a-zA-Z])\1+', r'\1', text)
+        # Normaliser les apostrophes doubles
+        text = text.replace("''", "'")
+        # Enlever les espaces en début et fin
+        text = text.strip()
+        return text
     
     @staticmethod
     def _generate_sigle_from_ministere(ministere: str) -> str:
@@ -803,7 +1973,312 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         pdf.restoreState()
 
     @classmethod
-    def _draw_table_of_contents(cls, pdf: canvas.Canvas, width: float, height: float) -> int:
+    def _build_toc_items_from_pdf_or_positions(cls, pdf_reader_complet: PdfReader | None = None, nb_pages_sommaire: int = 0) -> list[dict]:
+        """
+        Construit la liste des éléments du sommaire.
+        
+        Si pdf_reader_complet est fourni, cherche les textes dans le PDF (approche Word).
+        Sinon, utilise les positions enregistrées (ancienne approche).
+        
+        Args:
+            pdf_reader_complet: PDF reader du PDF complet (sans sommaire) pour chercher les textes
+            nb_pages_sommaire: Nombre de pages du sommaire (pour ajuster les numéros de page)
+        
+        Returns:
+            Liste des éléments du sommaire avec leurs numéros de page
+        """
+        toc_items = []
+        
+        # Récupérer les programmes
+        programmes = cls.data.get("programmes", [])
+        annee = cls.data.get("annee", "")
+        
+        # Si aucun programme n'est disponible, créer des programmes factices pour le sommaire
+        if not programmes:
+            programmes = [
+                {"numero": 1, "titre": "ADMINISTRATION GÉNÉRALE"},
+                {"numero": 2, "titre": "Portefeuille de l'État"}
+            ]
+            logger.info("📋 Aucun programme trouvé, utilisation de programmes factices pour le sommaire")
+        
+        # Si un PDF complet est fourni, chercher les textes dedans (approche Word)
+        # Sinon, utiliser les pages trouvées depuis cls._page_positions (qui contient les pages ajustées)
+        if pdf_reader_complet:
+            logger.info("🔍 Recherche des textes dans le PDF complet (approche Word)...")
+            # Chercher dans le PDF (sans ajustement, car nb_pages_sommaire sera appliqué après)
+            pages_found = cls._find_all_toc_pages(pdf_reader_complet, nb_pages_sommaire=0)
+            logger.info(f"✅ Pages trouvées dans le PDF: {pages_found}")
+            
+            # DÉSACTIVÉ: Ajuster les pages trouvées en ajoutant le nombre de pages du sommaire
+            # L'utilisateur veut tester sans cet ajustement
+            # if nb_pages_sommaire > 0:
+            #     pages_found = {key: page_num + nb_pages_sommaire for key, page_num in pages_found.items()}
+            #     logger.info(f"✅ Pages ajustées avec sommaire ({nb_pages_sommaire} pages): {pages_found}")
+            logger.info(f"📄 Utilisation des pages SANS ajustement dans _build_toc_items (nb_pages_sommaire={nb_pages_sommaire} pages ignorées)")
+            
+            # 1. Éléments préliminaires
+            toc_items.append({
+                "text": "LISTE DES TABLEAUX", 
+                "page": pages_found.get("liste_tableaux", 3), 
+                "level": 0, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "LISTE DES GRAPHIQUES", 
+                "page": pages_found.get("liste_graphiques", 3), 
+                "level": 0, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "SIGLES ET ABRÉVIATIONS", 
+                "page": pages_found.get("sigles_abreviations", 5), 
+                "level": 0, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "INTRODUCTION GÉNÉRALE", 
+                "page": pages_found.get("introduction_generale", 7), 
+                "level": 0, 
+                "bold": False
+            })
+            
+            # 2. PARTIE I : LE MINISTÈRE
+            partie_i_page = pages_found.get("partie_i", 8)
+            toc_items.append({
+                "text": "PARTIE I : LE MINISTÈRE", 
+                "page": partie_i_page, 
+                "level": 0, 
+                "bold": True
+            })
+            toc_items.append({
+                "text": "I. PRÉSENTATION GÉNÉRALE DU MINISTÈRE", 
+                "page": pages_found.get("presentation_generale", partie_i_page), 
+                "level": 1, 
+                "bold": False
+            })
+            
+            # Chercher les sous-sections de la Partie I
+            performance_page = pages_found.get("performance_generale", partie_i_page + 1)
+            financement_page = pages_found.get("financement_global", partie_i_page + 2)
+            
+            toc_items.append({
+                "text": "II. PERFORMANCE GÉNÉRALE DU MINISTÈRE", 
+                "page": performance_page, 
+                "level": 1, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "III. FINANCEMENT GLOBAL DU MINISTÈRE", 
+                "page": financement_page, 
+                "level": 1, 
+                "bold": False
+            })
+            
+            # 3. Programmes
+            for idx, programme in enumerate(programmes):
+                numero = programme.get("numero", 1)
+                titre = programme.get("titre", "")
+                
+                # Récupérer les pages trouvées pour ce programme
+                pages = {
+                    "start": pages_found.get(f"programme_{numero}_start", 13 + (idx * 17)),
+                    "intro": pages_found.get(f"programme_{numero}_intro", 13 + (idx * 17)),
+                    "strategie": pages_found.get(f"programme_{numero}_strategie", 14 + (idx * 17)),
+                    "realisations": pages_found.get(f"programme_{numero}_realisations", 16 + (idx * 17)),
+                    "performance": pages_found.get(f"programme_{numero}_performance", 24 + (idx * 17)),
+                    "conclusion": pages_found.get(f"programme_{numero}_conclusion", 29 + (idx * 17))
+                }
+                
+                # Ajouter PERSPECTIVES si disponible pour le programme 2
+                if numero == 2:
+                    pages["perspectives"] = pages_found.get(f"programme_{numero}_perspectives", 47)
+                
+                # Titre de la partie
+                partie_text = f"PARTIE {numero + 1} : LE PROGRAMME {numero} « {titre.upper()} »"
+                toc_items.append({
+                    "text": partie_text, 
+                    "page": pages["start"], 
+                    "level": 0, 
+                    "bold": True
+                })
+                
+                # Structure fixe pour chaque programme
+                toc_items.append({
+                    "text": "INTRODUCTION", 
+                    "page": pages["intro"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                toc_items.append({
+                    "text": "I. PRÉSENTATION DE LA STRATÉGIE DU PROGRAMME", 
+                    "page": pages["strategie"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                toc_items.append({
+                    "text": f"II. RÉALISATIONS DU PROGRAMME « {titre.upper()} » AU COURS DE L'EXERCICE {annee}", 
+                    "page": pages["realisations"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                toc_items.append({
+                    "text": "III. PERFORMANCE DU PROGRAMME", 
+                    "page": pages["performance"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                
+                # IV. PERSPECTIVES - seulement pour le programme 2
+                if "perspectives" in pages:
+                    toc_items.append({
+                        "text": "IV. PERSPECTIVES", 
+                        "page": pages["perspectives"], 
+                        "level": 1, 
+                        "bold": False
+                    })
+                
+                toc_items.append({
+                    "text": "CONCLUSION", 
+                    "page": pages["conclusion"], 
+                    "level": 1, 
+                    "bold": False
+                })
+        
+        else:
+            # Ancienne approche : utiliser les positions enregistrées
+            # IMPORTANT: cls._page_positions contient déjà les pages ajustées (incluent nb_pages_sommaire)
+            # Donc on utilise directement ces valeurs sans ajustement supplémentaire
+            # nb_pages_sommaire n'est pas utilisé dans cette branche
+            logger.info("📋 Utilisation des positions enregistrées pour le sommaire...")
+            
+            # 1. Éléments préliminaires
+            toc_items.append({
+                "text": "LISTE DES TABLEAUX", 
+                "page": cls._get_page_position("liste_tableaux", 3), 
+                "level": 0, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "LISTE DES GRAPHIQUES", 
+                "page": cls._get_page_position("liste_graphiques", 3), 
+                "level": 0, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "SIGLES ET ABRÉVIATIONS", 
+                "page": cls._get_page_position("sigles_abreviations", 5), 
+                "level": 0, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "INTRODUCTION GÉNÉRALE", 
+                "page": cls._get_page_position("introduction_generale", 7), 
+                "level": 0, 
+                "bold": False
+            })
+            
+            # 2. PARTIE I : LE MINISTÈRE
+            partie_i_page = cls._get_page_position("partie_i", 8)
+            toc_items.append({
+                "text": "PARTIE I : LE MINISTÈRE", 
+                "page": partie_i_page, 
+                "level": 0, 
+                "bold": True
+            })
+            toc_items.append({
+                "text": "I. PRÉSENTATION GÉNÉRALE DU MINISTÈRE", 
+                "page": partie_i_page, 
+                "level": 1, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "II. PERFORMANCE GÉNÉRALE DU MINISTÈRE", 
+                "page": partie_i_page + 1, 
+                "level": 1, 
+                "bold": False
+            })
+            toc_items.append({
+                "text": "III. FINANCEMENT GLOBAL DU MINISTÈRE", 
+                "page": partie_i_page + 2, 
+                "level": 1, 
+                "bold": False
+            })
+            
+            # 3. Programmes
+            for idx, programme in enumerate(programmes):
+                numero = programme.get("numero", 1)
+                titre = programme.get("titre", "")
+                
+                # Récupérer les pages calculées pour ce programme
+                pages = {
+                    "start": cls._get_page_position(f"programme_{numero}_start", 13 + (idx * 17)),
+                    "intro": cls._get_page_position(f"programme_{numero}_intro", 13 + (idx * 17)),
+                    "strategie": cls._get_page_position(f"programme_{numero}_strategie", 14 + (idx * 17)),
+                    "realisations": cls._get_page_position(f"programme_{numero}_realisations", 16 + (idx * 17)),
+                    "performance": cls._get_page_position(f"programme_{numero}_performance", 24 + (idx * 17)),
+                    "conclusion": cls._get_page_position(f"programme_{numero}_conclusion", 29 + (idx * 17))
+                }
+                
+                # Ajouter PERSPECTIVES si disponible pour le programme 2
+                if numero == 2:
+                    pages["perspectives"] = cls._get_page_position(f"programme_{numero}_perspectives", 47)
+                
+                # Titre de la partie
+                partie_text = f"PARTIE {numero + 1} : LE PROGRAMME {numero} « {titre.upper()} »"
+                toc_items.append({
+                    "text": partie_text, 
+                    "page": pages["start"], 
+                    "level": 0, 
+                    "bold": True
+                })
+                
+                # Structure fixe pour chaque programme
+                toc_items.append({
+                    "text": "INTRODUCTION", 
+                    "page": pages["intro"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                toc_items.append({
+                    "text": "I. PRÉSENTATION DE LA STRATÉGIE DU PROGRAMME", 
+                    "page": pages["strategie"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                toc_items.append({
+                    "text": f"II. RÉALISATIONS DU PROGRAMME « {titre.upper()} » AU COURS DE L'EXERCICE {annee}", 
+                    "page": pages["realisations"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                toc_items.append({
+                    "text": "III. PERFORMANCE DU PROGRAMME", 
+                    "page": pages["performance"], 
+                    "level": 1, 
+                    "bold": False
+                })
+                
+                # IV. PERSPECTIVES - seulement pour le programme 2
+                if "perspectives" in pages:
+                    toc_items.append({
+                        "text": "IV. PERSPECTIVES", 
+                        "page": pages["perspectives"], 
+                        "level": 1, 
+                        "bold": False
+                    })
+                
+                toc_items.append({
+                    "text": "CONCLUSION", 
+                    "page": pages["conclusion"], 
+                    "level": 1, 
+                    "bold": False
+                })
+        
+        logger.info(f"📋 Sommaire: {len(toc_items)} éléments construits")
+        return toc_items
+    
+    @classmethod
+    def _draw_table_of_contents(cls, pdf: canvas.Canvas, width: float, height: float, pdf_reader_complet: PdfReader | None = None, nb_pages_sommaire: int = 0) -> int:
         """Dessine la page du sommaire (table of contents) avec support multi-pages. Retourne le numéro de page suivant."""
         # Marges
         left_margin = 3 * cm
@@ -820,45 +2295,24 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Couleur bleue pour tous les éléments
         blue_color = colors.HexColor("#0066CC")
         
-        # Construire la liste des éléments du sommaire
-        toc_items = []
+        # Construire la liste des éléments du sommaire selon la structure fixe du document
+        # NOUVELLE APPROCHE : Si un PDF complet est fourni, chercher les textes dedans (comme Word)
+        # Sinon, utiliser les pages enregistrées (ancienne approche pour compatibilité)
+        toc_items = cls._build_toc_items_from_pdf_or_positions(pdf_reader_complet=pdf_reader_complet, nb_pages_sommaire=nb_pages_sommaire)
         
-        # Éléments fixes
-        toc_items.append({"text": "LISTE DES TABLEAUX", "page": 3, "level": 0, "bold": False})
-        toc_items.append({"text": "LISTE DES GRAPHIQUES", "page": 3, "level": 0, "bold": False})
-        toc_items.append({"text": "SIGLES ET ABRÉVIATIONS", "page": 5, "level": 0, "bold": False})
-        toc_items.append({"text": "INTRODUCTION GÉNÉRALE", "page": 7, "level": 0, "bold": False})
-        
-        # PARTIE I : LE MINISTÈRE
-        toc_items.append({"text": "PARTIE I : LE MINISTÈRE", "page": 8, "level": 0, "bold": True})
-        toc_items.append({"text": "I. PRÉSENTATION GÉNÉRALE DU MINISTÈRE", "page": 8, "level": 1, "bold": False})
-        toc_items.append({"text": "II. PERFORMANCE GÉNÉRALE DU MINISTÈRE", "page": 9, "level": 1, "bold": False})
-        toc_items.append({"text": "III. FINANCEMENT GLOBAL DU MINISTÈRE", "page": 10, "level": 1, "bold": False})
-        
-        # Programmes dynamiques depuis les données de la DB uniquement
-        # NE PAS utiliser DEFAULT_DATA pour éviter les valeurs factices
+        # Récupérer les programmes pour le log
         programmes = cls.data.get("programmes", [])
         
-        for programme in programmes:
-            numero = programme.get("numero", 1)
-            titre = programme.get("titre", "")
-            page_debut = programme.get("page_debut", 0)
-            sections = programme.get("sections", [])
-            
-            # Titre de la partie (PARTIE II, III, etc. car PARTIE I est le ministère)
-            partie_text = f"PARTIE {numero + 1} : LE PROGRAMME {numero} « {titre.upper()} »"
-            toc_items.append({"text": partie_text, "page": page_debut, "level": 0, "bold": True})
-            
-            # Sections du programme
-            for section in sections:
-                section_titre = section.get("titre", "")
-                section_page = section.get("page", page_debut)
-                toc_items.append({"text": section_titre, "page": section_page, "level": 1, "bold": False})
+        # Log pour déboguer : vérifier que les éléments sont présents
+        logger.info(f"📋 Sommaire: {len(toc_items)} éléments à afficher (programmes: {len(programmes)})")
+        if len(toc_items) > 0:
+            logger.info(f"📋 Premiers éléments: {[item['text'][:40] for item in toc_items[:5]]}")
         
         # Fonction helper pour dessiner une ligne du sommaire
         def draw_toc_line(text: str, page: str | int, level: int = 0, bold: bool = False, current_y_pos: float = None):
+            # current_y_pos doit toujours être fourni, pas de valeur par défaut
             if current_y_pos is None:
-                current_y_pos = current_y
+                raise ValueError("current_y_pos doit être fourni")
             line_spacing_val = line_spacing
             
             x_text = left_margin + (level * 1 * cm)  # Indentation selon le niveau
@@ -909,86 +2363,19 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             
             return current_y_pos - line_spacing_val
 
-        # Fonction pour dessiner le footer avec numéro de page
-        def draw_footer(page_number: int):
-            footer_y = footer_margin
-            footer_center_y = footer_y + footer_height / 2
-            
-            # Numéro de page dans le footer (design carte/page avec coin relevé)
-            page_num_box_size = 1.0 * cm
-            page_num_x = width - right_margin - page_num_box_size
-            page_num_y = footer_center_y - page_num_box_size / 2
-            
-            pdf.saveState()
-            
-            # Ombre portée
-            pdf.setFillColor(colors.HexColor("#E0E0E0"))
-            pdf.setStrokeColor(colors.HexColor("#E0E0E0"))
-            shadow_offset = 2
-            pdf.roundRect(
-                page_num_x + shadow_offset,
-                page_num_y - shadow_offset,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=0,
-                fill=1
-            )
-            
-            # Carte blanche principale
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.5)
-            pdf.roundRect(
-                page_num_x,
-                page_num_y,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=1,
-                fill=1
-            )
-            
-            # Coin relevé
-            corner_size = 0.3 * cm
-            corner_x = page_num_x + page_num_box_size - corner_size
-            corner_y = page_num_y + page_num_box_size - corner_size
-            
-            pdf.setFillColor(colors.HexColor("#F5F5F5"))
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.3)
-            corner_path = pdf.beginPath()
-            corner_path.moveTo(corner_x, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, corner_y)
-            corner_path.curveTo(corner_x + corner_size * 0.3, corner_y, corner_x, corner_y - corner_size * 0.3, corner_x, page_num_y + page_num_box_size - corner_size * 0.5)
-            corner_path.close()
-            pdf.drawPath(corner_path, stroke=1, fill=1)
-            
-            # Ligne de séparation
-            pdf.setLineWidth(0.3)
-            pdf.setStrokeColor(colors.HexColor("#AAAAAA"))
-            pdf.line(corner_x, page_num_y + page_num_box_size - corner_size * 0.5, page_num_x + page_num_box_size, corner_y)
-            
-            # Numéro de page
-            pdf.setFillColor(colors.HexColor("#666666"))
-            pdf.setFont("Helvetica", 10)
-            pdf.drawCentredString(
-                page_num_x + page_num_box_size / 2,
-                page_num_y + page_num_box_size / 2 - 3,
-                str(page_number)
-            )
-            
-            pdf.restoreState()
-
         # Dessiner le sommaire avec pagination automatique
         page_num = 2  # Commence à la page 2 (après la couverture)
         first_page = True
         
         while toc_items or first_page:
+            # Le canvas crée automatiquement une première page par défaut
+            # Pour la première page, dessiner directement dessus (pas besoin de showPage())
+            # Pour les pages suivantes, créer une nouvelle page avec showPage()
             if not first_page:
                 pdf.showPage()
                 logger.info(f"📄 Page {page_num}: Sommaire (suite)")
+            else:
+                logger.info(f"📄 Page {page_num}: Sommaire")
             
             pdf.saveState()
             
@@ -1038,8 +2425,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             for item in items_to_remove:
                 toc_items.remove(item)
             
-            # Dessiner le footer
-            draw_footer(page_num)
+            # Pas de footer (numéro de page) sur la page du sommaire
+            # draw_footer(page_num)  # DÉSACTIVÉ : le sommaire ne doit pas avoir de numéro de page
             
             pdf.restoreState()
             
@@ -1074,10 +2461,80 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Construire la liste des tableaux
         tableaux_items = []
         
-        # Récupérer les tableaux depuis les données (ou valeurs par défaut)
-        # Tableaux dynamiques depuis les données de la DB uniquement
-        # NE PAS utiliser DEFAULT_DATA pour éviter les valeurs factices
+        # Récupérer les tableaux depuis les données
         tableaux = cls.data.get("tableaux", [])
+        
+        # Vérifier si on a des pages trouvées dans le PDF (après génération)
+        tableaux_pages_found = getattr(cls, "_tableaux_pages_found", {})
+        
+        # Helper pour extraire la page d'un tuple (page, titre) ou retourner directement la valeur
+        def extract_page(value):
+            if isinstance(value, tuple):
+                return value[0]  # Extraire la page du tuple
+            return value  # Déjà un nombre
+        
+        # Helper pour extraire le titre d'un tuple (page, titre) ou retourner None
+        def extract_title(value):
+            if isinstance(value, tuple) and len(value) >= 2:
+                return value[1]  # Extraire le titre du tuple
+            return None
+        
+        # Si aucun tableau n'est disponible, créer des tableaux factices pour la liste
+        if not tableaux:
+            # Récupérer les programmes pour créer les tableaux dynamiques par programme
+            programmes = cls.data.get("programmes", [])
+            if not programmes:
+                # Créer des programmes factices si nécessaire
+                programmes = [
+                    {"numero": 1, "titre": "ADMINISTRATION GÉNÉRALE"},
+                    {"numero": 2, "titre": "Portefeuille de l'État"}
+                ]
+            
+            # Tableaux fixes du ministère - utiliser les pages et titres trouvés si disponibles
+            # Les tableaux sont maintenant numérotés 2, 3, 4 (après les modifications)
+            tableaux = []
+            for num in [2, 3, 4]:
+                found_data = tableaux_pages_found.get(num)
+                page = extract_page(found_data) if found_data else (8 if num == 2 else 9 if num == 3 else 10)
+                titre = extract_title(found_data) if found_data else (
+                    "Composantes des cadres de performance du ministère" if num == 2 else
+                    "Réalisations du cadre de performance du ministère" if num == 3 else
+                    "Tableau présentant l'exécution du budget du ministère"
+                )
+                tableaux.append({"numero": num, "titre": titre, "page": page})
+            
+            # Compteur pour les numéros de tableaux (commence à 5 car on a déjà les tableaux 2, 3, 4)
+            tableau_numero = 5
+            
+            for idx, programme in enumerate(programmes):
+                numero = programme.get("numero", idx + 1)
+                titre_prog = programme.get("titre", "")
+                
+                # Créer les 4 tableaux par programme en utilisant les données extraites si disponibles
+                for tab_idx in range(4):
+                    found_data = tableaux_pages_found.get(tableau_numero)
+                    page = extract_page(found_data) if found_data else (16 + (idx * 17) + (tab_idx * 2))
+                    
+                    # Utiliser le titre extrait si disponible, sinon utiliser un titre par défaut
+                    titre = extract_title(found_data)
+                    if not titre:
+                        # Titres par défaut selon l'index
+                        default_titres = [
+                            f"Exécution financière par action du programme {numero} « {titre_prog.upper()} »",
+                            f"Suivi des investissements du Programme {numero} « {titre_prog.upper()} »",
+                            f"Exécution des prévisions d'effectifs du programme {numero} « {titre_prog.upper()} »",
+                            f"Évolution des indicateurs du programme {numero} « {titre_prog.upper()} »"
+                        ]
+                        titre = default_titres[tab_idx] if tab_idx < len(default_titres) else f"Tableau {tableau_numero}"
+                    
+                    tableaux.append({
+                        "numero": tableau_numero,
+                        "titre": titre,
+                        "page": page
+                    })
+                    tableau_numero += 1
+            
+            logger.info(f"📋 Aucun tableau trouvé, utilisation de {len(tableaux)} tableaux factices pour la liste")
         
         for tableau in tableaux:
             numero = tableau.get("numero", 1)
@@ -1144,88 +2601,32 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
 
         # Fonction pour dessiner le footer avec numéro de page
         def draw_footer(page_number: int):
-            footer_y = footer_margin
-            footer_center_y = footer_y + footer_height / 2
-            
-            # Numéro de page dans le footer (design carte/page avec coin relevé)
-            page_num_box_size = 1.0 * cm
-            page_num_x = width - right_margin - page_num_box_size
-            page_num_y = footer_center_y - page_num_box_size / 2
-            
-            pdf.saveState()
-            
-            # Ombre portée
-            pdf.setFillColor(colors.HexColor("#E0E0E0"))
-            pdf.setStrokeColor(colors.HexColor("#E0E0E0"))
-            shadow_offset = 2
-            pdf.roundRect(
-                page_num_x + shadow_offset,
-                page_num_y - shadow_offset,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=0,
-                fill=1
+            cls._draw_page_footer(
+                pdf=pdf,
+                page_number=page_number,
+                width=width,
+                footer_margin=footer_margin,
+                footer_height=footer_height,
+                right_margin=right_margin
             )
-            
-            # Carte blanche principale
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.5)
-            pdf.roundRect(
-                page_num_x,
-                page_num_y,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=1,
-                fill=1
-            )
-            
-            # Coin relevé
-            corner_size = 0.3 * cm
-            corner_x = page_num_x + page_num_box_size - corner_size
-            corner_y = page_num_y + page_num_box_size - corner_size
-            
-            pdf.setFillColor(colors.HexColor("#F5F5F5"))
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.3)
-            corner_path = pdf.beginPath()
-            corner_path.moveTo(corner_x, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, corner_y)
-            corner_path.curveTo(corner_x + corner_size * 0.3, corner_y, corner_x, corner_y - corner_size * 0.3, corner_x, page_num_y + page_num_box_size - corner_size * 0.5)
-            corner_path.close()
-            pdf.drawPath(corner_path, stroke=1, fill=1)
-            
-            # Ligne de séparation
-            pdf.setLineWidth(0.3)
-            pdf.setStrokeColor(colors.HexColor("#AAAAAA"))
-            pdf.line(corner_x, page_num_y + page_num_box_size - corner_size * 0.5, page_num_x + page_num_box_size, corner_y)
-            
-            # Numéro de page
-            pdf.setFillColor(colors.HexColor("#666666"))
-            pdf.setFont("Helvetica", 10)
-            pdf.drawCentredString(
-                page_num_x + page_num_box_size / 2,
-                page_num_y + page_num_box_size / 2 - 3,
-                str(page_number)
-            )
-            
-            pdf.restoreState()
 
         # Dessiner la liste avec pagination automatique
         page_num = start_page
         first_page = True
         
+        logger.info(f"🔍 DIAGNOSTIC _draw_liste_tableaux - Début avec start_page={start_page}, {len(tableaux_items)} tableaux à afficher")
+        
+        logger.info(f"🔢 NUMÉROTATION - _draw_liste_tableaux DÉBUT: start_page={start_page}")
+        
         while tableaux_items or first_page:
-            if first_page:
-                # Créer la première page pour la liste des tableaux
-                pdf.showPage()
-                logger.info(f"📄 Page {page_num}: Liste des tableaux")
-            else:
+            # Pour la première page, ne pas appeler showPage() car elle a déjà été créée dans generate_pdf
+            if not first_page:
+                logger.info(f"🔢 NUMÉROTATION - showPage() appelé, nouvelle page {page_num}")
                 pdf.showPage()
                 logger.info(f"📄 Page {page_num}: Liste des tableaux (suite)")
+            else:
+                logger.info(f"🔢 NUMÉROTATION - Première page (pas de showPage), page_num={page_num}")
+                logger.info(f"📄 Page {page_num}: Liste des tableaux")
             
             pdf.saveState()
             
@@ -1235,6 +2636,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 pdf.setFont("Helvetica-Bold", 18)
                 title_y = start_y
                 pdf.drawString(left_margin, title_y, "LISTE DES TABLEAUX")
+                # Enregistrer la page pour le sommaire
+                cls._register_page_position("liste_tableaux", page_num)
                 current_y = title_y - 2 * cm
             else:
                 current_y = start_y
@@ -1266,11 +2669,15 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 tableaux_items.remove(item)
             
             # Dessiner le footer
+            logger.info(f"🔢 NUMÉROTATION - Footer dessiné avec page_num={page_num}")
             draw_footer(page_num)
             
             pdf.restoreState()
             
+            # Toujours incrémenter pour préparer la page suivante
+            logger.info(f"🔢 NUMÉROTATION - page_num avant incrément: {page_num}")
             page_num += 1
+            logger.info(f"🔢 NUMÉROTATION - page_num après incrément: {page_num}")
             first_page = False
             
             # Sécurité : éviter les boucles infinies
@@ -1278,6 +2685,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 logger.warning("⚠️ Aucun élément n'a pu être dessiné, sortie de boucle")
                 break
         
+        logger.info(f"🔢 NUMÉROTATION - _draw_liste_tableaux FIN: retourne page_num={page_num} (page suivante)")
         return page_num
 
     @classmethod
@@ -1301,10 +2709,74 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Construire la liste des graphiques
         graphiques_items = []
         
-        # Récupérer les graphiques depuis les données (ou valeurs par défaut)
-        # Graphiques dynamiques depuis les données de la DB uniquement
-        # NE PAS utiliser DEFAULT_DATA pour éviter les valeurs factices
+        # Récupérer les graphiques depuis les données
         graphiques = cls.data.get("graphiques", [])
+        
+        # Vérifier si on a des pages trouvées dans le PDF (après génération)
+        graphiques_pages_found = getattr(cls, "_graphiques_pages_found", {})
+        
+        # Helper pour extraire la page d'un tuple (page, titre) ou retourner directement la valeur
+        def extract_page(value):
+            if isinstance(value, tuple):
+                return value[0]  # Extraire la page du tuple
+            return value  # Déjà un nombre
+        
+        # Helper pour extraire le titre d'un tuple (page, titre) ou retourner None
+        def extract_title(value):
+            if isinstance(value, tuple) and len(value) >= 2:
+                return value[1]  # Extraire le titre du tuple
+            return None
+        
+        # Si aucun graphique n'est disponible, créer des graphiques factices pour la liste
+        if not graphiques:
+            # Récupérer les programmes pour créer les graphiques dynamiques par programme
+            programmes = cls.data.get("programmes", [])
+            if not programmes:
+                # Créer des programmes factices si nécessaire
+                programmes = [
+                    {"numero": 1, "titre": "ADMINISTRATION GÉNÉRALE"},
+                    {"numero": 2, "titre": "Portefeuille de l'État"}
+                ]
+            
+            # Figure 1: Graphique fixe du ministère - utiliser les pages et titres trouvés si disponibles
+            found_data_1 = graphiques_pages_found.get(1)
+            page_1 = extract_page(found_data_1) if found_data_1 else 10
+            titre_1 = extract_title(found_data_1) if found_data_1 else "Répartition du budget actuel du Ministère par natures de dépenses"
+            graphiques = [
+                {"numero": 1, "titre": titre_1, "page": page_1}
+            ]
+            
+            # Compteur pour les numéros de figures (commence à 2 car on a déjà la Figure 1)
+            figure_numero = 2
+            
+            for idx, programme in enumerate(programmes):
+                numero = programme.get("numero", idx + 1)
+                titre_prog = programme.get("titre", "")
+                
+                # Créer les 3 graphiques par programme en utilisant les données extraites si disponibles
+                for fig_idx in range(3):
+                    found_data = graphiques_pages_found.get(figure_numero)
+                    page = extract_page(found_data) if found_data else (16 + (idx * 17) + (fig_idx * 3))
+                    
+                    # Utiliser le titre extrait si disponible, sinon utiliser un titre par défaut
+                    titre = extract_title(found_data)
+                    if not titre:
+                        # Titres par défaut selon l'index
+                        default_titres = [
+                            f"Répartition du budget actuel du Programme {numero} « {titre_prog.upper()} » par nature de dépenses",
+                            f"Evolution des taux d'exécution par action du Programme {numero} « {titre_prog.upper()} »",
+                            f"Evolution des effectifs du Programme {numero} « {titre_prog.upper()} » par catégorie"
+                        ]
+                        titre = default_titres[fig_idx] if fig_idx < len(default_titres) else f"Figure {figure_numero}"
+                    
+                    graphiques.append({
+                        "numero": figure_numero,
+                        "titre": titre,
+                        "page": page
+                    })
+                    figure_numero += 1
+            
+            logger.info(f"📋 Aucun graphique trouvé, utilisation de {len(graphiques)} graphiques factices pour la liste")
         
         for graphique in graphiques:
             numero = graphique.get("numero", 1)
@@ -1371,88 +2843,30 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
 
         # Fonction pour dessiner le footer avec numéro de page
         def draw_footer(page_number: int):
-            footer_y = footer_margin
-            footer_center_y = footer_y + footer_height / 2
-            
-            # Numéro de page dans le footer (design carte/page avec coin relevé)
-            page_num_box_size = 1.0 * cm
-            page_num_x = width - right_margin - page_num_box_size
-            page_num_y = footer_center_y - page_num_box_size / 2
-            
-            pdf.saveState()
-            
-            # Ombre portée
-            pdf.setFillColor(colors.HexColor("#E0E0E0"))
-            pdf.setStrokeColor(colors.HexColor("#E0E0E0"))
-            shadow_offset = 2
-            pdf.roundRect(
-                page_num_x + shadow_offset,
-                page_num_y - shadow_offset,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=0,
-                fill=1
+            cls._draw_page_footer(
+                pdf=pdf,
+                page_number=page_number,
+                width=width,
+                footer_margin=footer_margin,
+                footer_height=footer_height,
+                right_margin=right_margin
             )
-            
-            # Carte blanche principale
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.5)
-            pdf.roundRect(
-                page_num_x,
-                page_num_y,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=1,
-                fill=1
-            )
-            
-            # Coin relevé
-            corner_size = 0.3 * cm
-            corner_x = page_num_x + page_num_box_size - corner_size
-            corner_y = page_num_y + page_num_box_size - corner_size
-            
-            pdf.setFillColor(colors.HexColor("#F5F5F5"))
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.3)
-            corner_path = pdf.beginPath()
-            corner_path.moveTo(corner_x, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, corner_y)
-            corner_path.curveTo(corner_x + corner_size * 0.3, corner_y, corner_x, corner_y - corner_size * 0.3, corner_x, page_num_y + page_num_box_size - corner_size * 0.5)
-            corner_path.close()
-            pdf.drawPath(corner_path, stroke=1, fill=1)
-            
-            # Ligne de séparation
-            pdf.setLineWidth(0.3)
-            pdf.setStrokeColor(colors.HexColor("#AAAAAA"))
-            pdf.line(corner_x, page_num_y + page_num_box_size - corner_size * 0.5, page_num_x + page_num_box_size, corner_y)
-            
-            # Numéro de page
-            pdf.setFillColor(colors.HexColor("#666666"))
-            pdf.setFont("Helvetica", 10)
-            pdf.drawCentredString(
-                page_num_x + page_num_box_size / 2,
-                page_num_y + page_num_box_size / 2 - 3,
-                str(page_number)
-            )
-            
-            pdf.restoreState()
 
         # Dessiner la liste avec pagination automatique
+        logger.info(f"🔢 NUMÉROTATION - _draw_liste_graphiques DÉBUT: start_page={start_page}")
         page_num = start_page
         first_page = True
         
         while graphiques_items or first_page:
-            if first_page:
-                # Créer la première page pour la liste des graphiques
-                pdf.showPage()
-                logger.info(f"📄 Page {page_num}: Liste des graphiques")
-            else:
+            # La première page a déjà été créée dans generate_pdf avant l'appel
+            # On n'a besoin de créer une nouvelle page que pour les pages suivantes
+            if not first_page:
+                logger.info(f"🔢 NUMÉROTATION - showPage() appelé, nouvelle page {page_num}")
                 pdf.showPage()
                 logger.info(f"📄 Page {page_num}: Liste des graphiques (suite)")
+            else:
+                logger.info(f"🔢 NUMÉROTATION - Première page graphiques (déjà créée dans generate_pdf), page_num={page_num}")
+                logger.info(f"📄 Page {page_num}: Liste des graphiques")
             
             pdf.saveState()
             
@@ -1462,6 +2876,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 pdf.setFont("Helvetica-Bold", 18)
                 title_y = start_y
                 pdf.drawString(left_margin, title_y, "LISTE DES GRAPHIQUES")
+                # Enregistrer la page pour le sommaire
+                cls._register_page_position("liste_graphiques", page_num)
                 current_y = title_y - 2 * cm
             else:
                 current_y = start_y
@@ -1493,11 +2909,15 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 graphiques_items.remove(item)
             
             # Dessiner le footer
+            logger.info(f"🔢 NUMÉROTATION - Footer dessiné avec page_num={page_num}")
             draw_footer(page_num)
             
             pdf.restoreState()
             
+            # Toujours incrémenter pour préparer la page suivante
+            logger.info(f"🔢 NUMÉROTATION - page_num avant incrément: {page_num}")
             page_num += 1
+            logger.info(f"🔢 NUMÉROTATION - page_num après incrément: {page_num}")
             first_page = False
             
             # Sécurité : éviter les boucles infinies
@@ -1505,6 +2925,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 logger.warning("⚠️ Aucun élément n'a pu être dessiné, sortie de boucle")
                 break
         
+        logger.info(f"🔢 NUMÉROTATION - _draw_liste_graphiques FIN: retourne page_num={page_num} (page suivante)")
         return page_num
 
     @classmethod
@@ -1525,13 +2946,55 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Couleur bleue pour tous les éléments
         blue_color = colors.HexColor("#0066CC")
         
-        # Récupérer les sigles depuis les données (ou valeurs par défaut)
+        # Récupérer les sigles depuis les données
         sigles = cls.data.get("sigles", [])
-        # NE PAS utiliser DEFAULT_DATA pour éviter les valeurs factices
-        # Si pas de sigles dans la DB, utiliser une liste vide
-        is_sigles_user = False
+        
+        # Si aucun sigle n'est disponible, créer une liste statique de sigles factices
         if not sigles:
-            sigles = []
+            sigles = [
+                {"sigle": "ADERIZ", "definition": "Agence pour le Développement de la Filière Riz"},
+                {"sigle": "AFOR", "definition": "Agence Foncière Rurale"},
+                {"sigle": "AG", "definition": "Administration Générale"},
+                {"sigle": "AGEF", "definition": "Agence de Gestion Foncière"},
+                {"sigle": "AIGF", "definition": "Agence Ivoirienne de Gestion des Fréquences radioélectriques"},
+                {"sigle": "ANADER", "definition": "Agence Nationale d'Appui au Développement Rural"},
+                {"sigle": "ANSUT", "definition": "Agence Nationale du Service Universel des Télécommunications"},
+                {"sigle": "CNRA", "definition": "Centre National de Recherche Agronomique"},
+                {"sigle": "DG", "definition": "Directeur Général"},
+                {"sigle": "DGPE", "definition": "Direction Générale du Portefeuille de l'État"},
+                {"sigle": "DPPD-PAP", "definition": "Document de Programmation Pluriannuelle de Dépenses – Projet Annuel de Performance"},
+                {"sigle": "EPN", "definition": "Établissement Public Nationaux"},
+                {"sigle": "FIDA", "definition": "Fonds International de Développement Agricole"},
+                {"sigle": "GESTOCI", "definition": "Société de Gestion des Stocks Pétroliers de Côte d'Ivoire"},
+                {"sigle": "GUCE-CI", "definition": "Guichet Unique du Commerce Extérieur de Côte d'Ivoire"},
+                {"sigle": "I2T", "definition": "Institut Ivoirien de Technologie"},
+                {"sigle": "IFRS", "definition": "International Financial Reporting Standards (Normes internationales d'information financière)"},
+                {"sigle": "INIE", "definition": "Institut National Ivoirien de l'Entreprise"},
+                {"sigle": "LONACI", "definition": "Loterie Nationale de Côte d'Ivoire"},
+                {"sigle": "MBPE", "definition": "Ministère du Budget et du Portefeuille de l'État"},
+                {"sigle": "OIC", "definition": "Office Ivoirien des Chargeurs"},
+                {"sigle": "ONEP", "definition": "Office National de l'Eau Potable"},
+                {"sigle": "PAS", "definition": "Programme d'Actions Stratégiques"},
+                {"sigle": "PCA", "definition": "Président du Conseil d'Administration"},
+                {"sigle": "PCI", "definition": "Patrimoine Culturel Immatériel"},
+                {"sigle": "PETROCI", "definition": "Société Nationale d'Opérations Pétrolières de Côte d'Ivoire"},
+                {"sigle": "PND", "definition": "Plan National de Développement"},
+                {"sigle": "PTA", "definition": "Plan de Travail Annuel"},
+                {"sigle": "RAP", "definition": "Rapport Annuel de Performance"},
+                {"sigle": "RFFIM", "definition": "Responsable de la Fonction Financière Ministérielle"},
+                {"sigle": "RProg", "definition": "Responsable de Programme"},
+                {"sigle": "SGMT", "definition": "Société de Gestion du Grand Marché de Treichville"},
+                {"sigle": "SIPF", "definition": "Société Ivoirienne de gestion du Patrimoine Ferroviaire"},
+                {"sigle": "SNDI", "definition": "Système National de Développement de l'Information"},
+                {"sigle": "SOCITA", "definition": "Société de Transformation Agricole"},
+                {"sigle": "SODEFOR", "definition": "Société de Développement des Forêts"},
+                {"sigle": "SODEMI", "definition": "Société pour le Développement Minier de la Côte d'Ivoire"},
+                {"sigle": "SODEXA", "definition": "Société d'Exploitation et de Développement Aéroportuaire, Aéronautique et Météorologique"},
+                {"sigle": "SOGEDI", "definition": "Société de Gestion et de Développement des Infrastructures Industrielles"},
+                {"sigle": "SONAPIE", "definition": "Société Nationale de Gestion du Patrimoine Immobilier de l'État"},
+                {"sigle": "SOTRA", "definition": "Société des Transports Abidjanais"},
+            ]
+            logger.info(f"📋 Aucun sigle trouvé, utilisation de {len(sigles)} sigles statiques pour la liste")
         
         # Ajouter automatiquement le sigle du ministère généré dynamiquement
         sigle_ministere = cls._get_sigle_ministere()
@@ -1551,75 +3014,14 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # Fonction pour dessiner le footer avec numéro de page
         def draw_footer(page_number: int):
-            footer_y = footer_margin
-            footer_center_y = footer_y + footer_height / 2
-            
-            # Numéro de page dans le footer (design carte/page avec coin relevé)
-            page_num_box_size = 1.0 * cm
-            page_num_x = width - right_margin - page_num_box_size
-            page_num_y = footer_center_y - page_num_box_size / 2
-            
-            pdf.saveState()
-            
-            # Ombre portée
-            pdf.setFillColor(colors.HexColor("#E0E0E0"))
-            pdf.setStrokeColor(colors.HexColor("#E0E0E0"))
-            shadow_offset = 2
-            pdf.roundRect(
-                page_num_x + shadow_offset,
-                page_num_y - shadow_offset,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=0,
-                fill=1
+            cls._draw_page_footer(
+                pdf=pdf,
+                page_number=page_number,
+                width=width,
+                footer_margin=footer_margin,
+                footer_height=footer_height,
+                right_margin=right_margin
             )
-            
-            # Carte blanche principale
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.5)
-            pdf.roundRect(
-                page_num_x,
-                page_num_y,
-                page_num_box_size,
-                page_num_box_size,
-                radius=3,
-                stroke=1,
-                fill=1
-            )
-            
-            # Coin relevé
-            corner_size = 0.3 * cm
-            corner_x = page_num_x + page_num_box_size - corner_size
-            corner_y = page_num_y + page_num_box_size - corner_size
-            
-            pdf.setFillColor(colors.HexColor("#F5F5F5"))
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.3)
-            corner_path = pdf.beginPath()
-            corner_path.moveTo(corner_x, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, page_num_y + page_num_box_size)
-            corner_path.lineTo(page_num_x + page_num_box_size, corner_y)
-            corner_path.curveTo(corner_x + corner_size * 0.3, corner_y, corner_x, corner_y - corner_size * 0.3, corner_x, page_num_y + page_num_box_size - corner_size * 0.5)
-            corner_path.close()
-            pdf.drawPath(corner_path, stroke=1, fill=1)
-            
-            # Ligne de séparation
-            pdf.setLineWidth(0.3)
-            pdf.setStrokeColor(colors.HexColor("#AAAAAA"))
-            pdf.line(corner_x, page_num_y + page_num_box_size - corner_size * 0.5, page_num_x + page_num_box_size, corner_y)
-            
-            # Numéro de page
-            pdf.setFillColor(colors.HexColor("#666666"))
-            pdf.setFont("Helvetica", 10)
-            pdf.drawCentredString(
-                page_num_x + page_num_box_size / 2,
-                page_num_y + page_num_box_size / 2 - 3,
-                str(page_number)
-            )
-            
-            pdf.restoreState()
 
         # Fonction pour dessiner une entrée sigle/définition avec styling selon la source
         def draw_sigle_entry(sigle: str, definition: str, x: float, y: float, max_width: float, source: str = "default") -> float:
@@ -1676,18 +3078,21 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             return y - line_spacing
 
         # Dessiner avec pagination automatique
+        logger.info(f"🔢 NUMÉROTATION - _draw_liste_sigles_abreviations DÉBUT: start_page={start_page}")
         page_num = start_page
         first_page = True
         sigles_remaining = sigles.copy()
         
         while sigles_remaining or first_page:
-            if first_page:
-                # Créer la première page
-                pdf.showPage()
-                logger.info(f"📄 Page {page_num}: Sigles et abréviations")
-            else:
+            # La première page a déjà été créée dans generate_pdf avant l'appel
+            # On n'a besoin de créer une nouvelle page que pour les pages suivantes
+            if not first_page:
+                logger.info(f"🔢 NUMÉROTATION - showPage() appelé, nouvelle page {page_num}")
                 pdf.showPage()
                 logger.info(f"📄 Page {page_num}: Sigles et abréviations (suite)")
+            else:
+                logger.info(f"🔢 NUMÉROTATION - Première page sigles (déjà créée dans generate_pdf), page_num={page_num}")
+                logger.info(f"📄 Page {page_num}: Sigles et abréviations")
             
             pdf.saveState()
             
@@ -1697,6 +3102,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 pdf.setFont("Helvetica-Bold", 18)
                 title_y = start_y
                 pdf.drawString(left_margin, title_y, "SIGLES ET ABRÉVIATIONS")
+                # Enregistrer la page pour le sommaire
+                cls._register_page_position("sigles_abreviations", page_num)
                 current_y = title_y - 1.5 * cm
             else:
                 current_y = start_y
@@ -1731,11 +3138,15 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 sigles_remaining.remove(item)
             
             # Dessiner le footer
+            logger.info(f"🔢 NUMÉROTATION - Footer dessiné avec page_num={page_num}")
             draw_footer(page_num)
             
             pdf.restoreState()
             
+            # Toujours incrémenter pour préparer la page suivante
+            logger.info(f"🔢 NUMÉROTATION - page_num avant incrément: {page_num}")
             page_num += 1
+            logger.info(f"🔢 NUMÉROTATION - page_num après incrément: {page_num}")
             first_page = False
             
             # Sécurité : éviter les boucles infinies
@@ -1743,6 +3154,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 logger.warning("⚠️ Aucun élément n'a pu être dessiné, sortie de boucle")
                 break
         
+        logger.info(f"🔢 NUMÉROTATION - _draw_liste_sigles_abreviations FIN: retourne page_num={page_num} (page suivante)")
         return page_num
     
     @classmethod
@@ -1767,13 +3179,18 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         - Gère la pagination manuellement (Canvas)
         - Supporte correctement LongTable sur plusieurs pages
         """
+        logger.info(f"🔢 NUMÉROTATION - _render_multipage_story DÉBUT: page_num={page_num}, {len(story)} éléments dans story")
         first_page = True
         current_page = page_num
 
         while story:
             # La première page est déjà créée avant l'appel
             if not first_page:
+                logger.info(f"🔢 NUMÉROTATION - showPage() dans _render_multipage_story, nouvelle page {current_page}")
                 pdf.showPage()
+
+            # Mettre à jour la variable de classe pour que les PageMarker puissent l'utiliser
+            cls._current_rendering_page = current_page
 
             frame = Frame(
                 frame_x,
@@ -1786,6 +3203,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             pdf.saveState()
 
             before = len(story)
+            logger.info(f"🔢 NUMÉROTATION - Rendu page {current_page}: {before} éléments restants")
             logger.info(f"   📝 Page {current_page}: {before} éléments restants")
 
             try:
@@ -1810,6 +3228,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
 
             # Footer / numéro de page
             if show_page_number:
+                logger.info(f"🔢 NUMÉROTATION - Footer pour page {current_page}")
                 if draw_footer_func:
                     draw_footer_func(current_page)
                 else:
@@ -1822,9 +3241,19 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             # Car pour LongTable, len(story) peut rester constant
             # tout en avançant dans le tableau.
 
+            # Toujours incrémenter pour préparer la page suivante
+            # On retourne la page suivante pour indiquer où commencer la prochaine section
+            logger.info(f"🔢 NUMÉROTATION - page_num avant incrément: {current_page}")
             current_page += 1
+            logger.info(f"🔢 NUMÉROTATION - page_num après incrément: {current_page}")
             first_page = False
 
+        # Réinitialiser la variable de classe
+        cls._current_rendering_page = None
+        
+        # Retourner la page suivante (pour indiquer où commencer la prochaine section)
+        # Si la dernière page dessinée est N, on retourne N+1
+        logger.info(f"🔢 NUMÉROTATION - _render_multipage_story FIN: retourne current_page={current_page} (page suivante après la dernière dessinée)")
         return current_page
     
     @classmethod
@@ -1906,43 +3335,14 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
 
         # Fonction pour dessiner le footer avec numéro de page
         def draw_footer(page_number: int):
-            footer_y = footer_height / 2
-            page_num_box_size = 1.0 * cm
-            page_num_x = width - right_margin - page_num_box_size
-            page_num_y = footer_y - page_num_box_size / 2
-            
-            pdf.saveState()
-            
-            # Carte blanche avec coins arrondis
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.5)
-            pdf.roundRect(page_num_x, page_num_y, page_num_box_size, page_num_box_size, 3, stroke=1, fill=1)
-            
-            # Ombre subtile
-            pdf.setFillColor(colors.HexColor("#E0E0E0"))
-            pdf.roundRect(page_num_x + 0.05 * cm, page_num_y - 0.05 * cm, page_num_box_size, page_num_box_size, 3, stroke=0, fill=1)
-            
-            # Coins recourbés (coin supérieur droit)
-            corner_size = 0.3 * cm
-            corner_x = page_num_x + page_num_box_size - corner_size
-            corner_y = page_num_y + page_num_box_size
-            
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#AAAAAA"))
-            pdf.setLineWidth(0.3)
-            pdf.line(corner_x, page_num_y + page_num_box_size - corner_size * 0.5, page_num_x + page_num_box_size, corner_y)
-            
-            # Numéro de page
-            pdf.setFillColor(colors.HexColor("#666666"))
-            pdf.setFont("Helvetica", 10)
-            pdf.drawCentredString(
-                page_num_x + page_num_box_size / 2,
-                page_num_y + page_num_box_size / 2 - 3,
-                str(page_number)
+            cls._draw_page_footer(
+                pdf=pdf,
+                page_number=page_number,
+                width=width,
+                footer_margin=footer_margin,
+                footer_height=footer_height,
+                right_margin=right_margin
             )
-            
-            pdf.restoreState()
 
         # Styles pour les paragraphes
         styles = getSampleStyleSheet()
@@ -2087,6 +3487,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         story: list[Any] = []
         
         # Titre
+        # Enregistrer la page AVANT le titre pour garantir que la page enregistrée est celle où le titre commence
+        story.append(PageMarker("introduction_generale"))
         story.append(Paragraph("INTRODUCTION GÉNÉRALE", title_style))
         story.append(Spacer(1, 0.3 * cm))
         
@@ -2218,11 +3620,13 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             formatted_item_final = format_by_source(formatted_item, seconde_partie_items_source)
             story.append(Paragraph(formatted_item_final, bullet_style, bulletText="•"))
         
-        # Créer la première page
-        pdf.showPage()
+        logger.info(f"🔢 NUMÉROTATION - _draw_introduction_generale DÉBUT: start_page={start_page}")
+        
+        # La première page a déjà été créée dans generate_pdf avant l'appel
         logger.info(f"📄 Page {start_page}: Introduction générale")
         
         # Rendre la story avec pagination automatique
+        logger.info(f"🔢 NUMÉROTATION - AVANT _render_multipage_story pour introduction: start_page={start_page}")
         final_page = cls._render_multipage_story(
             pdf,
             story,
@@ -2235,12 +3639,16 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             show_page_number=True,
             draw_footer_func=draw_footer,
         )
+        logger.info(f"🔢 NUMÉROTATION - APRÈS _render_multipage_story pour introduction: final_page={final_page}")
+        logger.info(f"🔢 NUMÉROTATION - _draw_introduction_generale FIN: retourne final_page={final_page}")
         
         return final_page
 
     @classmethod
     def _draw_partie_i_ministere(cls, pdf: canvas.Canvas, width: float, height: float, start_page: int) -> int:
         """Dessine la PARTIE I : LE MINISTÈRE avec support multi-pages."""
+        logger.info(f"🔢 NUMÉROTATION - _draw_partie_i_ministere DÉBUT: start_page={start_page}")
+        
         # Marges et dimensions
         left_margin = 3 * cm
         right_margin = 3 * cm
@@ -2253,43 +3661,14 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
 
         # Fonction pour dessiner le footer avec numéro de page
         def draw_footer(page_number: int):
-            footer_y = footer_height / 2
-            page_num_box_size = 1.0 * cm
-            page_num_x = width - right_margin - page_num_box_size
-            page_num_y = footer_y - page_num_box_size / 2
-            
-            pdf.saveState()
-            
-            # Carte blanche avec coins arrondis
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.5)
-            pdf.roundRect(page_num_x, page_num_y, page_num_box_size, page_num_box_size, 3, stroke=1, fill=1)
-            
-            # Ombre subtile
-            pdf.setFillColor(colors.HexColor("#E0E0E0"))
-            pdf.roundRect(page_num_x + 0.05 * cm, page_num_y - 0.05 * cm, page_num_box_size, page_num_box_size, 3, stroke=0, fill=1)
-            
-            # Coins recourbés (coin supérieur droit)
-            corner_size = 0.3 * cm
-            corner_x = page_num_x + page_num_box_size - corner_size
-            corner_y = page_num_y + page_num_box_size
-            
-            pdf.setFillColor(colors.white)
-            pdf.setStrokeColor(colors.HexColor("#AAAAAA"))
-            pdf.setLineWidth(0.3)
-            pdf.line(corner_x, page_num_y + page_num_box_size - corner_size * 0.5, page_num_x + page_num_box_size, corner_y)
-            
-            # Numéro de page
-            pdf.setFillColor(colors.HexColor("#666666"))
-            pdf.setFont("Helvetica", 10)
-            pdf.drawCentredString(
-                page_num_x + page_num_box_size / 2,
-                page_num_y + page_num_box_size / 2 - 3,
-                str(page_number)
+            cls._draw_page_footer(
+                pdf=pdf,
+                page_number=page_number,
+                width=width,
+                footer_margin=footer_margin,
+                footer_height=footer_height,
+                right_margin=right_margin
             )
-            
-            pdf.restoreState()
 
         # Styles pour les paragraphes
         styles = getSampleStyleSheet()
@@ -2497,10 +3876,16 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         story: list[Any] = []
         
         # Titre de la partie
+        # Enregistrer la page AVANT le titre pour garantir que la page enregistrée est celle où le titre commence
+        story.append(PageMarker("partie_i"))
         story.append(Paragraph("PARTIE I : LE MINISTÈRE", partie_title_style))
         story.append(Spacer(1, 0.3 * cm))
         
         # Section I. PRESENTATION GENERALE DU MINISTERE
+        # Enregistrer la page AVANT le titre (après CondPageBreak s'il y en a un)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        # et le titre suivra sur la même page
+        story.append(PageMarker("presentation_generale"))
         story.append(Paragraph("I. PRÉSENTATION GÉNÉRALE DU MINISTÈRE", section_title_style))
         story.append(Spacer(1, 0.15 * cm))
         
@@ -2566,7 +3951,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         story.append(Paragraph(para1_text, body_style))
         story.append(Spacer(1, 0.2 * cm))
         
-        # Tableau : Récapitulatif des actions et activités par programme
+        # Tableau 1: Récapitulatif des actions et activités par programme
         table_header_style = ParagraphStyle(
             "TableHeader",
             parent=styles["Normal"],
@@ -2654,7 +4039,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         )
         
         # Ajouter le titre du tableau et le tableau ensemble
-        story.append(Paragraph("Tableau : Récapitulatif des actions et activités par programme", subsection_title_style))
+        tableau_numero = cls._get_next_tableau_numero()
+        story.append(Paragraph(f"Tableau {tableau_numero}: Récapitulatif des actions et activités par programme", subsection_title_style))
         story.append(Spacer(1, 0.2 * cm))
         story.append(recap_table)
         story.append(Spacer(1, 0.15 * cm))
@@ -2775,6 +4161,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # Section II. PERFORMANCE GENERALE DU MINISTERE
         story.append(CondPageBreak(3 * cm))
+        # Enregistrer la page AVANT le titre (après CondPageBreak)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        story.append(PageMarker("performance_generale"))
         story.append(Paragraph("II. PERFORMANCE GÉNÉRALE DU MINISTÈRE", section_title_style))
         story.append(Spacer(1, 0.15 * cm))
         
@@ -2782,7 +4171,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         story.append(CondPageBreak(3 * cm))
         story.append(Paragraph("II.1. Architecture du cadre de performance", subsection_title_style))
         
-        # Tableau 1: Composantes des cadres de performance du ministère
+        # Tableau 2: Composantes des cadres de performance du ministère
         performance_data = partie_data.get("performance", {})
         architecture_data = performance_data.get("architecture", {})
         
@@ -2849,7 +4238,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             ])
         )
         
-        story.append(Paragraph("Tableau 1: Composantes des cadres de performance du ministère", subsection_title_style))
+        tableau_numero = cls._get_next_tableau_numero()
+        story.append(Paragraph(f"Tableau {tableau_numero}: Composantes des cadres de performance du ministère", subsection_title_style))
         story.append(Spacer(1, 0.2 * cm))
         story.append(tableau1)
         story.append(Spacer(1, 0.15 * cm))
@@ -2875,7 +4265,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         story.append(CondPageBreak(3 * cm))
         story.append(Paragraph("II.2. Bilan des données globales du cadre de performance", subsection_title_style))
         
-        # Tableau 2: Réalisations du cadre de performance du ministère
+        # Tableau 3: Réalisations du cadre de performance du ministère
         realisations = performance_data.get("realisations", [])
         
         tableau2_data = [
@@ -2958,7 +4348,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             ])
         )
         
-        story.append(Paragraph("Tableau 2: Réalisations du cadre de performance du ministère", subsection_title_style))
+        tableau_numero = cls._get_next_tableau_numero()
+        story.append(Paragraph(f"Tableau {tableau_numero}: Réalisations du cadre de performance du ministère", subsection_title_style))
         story.append(Spacer(1, 0.2 * cm))
         story.append(tableau2)
         story.append(Spacer(1, 0.15 * cm))
@@ -3131,6 +4522,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # Section III. FINANCEMENT GLOBAL DU MINISTERE
         story.append(CondPageBreak(3 * cm))
+        # Enregistrer la page AVANT le titre (après CondPageBreak)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        story.append(PageMarker("financement_global"))
         story.append(Paragraph("III. FINANCEMENT GLOBAL DU MINISTÈRE", section_title_style))
         story.append(Spacer(1, 0.15 * cm))
         
@@ -3555,7 +4949,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # Ajouter le graphique en camembert (Figure 1)
         story.append(Spacer(1, 0.3 * cm))
-        story.append(Paragraph(f"<b>Figure 1: Répartition du budget actuel du Ministère par natures de dépenses</b>", subsection_title_style))
+        figure_numero = cls._get_next_figure_numero()
+        story.append(Paragraph(f"<b>Figure {figure_numero}: Répartition du budget actuel du Ministère par natures de dépenses</b>", subsection_title_style))
         story.append(Spacer(1, 0.2 * cm))
         
         # Générer le graphique en camembert
@@ -3653,7 +5048,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             story.append(pie_with_source)
             story.append(Spacer(1, 0.3 * cm))
         
-        # Tableau 3: Tableau présentant l'exécution du budget du ministère
+        # Tableau 4: Tableau présentant l'exécution du budget du ministère
         story.append(CondPageBreak(5 * cm))
         story.append(Spacer(1, 0.3 * cm))
         intro_tableau3_default = "Le tableau ci-dessous rend compte de l'exécution des budgets alloués au Ministère."
@@ -3665,39 +5060,168 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         story.append(Spacer(1, 0.2 * cm))
         
         # Titre du tableau
-        story.append(Paragraph("<b>Tableau 3: Tableau présentant l'exécution du budget du ministère</b>", subsection_title_style))
+        tableau_numero = cls._get_next_tableau_numero()
+        story.append(Paragraph(f"<b>Tableau {tableau_numero}: Tableau présentant l'exécution du budget du ministère</b>", subsection_title_style))
         
-        # Récupérer les données pour le tableau 3
-        # Utiliser les données déjà chargées pour le graphique
+        # Récupérer les données pour le tableau 3 depuis la base de données
         annee_precedente = annee - 1
-        # TODO: Récupérer le budget réel de l'année précédente depuis la base de données
-        # Pour l'instant, utiliser une valeur calculée basée sur le budget actuel
-        budget_annee_precedente = budget_reel_total * 0.95  # Approximation: 95% du budget actuel
-        prev_annee = budget_reel_total  # Budget prévu pour l'année (budget actuel)
-        real_annee = prev_annee - 308792055  # Budget réalisé pour l'année (légèrement inférieur)
-        ecart_annee = prev_annee - real_annee
-        tx_real_annee = (real_annee / prev_annee * 100) if prev_annee > 0 else 0
         
-        # Données par nature pour 2024 (déjà calculées)
-        personnel_prev = personnel_reel
-        personnel_real = personnel_prev - 28200
+        # Vérifier si on doit utiliser des données factices ou réelles
+        is_tableau3_fake = is_financement_fake
+        
+        # Récupérer les données d'exécution depuis sigobe_execution pour l'année précédente et l'année courante
+        budget_annee_precedente_realisation = 0
+        budget_annee_prevue = 0
+        budget_annee_realisee = 0
+        
+        personnel_n1_realisation = 0
+        personnel_prev = 0
+        personnel_real = 0
+        
+        biens_n1_realisation = 0
+        biens_prev = 0
+        biens_real_exec = 0
+        
+        transferts_n1_realisation = 0
+        transferts_prev = 0
+        transferts_real_exec = 0
+        
+        investissements_n1_realisation = 0
+        investissements_prev = 0
+        investissements_real_exec = 0
+        
+        # Si mode final et données vides, utiliser 0 partout (pas de données factices)
+        if mode == "final" and not is_financement_fake and budget_reel_total == 0:
+            logger.info(f"📊 Mode final avec base vide: toutes les valeurs du tableau 3 seront à 0")
+            is_tableau3_fake = False
+            # Toutes les variables restent à 0 (déjà initialisées)
+        elif cls._db_session and not is_financement_fake:
+            # Récupérer les vraies données depuis sigobe_execution
+            try:
+                from app.models.budget import SigobeExecution, SigobeChargement
+                session = cls._db_session
+                
+                # Récupérer les chargements pour les deux années
+                chargement_annee_precedente = session.exec(
+                    select(SigobeChargement)
+                    .where(SigobeChargement.annee == annee_precedente)
+                    .order_by(SigobeChargement.date_chargement.desc())
+                ).first()
+                
+                chargement_annee = session.exec(
+                    select(SigobeChargement)
+                    .where(SigobeChargement.annee == annee)
+                    .order_by(SigobeChargement.date_chargement.desc())
+                ).first()
+                
+                if chargement_annee_precedente:
+                    # Données pour l'année précédente (réalisations)
+                    sigobe_n1 = session.exec(
+                        select(SigobeExecution)
+                        .where(SigobeExecution.chargement_id == chargement_annee_precedente.id)
+                    ).all()
+                    
+                    for exec_sigobe in sigobe_n1:
+                        montant_execute = float(exec_sigobe.budget_execute or 0)
+                        budget_annee_precedente_realisation += montant_execute
+                        
+                        # Par nature
+                        type_dep = (exec_sigobe.type_depense or "").upper()
+                        if "PERSONNEL" in type_dep or type_dep == "P":
+                            personnel_n1_realisation += montant_execute
+                        elif "BIENS" in type_dep or "SERVICES" in type_dep or type_dep == "BS":
+                            biens_n1_realisation += montant_execute
+                        elif "TRANSFERT" in type_dep or type_dep == "T":
+                            transferts_n1_realisation += montant_execute
+                        elif "INVESTISSEMENT" in type_dep or type_dep == "I":
+                            investissements_n1_realisation += montant_execute
+                
+                if chargement_annee:
+                    # Données pour l'année courante (prévu et réalisé)
+                    sigobe_n = session.exec(
+                        select(SigobeExecution)
+                        .where(SigobeExecution.chargement_id == chargement_annee.id)
+                    ).all()
+                    
+                    for exec_sigobe in sigobe_n:
+                        budget_vote = float(exec_sigobe.budget_vote or 0)
+                        budget_execute = float(exec_sigobe.budget_execute or 0)
+                        
+                        budget_annee_prevue += budget_vote
+                        budget_annee_realisee += budget_execute
+                        
+                        # Par nature
+                        type_dep = (exec_sigobe.type_depense or "").upper()
+                        if "PERSONNEL" in type_dep or type_dep == "P":
+                            personnel_prev += budget_vote
+                            personnel_real += budget_execute
+                        elif "BIENS" in type_dep or "SERVICES" in type_dep or type_dep == "BS":
+                            biens_prev += budget_vote
+                            biens_real_exec += budget_execute
+                        elif "TRANSFERT" in type_dep or type_dep == "T":
+                            transferts_prev += budget_vote
+                            transferts_real_exec += budget_execute
+                        elif "INVESTISSEMENT" in type_dep or type_dep == "I":
+                            investissements_prev += budget_vote
+                            investissements_real_exec += budget_execute
+                
+                logger.info(f"📊 Données tableau 3 chargées depuis DB: N-1={budget_annee_precedente_realisation}, N prévu={budget_annee_prevue}, N réalisé={budget_annee_realisee}")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors du chargement des données d'exécution pour le tableau 3: {e}")
+                # En cas d'erreur, utiliser 0 (mode final)
+                if mode == "final":
+                    is_tableau3_fake = False
+                    # Variables déjà à 0
+                else:
+                    is_tableau3_fake = True
+        elif is_financement_fake:
+            # Mode brouillon avec données factices
+            is_tableau3_fake = True
+            budget_annee_precedente_realisation = budget_reel_total * 0.95
+            budget_annee_prevue = budget_reel_total
+            budget_annee_realisee = budget_annee_prevue * 0.95  # 95% d'exécution
+            
+            personnel_n1_realisation = personnel_reel * 0.95
+            personnel_prev = personnel_reel
+            personnel_real = personnel_prev * 0.97  # 97% d'exécution
+            
+            biens_n1_realisation = biens_reel * 0.95
+            biens_prev = biens_reel
+            biens_real_exec = biens_prev * 0.90  # 90% d'exécution
+            
+            transferts_n1_realisation = transferts_reel
+            transferts_prev = transferts_reel
+            transferts_real_exec = transferts_prev  # 100% d'exécution
+            
+            investissements_n1_realisation = investissements_reel * 0.95
+            investissements_prev = investissements_reel
+            investissements_real_exec = investissements_prev * 0.85  # 85% d'exécution
+        
+        # Calculer les écarts et taux pour l'année courante (totaux)
+        ecart_annee = budget_annee_prevue - budget_annee_realisee
+        tx_real_annee = (budget_annee_realisee / budget_annee_prevue * 100) if budget_annee_prevue > 0 else 0
+        
+        # Calculer les écarts et taux par nature
         personnel_ecart = personnel_prev - personnel_real
         personnel_tx = (personnel_real / personnel_prev * 100) if personnel_prev > 0 else 0
         
-        biens_prev = biens_reel
-        biens_real = biens_prev - 308763854
-        biens_ecart = biens_prev - biens_real
-        biens_tx = (biens_real / biens_prev * 100) if biens_prev > 0 else 0
+        biens_ecart = biens_prev - biens_real_exec
+        biens_tx = (biens_real_exec / biens_prev * 100) if biens_prev > 0 else 0
         
-        transferts_prev = transferts_reel
-        transferts_real = transferts_prev
-        transferts_ecart = 0
-        transferts_tx = 100.0
+        transferts_ecart = transferts_prev - transferts_real_exec
+        transferts_tx = (transferts_real_exec / transferts_prev * 100) if transferts_prev > 0 else 0
         
-        investissements_prev = investissements_reel
-        investissements_real = investissements_prev - 1
-        investissements_ecart = 1
-        investissements_tx = (investissements_real / investissements_prev * 100) if investissements_prev > 0 else 0
+        investissements_ecart = investissements_prev - investissements_real_exec
+        investissements_tx = (investissements_real_exec / investissements_prev * 100) if investissements_prev > 0 else 0
+        
+        # Fonction de formatage spécifique pour le tableau 3
+        def format_tableau3_value(value: Any) -> str:
+            """Formate une valeur du tableau 3 selon si elle est factice ou réelle."""
+            if is_tableau3_fake:
+                return cls._format_fake_data(str(value))
+            else:
+                return cls._format_db_data(str(value))
         
         # Styles pour le tableau avec hauteur de lignes réduite
         table_header_style = ParagraphStyle(
@@ -3762,14 +5286,14 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         )
         
         # Construire les données du tableau avec structure complexe
-        # Formater les années dans les en-têtes selon leur source (dynamiques)
+        # Formater les années dans les en-têtes selon leur source (dynamiques - toujours DB)
         annee_precedente = annee - 1
-        annee_precedente_formatted = format_financement_value(str(annee_precedente))
-        annee_actuelle_formatted = format_financement_value(str(annee))
+        annee_precedente_formatted = cls._format_db_data(str(annee_precedente))
+        annee_actuelle_formatted = cls._format_db_data(str(annee))
         
         # Formater les valeurs communes (zéro et tiret) selon leur source
-        formatted_zero = format_financement_value(format_fcfa(0))
-        formatted_dash = format_financement_value("-")
+        formatted_zero = format_tableau3_value(format_fcfa(0))
+        formatted_dash = format_tableau3_value("-")
         
         # En-têtes multi-lignes
         table_data = []
@@ -3804,11 +5328,11 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # 1.1 Ressources intérieures
         # Formater toutes les valeurs numériques selon leur source
-        formatted_budget_annee_precedente = format_financement_value(format_fcfa(budget_annee_precedente))
-        formatted_prev_annee = format_financement_value(format_fcfa(prev_annee))
-        formatted_real_annee = format_financement_value(format_fcfa(real_annee))
-        formatted_ecart_annee = format_financement_value(format_fcfa(ecart_annee))
-        formatted_tx_real_annee = format_financement_value(f"{tx_real_annee:.2f}%")
+        formatted_budget_annee_precedente = format_tableau3_value(format_fcfa(budget_annee_precedente_realisation))
+        formatted_prev_annee = format_tableau3_value(format_fcfa(budget_annee_prevue))
+        formatted_real_annee = format_tableau3_value(format_fcfa(budget_annee_realisee))
+        formatted_ecart_annee = format_tableau3_value(format_fcfa(ecart_annee))
+        formatted_tx_real_annee = format_tableau3_value(f"{tx_real_annee:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.1 Ressources intérieures", table_cell_style),
@@ -3830,7 +5354,6 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         ])
         
         # 1.1.2 Recettes de services
-        formatted_dash = format_financement_value("-")
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1.1.2 Recettes de services", table_cell_style),
             Paragraph(formatted_zero, table_cell_right_style),
@@ -3892,60 +5415,76 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # 2.1 Personnel
         # Formater toutes les valeurs numériques selon leur source
-        formatted_personnel_prev = format_financement_value(format_fcfa(personnel_prev))
-        formatted_personnel_real = format_financement_value(format_fcfa(personnel_real))
-        formatted_personnel_ecart = format_financement_value(format_fcfa(personnel_ecart))
-        formatted_personnel_tx = format_financement_value(f"{personnel_tx:.2f}%")
+        formatted_personnel_n1 = format_tableau3_value(format_fcfa(personnel_n1_realisation))
+        formatted_personnel_prev = format_tableau3_value(format_fcfa(personnel_prev))
+        formatted_personnel_real = format_tableau3_value(format_fcfa(personnel_real))
+        formatted_personnel_ecart = format_tableau3_value(format_fcfa(personnel_ecart))
+        formatted_personnel_tx = format_tableau3_value(f"{personnel_tx:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;2.1 Personnel", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),  # 2023 - à remplacer par données réelles
+            Paragraph(formatted_personnel_n1, table_cell_right_style),
             Paragraph(formatted_personnel_prev, table_cell_right_style),
             Paragraph(formatted_personnel_real, table_cell_right_style),
             Paragraph(formatted_personnel_ecart, table_cell_right_style),
             Paragraph(formatted_personnel_tx, table_cell_center_style),
         ])
         
-        # 2.1.1 Solde
-        # Formater toutes les valeurs numériques selon leur source
-        formatted_solde_prev = format_financement_value(format_fcfa(6270538992))
-        formatted_solde_real = format_financement_value(format_fcfa(6270538792))
-        formatted_solde_ecart = format_financement_value(format_fcfa(200))
-        formatted_100_pct = format_financement_value("100%")
+        # 2.1.1 Solde - Utiliser 0 si base vide, valeurs factices si mode brouillon
+        solde_n1 = personnel_n1_realisation * 0.95 if is_tableau3_fake else 0
+        solde_prev = personnel_prev * 0.95 if is_tableau3_fake else 0
+        solde_real = personnel_real * 0.95 if is_tableau3_fake else 0
+        solde_ecart = solde_prev - solde_real
+        solde_tx = (solde_real / solde_prev * 100) if solde_prev > 0 else 0
+        
+        formatted_solde_n1 = format_tableau3_value(format_fcfa(solde_n1))
+        formatted_solde_prev = format_tableau3_value(format_fcfa(solde_prev))
+        formatted_solde_real = format_tableau3_value(format_fcfa(solde_real))
+        formatted_solde_ecart = format_tableau3_value(format_fcfa(solde_ecart))
+        formatted_solde_tx = format_tableau3_value(f"{solde_tx:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.1.1 Solde y compris EPN", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),
+            Paragraph(formatted_solde_n1, table_cell_right_style),
             Paragraph(formatted_solde_prev, table_cell_right_style),
             Paragraph(formatted_solde_real, table_cell_right_style),
             Paragraph(formatted_solde_ecart, table_cell_right_style),
-            Paragraph(formatted_100_pct, table_cell_center_style),
+            Paragraph(formatted_solde_tx, table_cell_center_style),
         ])
         
-        # 2.1.2 Contractuels
-        formatted_contractuels_prev = format_financement_value(format_fcfa(873574247))
-        formatted_contractuels_real = format_financement_value(format_fcfa(873546247))
-        formatted_contractuels_ecart = format_financement_value(format_fcfa(28000))
+        # 2.1.2 Contractuels - Utiliser 0 si base vide, valeurs factices si mode brouillon
+        contractuels_n1 = personnel_n1_realisation * 0.05 if is_tableau3_fake else 0
+        contractuels_prev = personnel_prev * 0.05 if is_tableau3_fake else 0
+        contractuels_real = personnel_real * 0.05 if is_tableau3_fake else 0
+        contractuels_ecart = contractuels_prev - contractuels_real
+        contractuels_tx = (contractuels_real / contractuels_prev * 100) if contractuels_prev > 0 else 0
+        
+        formatted_contractuels_n1 = format_tableau3_value(format_fcfa(contractuels_n1))
+        formatted_contractuels_prev = format_tableau3_value(format_fcfa(contractuels_prev))
+        formatted_contractuels_real = format_tableau3_value(format_fcfa(contractuels_real))
+        formatted_contractuels_ecart = format_tableau3_value(format_fcfa(contractuels_ecart))
+        formatted_contractuels_tx = format_tableau3_value(f"{contractuels_tx:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.1.2 Contractuels hors solde", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),
+            Paragraph(formatted_contractuels_n1, table_cell_right_style),
             Paragraph(formatted_contractuels_prev, table_cell_right_style),
             Paragraph(formatted_contractuels_real, table_cell_right_style),
             Paragraph(formatted_contractuels_ecart, table_cell_right_style),
-            Paragraph(formatted_100_pct, table_cell_center_style),
+            Paragraph(formatted_contractuels_tx, table_cell_center_style),
         ])
         
         # 2.2 Biens et Service
         # Formater toutes les valeurs numériques selon leur source
-        formatted_biens_prev = format_financement_value(format_fcfa(biens_prev))
-        formatted_biens_real = format_financement_value(format_fcfa(biens_real))
-        formatted_biens_ecart = format_financement_value(format_fcfa(biens_ecart))
-        formatted_biens_tx = format_financement_value(f"{biens_tx:.2f}%")
+        formatted_biens_n1 = format_tableau3_value(format_fcfa(biens_n1_realisation))
+        formatted_biens_prev = format_tableau3_value(format_fcfa(biens_prev))
+        formatted_biens_real = format_tableau3_value(format_fcfa(biens_real_exec))
+        formatted_biens_ecart = format_tableau3_value(format_fcfa(biens_ecart))
+        formatted_biens_tx = format_tableau3_value(f"{biens_tx:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;2.2 Biens et Service", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),
+            Paragraph(formatted_biens_n1, table_cell_right_style),
             Paragraph(formatted_biens_prev, table_cell_right_style),
             Paragraph(formatted_biens_real, table_cell_right_style),
             Paragraph(formatted_biens_ecart, table_cell_right_style),
@@ -3953,28 +5492,32 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         ])
         
         # 2.3 Transferts
-        formatted_transferts_prev = format_financement_value(format_fcfa(transferts_prev))
-        formatted_transferts_real = format_financement_value(format_fcfa(transferts_real))
-        formatted_transferts_ecart = format_financement_value(format_fcfa(transferts_ecart))
-        formatted_transferts_tx = format_financement_value(f"{transferts_tx:.2f}%")
+        formatted_transferts_n1 = format_tableau3_value(format_fcfa(transferts_n1_realisation))
+        formatted_transferts_prev = format_tableau3_value(format_fcfa(transferts_prev))
+        formatted_transferts_real = format_tableau3_value(format_fcfa(transferts_real_exec))
+        formatted_transferts_ecart = format_tableau3_value(format_fcfa(transferts_ecart))
+        formatted_transferts_tx = format_tableau3_value(f"{transferts_tx:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;2.3 Transferts", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),
+            Paragraph(formatted_transferts_n1, table_cell_right_style),
             Paragraph(formatted_transferts_prev, table_cell_right_style),
             Paragraph(formatted_transferts_real, table_cell_right_style),
             Paragraph(formatted_transferts_ecart, table_cell_right_style),
             Paragraph(formatted_transferts_tx, table_cell_center_style),
         ])
         
-        # 2.3.1 Transferts courants
+        # 2.3.1 Transferts courants - Utiliser les mêmes valeurs que les transferts totaux
+        # Le taux est calculé basé sur transferts_prev et transferts_real_exec (déjà calculé dans transferts_tx)
+        formatted_transferts_courants_tx = formatted_transferts_tx
+        
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.3.1 Transferts courants", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),
+            Paragraph(formatted_transferts_n1, table_cell_right_style),
             Paragraph(formatted_transferts_prev, table_cell_right_style),
             Paragraph(formatted_transferts_real, table_cell_right_style),
-            Paragraph(formatted_zero, table_cell_right_style),
-            Paragraph(formatted_100_pct, table_cell_center_style),
+            Paragraph(formatted_transferts_ecart, table_cell_right_style),
+            Paragraph(formatted_transferts_courants_tx, table_cell_center_style),
         ])
         
         # 2.3.2 Transferts en capital
@@ -3989,14 +5532,15 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # 2.4 Investissement
         # Formater toutes les valeurs numériques selon leur source
-        formatted_investissements_prev = format_financement_value(format_fcfa(investissements_prev))
-        formatted_investissements_real = format_financement_value(format_fcfa(investissements_real))
-        formatted_investissements_ecart = format_financement_value(format_fcfa(investissements_ecart))
-        formatted_investissements_tx = format_financement_value(f"{investissements_tx:.2f}%")
+        formatted_investissements_n1 = format_tableau3_value(format_fcfa(investissements_n1_realisation))
+        formatted_investissements_prev = format_tableau3_value(format_fcfa(investissements_prev))
+        formatted_investissements_real = format_tableau3_value(format_fcfa(investissements_real_exec))
+        formatted_investissements_ecart = format_tableau3_value(format_fcfa(investissements_ecart))
+        formatted_investissements_tx = format_tableau3_value(f"{investissements_tx:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;2.4 Investissement", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),
+            Paragraph(formatted_investissements_n1, table_cell_right_style),
             Paragraph(formatted_investissements_prev, table_cell_right_style),
             Paragraph(formatted_investissements_real, table_cell_right_style),
             Paragraph(formatted_investissements_ecart, table_cell_right_style),
@@ -4006,7 +5550,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # 2.4.1 Trésor
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.4.1 Trésor", table_cell_style),
-            Paragraph(formatted_zero, table_cell_right_style),
+            Paragraph(formatted_investissements_n1, table_cell_right_style),
             Paragraph(formatted_investissements_prev, table_cell_right_style),
             Paragraph(formatted_investissements_real, table_cell_right_style),
             Paragraph(formatted_investissements_ecart, table_cell_right_style),
@@ -4128,26 +5672,26 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # Analyse de l'exécution budgétaire
         # Calculer les taux d'exécution réels basés sur les données
-        tx_execution_global = (real_annee / prev_annee * 100) if prev_annee > 0 else 0
+        tx_execution_global = (budget_annee_realisee / budget_annee_prevue * 100) if budget_annee_prevue > 0 else 0
         tx_execution_personnel = (personnel_real / personnel_prev * 100) if personnel_prev > 0 else 0
-        tx_execution_biens = (biens_real / biens_prev * 100) if biens_prev > 0 else 0
-        tx_execution_transferts = (transferts_real / transferts_prev * 100) if transferts_prev > 0 else 0
-        tx_execution_investissements = (investissements_real / investissements_prev * 100) if investissements_prev > 0 else 0
+        tx_execution_biens = (biens_real_exec / biens_prev * 100) if biens_prev > 0 else 0
+        tx_execution_transferts = (transferts_real_exec / transferts_prev * 100) if transferts_prev > 0 else 0
+        tx_execution_investissements = (investissements_real_exec / investissements_prev * 100) if investissements_prev > 0 else 0
         
         # Formatage des montants et taux selon leur source (factice ou DB) - utiliser format_financement_value
         formatted_annee = format_financement_value(str(annee))
-        formatted_prev_annee = format_financement_value(format_fcfa(prev_annee))
-        formatted_real_annee = format_financement_value(format_fcfa(real_annee))
+        formatted_prev_annee = format_financement_value(format_fcfa(budget_annee_prevue))
+        formatted_real_annee = format_financement_value(format_fcfa(budget_annee_realisee))
         formatted_tx_global = format_financement_value(f"{tx_execution_global:.2f}%")
         formatted_personnel_prev = format_financement_value(format_fcfa(personnel_prev))
         formatted_personnel_real = format_financement_value(format_fcfa(personnel_real))
         formatted_biens_prev = format_financement_value(format_fcfa(biens_prev))
-        formatted_biens_real = format_financement_value(format_fcfa(biens_real))
+        formatted_biens_real = format_financement_value(format_fcfa(biens_real_exec))
         formatted_tx_biens = format_financement_value(f"{tx_execution_biens:.2f}%")
         formatted_transferts_prev = format_financement_value(format_fcfa(transferts_prev))
         formatted_tx_transferts = format_financement_value(f"{tx_execution_transferts:.2f}%")
         formatted_investissements_prev = format_financement_value(format_fcfa(investissements_prev))
-        formatted_investissements_real = format_financement_value(format_fcfa(investissements_real))
+        formatted_investissements_real = format_financement_value(format_fcfa(investissements_real_exec))
         formatted_tx_investissements = format_financement_value(f"{tx_execution_investissements:.2f}%")
         
         # Récupérer les interprétations personnalisées pour l'analyse d'exécution
@@ -4205,6 +5749,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # La page a déjà été créée dans generate_pdf avant l'appel
         # Rendre la story avec pagination automatique
+        logger.info(f"🔢 NUMÉROTATION - AVANT _render_multipage_story pour partie I: start_page={start_page}")
         final_page = cls._render_multipage_story(
             pdf,
             story,
@@ -4217,6 +5762,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             show_page_number=True,
             draw_footer_func=draw_footer,
         )
+        logger.info(f"🔢 NUMÉROTATION - APRÈS _render_multipage_story pour partie I: final_page={final_page}")
+        logger.info(f"🔢 NUMÉROTATION - _draw_partie_i_ministere FIN: retourne final_page={final_page}")
         
         return final_page
 
@@ -6838,6 +8385,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Titre de la partie (formaté après la définition de format_programme_value)
         formatted_numero_partie = format_programme_value(str(numero), is_programme_fake)
         formatted_titre_partie = format_programme_value(titre.upper(), is_programme_fake)
+        # Enregistrer la page AVANT le titre pour garantir que la page enregistrée est celle où le titre commence
+        story.append(PageMarker(f"programme_{numero}_start"))
         story.append(Paragraph(f"PARTIE {partie_numero_romain} : LE PROGRAMME {formatted_numero_partie} « {formatted_titre_partie} »", partie_title_style))
         story.append(Spacer(1, 0.3 * cm))
         
@@ -6845,6 +8394,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Section INTRODUCTION
         # ============================================================
         story.append(CondPageBreak(3 * cm))
+        # Enregistrer la page AVANT le titre (après CondPageBreak)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        story.append(PageMarker(f"programme_{numero}_intro"))
         story.append(Paragraph("INTRODUCTION", section_title_style))
         story.append(Spacer(1, 0.2 * cm))
         
@@ -6981,6 +8533,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # I. PRÉSENTATION DE LA STRATÉGIE DU PROGRAMME
         # ============================================================
         story.append(CondPageBreak(3 * cm))
+        # Enregistrer la page AVANT le titre (après CondPageBreak)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        story.append(PageMarker(f"programme_{numero}_strategie"))
         story.append(Paragraph(f"{partie_numero_romain}. PRÉSENTATION DE LA STRATÉGIE DU PROGRAMME", section_title_style))
         story.append(Spacer(1, 0.2 * cm))
         
@@ -7790,6 +9345,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # II. REALISATIONS DU PROGRAMME
         # ============================================================
         story.append(CondPageBreak(3 * cm))
+        # Enregistrer la page AVANT le titre (après CondPageBreak)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        story.append(PageMarker(f"programme_{numero}_realisations"))
         # Le titre et l'année viennent toujours de la DB (pas factices)
         formatted_titre_realisations = format_programme_value(titre.upper(), is_programme_fake)
         formatted_annee_realisations = format_programme_value(str(annee), False)  # Année toujours DB
@@ -7834,7 +9392,10 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         if pie_chart_buffer:
             # Titre du graphique (même format que pour le ministère)
             story.append(Spacer(1, 0.3 * cm))
-            story.append(Paragraph(f"<b>Figure : Répartition du budget actuel par natures de dépenses</b>", subsection_title_style))
+            figure_numero = cls._get_next_figure_numero()
+            formatted_numero_fig = format_programme_value(str(numero), is_programme_fake)
+            formatted_titre_fig = format_programme_value(titre, is_programme_fake)
+            story.append(Paragraph(f"<b>Figure {figure_numero}: Répartition du budget actuel du Programme {formatted_numero_fig} « {formatted_titre_fig} » par nature de dépenses</b>", subsection_title_style))
             story.append(Spacer(1, 0.2 * cm))
             
             # Créer la source
@@ -8282,7 +9843,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Créer le tableau d'exécution par action
         formatted_numero = format_programme_value(str(numero), is_programme_fake)
         formatted_titre_tableau = format_programme_value(titre, is_programme_fake)
-        tableau_titre = f"Tableau 4: Exécution financière par action du programme {formatted_numero} « {formatted_titre_tableau} »"
+        tableau_numero = cls._get_next_tableau_numero()
+        tableau_titre = f"Tableau {tableau_numero}: Exécution financière par action du programme {formatted_numero} « {formatted_titre_tableau} »"
         story.append(Paragraph(f"<b>{tableau_titre}</b>", subsection_title_style))
         story.append(Spacer(1, 0.2 * cm))
         
@@ -8608,9 +10170,10 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             story.append(Spacer(1, 0.3 * cm))
             
             # Titre du graphique
+            figure_numero = cls._get_next_figure_numero()
             formatted_numero_fig3 = format_programme_value(str(numero), is_programme_fake)
             formatted_titre_fig3 = format_programme_value(titre, is_programme_fake)
-            story.append(Paragraph(f"<b>Figure 3: Evolution des taux d'exécution par action du Programme {formatted_numero_fig3} « {formatted_titre_fig3} »</b>", subsection_title_style))
+            story.append(Paragraph(f"<b>Figure {figure_numero}: Evolution des taux d'exécution par action du Programme {formatted_numero_fig3} « {formatted_titre_fig3} »</b>", subsection_title_style))
             story.append(Spacer(1, 0.2 * cm))
             
             # Créer un Flowable personnalisé pour le graphique avec source (similaire au graphique en camembert)
@@ -8748,7 +10311,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Titre du tableau (toujours affiché)
         formatted_numero_tab5 = format_programme_value(str(numero), is_programme_fake)  # Numéro peut être factice
         formatted_titre_tab5 = format_programme_value(titre, is_programme_fake)  # Titre du programme peut être factice
-        story.append(Paragraph(f"<b>Tableau 5: Suivi des investissements du Programme {formatted_numero_tab5} « {formatted_titre_tab5} »</b>", body_style))
+        tableau_numero = cls._get_next_tableau_numero()
+        story.append(Paragraph(f"<b>Tableau {tableau_numero}: Suivi des investissements du Programme {formatted_numero_tab5} « {formatted_titre_tab5} »</b>", body_style))
         story.append(Spacer(1, 0.1 * cm))
         
         # Tableau (conditionné - afficher un message si vide)
@@ -8884,7 +10448,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Titre du tableau (toujours affiché)
         formatted_numero_tab6 = format_programme_value(str(numero), is_programme_fake)
         formatted_titre_tab6 = format_programme_value(titre, is_programme_fake)
-        story.append(Paragraph(f"<b>Tableau 6: Exécution des prévisions d'effectifs du programme {formatted_numero_tab6} « {formatted_titre_tab6} »</b>", body_style))
+        tableau_numero = cls._get_next_tableau_numero()
+        story.append(Paragraph(f"<b>Tableau {tableau_numero}: Exécution des prévisions d'effectifs du programme {formatted_numero_tab6} « {formatted_titre_tab6} »</b>", body_style))
         story.append(Spacer(1, 0.1 * cm))
         
         # Tableau (conditionné - afficher un message si vide)
@@ -8910,9 +10475,10 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # ============================================================
         
         # Titre du graphique (toujours affiché)
+        figure_numero = cls._get_next_figure_numero()
         formatted_numero_fig4 = format_programme_value(str(numero), is_programme_fake)
         formatted_titre_fig4 = format_programme_value(titre, is_programme_fake)
-        story.append(Paragraph(f"<b>Figure 4: Evolution des effectifs du Programme {formatted_numero_fig4} « {formatted_titre_fig4} » par catégorie</b>", subsection_title_style))
+        story.append(Paragraph(f"<b>Figure {figure_numero}: Evolution des effectifs du Programme {formatted_numero_fig4} « {formatted_titre_fig4} » par catégorie</b>", subsection_title_style))
         story.append(Spacer(1, 0.2 * cm))
         
         # Générer le graphique en barres (conditionné)
@@ -9239,6 +10805,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # III. PERFORMANCE DU PROGRAMME
         # ============================================================
         story.append(CondPageBreak(3 * cm))
+        # Enregistrer la page AVANT le titre (après CondPageBreak)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        story.append(PageMarker(f"programme_{numero}_performance"))
         story.append(Paragraph("III. PERFORMANCE DU PROGRAMME", section_title_style))
         story.append(Spacer(1, 0.2 * cm))
         
@@ -9273,7 +10842,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Titre du tableau (toujours affiché)
         formatted_numero_tab7 = format_programme_value(str(numero), is_programme_fake)
         formatted_titre_tab7 = format_programme_value(titre, is_programme_fake)
-        story.append(Paragraph(f"<b>Tableau 7: Évolution des indicateurs du programme {formatted_numero_tab7} « {formatted_titre_tab7} »</b>", body_style))
+        tableau_numero = cls._get_next_tableau_numero()
+        story.append(Paragraph(f"<b>Tableau {tableau_numero}: Évolution des indicateurs du programme {formatted_numero_tab7} « {formatted_titre_tab7} »</b>", body_style))
         story.append(Spacer(1, 0.1 * cm))
         
         # Tableau (conditionné - afficher un message si vide)
@@ -9490,7 +11060,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                     formatted_annee_n_3_fig = cls._format_db_data(str(annee_n_3))
                     formatted_annee_fig = cls._format_db_data(str(annee))
                     
-                    figure_title_text = f"Figure {12 + indicateur_num}: Evolution de l'indicateur {formatted_indicateur_num_fig} « {formatted_indicateur_nom_fig} » de {formatted_annee_n_3_fig} à {formatted_annee_fig}"
+                    figure_numero = cls._get_next_figure_numero()
+                    figure_title_text = f"Figure {figure_numero}: Evolution de l'indicateur {formatted_indicateur_num_fig} « {formatted_indicateur_nom_fig} » de {formatted_annee_n_3_fig} à {formatted_annee_fig}"
                     figure_title_para = Paragraph(f"<b>{figure_title_text}</b>", body_style)
                     
                     # Créer la source
@@ -9778,6 +11349,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # CONCLUSION
         # ============================================================
         story.append(CondPageBreak(3 * cm))
+        # Enregistrer la page AVANT le titre (après CondPageBreak)
+        # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
+        story.append(PageMarker(f"programme_{numero}_conclusion"))
         story.append(Paragraph("CONCLUSION", section_title_style))
         story.append(Spacer(1, 0.15 * cm))
         
@@ -9803,6 +11377,11 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             """Callback appelé à chaque page pour dessiner le footer."""
             nonlocal page_counter
             page_counter += 1
+            
+            # Mettre à jour la variable de classe pour que les PageMarker puissent l'utiliser
+            cls._current_rendering_page = page_counter
+            # Stocker aussi dans le canvas pour que les marqueurs puissent y accéder
+            canv._pageNumber = page_counter - 1  # 0-indexé pour ReportLab
             
             canv.saveState()
             card_size = 1.0 * cm
@@ -9837,6 +11416,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # Construire le PDF avec SimpleDocTemplate (DÉCOUPAGE AUTOMATIQUE DU TABLEAU !)
         doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+        
+        # Réinitialiser la variable de classe après le build
+        cls._current_rendering_page = None
         
         temp_buffer.seek(0)
         
@@ -10401,6 +11983,8 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         story = []
         
         # Titre
+        # Enregistrer la page AVANT le titre pour garantir que la page enregistrée est celle où le titre commence
+        story.append(PageMarker("conclusion_generale"))
         story.append(Paragraph("CONCLUSION GÉNÉRALE", section_title_style))
         story.append(Spacer(1, 0.3 * cm))
         
@@ -10631,6 +12215,11 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             nonlocal page_counter
             page_counter += 1
             
+            # Mettre à jour la variable de classe pour que les PageMarker puissent l'utiliser
+            cls._current_rendering_page = page_counter
+            # Stocker aussi dans le canvas pour que les marqueurs puissent y accéder
+            canv._pageNumber = page_counter - 1  # 0-indexé pour ReportLab
+            
             canv.saveState()
             card_size = 1.0 * cm
             corner_size = 0.3 * cm
@@ -10664,6 +12253,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         
         # Construire le PDF avec SimpleDocTemplate
         doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+        
+        # Réinitialiser la variable de classe après le build
+        cls._current_rendering_page = None
         
         temp_buffer.seek(0)
         
@@ -11079,6 +12671,12 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Initialiser la session de base de données
         cls._db_session = session
         cls._db_data_keys = set()  # Réinitialiser les clés DB
+        cls._page_positions = {}  # Réinitialiser les positions des pages
+        cls._current_rendering_page = None  # Réinitialiser la page de rendu actuelle
+        cls._reset_tableau_counter(1)  # Initialiser le compteur de tableaux à 1 pour une numérotation continue
+        logger.info(f"📊 Compteur de tableaux initialisé à 1")
+        cls._reset_figure_counter(1)  # Initialiser le compteur de figures à 1 pour une numérotation continue
+        logger.info(f"📊 Compteur de figures initialisé à 1")
         
         # Charger les données depuis la base de données (SystemSettings et RapData)
         db_data = cls.load_system_settings_data(session)
@@ -11168,6 +12766,9 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         # Définir les dimensions de la page
         page_width, page_height = landscape(A4)
         
+        # Réinitialiser les positions de pages
+        cls._page_positions = {}
+        
         # Pour la couverture, on utilise Canvas directement
         cover_buffer = BytesIO()
         cover_pdf = canvas.Canvas(cover_buffer, pagesize=landscape(A4))
@@ -11181,94 +12782,488 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         cover_pdf.save()
         cover_buffer.seek(0)
         
-        # Générer toutes les autres pages avec Canvas (sauf les parties programmes)
-        logger.info("📄 Génération de toutes les pages avec Canvas...")
+        # ===================================================================
+        # NOUVELLE APPROCHE (comme Word) : 
+        # 1. Générer tout le PDF d'abord (sans sommaire)
+        # 2. Chercher les textes dans le PDF généré pour trouver leurs pages
+        # 3. Générer le sommaire avec les pages trouvées
+        # 4. Fusionner : couverture + sommaire + contenu + programmes + conclusion
+        # ===================================================================
         
-        canvas_buffer = BytesIO()
-        canvas_pdf = canvas.Canvas(canvas_buffer, pagesize=landscape(A4))
-        width, height = landscape(A4)
+        logger.info("📄 NOUVELLE APPROCHE : Génération du contenu complet d'abord (sans sommaire)...")
         
-        # Utiliser exactement la même logique que le service original pour les pages non-programmes
-        logger.info("📄 Page 2+: Sommaire")
-        next_page = cls._draw_table_of_contents(canvas_pdf, width, height)
-        
-        logger.info(f"📄 Page {next_page}+: Liste des tableaux")
-        next_page = cls._draw_liste_tableaux(canvas_pdf, width, height, next_page)
-        
-        logger.info(f"📄 Page {next_page}+: Liste des graphiques")
-        next_page = cls._draw_liste_graphiques(canvas_pdf, width, height, next_page)
-        
-        logger.info(f"📄 Page {next_page}+: Sigles et abréviations")
-        next_page = cls._draw_liste_sigles_abreviations(canvas_pdf, width, height, next_page)
-        
-        logger.info(f"📄 Page {next_page}+: Introduction générale")
-        next_page = cls._draw_introduction_generale(canvas_pdf, width, height, next_page)
-        
-        # PARTIE I : LE MINISTÈRE
-        canvas_pdf.showPage()
-        next_page += 1
-        logger.info(f"📄 Page {next_page}: PARTIE I : LE MINISTÈRE")
-        next_page = cls._draw_partie_i_ministere(canvas_pdf, width, height, next_page)
-        
-        # Sauvegarder le PDF Canvas (sans les parties programmes)
-        logger.info("💾 Sauvegarde du PDF Canvas...")
-        canvas_pdf.save()
-        canvas_buffer.seek(0)
-        
-        # Fusionner tous les PDFs
-        logger.info("📎 Fusion de tous les PDFs...")
-        
-        writer = PdfWriter()
-        
-        # Ajouter la couverture
-        cover_reader = PdfReader(cover_buffer)
-        writer.add_page(cover_reader.pages[0])
-        
-        # Ajouter toutes les pages du PDF Canvas
-        canvas_reader = PdfReader(canvas_buffer)
-        for page in canvas_reader.pages:
-            writer.add_page(page)
-        
-        # Générer les parties programmes avec SimpleDocTemplate (DÉCOUPAGE AUTOMATIQUE !)
+        # Récupérer les programmes depuis cls.data
         programmes = cls.data.get("programmes", [])
-        is_programmes_fake = False
         
-        # Si pas de programmes dans cls.data, vérifier si on doit utiliser DEFAULT_DATA (factices)
+        # Si aucun programme n'est disponible, créer des programmes factices
         if not programmes:
             if cls._should_use_fake_data():
                 programmes = cls.DEFAULT_DATA.get("programmes", [])
-                is_programmes_fake = bool(programmes)
-                if is_programmes_fake:
-                    logger.info(f"📊 Programmes factices utilisés (DEFAULT_DATA)")
+                logger.info(f"📊 Programmes factices utilisés (DEFAULT_DATA)")
             else:
                 logger.warning(f"⚠️ Aucun programme trouvé et mode final - aucun programme ne sera généré")
         else:
-            # Programmes viennent de la DB
             logger.info(f"📊 Programmes chargés depuis la DB: {len(programmes)} programmes")
         
-        for programme in programmes:
-            next_page += 1  # Commencer sur une nouvelle page
+        is_programmes_fake = bool(programmes and cls._should_use_fake_data())
+        
+        # Générer le CONTENU (sans sommaire) - les pages commencent à 2 (après la couverture)
+        logger.info("📄 Génération du contenu (liste tableaux, graphiques, sigles, intro, partie I)...")
+        content_buffer = BytesIO()
+        content_pdf = canvas.Canvas(content_buffer, pagesize=landscape(A4))
+        width, height = landscape(A4)
+        
+        # Commencer après la couverture (page 1) - SANS sommaire pour l'instant
+        next_page = 2  # Page après la couverture
+        logger.info(f"🔍 DIAGNOSTIC - next_page initial = {next_page} (après couverture, SANS sommaire)")
+        
+        # Note: canvas.Canvas crée déjà une première page par défaut (index 0) lorsqu'on l'initialise
+        # Pas besoin d'appeler showPage() ici - _draw_liste_tableaux dessinera directement sur cette page
+        
+        # Générer la LISTE DES TABLEAUX
+        logger.info(f"📄 Page {next_page}+: Liste des tableaux")
+        next_page = cls._draw_liste_tableaux(content_pdf, width, height, next_page)
+        
+        # Générer la LISTE DES GRAPHIQUES
+        content_pdf.showPage()
+        logger.info(f"📄 Page {next_page}+: Liste des graphiques")
+        next_page = cls._draw_liste_graphiques(content_pdf, width, height, next_page)
+        
+        # Générer SIGLES ET ABRÉVIATIONS
+        content_pdf.showPage()
+        logger.info(f"📄 Page {next_page}+: Sigles et abréviations")
+        next_page = cls._draw_liste_sigles_abreviations(content_pdf, width, height, next_page)
+        
+        # Générer INTRODUCTION GÉNÉRALE
+        content_pdf.showPage()
+        logger.info(f"📄 Page {next_page}+: Introduction générale")
+        next_page = cls._draw_introduction_generale(content_pdf, width, height, next_page)
+        
+        # PARTIE I : LE MINISTÈRE
+        content_pdf.showPage()
+        logger.info(f"📄 Page {next_page}: PARTIE I : LE MINISTÈRE")
+        next_page = cls._draw_partie_i_ministere(content_pdf, width, height, next_page)
+        
+        # Sauvegarder le contenu
+        content_pdf.save()
+        content_buffer.seek(0)
+        
+        # Générer les parties programmes
+        programme_buffers = []
+        logger.info(f"📄 Page {next_page}+: Génération des programmes...")
+        
+        for idx, programme in enumerate(programmes):
+            if idx > 0:
+                next_page += 1  # Nouvelle page pour chaque programme
+            
             numero = programme.get("numero", 1)
             titre = programme.get("titre", "")
-            logger.info(f"📄 Page {next_page}: PARTIE {numero + 1} : LE PROGRAMME {numero} « {titre.upper()} » (SimpleDocTemplate)")
+            logger.info(f"📄 Page {next_page}: PARTIE {numero + 1} : LE PROGRAMME {numero} « {titre.upper()} »")
             
             # Marquer le programme comme factice si nécessaire
             programme["_is_fake"] = is_programmes_fake
             
-            # Utiliser SimpleDocTemplate pour cette partie (DÉCOUPAGE AUTOMATIQUE !)
-            prog_buffer, next_page = cls._draw_partie_programme_simpledoc(programme, next_page, session=session)
+            # Utiliser SimpleDocTemplate pour cette partie
+            prog_buffer, final_page = cls._draw_partie_programme_simpledoc(programme, next_page, session=session)
+            programme_buffers.append(prog_buffer)
+            next_page = final_page
+        
+        # Générer la CONCLUSION GÉNÉRALE
+        next_page += 1
+        logger.info(f"📄 Page {next_page}: CONCLUSION GÉNÉRALE")
+        conclusion_buffer, next_page = cls._draw_conclusion_generale(next_page, session=session)
+        
+        # Fusionner tout dans un PDF temporaire (sans sommaire) pour chercher les textes
+        logger.info("📄 Création d'un PDF temporaire complet (sans sommaire) pour chercher les textes...")
+        temp_writer = PdfWriter()
+        
+        # Ajouter la couverture
+        cover_reader = PdfReader(cover_buffer)
+        temp_writer.add_page(cover_reader.pages[0])
+        
+        # Ajouter le contenu
+        content_reader = PdfReader(content_buffer)
+        content_pages_clean = []
+        for page in content_reader.pages:
+            page_text = page.extract_text().strip()
+            if page_text:  # Seulement garder les pages avec du contenu
+                content_pages_clean.append(page)
+        for page in content_pages_clean:
+            temp_writer.add_page(page)
+        
+        # Ajouter les programmes
+        for prog_buffer in programme_buffers:
+            prog_reader = PdfReader(prog_buffer)
+            for page in prog_reader.pages:
+                temp_writer.add_page(page)
+        
+        # Ajouter la conclusion
+        conclusion_reader = PdfReader(conclusion_buffer)
+        for page in conclusion_reader.pages:
+            temp_writer.add_page(page)
+        
+        # Sauvegarder le PDF temporaire
+        temp_pdf_buffer = BytesIO()
+        temp_writer.write(temp_pdf_buffer)
+        temp_pdf_buffer.seek(0)
+        temp_pdf_reader = PdfReader(temp_pdf_buffer)
+        
+        logger.info(f"📄 PDF temporaire créé: {len(temp_pdf_reader.pages)} pages (sans sommaire)")
+        
+        # Chercher les vraies pages des tableaux et graphiques dans le PDF temporaire
+        logger.info("🔍 Recherche des vraies pages des tableaux et graphiques dans le PDF temporaire...")
+        tableaux_pages, graphiques_pages = cls._find_tableaux_and_graphiques_pages(temp_pdf_reader)
+        
+        # Stocker les pages trouvées pour utilisation dans les fonctions de dessin
+        cls._tableaux_pages_found = tableaux_pages
+        cls._graphiques_pages_found = graphiques_pages
+        
+        # Mettre à jour les pages dans cls.data si trouvées (pour utilisation dans les fonctions)
+        if tableaux_pages:
+            if "tableaux" not in cls.data:
+                cls.data["tableaux"] = []
             
-            # Ajouter les pages de cette partie au PDF final
+            # Mettre à jour les pages et titres des tableaux existants
+            for tableau in cls.data["tableaux"]:
+                numero = tableau.get("numero")
+                if numero and numero in tableaux_pages:
+                    page_num, titre = tableaux_pages[numero]
+                    tableau["page"] = page_num
+                    tableau["titre"] = titre  # Mettre à jour le titre aussi
+                    logger.info(f"✅ Tableau {numero} mis à jour: page {page_num}, titre: '{titre[:80]}...'")
+        
+        if graphiques_pages:
+            if "graphiques" not in cls.data:
+                cls.data["graphiques"] = []
+            
+            # Mettre à jour les pages et titres des graphiques existants
+            for graphique in cls.data["graphiques"]:
+                numero = graphique.get("numero")
+                if numero and numero in graphiques_pages:
+                    page_num, titre = graphiques_pages[numero]
+                    graphique["page"] = page_num
+                    graphique["titre"] = titre  # Mettre à jour le titre aussi
+                    logger.info(f"✅ Graphique {numero} mis à jour: page {page_num}, titre: '{titre[:80]}...'")
+        
+        logger.info("✅ Pages des tableaux et graphiques trouvées et stockées dans cls.data")
+        logger.info(f"📊 Récapitulatif - Tableaux pages trouvées: {tableaux_pages}")
+        logger.info(f"📊 Récapitulatif - Graphiques pages trouvées: {graphiques_pages}")
+        
+        # Mettre à jour cls.data avec les vraies pages pour utilisation immédiate
+        if tableaux_pages:
+            logger.info(f"📝 Mise à jour de cls.data avec {len(tableaux_pages)} pages de tableaux...")
+            # Reconstruire ou mettre à jour la liste des tableaux avec les vraies pages
+            programmes = cls.data.get("programmes", [])
+            if not programmes:
+                programmes = cls.DEFAULT_DATA.get("programmes", [])
+            
+            # Créer la liste des tableaux avec les titres extraits du PDF
+            if not cls.data.get("tableaux"):
+                tableaux_list = []
+                # Créer un tableau pour chaque numéro trouvé dans tableaux_pages
+                for numero in sorted(tableaux_pages.keys()):
+                    page_num, titre = tableaux_pages[numero]
+                    tableaux_list.append({
+                        "numero": numero,
+                        "titre": titre,  # Utiliser le titre extrait du PDF
+                        "page": page_num
+                    })
+                
+                cls.data["tableaux"] = tableaux_list
+                logger.info(f"✅ Liste des tableaux créée avec {len(tableaux_list)} éléments (titres extraits du PDF)")
+            else:
+                # Mettre à jour les pages et titres existants
+                updated_count = 0
+                for tableau in cls.data["tableaux"]:
+                    numero = tableau.get("numero")
+                    if numero and numero in tableaux_pages:
+                        page_num, titre = tableaux_pages[numero]
+                        old_page = tableau.get("page", "N/A")
+                        old_titre = tableau.get("titre", "N/A")
+                        tableau["page"] = page_num
+                        tableau["titre"] = titre  # Mettre à jour le titre aussi
+                        logger.info(f"   📝 Tableau {numero}: page {old_page} → {page_num}, titre: '{titre[:60]}...'")
+                        updated_count += 1
+                logger.info(f"✅ {updated_count} tableaux mis à jour dans cls.data (pages et titres)")
+        
+        if graphiques_pages:
+            logger.info(f"📝 Mise à jour de cls.data avec {len(graphiques_pages)} pages de graphiques...")
+            # Reconstruire ou mettre à jour la liste des graphiques avec les vraies pages
+            programmes = cls.data.get("programmes", [])
+            if not programmes:
+                programmes = cls.DEFAULT_DATA.get("programmes", [])
+            
+            # Créer la liste des graphiques avec les titres extraits du PDF
+            if not cls.data.get("graphiques"):
+                graphiques_list = []
+                # Créer un graphique pour chaque numéro trouvé dans graphiques_pages
+                for numero in sorted(graphiques_pages.keys()):
+                    page_num, titre = graphiques_pages[numero]
+                    graphiques_list.append({
+                        "numero": numero,
+                        "titre": titre,  # Utiliser le titre extrait du PDF
+                        "page": page_num
+                    })
+                
+                cls.data["graphiques"] = graphiques_list
+                logger.info(f"✅ Liste des graphiques créée avec {len(graphiques_list)} éléments (titres extraits du PDF)")
+            else:
+                # Mettre à jour les pages et titres existants
+                updated_count = 0
+                for graphique in cls.data["graphiques"]:
+                    numero = graphique.get("numero")
+                    if numero and numero in graphiques_pages:
+                        page_num, titre = graphiques_pages[numero]
+                        old_page = graphique.get("page", "N/A")
+                        old_titre = graphique.get("titre", "N/A")
+                        graphique["page"] = page_num
+                        graphique["titre"] = titre  # Mettre à jour le titre aussi
+                        logger.info(f"   📝 Graphique {numero}: page {old_page} → {page_num}, titre: '{titre[:60]}...'")
+                        updated_count += 1
+                logger.info(f"✅ {updated_count} graphiques mis à jour dans cls.data (pages et titres)")
+        
+        # Régénérer les buffers des listes avec les vraies pages
+        if tableaux_pages or graphiques_pages:
+            logger.info("📄 Régénération des buffers des listes avec les vraies pages trouvées...")
+            logger.info(f"   - Tableaux pages disponibles: {tableaux_pages}")
+            logger.info(f"   - Graphiques pages disponibles: {graphiques_pages}")
+            
+            # Régénérer le buffer de la liste des tableaux
+            logger.info("📝 Régénération du buffer de la liste des tableaux...")
+            liste_tableaux_buffer_new = BytesIO()
+            liste_tableaux_pdf_new = canvas.Canvas(liste_tableaux_buffer_new, pagesize=landscape(A4))
+            width, height = landscape(A4)
+            liste_tableaux_start_page = cls._get_page_position("liste_tableaux", 2)
+            logger.info(f"   - Page de départ pour liste tableaux: {liste_tableaux_start_page}")
+            logger.info(f"   - Tableaux dans cls.data: {len(cls.data.get('tableaux', []))}")
+            for tab in cls.data.get('tableaux', []):
+                logger.info(f"      Tableau {tab.get('numero')}: page {tab.get('page', 'N/A')}")
+            cls._draw_liste_tableaux(liste_tableaux_pdf_new, width, height, liste_tableaux_start_page)
+            liste_tableaux_pdf_new.save()
+            liste_tableaux_buffer_new.seek(0)
+            liste_tableaux_reader_new = PdfReader(liste_tableaux_buffer_new)
+            logger.info(f"✅ Liste des tableaux régénérée: {len(liste_tableaux_reader_new.pages)} page(s)")
+            
+            # Régénérer le buffer de la liste des graphiques
+            logger.info("📝 Régénération du buffer de la liste des graphiques...")
+            liste_graphiques_buffer_new = BytesIO()
+            liste_graphiques_pdf_new = canvas.Canvas(liste_graphiques_buffer_new, pagesize=landscape(A4))
+            width, height = landscape(A4)
+            liste_graphiques_start_page = cls._get_page_position("liste_graphiques", 3)
+            logger.info(f"   - Page de départ pour liste graphiques: {liste_graphiques_start_page}")
+            logger.info(f"   - Graphiques dans cls.data: {len(cls.data.get('graphiques', []))}")
+            for graph in cls.data.get('graphiques', []):
+                logger.info(f"      Graphique {graph.get('numero')}: page {graph.get('page', 'N/A')}")
+            liste_graphiques_pdf_new.showPage()  # Créer la première page
+            cls._draw_liste_graphiques(liste_graphiques_pdf_new, width, height, liste_graphiques_start_page)
+            liste_graphiques_pdf_new.save()
+            liste_graphiques_buffer_new.seek(0)
+            liste_graphiques_reader_new = PdfReader(liste_graphiques_buffer_new)
+            logger.info(f"✅ Liste des graphiques régénérée: {len(liste_graphiques_reader_new.pages)} page(s)")
+            
+            # Extraire les autres sections de content_buffer (sigles, intro, partie I)
+            logger.info("📄 Extraction des autres sections du content_buffer original...")
+            content_buffer.seek(0)  # Réinitialiser le buffer avant lecture
+            content_reader_old = PdfReader(content_buffer)
+            content_pages_all = list(content_reader_old.pages)
+            logger.info(f"   - Content buffer original contient {len(content_pages_all)} pages")
+            
+            # Trouver où commencent les autres sections en cherchant "SIGLES ET ABRÉVIATIONS"
+            debut_autres_sections = 0
+            for idx, page in enumerate(content_pages_all):
+                try:
+                    page_text = page.extract_text().strip().upper()
+                    if "SIGLES" in page_text and "ABRÉVIATIONS" in page_text:
+                        debut_autres_sections = idx
+                        logger.info(f"   📄 Page {idx + 1} trouvée comme début des autres sections (SIGLES ET ABRÉVIATIONS)")
+                        break
+                except Exception as e:
+                    logger.debug(f"   ⚠️ Erreur lors de l'extraction du texte de la page {idx + 1}: {e}")
+                    continue
+            
+            if debut_autres_sections == 0:
+                logger.warning("   ⚠️ Début des autres sections non trouvé, utilisation de toutes les pages")
+            
+            # Extraire les pages des autres sections (sigles, intro, partie I, etc.)
+            autres_sections_pages = content_pages_all[debut_autres_sections:] if debut_autres_sections >= 0 else content_pages_all
+            logger.info(f"   - {len(autres_sections_pages)} pages d'autres sections extraites (à partir de la page {debut_autres_sections + 1})")
+            
+            # Reconstruire content_buffer avec les nouvelles listes et les autres sections
+            logger.info(f"📄 Reconstruction de content_buffer: {len(liste_tableaux_reader_new.pages)} pages liste tableaux + {len(liste_graphiques_reader_new.pages)} pages liste graphiques + {len(autres_sections_pages)} pages autres sections")
+            content_buffer_rebuilt = BytesIO()
+            content_writer = PdfWriter()
+            
+            # Ajouter les nouvelles listes
+            for page in liste_tableaux_reader_new.pages:
+                content_writer.add_page(page)
+            for page in liste_graphiques_reader_new.pages:
+                content_writer.add_page(page)
+            
+            # Ajouter les autres sections (sigles, intro, partie I, etc.)
+            logger.info("   📝 Ajout des autres sections au nouveau content_buffer...")
+            for idx, page in enumerate(autres_sections_pages):
+                content_writer.add_page(page)
+                if idx < 3:  # Log pour les 3 premières pages
+                    logger.debug(f"      Page {idx + 1} ajoutée")
+            
+            content_writer.write(content_buffer_rebuilt)
+            content_buffer_rebuilt.seek(0)
+            
+            # Vérifier le nouveau content_buffer
+            content_reader_new = PdfReader(content_buffer_rebuilt)
+            logger.info(f"✅ content_buffer reconstruit avec succès: {len(content_reader_new.pages)} pages au total")
+            logger.info(f"   - Pages liste tableaux: {len(liste_tableaux_reader_new.pages)}")
+            logger.info(f"   - Pages liste graphiques: {len(liste_graphiques_reader_new.pages)}")
+            logger.info(f"   - Pages autres sections: {len(autres_sections_pages)}")
+            logger.info(f"   - Total: {len(liste_tableaux_reader_new.pages) + len(liste_graphiques_reader_new.pages) + len(autres_sections_pages)} pages")
+            
+            content_buffer = content_buffer_rebuilt  # Remplacer l'ancien buffer
+        
+        # Les positions ont été enregistrées directement par les PageMarker pendant la génération
+        # Utiliser directement ces positions (qui sont dans le contexte du PDF temporaire, sans sommaire)
+        logger.info("🔍 Utilisation des positions enregistrées par les PageMarker...")
+        logger.info(f"✅ Positions enregistrées par les marqueurs: {cls._page_positions}")
+        
+        # Chercher dans le PDF temporaire pour les clés manquantes (fallback)
+        pages_found_by_search = cls._find_all_toc_pages(temp_pdf_reader, nb_pages_sommaire=0)
+        logger.info(f"✅ Pages trouvées par recherche (fallback): {pages_found_by_search}")
+        
+        # Combiner : utiliser les positions enregistrées en priorité, puis la recherche comme fallback
+        pages_found = cls._page_positions.copy()
+        for key, page_num in pages_found_by_search.items():
+            if key not in pages_found:
+                logger.info(f"⚠️ Clé '{key}' non trouvée dans les marqueurs, utilisation de la recherche: page {page_num}")
+                pages_found[key] = page_num
+            else:
+                logger.info(f"✅ Clé '{key}' trouvée dans les marqueurs: page {pages_found[key]} (recherche: {page_num})")
+        
+        logger.info(f"✅ Pages finales combinées: {pages_found}")
+        
+        # Générer un sommaire temporaire pour connaître son nombre de pages
+        # Utiliser les positions enregistrées (sans ajustement) pour le sommaire temporaire
+        logger.info("📄 Génération temporaire du sommaire pour calculer son nombre de pages...")
+        # Mettre à jour cls._page_positions avec les pages trouvées (sans ajustement) pour le sommaire temporaire
+        cls._page_positions = pages_found.copy()
+        sommaire_temp_buffer = BytesIO()
+        sommaire_temp_pdf = canvas.Canvas(sommaire_temp_buffer, pagesize=landscape(A4))
+        width, height = landscape(A4)
+        cls._draw_table_of_contents(sommaire_temp_pdf, width, height, pdf_reader_complet=None, nb_pages_sommaire=0)
+        sommaire_temp_pdf.save()
+        sommaire_temp_buffer.seek(0)
+        
+        # Compter le nombre de pages du sommaire
+        sommaire_temp_reader = PdfReader(sommaire_temp_buffer)
+        nb_pages_sommaire = len(sommaire_temp_reader.pages)
+        logger.info(f"📄 Sommaire temporaire: {nb_pages_sommaire} pages générées")
+        
+        # DÉSACTIVÉ: Ajustement des pages trouvées en ajoutant le nombre de pages du sommaire
+        # L'utilisateur veut tester sans cet ajustement
+        # # Car le sommaire sera inséré après la couverture dans le PDF final
+        # # Exemple: Si "LISTE DES TABLEAUX" est trouvé à la page 2 dans le PDF temporaire (page 1 = couverture)
+        # #          Dans le PDF final: page 1 = couverture, page 2-3 = sommaire (2 pages), page 4 = LISTE DES TABLEAUX
+        # #          Donc: 2 + 2 = 4 ✓
+        # logger.info(f"📄 Ajustement des pages trouvées: ajout de {nb_pages_sommaire} pages (sommaire)")
+        # logger.info(f"   Explication: Les pages trouvées sont dans un PDF qui commence à la page 1 (couverture)")
+        # logger.info(f"   Dans le PDF final, le sommaire sera inséré après la couverture, donc toutes les pages suivantes sont décalées")
+        # adjusted_pages_found = {}
+        # for key, page_num in pages_found.items():
+        #     adjusted_page = page_num + nb_pages_sommaire
+        #     adjusted_pages_found[key] = adjusted_page
+        #     logger.info(f"   {key}: page {page_num} (trouvée) + {nb_pages_sommaire} (sommaire) = {adjusted_page} (dans PDF final)")
+        
+        # Utiliser les pages SANS ajustement (telles qu'enregistrées par les marqueurs)
+        logger.info(f"📄 Utilisation des pages SANS ajustement (nb_pages_sommaire={nb_pages_sommaire} pages ignorées)")
+        logger.info(f"✅ Pages non ajustées (utilisées telles quelles): {pages_found}")
+        
+        # Générer le sommaire final avec les pages non ajustées
+        logger.info("📄 Génération finale du sommaire avec les pages NON ajustées...")
+        sommaire_buffer = BytesIO()
+        sommaire_pdf = canvas.Canvas(sommaire_buffer, pagesize=landscape(A4))
+        width, height = landscape(A4)
+        
+        # Utiliser les pages non ajustées pour le sommaire final
+        # IMPORTANT: Les pages dans pages_found sont telles qu'enregistrées (SANS ajustement)
+        cls._page_positions = pages_found
+        
+        cls._draw_table_of_contents(sommaire_pdf, width, height, pdf_reader_complet=None, nb_pages_sommaire=0)
+        sommaire_pdf.save()
+        sommaire_buffer.seek(0)
+        
+        # Fusionner tous les PDFs dans le bon ordre
+        logger.info("📎 Fusion de tous les PDFs dans le bon ordre...")
+        
+        writer = PdfWriter()
+        logger.info(f"🔍 DIAGNOSTIC - PdfWriter créé, nombre de pages actuel: {len(writer.pages)}")
+        
+        # 1. Ajouter la couverture (page 1)
+        cover_reader = PdfReader(cover_buffer)
+        logger.info(f"🔍 DIAGNOSTIC - Nombre de pages de la couverture: {len(cover_reader.pages)}")
+        for i, page in enumerate(cover_reader.pages):
+            page_text = page.extract_text().strip()
+            logger.info(f"🔍 DIAGNOSTIC - Page {i+1} de la couverture: {len(page_text)} caractères - Début: {page_text[:50] if page_text else 'VIDE'}")
+        writer.add_page(cover_reader.pages[0])
+        logger.info(f"🔍 DIAGNOSTIC - Après ajout couverture, nombre de pages dans writer: {len(writer.pages)}")
+        
+        # 2. Ajouter le sommaire (page 2+)
+        sommaire_reader = PdfReader(sommaire_buffer)
+        sommaire_pages = list(sommaire_reader.pages)
+        logger.info(f"📄 Sommaire: {len(sommaire_pages)} pages générées")
+        
+        # Vérifier et supprimer les pages vides du sommaire
+        sommaire_pages_clean = []
+        for i, page in enumerate(sommaire_pages):
+            # Vérifier si la page est vide (approximation : vérifier la taille du contenu)
+            page_text = page.extract_text().strip()
+            if page_text:  # Seulement garder les pages avec du contenu (même la première)
+                sommaire_pages_clean.append(page)
+                logger.info(f"🔍 DIAGNOSTIC - Page sommaire {i+1} ajoutée ({len(page_text)} caractères)")
+            else:
+                logger.warning(f"⚠️ Page vide détectée dans le sommaire à l'index {i}, suppression")
+        
+        for page in sommaire_pages_clean:
+            writer.add_page(page)
+        
+        # 3. Ajouter toutes les autres sections (liste tableaux, graphiques, sigles, intro, partie I)
+        content_reader = PdfReader(content_buffer)
+        content_pages = list(content_reader.pages)
+        logger.info(f"📄 Contenu (liste tableaux, etc.): {len(content_pages)} pages générées")
+        
+        # LOGS DE DIAGNOSTIC DÉTAILLÉS pour chaque page du contenu
+        logger.info(f"🔍 DIAGNOSTIC - Analyse détaillée des pages du contenu:")
+        for i, page in enumerate(content_pages):
+            page_text = page.extract_text().strip()
+            page_size = len(page_text)
+            logger.info(f"🔍 DIAGNOSTIC - Page contenu {i+1}/{len(content_pages)}: {page_size} caractères")
+            if page_size > 0:
+                logger.info(f"🔍 DIAGNOSTIC -   Premiers caractères: {page_text[:100]}")
+            else:
+                logger.warning(f"🔍 DIAGNOSTIC -   ⚠️ PAGE VIDE détectée à l'index {i}!")
+        
+        # Vérifier et supprimer les pages vides du contenu
+        content_pages_clean = []
+        for i, page in enumerate(content_pages):
+            page_text = page.extract_text().strip()
+            # NE PAS garder la première page si elle est vide - c'est une page vide à supprimer
+            if page_text:  # Seulement garder les pages avec du contenu
+                content_pages_clean.append(page)
+                logger.info(f"🔍 DIAGNOSTIC - Page {i+1} ajoutée au PDF final ({len(page_text)} caractères)")
+            else:
+                logger.warning(f"⚠️ Page vide détectée dans le contenu à l'index {i}, suppression")
+        
+        logger.info(f"🔍 DIAGNOSTIC - Total pages contenu à ajouter: {len(content_pages_clean)} (sur {len(content_pages)} générées)")
+        logger.info(f"🔍 DIAGNOSTIC - Nombre de pages dans writer avant ajout contenu: {len(writer.pages)}")
+        for idx, page in enumerate(content_pages_clean):
+            writer.add_page(page)
+            logger.info(f"🔍 DIAGNOSTIC - Page contenu {idx+1}/{len(content_pages_clean)} ajoutée. Total pages dans writer: {len(writer.pages)}")
+        logger.info(f"🔍 DIAGNOSTIC - Après ajout contenu, nombre total de pages dans writer: {len(writer.pages)}")
+        
+        # 4. Ajouter les parties programmes
+        for prog_buffer in programme_buffers:
             prog_reader = PdfReader(prog_buffer)
             for page in prog_reader.pages:
                 writer.add_page(page)
         
-        # Générer la CONCLUSION GÉNÉRALE après toutes les parties programmes
-        next_page += 1  # Commencer sur une nouvelle page
-        logger.info(f"📄 Page {next_page}: CONCLUSION GÉNÉRALE")
-        conclusion_buffer, next_page = cls._draw_conclusion_generale(next_page, session=session)
-        
-        # Ajouter les pages de la conclusion générale au PDF final
+        # 5. Ajouter la conclusion générale
         conclusion_reader = PdfReader(conclusion_buffer)
         for page in conclusion_reader.pages:
             writer.add_page(page)
@@ -11278,5 +13273,5 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         writer.write(final_buffer)
         final_buffer.seek(0)
         
-        logger.info("✅ PDF généré avec succès (SimpleDocTemplate avec découpage automatique)")
+        logger.info(f"✅ PDF généré avec succès. Positions de pages calculées: {cls._page_positions}")
         return final_buffer

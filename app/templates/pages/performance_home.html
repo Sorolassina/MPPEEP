@@ -57,7 +57,6 @@
             </div>
             <div class="performance-hero-actions">
                 <a href="{{ url_for('performance_objectifs') }}" class="btn btn-premium btn-primary">Gérer les objectifs</a>
-                <button type="button" class="btn btn-premium btn-secondary" onclick="openEngagementModal()">Lettre d'engagement</button>
             </div>
         </div>
         <div class="performance-hero-metrics">
@@ -229,10 +228,6 @@
                 <span class="action-icon">📈</span>
                 <span class="action-text">Lettre d'engagement de performance</span>
             </button>
-            <button type="button" class="action-button" onclick="openRapportAnnuelModal()">
-                <span class="action-icon">📊</span>
-                <span class="action-text">Rapport annuel de performance</span>
-            </button>
         </div>
     </section>
 </div>
@@ -243,7 +238,7 @@
             <h2 class="modal-title">Préparer la lettre d'engagement</h2>
             <button type="button" class="modal-close" onclick="closeEngagementModal()">&times;</button>
         </div>
-        <form id="engagementForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_lettres_engagement_pdf') }}">
+        <form id="engagementForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_lettres_engagement_pdf') }}" data-endpoint-word="{{ url_for('performance_lettres_engagement_docx') }}">
             <p class="performance-engagement-intro">
                 Renseignez les informations ci-dessous. Les champs laissés vides utiliseront les valeurs de référence déjà enregistrées.
             </p>
@@ -393,6 +388,7 @@
         <div class="modal-footer performance-engagement-footer">
             <button type="button" class="btn btn-secondary" onclick="closeEngagementModal()">Annuler</button>
             <button type="submit" form="engagementForm" class="btn btn-primary">Générer le PDF</button>
+            <button type="button" class="btn btn-success" onclick="generateEngagementWord()" title="Convertir le PDF en document Word pour modifications">📝 Télécharger en Word</button>
         </div>
     </div>
 </div>
@@ -404,7 +400,7 @@
             <h2 class="modal-title">Préparer la lettre d'engagement de performance</h2>
             <button type="button" class="modal-close" onclick="closePerformanceEngagementModal()">&times;</button>
         </div>
-        <form id="performanceEngagementForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_lettres_engagement_performance_pdf') }}">
+        <form id="performanceEngagementForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_lettres_engagement_performance_pdf') }}" data-endpoint-word="{{ url_for('performance_lettres_engagement_performance_docx') }}">
             <p class="performance-engagement-intro">
                 Renseignez les informations ci-dessous. Les champs laissés vides utiliseront les valeurs de référence déjà enregistrées.
             </p>
@@ -541,6 +537,7 @@
         <div class="modal-footer performance-engagement-footer">
             <button type="button" class="btn btn-secondary" onclick="closePerformanceEngagementModal()">Annuler</button>
             <button type="submit" form="performanceEngagementForm" class="btn btn-primary">Générer le PDF</button>
+            <button type="button" class="btn btn-success" onclick="generatePerformanceEngagementWord()" title="Convertir le PDF en document Word pour modifications">📝 Télécharger en Word</button>
         </div>
     </div>
 </div>
@@ -1019,6 +1016,180 @@ function handlePerformanceEngagementSubmit(event) {
 
     closePerformanceEngagementModal();
     window.location.assign(targetUrl);
+}
+
+// Fonction pour générer la lettre d'engagement opérationnel en Word
+async function generateEngagementWord() {
+    const form = document.getElementById('engagementForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+
+    const endpoint = form.dataset.endpointWord;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint Word introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    for (const [key, rawValue] of formData.entries()) {
+        let value = (rawValue || "").toString().trim();
+        if (!value) {
+            continue;
+        }
+
+        if (key === "date") {
+            value = formatDateForApi(value);
+        }
+
+        if (key === "annee") {
+            value = value.replace(/[^\d]/g, "");
+        }
+
+        if (!value) {
+            continue;
+        }
+
+        params.append(key, value);
+    }
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    // Générer la lettre en Word
+    try {
+        if (typeof showGlobalLoading === "function") {
+            showGlobalLoading("Conversion en Word...", "Génération du PDF puis conversion en document Word. Cela peut prendre quelques instants...");
+        }
+
+        // Faire une requête fetch pour télécharger le fichier Word
+        const response = await fetch(targetUrl);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Erreur lors de la conversion en Word" }));
+            throw new Error(errorData.detail || `Erreur HTTP: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Extraire l'année pour le nom de fichier
+        const annee = formData.get("annee") || new Date().getFullYear();
+        a.download = `lettre_engagement_${annee}.docx`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        if (typeof showSuccess === "function") {
+            showSuccess("Document Word téléchargé avec succès !");
+        }
+    } catch (error) {
+        console.error("Erreur lors de la conversion en Word:", error);
+        if (typeof showError === "function") {
+            showError(`Erreur lors de la conversion en Word: ${error.message || error}`);
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+    }
+}
+
+// Fonction pour générer la lettre d'engagement de performance en Word
+async function generatePerformanceEngagementWord() {
+    const form = document.getElementById('performanceEngagementForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+
+    const endpoint = form.dataset.endpointWord;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint Word introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    for (const [key, rawValue] of formData.entries()) {
+        let value = (rawValue || "").toString().trim();
+        if (!value) {
+            continue;
+        }
+
+        if (key === "date") {
+            value = formatDateForApi(value);
+        }
+
+        if (key === "annee") {
+            value = value.replace(/[^\d]/g, "");
+        }
+
+        if (!value) {
+            continue;
+        }
+
+        params.append(key, value);
+    }
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    // Générer la lettre en Word
+    try {
+        if (typeof showGlobalLoading === "function") {
+            showGlobalLoading("Conversion en Word...", "Génération du PDF puis conversion en document Word. Cela peut prendre quelques instants...");
+        }
+
+        // Faire une requête fetch pour télécharger le fichier Word
+        const response = await fetch(targetUrl);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Erreur lors de la conversion en Word" }));
+            throw new Error(errorData.detail || `Erreur HTTP: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Extraire l'année pour le nom de fichier
+        const annee = formData.get("annee") || new Date().getFullYear();
+        a.download = `lettre_engagement_performance_${annee}.docx`;
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        if (typeof showSuccess === "function") {
+            showSuccess("Document Word téléchargé avec succès !");
+        }
+    } catch (error) {
+        console.error("Erreur lors de la conversion en Word:", error);
+        if (typeof showError === "function") {
+            showError(`Erreur lors de la conversion en Word: ${error.message || error}`);
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+    }
 }
 
 // Fonctions pour le modal du rapport annuel

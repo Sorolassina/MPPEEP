@@ -63,6 +63,8 @@ pdfplumber>=0.11.7
 pdfminer-six>=20250506
 pypdfium2>=4.30.0
 pillow>=11.3.0
+# Adobe PDF Services SDK (pour conversion PDF → Word)
+pdfservices-sdk>=4.2.0
 
 # ============================================
 # VISUALISATION DE DONNÉES

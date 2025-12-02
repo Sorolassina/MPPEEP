@@ -580,7 +580,7 @@ Accueil
             {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdb' %}
             <a href="{{ url_for('budget_home') }}" class="action-button">
                 <span class="action-icon">💰</span>
-                <span class="action-text">Budget</span>
+                <span class="action-text">Suivi-exécution budgétaire</span>
             </a>
             {% endif %}
 
@@ -588,7 +588,7 @@ Accueil
             {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdb' %}
             <a href="{{ url_for('performance_home') }}" class="action-button">
                 <span class="action-icon">📊</span>
-                <span class="action-text">Performance</span>
+                <span class="action-text">Suivi de la performance</span>
             </a>
             {% endif %}
 
@@ -596,7 +596,7 @@ Accueil
             {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdb' %}
             <a href="#" class="action-button" title="Module Plannification (bientôt disponible)">
                 <span class="action-icon">🗓️</span>
-                <span class="action-text">Plannification</span>
+                <span class="action-text">Gestion de la plannification</span>
             </a>
             {% endif %}
 
@@ -604,7 +604,7 @@ Accueil
              {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdrh' or current_user.type_user == 'cs' or current_user.type_user == 'agent' %}
              <a href="{{ url_for('rh_home') }}" class="action-button">
                  <span class="action-icon">👥</span>
-                 <span class="action-text">Ressources Humaines</span>
+                 <span class="action-text">Gestion des ressources humaines</span>
              </a>
              {% endif %}
 
@@ -612,7 +612,7 @@ Accueil
             {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdc' %}
             <a href="{{ url_for('stock_home') }}" class="action-button">
                 <span class="action-icon">📦</span>
-                <span class="action-text">Stocks</span>
+                <span class="action-text">Gestion des stocks</span>
             </a>
             {% endif %}
   
