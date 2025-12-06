@@ -1,0 +1,490 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Suivi des Activités SIGOBE - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.activites-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.filters-section {
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.08) 0%, rgba(232, 106, 10, 0.08) 100%);
+    border-radius: 20px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.filters-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.85);
+    font-size: 0.95rem;
+}
+
+.filter-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(15, 23, 42, 0.1);
+    border-radius: 12px;
+    background: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.filter-select[type="text"] {
+    cursor: text;
+}
+
+.filter-select:hover {
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.activites-table-container {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    overflow-x: visible;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.activites-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    table-layout: fixed;
+}
+
+.activites-table thead {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
+}
+
+.activites-table th {
+    padding: 0.6rem 0.5rem;
+    text-align: left;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.9);
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    white-space: nowrap;
+    font-size: 0.8rem;
+}
+
+.activites-table td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.activites-table tbody tr:hover {
+    background: rgba(102, 126, 234, 0.03);
+}
+
+.activites-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.activite-libelle {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.95);
+    margin-bottom: 0.2rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.activite-code {
+    font-size: 0.7rem;
+    color: rgba(15, 23, 42, 0.6);
+    line-height: 1.3;
+}
+
+.resultat-text {
+    color: rgba(15, 23, 42, 0.85);
+    line-height: 1.4;
+    font-size: 0.75rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.preuve-link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    transition: color 0.2s;
+    font-size: 0.75rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.preuve-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.actions-cell {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.btn-action-small {
+    padding: 0.3rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    white-space: nowrap;
+}
+
+.btn-edit {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-edit:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(15, 23, 42, 0.6);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: rgba(15, 23, 42, 0.85);
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .activites-page {
+        padding: 1rem;
+    }
+    
+    .activites-table-container {
+        padding: 1rem;
+    }
+    
+    .activites-table {
+        font-size: 0.85rem;
+    }
+    
+    .activites-table th,
+    .activites-table td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='📋 Suivi des Activités SIGOBE',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Activités'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('budget_home'), 'primary': False},
+        {'label': '➕ Nouveau Suivi', 'url': url_for('budget_activite_nouveau'), 'primary': True, 'disabled': current_user.is_guest}
+    ]
+) }}
+
+<div class="activites-page">
+    {% if current_user.is_guest %}
+    <div class="notice-banner" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%); border-left: 4px solid #f59e0b; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+        <span style="font-size: 1.5rem; margin-right: 0.75rem;">🎯</span>
+        <div style="display: inline-block;">
+            <strong>Mode Démonstration</strong>
+            <p style="margin: 0.25rem 0 0 0; color: rgba(15, 23, 42, 0.7);">Vous consultez des données fictives pour explorer les fonctionnalités.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filtres -->
+    <div class="filters-section">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">🧭</span>
+            <div>
+                <h3 style="margin: 0; font-size: 1.2rem; color: rgba(15, 23, 42, 0.95);">Filtres de recherche</h3>
+                <p style="margin: 0.25rem 0 0 0; color: rgba(15, 23, 42, 0.7); font-size: 0.9rem;">Filtrez les suivis d'activités par période</p>
+            </div>
+        </div>
+        
+        <form method="get" action="{{ url_for('budget_activites') }}" id="filterForm">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label class="filter-label" for="annee">📅 Année</label>
+                    <select id="annee" name="annee" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        {% for an in annees_disponibles %}
+                        <option value="{{ an }}" {% if an == annee %}selected{% endif %}>{{ an }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="periode_type">📊 Type de Période</label>
+                    <select id="periode_type" name="periode_type" class="filter-select" onchange="updatePeriodeValeur(); document.getElementById('filterForm').submit()">
+                        <option value="">Tous</option>
+                        <option value="mois" {% if periode_type == 'mois' %}selected{% endif %}>Mensuel</option>
+                        <option value="trimestre" {% if periode_type == 'trimestre' %}selected{% endif %}>Trimestriel</option>
+                        <option value="semestre" {% if periode_type == 'semestre' %}selected{% endif %}>Semestriel</option>
+                        <option value="annuel" {% if periode_type == 'annuel' %}selected{% endif %}>Annuel</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group" id="periode_valeur_group" style="display: {% if periode_type == 'mois' or periode_type == 'trimestre' or periode_type == 'semestre' %}block{% else %}none{% endif %};">
+                    <label class="filter-label" for="periode_valeur">📆 Période</label>
+                    <select id="periode_valeur" name="periode_valeur" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        <option value="">Toutes</option>
+                        {% if periode_type == 'mois' %}
+                            {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if periode_valeur == i %}selected{% endif %}>Mois {{ i }}</option>
+                            {% endfor %}
+                        {% elif periode_type == 'trimestre' %}
+                            {% for i in range(1, 5) %}
+                            <option value="{{ i }}" {% if periode_valeur == i %}selected{% endif %}>Trimestre {{ i }}</option>
+                            {% endfor %}
+                        {% elif periode_type == 'semestre' %}
+                            {% for i in range(1, 3) %}
+                            <option value="{{ i }}" {% if periode_valeur == i %}selected{% endif %}>Semestre {{ i }}</option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="code_activite">🔖 Code Activité</label>
+                    <input type="text" id="code_activite" name="code_activite" class="filter-select" 
+                           value="{{ code_activite or '' }}" 
+                           placeholder="Rechercher par code..."
+                           onchange="document.getElementById('filterForm').submit()">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="libelle_activite">📝 Libellé Activité</label>
+                    <input type="text" id="libelle_activite" name="libelle_activite" class="filter-select" 
+                           value="{{ libelle_activite or '' }}" 
+                           placeholder="Rechercher par libellé..."
+                           onchange="document.getElementById('filterForm').submit()">
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tableau des suivis -->
+    <div class="activites-table-container">
+        {% if suivis and suivis|length > 0 %}
+        <table class="activites-table">
+            <colgroup>
+                <col style="width: 15%;">
+                <col style="width: 10%;">
+                <col style="width: 18%;">
+                <col style="width: 18%;">
+                <col style="width: 12%;">
+                <col style="width: 15%;">
+                <col style="width: 7%;">
+                <col style="width: 5%;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Action/Activités</th>
+                    <th>Structures Responsables</th>
+                    <th>Résultat Attendu</th>
+                    <th>Résultat Opérationnel</th>
+                    <th>Preuve de Réalisation</th>
+                    <th>Observations</th>
+                    <th>Période</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for suivi in suivis %}
+                <tr>
+                    <td>
+                        <div class="activite-libelle">{{ suivi.libelle_activite }}</div>
+                        {% if suivi.code_activite %}
+                        <div class="activite-code">Code: {{ suivi.code_activite }}</div>
+                        {% endif %}
+                        {% if suivi.programme %}
+                        <div class="activite-code">Programme: {{ suivi.programme }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.75rem;">{{ suivi.structures_responsables }}</td>
+                    <td>
+                        <div class="resultat-text">{{ suivi.resultat_attendu }}</div>
+                    </td>
+                    <td>
+                        {% if suivi.resultat_operationnel %}
+                        <div class="resultat-text">{{ suivi.resultat_operationnel }}</div>
+                        {% else %}
+                        <span style="color: rgba(15, 23, 42, 0.5);">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if suivi.preuve_realisation %}
+                        <a href="/{{ suivi.preuve_realisation }}" target="_blank" class="preuve-link">
+                            📄 {{ suivi.preuve_filename or 'Voir le document' }}
+                        </a>
+                        {% else %}
+                        <span style="color: rgba(15, 23, 42, 0.5); font-size: 0.75rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if suivi.observations %}
+                        <div class="resultat-text">{{ suivi.observations }}</div>
+                        {% else %}
+                        <span style="color: rgba(15, 23, 42, 0.5); font-size: 0.75rem;">RAS</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: rgba(15, 23, 42, 0.85); font-size: 0.75rem;">
+                            {{ suivi.periode_type|title }}
+                            {% if suivi.periode_valeur %}
+                            {{ suivi.periode_valeur }}
+                            {% endif %}
+                        </div>
+                        {% if suivi.date_periode %}
+                        <div style="font-size: 0.7rem; color: rgba(15, 23, 42, 0.6);">
+                            {{ suivi.date_periode.strftime('%d/%m/%Y') }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions-cell">
+                            <a href="{{ url_for('budget_activite_edit', suivi_id=suivi.id) }}" class="btn-action-small btn-edit" title="Modifier">
+                                ✏️
+                            </a>
+                            <button onclick="deleteSuivi({{ suivi.id }}, '{{ suivi.libelle_activite|replace("'", "\\'") }}')" class="btn-action-small btn-delete" title="Supprimer">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <h3>Aucun suivi d'activité</h3>
+            <p>Aucun suivi d'activité trouvé pour les critères sélectionnés.</p>
+            <a href="{{ url_for('budget_activite_nouveau') }}" class="btn btn-premium btn-primary" style="margin-top: 1.5rem;">
+                ➕ Créer le premier suivi
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function updatePeriodeValeur() {
+    const periodeType = document.getElementById('periode_type').value;
+    const periodeValeurGroup = document.getElementById('periode_valeur_group');
+    const periodeValeur = document.getElementById('periode_valeur');
+    
+    if (periodeType === 'mois' || periodeType === 'trimestre' || periodeType === 'semestre') {
+        periodeValeurGroup.style.display = 'block';
+        periodeValeur.innerHTML = '<option value="">Toutes</option>';
+        
+        if (periodeType === 'mois') {
+            for (let i = 1; i <= 12; i++) {
+                periodeValeur.innerHTML += `<option value="${i}">Mois ${i}</option>`;
+            }
+        } else if (periodeType === 'trimestre') {
+            for (let i = 1; i <= 4; i++) {
+                periodeValeur.innerHTML += `<option value="${i}">Trimestre ${i}</option>`;
+            }
+        } else if (periodeType === 'semestre') {
+            for (let i = 1; i <= 2; i++) {
+                periodeValeur.innerHTML += `<option value="${i}">Semestre ${i}</option>`;
+            }
+        }
+    } else {
+        periodeValeurGroup.style.display = 'none';
+        periodeValeur.value = '';
+    }
+}
+
+function deleteSuivi(id, libelle) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le suivi d'activité "${libelle}" ?\n\nCette action est irréversible.`)) {
+        return;
+    }
+    
+    fetch(`/api/v1/budget/api/activites/suivi/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Erreur lors de la suppression');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    });
+}
+</script>
+{% endblock %}
+

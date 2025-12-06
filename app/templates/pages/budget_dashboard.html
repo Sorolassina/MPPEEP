@@ -12,8 +12,12 @@
     ],
     actions=[
         {'label': '❓ Aide', 'url': url_for('aide_budget'), 'primary': False, 'disabled': current_user.is_guest},
+        
+        {'label': '📋 Activités', 'url': url_for('budget_activites'), 'primary': False, 'disabled': current_user.is_guest},
+        {'label': '💰 Investissements', 'url': url_for('budget_investissements'), 'primary': False, 'disabled': current_user.is_guest},       
         {'label': '📋 Fiches Techniques', 'url': url_for('budget_fiches_hierarchique'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '📊 SIGOBE', 'url': url_for('budget_sigobe'), 'primary': False, 'disabled': current_user.is_guest},
+        {'label': '📋 Demandes', 'url': url_for('generic_requests_list', module='budget'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': True}
     ]
 ) }}
@@ -471,11 +475,11 @@
 <style>
 /* Styles spécifiques pour le Budget Dashboard */
 .budget-container {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 2rem 1.5rem;
+    box-sizing: border-box;
     overflow-y: auto;
 }
 

@@ -392,3 +392,176 @@ def preview_file(
     preview = ExcelProcessorService.get_file_preview(db_file.file_path, nrows)
 
     return {"file_id": file_id, "filename": db_file.original_filename, "preview": preview}
+
+
+@router.post("/test-upload")
+async def test_upload_file(
+    request: Request,
+    file: UploadFile = FastAPIFile(...),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Endpoint de test pour vérifier que l'upload de fichier fonctionne dans /files/
+    """
+    logger.info(f"🔍 [FILES] ===== TEST UPLOAD FILE REÇU =====")
+    logger.info(f"🔍 [FILES] URL: {request.url}")
+    logger.info(f"🔍 [FILES] Method: {request.method}")
+    logger.info(f"🔍 [FILES] Headers: {dict(request.headers)}")
+    logger.info(f"🔍 [FILES] Filename: {file.filename if file.filename else 'N/A'}")
+    
+    try:
+        content = await file.read()
+        file_size = len(content)
+        
+        logger.info(f"✅ [FILES] Fichier reçu: {file.filename}, taille: {file_size} bytes")
+        
+        return {
+            "success": True,
+            "message": "Fichier reçu avec succès dans /files/",
+            "filename": file.filename,
+            "size": file_size,
+            "user": current_user.email
+        }
+    except Exception as e:
+        logger.error(f"❌ [FILES] Erreur dans test-upload: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors du test: {str(e)}"
+        )
+
+
+@router.post("/test-chatbot-upload")
+async def test_chatbot_upload_in_files(
+    request: Request,
+    file: UploadFile = FastAPIFile(...),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Endpoint de test qui reproduit EXACTEMENT la logique de /chatbot/upload-document
+    mais dans /files/ pour vérifier si le problème vient du chemin /chatbot/
+    """
+    from datetime import datetime
+    from pathlib import Path
+    from uuid import uuid4
+    from app.core.path_config import path_config
+    from app.services.document_extractor import DocumentExtractor
+    from app.services.activity_service import ActivityService
+    
+    logger.info(f"🔍 [FILES] ===== TEST CHATBOT UPLOAD (dans /files/) =====")
+    logger.info(f"🔍 [FILES] URL: {request.url}")
+    logger.info(f"🔍 [FILES] Method: {request.method}")
+    logger.info(f"🔍 [FILES] Headers: {dict(request.headers)}")
+    
+    try:
+        logger.info(f"📤 [FILES] Upload de document reçu: {file.filename if file.filename else 'N/A'} par {current_user.email}")
+        
+        # Vérifier le type de fichier
+        if not file.filename:
+            logger.warning("⚠️ Nom de fichier manquant")
+            raise HTTPException(status_code=400, detail="Nom de fichier manquant")
+        
+        filename_lower = file.filename.lower()
+        allowed_extensions = ['.pdf', '.doc', '.docx', '.txt', '.md']
+        
+        if not any(filename_lower.endswith(ext) for ext in allowed_extensions):
+            logger.warning(f"⚠️ Type de fichier non supporté: {file.filename}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Type de fichier non supporté. Types acceptés: {', '.join(allowed_extensions)}"
+            )
+        
+        # Vérifier la taille (max 10 MB)
+        MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+        content = await file.read()
+        file_size = len(content)
+        logger.info(f"📊 [FILES] Taille du fichier: {file_size / 1024:.2f} KB")
+        
+        if file_size > MAX_SIZE:
+            logger.warning(f"⚠️ Fichier trop volumineux: {file_size / (1024*1024):.2f} MB")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Fichier trop volumineux (max 10 MB, reçu {file_size / (1024*1024):.2f} MB)"
+            )
+        
+        if not content:
+            raise HTTPException(status_code=400, detail="Le fichier est vide.")
+        
+        # Générer un nom de fichier unique
+        extension = Path(file.filename).suffix.lower()
+        if not extension:
+            extension = ".txt"
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_filename = f"{timestamp}_{uuid4().hex[:8]}{extension}"
+        
+        # Créer le dossier pour les documents (dans files/test au lieu de chatbot/documents)
+        docs_dir = path_config.UPLOADS_DIR / "files" / "test"
+        path_config.ensure_directory_exists(docs_dir)
+        
+        # Sauvegarder le fichier
+        destination = docs_dir / unique_filename
+        destination.write_bytes(content)
+        
+        # Générer les chemins relatifs et URL
+        relative_path = f"files/test/{unique_filename}"
+        file_url = path_config.get_file_url("uploads", relative_path)
+        
+        # Extraire le texte directement depuis le contenu
+        logger.info(f"🔍 [FILES] Extraction du texte pour {file.filename}...")
+        try:
+            text = DocumentExtractor.extract_text_from_content(content, file.filename)
+            logger.info(f"✅ [FILES] Texte extrait: {len(text) if text else 0} caractères")
+        except Exception as e:
+            logger.error(f"❌ [FILES] Erreur lors de l'extraction du texte: {e}", exc_info=True)
+            if destination.exists():
+                destination.unlink()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Erreur lors de l'extraction du texte: {str(e)}"
+            )
+        
+        if not text or len(text.strip()) == 0:
+            logger.warning(f"⚠️ [FILES] Document vide: {file.filename}")
+            if destination.exists():
+                destination.unlink()
+            raise HTTPException(
+                status_code=400,
+                detail="Le document ne contient pas de texte extractible."
+            )
+        
+        # Logger l'activité
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="upload",
+            target_type="test_document",
+            description=f"Test upload document (copie de chatbot) ({file.filename})",
+            icon="📄",
+        )
+        
+        logger.info(f"✅ [FILES] Document traité et sauvegardé: {file.filename} ({len(text)} caractères)")
+        
+        return {
+            "success": True,
+            "filename": file.filename,
+            "saved_filename": unique_filename,
+            "path": relative_path,
+            "url": file_url,
+            "file_size": file_size,
+            "text": text,
+            "text_length": len(text),
+            "message": "✅ Test réussi ! L'endpoint fonctionne dans /files/"
+        }
+        
+    except HTTPException as e:
+        logger.error(f"❌ [FILES] HTTPException lors de l'upload: {e.status_code} - {e.detail}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ [FILES] Erreur inattendue lors de l'upload du document: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors du traitement du document: {str(e)}"
+        )

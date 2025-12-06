@@ -2324,21 +2324,21 @@ class RAPDataLoader(RAPBaseGenerator):
             cibles_atteintes = 0
             
             try:
-                # Objectifs globaux : type STRATEGIQUE
+                # Objectifs globaux : type GLOBAL (liés à un résultat stratégique)
                 objectifs_globaux = session.exec(
                     select(ObjectifPerformance).where(
                         and_(
-                            ObjectifPerformance.type_objectif == TypeObjectif.STRATEGIQUE,
+                            ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL,
                             ObjectifPerformance.resultat_strategique_id.isnot(None)
                         )
                     )
                 ).all()
                 
-                # Objectifs spécifiques : type OPERATIONNEL
+                # Objectifs spécifiques : type SPECIFIQUE (liés à un objectif global)
                 objectifs_specifiques = session.exec(
                     select(ObjectifPerformance).where(
                         and_(
-                            ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL,
+                            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
                             ObjectifPerformance.objectif_global_id.isnot(None)
                         )
                     )
@@ -2408,7 +2408,7 @@ class RAPDataLoader(RAPBaseGenerator):
                 objectifs_prog = session.exec(
                     select(ObjectifPerformance).where(
                         and_(
-                            ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL,
+                            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
                             ObjectifPerformance.objectif_global_id.isnot(None)
                         )
                     )
@@ -2914,8 +2914,8 @@ class RAPDataLoader(RAPBaseGenerator):
         HIÉRARCHIE COMPLÈTE :
         - OrientationStrategique
           └── ResultatStrategique
-              └── ObjectifPerformance (type=STRATEGIQUE, objectif global)
-                  └── ObjectifPerformance (type=OPERATIONNEL, objectif spécifique)
+              └── ObjectifPerformance (type=GLOBAL, objectif global, lié à un résultat stratégique)
+                  └── ObjectifPerformance (type=SPECIFIQUE, objectif spécifique, lié à un objectif global)
                       └── IndicateurPerformance
         
         Cette méthode charge la hiérarchie jusqu'aux objectifs globaux
@@ -2934,8 +2934,8 @@ class RAPDataLoader(RAPBaseGenerator):
         
         Note:
             La table ObjectifPerformance gère DEUX types d'objectifs :
-            - Objectifs GLOBAUX (type_objectif=STRATEGIQUE)
-            - Objectifs SPÉCIFIQUES (type_objectif=OPERATIONNEL)
+            - Objectifs GLOBAUX (type_objectif=GLOBAL, liés à un résultat stratégique)
+            - Objectifs SPÉCIFIQUES (type_objectif=SPECIFIQUE, liés à un objectif global)
         """
         if not session:
             return None
@@ -2985,13 +2985,13 @@ class RAPDataLoader(RAPBaseGenerator):
                     })
                 else:
                     for resultat in resultats:
-                        # 3. Charger les objectifs globaux (STRATEGIQUE) pour ce résultat stratégique
+                        # 3. Charger les objectifs globaux (GLOBAL) pour ce résultat stratégique
                         objectifs_globaux = session.exec(
                             select(ObjectifPerformance)
                             .where(
                                 and_(
                                     ObjectifPerformance.resultat_strategique_id == resultat.id,
-                                    ObjectifPerformance.type_objectif == TypeObjectif.STRATEGIQUE
+                                    ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL
                                 )
                             )
                             .order_by(ObjectifPerformance.titre.asc())
@@ -3015,7 +3015,7 @@ class RAPDataLoader(RAPBaseGenerator):
                                         .where(
                                             and_(
                                                 ObjectifPerformance.objectif_global_id == obj_global.id,
-                                                ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL
+                                                ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE
                                             )
                                         )
                                         .order_by(ObjectifPerformance.titre.asc())

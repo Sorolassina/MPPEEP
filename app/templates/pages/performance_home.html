@@ -13,6 +13,7 @@
         {'name': 'Performance'}
     ],
     actions=[
+        {'label': '📋 Demandes', 'url': url_for('generic_requests_list', module='performance'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '❓ Aide', 'url': url_for('aide_performance'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
     ]
@@ -161,31 +162,27 @@
         </div>
         <div class="performance-chart-grid">
             <article class="performance-chart-card">
-                <h3 class="performance-chart-title">Évolution des objectifs (6 derniers mois)</h3>
-                <div class="performance-chart-placeholder">
-                    📈 Graphique d'évolution des objectifs
-                    <small>Les graphiques interactifs seront intégrés prochainement</small>
+                <h3 class="performance-chart-title">Évolution des objectifs par statut</h3>
+                <div class="performance-chart-container">
+                    <canvas id="chartObjectifsStatut"></canvas>
                 </div>
             </article>
             <article class="performance-chart-card">
                 <h3 class="performance-chart-title">Performance par programme</h3>
-                <div class="performance-chart-placeholder">
-                    📊 Graphique en barres par programme
-                    <small>Comparaison des performances par secteur</small>
+                <div class="performance-chart-container">
+                    <canvas id="chartPerformanceProgramme"></canvas>
                 </div>
             </article>
             <article class="performance-chart-card">
-                <h3 class="performance-chart-title">Indicateurs clés de performance</h3>
-                <div class="performance-chart-placeholder">
-                    🎯 Graphique radar des KPIs
-                    <small>Vue d'ensemble des indicateurs principaux</small>
+                <h3 class="performance-chart-title">Indicateurs clés de performance (Radar)</h3>
+                <div class="performance-chart-container">
+                    <canvas id="chartKPIRadar"></canvas>
                 </div>
             </article>
             <article class="performance-chart-card">
-                <h3 class="performance-chart-title">Tendances et prévisions</h3>
-                <div class="performance-chart-placeholder">
-                    📈 Graphique de tendances
-                    <small>Projections et analyses prédictives</small>
+                <h3 class="performance-chart-title">Répartition des indicateurs par catégorie</h3>
+                <div class="performance-chart-container">
+                    <canvas id="chartIndicateursCategorie"></canvas>
                 </div>
             </article>
         </div>
@@ -1294,6 +1291,377 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Initialiser les graphiques de performance
+    initializePerformanceCharts();
 });
+
+// Charger Chart.js et initialiser les graphiques
+function initializePerformanceCharts() {
+    // Charger Chart.js dynamiquement si pas déjà chargé
+    if (typeof Chart === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        script.onload = function() {
+            loadAllCharts();
+        };
+        document.head.appendChild(script);
+    } else {
+        loadAllCharts();
+    }
+}
+
+// Charger tous les graphiques
+async function loadAllCharts() {
+    {% if not current_user.is_guest %}
+    try {
+        await Promise.all([
+            loadChartObjectifsStatut(),
+            loadChartPerformanceProgramme(),
+            loadChartKPIRadar(),
+            loadChartIndicateursCategorie()
+        ]);
+    } catch (error) {
+        console.error('Erreur lors de l\'initialisation des graphiques:', error);
+    }
+    {% endif %}
+}
+
+// Graphique 1: Objectifs par statut (camembert)
+async function loadChartObjectifsStatut() {
+    try {
+        const ctx = document.getElementById('chartObjectifsStatut');
+        if (!ctx) return;
+        
+        const response = await fetch("{{ url_for('get_objectifs_api') }}");
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const objectifs = result.data;
+            
+            // Compter par statut
+            const statuts = {
+                'Planifié': 0,
+                'En cours': 0,
+                'Atteint': 0,
+                'En retard': 0,
+                'Annulé': 0
+            };
+            
+            objectifs.forEach(obj => {
+                const statut = obj.statut || 'Planifié';
+                const statutKey = statut.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                if (statuts.hasOwnProperty(statutKey)) {
+                    statuts[statutKey]++;
+                } else {
+                    statuts['Planifié']++;
+                }
+            });
+            
+            const labels = Object.keys(statuts).filter(k => statuts[k] > 0);
+            const data = labels.map(k => statuts[k]);
+            
+            if (data.length > 0) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: [
+                                'rgba(102, 126, 234, 0.8)',
+                                'rgba(40, 167, 69, 0.8)',
+                                'rgba(5, 154, 23, 0.8)',
+                                'rgba(220, 53, 69, 0.8)',
+                                'rgba(108, 117, 125, 0.8)'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            } else {
+                ctx.parentElement.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">Aucune donnée disponible</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Erreur chargement graphique objectifs par statut:', error);
+    }
+}
+
+// Graphique 2: Performance par programme (barres)
+async function loadChartPerformanceProgramme() {
+    try {
+        const ctx = document.getElementById('chartPerformanceProgramme');
+        if (!ctx) return;
+        
+        const response = await fetch("{{ url_for('list_programmes_api') }}");
+        const programmes = await response.json();
+        
+        if (programmes && Array.isArray(programmes) && programmes.length > 0) {
+            // Pour chaque programme, calculer le taux de réalisation moyen des OG associés
+            const programmeData = [];
+            
+            for (const prog of programmes) {
+                const responseObj = await fetch(`{{ url_for('get_objectifs_api') }}?programme_id=${prog.id}`);
+                const resultObj = await responseObj.json();
+                
+                if (resultObj.success && resultObj.data) {
+                    const ogs = resultObj.data.filter(obj => 
+                        (obj.type_objectif === 'global' || obj.type_objectif === 'GLOBAL') && obj.programme_id === prog.id
+                    );
+                    
+                    if (ogs.length > 0) {
+                        let tauxTotal = 0;
+                        let count = 0;
+                        
+                        ogs.forEach(og => {
+                            if (og.valeur_cible && og.valeur_cible > 0) {
+                                const valeurActuelle = og.valeur_actuelle || 0;
+                                const taux = (valeurActuelle / og.valeur_cible) * 100;
+                                tauxTotal += Math.min(taux, 100);
+                                count++;
+                            }
+                        });
+                        
+                        if (count > 0) {
+                            programmeData.push({
+                                label: prog.code || prog.libelle,
+                                taux: tauxTotal / count
+                            });
+                        }
+                    }
+                }
+            }
+            
+            if (programmeData.length > 0) {
+                programmeData.sort((a, b) => b.taux - a.taux);
+                
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: programmeData.map(d => d.label),
+                        datasets: [{
+                            label: 'Taux de réalisation (%)',
+                            data: programmeData.map(d => parseFloat(d.taux.toFixed(1))),
+                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                ctx.parentElement.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">Aucune donnée disponible</p>';
+            }
+        } else {
+            ctx.parentElement.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">Aucun programme disponible</p>';
+        }
+    } catch (error) {
+        console.error('Erreur chargement graphique performance par programme:', error);
+    }
+}
+
+// Graphique 3: Graphique radar des KPIs de performance
+async function loadChartKPIRadar() {
+    try {
+        const ctx = document.getElementById('chartKPIRadar');
+        if (!ctx) return;
+        
+        // Récupérer les KPIs depuis la page (déjà calculés)
+        const kpis = {
+            taux_realisation: {{ kpis.taux_realisation }},
+            objectifs_atteints: {{ kpis.objectifs_atteints }},
+            total_objectifs: {{ kpis.total_objectifs }},
+            objectifs_en_cours: {{ kpis.objectifs_en_cours }},
+            objectifs_en_retard: {{ kpis.objectifs_en_retard }},
+            indicateurs_alerte: {{ kpis.indicateurs_alerte }},
+            total_indicateurs: {{ kpis.total_indicateurs }},
+            score_global: {{ kpis.score_global }}
+        };
+        
+        // Calculer les valeurs normalisées (0-100) pour le radar
+        const calculerPourcentage = (valeur, max) => {
+            if (max === 0) return 0;
+            return Math.min((valeur / max) * 100, 100);
+        };
+        
+        // Normaliser les valeurs pour le radar
+        const tauxRealisation = kpis.taux_realisation || 0;
+        const tauxAtteints = kpis.total_objectifs > 0 ? (kpis.objectifs_atteints / kpis.total_objectifs) * 100 : 0;
+        const tauxEnCours = kpis.total_objectifs > 0 ? (kpis.objectifs_en_cours / kpis.total_objectifs) * 100 : 0;
+        const tauxSansRetard = kpis.total_objectifs > 0 ? ((kpis.total_objectifs - kpis.objectifs_en_retard) / kpis.total_objectifs) * 100 : 0;
+        const tauxIndicateursOK = kpis.total_indicateurs > 0 ? ((kpis.total_indicateurs - kpis.indicateurs_alerte) / kpis.total_indicateurs) * 100 : 0;
+        const scoreGlobal = kpis.score_global * 10; // Convertir de /10 à /100
+        
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Taux de réalisation',
+                    'Objectifs atteints',
+                    'Objectifs en cours',
+                    'Objectifs sans retard',
+                    'Indicateurs OK',
+                    'Score global'
+                ],
+                datasets: [{
+                    label: 'Performance globale',
+                    data: [
+                        tauxRealisation,
+                        tauxAtteints,
+                        tauxEnCours,
+                        tauxSansRetard,
+                        tauxIndicateursOK,
+                        scoreGlobal
+                    ],
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(102, 126, 234, 1)',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.r.toFixed(1) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        min: 0,
+                        ticks: {
+                            stepSize: 20,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        angleLines: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur chargement graphique radar KPIs:', error);
+    }
+}
+
+// Graphique 4: Indicateurs par catégorie
+async function loadChartIndicateursCategorie() {
+    try {
+        const ctx = document.getElementById('chartIndicateursCategorie');
+        if (!ctx) return;
+        
+        const response = await fetch("{{ url_for('get_indicateurs_api') }}");
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const indicateurs = result.data;
+            
+            // Compter par catégorie
+            const categories = {};
+            
+            indicateurs.forEach(ind => {
+                const cat = ind.categorie || 'Autre';
+                categories[cat] = (categories[cat] || 0) + 1;
+            });
+            
+            const labels = Object.keys(categories);
+            const data = Object.values(categories);
+            
+            if (data.length > 0) {
+                const colors = [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(118, 75, 162, 0.8)',
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(220, 53, 69, 0.8)',
+                    'rgba(23, 162, 184, 0.8)',
+                ];
+                
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors.slice(0, labels.length),
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            } else {
+                ctx.parentElement.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">Aucune donnée disponible</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Erreur chargement graphique indicateurs par catégorie:', error);
+    }
+}
 </script>
 {% endblock %}

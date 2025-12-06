@@ -1,0 +1,388 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}{% if evenement %}Modifier{% else %}Nouveau{% endif %} Événement - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.evenement-form-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.form-container {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+
+.form-section {
+    margin-bottom: 2.5rem;
+}
+
+.form-section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.95);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.85);
+    font-size: 0.95rem;
+}
+
+.form-label .required {
+    color: #ef4444;
+    margin-left: 0.25rem;
+}
+
+.form-control,
+.form-select,
+.form-textarea {
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(15, 23, 42, 0.1);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: rgba(15, 23, 42, 0.6);
+}
+
+.btn-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid rgba(15, 23, 42, 0.08);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title=('✏️ Modifier' if evenement else '➕ Nouveau') + ' Événement',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Plannification', 'url': url_for('plannification_home')},
+        {'name': 'Modifier' if evenement else 'Nouveau'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('plannification_home'), 'primary': False}
+    ]
+) }}
+
+<div class="evenement-form-page">
+    <div class="form-container">
+        <form id="evenementForm" method="post" action="{% if evenement %}{{ url_for('api_update_evenement', evenement_id=evenement.id) }}{% else %}{{ url_for('api_create_evenement') }}{% endif %}">
+            
+            <!-- Section: Informations de base -->
+            <div class="form-section">
+                <h2 class="form-section-title">📋 Informations de base</h2>
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="titre" class="form-label">
+                            Titre <span class="required">*</span>
+                        </label>
+                        <input type="text" id="titre" name="titre" class="form-control" 
+                               value="{{ evenement.titre if evenement else '' }}" required>
+                        <p class="form-help">Titre de l'événement</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="type_evenement" class="form-label">
+                            Type d'événement <span class="required">*</span>
+                        </label>
+                        <select id="type_evenement" name="type_evenement" class="form-select" required>
+                            {% for type_evt in TypeEvenement %}
+                            <option value="{{ type_evt.value }}" {% if evenement and evenement.type_evenement == type_evt.value %}selected{% endif %}>
+                                {{ type_evt.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="statut" class="form-label">
+                            Statut <span class="required">*</span>
+                        </label>
+                        <select id="statut" name="statut" class="form-select" required>
+                            {% for statut_evt in StatutEvenement %}
+                            <option value="{{ statut_evt.value }}" {% if evenement and evenement.statut == statut_evt.value %}selected{% endif %}>
+                                {{ statut_evt.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="priorite" class="form-label">
+                            Priorité <span class="required">*</span>
+                        </label>
+                        <select id="priorite" name="priorite" class="form-select" required>
+                            {% for priorite_evt in PrioriteEvenement %}
+                            <option value="{{ priorite_evt.value }}" {% if evenement and evenement.priorite == priorite_evt.value %}selected{% endif %}>
+                                {{ priorite_evt.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea id="description" name="description" class="form-textarea">{{ evenement.description if evenement else '' }}</textarea>
+                    <p class="form-help">Description détaillée de l'événement</p>
+                </div>
+            </div>
+
+            <!-- Section: Dates et heures -->
+            <div class="form-section">
+                <h2 class="form-section-title">📅 Dates et heures</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="journee_entiere" class="form-label">
+                            <input type="checkbox" id="journee_entiere" name="journee_entiere" 
+                                   {% if evenement and evenement.journee_entiere %}checked{% endif %}
+                                   onchange="toggleHeures()">
+                            Journée entière
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="date_debut" class="form-label">
+                            Date de début <span class="required">*</span>
+                        </label>
+                        <input type="date" id="date_debut" name="date_debut" class="form-control" 
+                               value="{% if evenement %}{{ evenement.date_debut.isoformat() }}{% elif date_selected %}{{ date_selected.isoformat() }}{% endif %}" required>
+                    </div>
+                    
+                    <div class="form-group" id="heure_debut_group">
+                        <label for="heure_debut" class="form-label">Heure de début</label>
+                        <input type="time" id="heure_debut" name="heure_debut" class="form-control" 
+                               value="{% if evenement and evenement.heure_debut %}{{ evenement.heure_debut.strftime('%H:%M') }}{% endif %}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="date_fin" class="form-label">Date de fin</label>
+                        <input type="date" id="date_fin" name="date_fin" class="form-control" 
+                               value="{% if evenement and evenement.date_fin %}{{ evenement.date_fin.isoformat() }}{% endif %}">
+                    </div>
+                    
+                    <div class="form-group" id="heure_fin_group">
+                        <label for="heure_fin" class="form-label">Heure de fin</label>
+                        <input type="time" id="heure_fin" name="heure_fin" class="form-control" 
+                               value="{% if evenement and evenement.heure_fin %}{{ evenement.heure_fin.strftime('%H:%M') }}{% endif %}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Localisation et participants -->
+            <div class="form-section">
+                <h2 class="form-section-title">📍 Localisation et participants</h2>
+                
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label for="lieu" class="form-label">Lieu</label>
+                        <input type="text" id="lieu" name="lieu" class="form-control" 
+                               value="{{ evenement.lieu if evenement else '' }}">
+                        <p class="form-help">Lieu de l'événement</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="responsable_id" class="form-label">Responsable</label>
+                        <select id="responsable_id" name="responsable_id" class="form-select">
+                            <option value="">— Aucun —</option>
+                            {% for user in utilisateurs %}
+                            <option value="{{ user.id }}" {% if evenement and evenement.responsable_id == user.id %}selected{% endif %}>
+                                {{ user.full_name or user.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="participants" class="form-label">Participants</label>
+                    <textarea id="participants" name="participants" class="form-textarea" placeholder="Liste des participants (séparés par des virgules)">{{ evenement.participants if evenement else '' }}</textarea>
+                    <p class="form-help">Liste des participants (séparés par des virgules ou format JSON)</p>
+                </div>
+            </div>
+
+            <!-- Section: Rappels et options -->
+            <div class="form-section">
+                <h2 class="form-section-title">🔔 Rappels et options</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rappel_actif" class="form-label">
+                            <input type="checkbox" id="rappel_actif" name="rappel_actif" 
+                                   {% if evenement and evenement.rappel_actif %}checked{% endif %}
+                                   onchange="toggleRappel()">
+                            Activer les rappels
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-row" id="rappel_options" style="display: none;">
+                    <div class="form-group">
+                        <label for="rappel_avant_jours" class="form-label">Rappel (jours avant)</label>
+                        <input type="number" id="rappel_avant_jours" name="rappel_avant_jours" class="form-control" 
+                               value="{{ evenement.rappel_avant_jours if evenement else '' }}" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="rappel_avant_heures" class="form-label">Rappel (heures avant)</label>
+                        <input type="number" id="rappel_avant_heures" name="rappel_avant_heures" class="form-control" 
+                               value="{{ evenement.rappel_avant_heures if evenement else '' }}" min="0">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="couleur" class="form-label">Couleur</label>
+                        <input type="color" id="couleur" name="couleur" class="form-control" 
+                               value="{{ evenement.couleur if evenement and evenement.couleur else '#667EEA' }}">
+                        <p class="form-help">Couleur pour l'affichage dans le calendrier</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="btn-group">
+                <a href="{{ url_for('plannification_home') }}" class="btn btn-premium btn-secondary">Annuler</a>
+                <button type="submit" class="btn btn-premium btn-primary">
+                    {% if evenement %}💾 Enregistrer les modifications{% else %}➕ Créer l'événement{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleHeures() {
+    const journeeEntiere = document.getElementById('journee_entiere').checked;
+    const heureDebutGroup = document.getElementById('heure_debut_group');
+    const heureFinGroup = document.getElementById('heure_fin_group');
+    
+    if (journeeEntiere) {
+        heureDebutGroup.style.display = 'none';
+        heureFinGroup.style.display = 'none';
+        document.getElementById('heure_debut').value = '';
+        document.getElementById('heure_fin').value = '';
+    } else {
+        heureDebutGroup.style.display = 'block';
+        heureFinGroup.style.display = 'block';
+    }
+}
+
+function toggleRappel() {
+    const rappelActif = document.getElementById('rappel_actif').checked;
+    const rappelOptions = document.getElementById('rappel_options');
+    
+    if (rappelActif) {
+        rappelOptions.style.display = 'grid';
+    } else {
+        rappelOptions.style.display = 'none';
+    }
+}
+
+// Initialiser au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    toggleHeures();
+    toggleRappel();
+    
+    // Intercepter la soumission du formulaire
+    document.getElementById('evenementForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        
+        // Convertir les checkboxes
+        formData.set('journee_entiere', document.getElementById('journee_entiere').checked ? 'true' : 'false');
+        formData.set('rappel_actif', document.getElementById('rappel_actif').checked ? 'true' : 'false');
+        
+        showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
+        
+        try {
+            const url = form.getAttribute('action');
+            const method = {% if evenement %}'PUT'{% else %}'POST'{% endif %};
+            
+            const response = await submitFormAsJson(url, formData, method, true);
+            
+            if (response.ok) {
+                const data = await response.json();
+                hideGlobalLoading();
+                showSuccess(data.message || 'Enregistrement réussi');
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('plannification_home') }}";
+                }, 1000);
+            } else {
+                await handleFetchError(response, 'Erreur lors de l\'enregistrement');
+            }
+        } catch (error) {
+            hideGlobalLoading();
+            console.error('Erreur lors de la soumission:', error);
+            showError('Erreur lors de l\'enregistrement: ' + error.message);
+        }
+    });
+});
+</script>
+{% endblock %}
+

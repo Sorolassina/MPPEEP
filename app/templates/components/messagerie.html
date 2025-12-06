@@ -36,16 +36,24 @@
 
 <style>
 .messagerie-popup {
-    position: fixed;
-    right: 20px;
-    bottom: 100px;
+    position: fixed !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    top: auto !important;
+    left: auto !important;
     width: 450px;
-    max-height: 600px;
+    max-height: calc(100vh - 40px);
+    min-height: 400px;
     display: none;
     flex-direction: column;
     overflow: hidden;
-    z-index: 10000;
+    z-index: 99999 !important;
     border-radius: 15px;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    margin: 0 !important;
+    padding: 0 !important;
     --messagerie-surface: #1f2027;
     --messagerie-surface-alt: #15161c;
     --messagerie-border: rgba(255, 255, 255, 0.08);
@@ -64,7 +72,12 @@
 }
 
 .messagerie-popup.active {
-    display: flex;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    right: 20px !important;
+    bottom: 20px !important;
 }
 
 .messagerie-header {
@@ -456,43 +469,120 @@ let isSearchMode = false; // Flag pour savoir si on est en mode recherche
 
 // Toggle messagerie popup
 function toggleMessagerie() {
+    console.log('🔔 toggleMessagerie appelé');
     const popup = document.getElementById('messageriePopup');
-    const button = document.querySelector('.floating-help-button');
+    const button = document.querySelector('.nav-messagerie-button, .floating-help-button');
+    
+    if (!popup) {
+        console.error('❌ Popup de messagerie non trouvée dans le DOM');
+        return;
+    }
+    
+    console.log('✅ Popup trouvée:', popup);
     const isActive = popup.classList.contains('active');
+    console.log('📊 État actuel:', isActive ? 'active' : 'inactive');
     
     if (isActive) {
         popup.classList.remove('active');
-        stopPolling();
-        // Réafficher le bouton
-        if (button) {
+        if (typeof stopPolling === 'function') {
+            stopPolling();
+        }
+        // Réafficher le bouton (seulement pour le bouton flottant)
+        if (button && button.classList.contains('floating-help-button')) {
             button.style.display = 'flex';
         }
+        console.log('🔒 Messagerie fermée');
     } else {
+        // S'assurer que la popup est dans le body
+        if (popup.parentElement !== document.body) {
+            document.body.appendChild(popup);
+            console.log('✅ Popup déplacée dans le body (toggle)');
+        }
+        
+        // Forcer le positionnement fixed avec des styles inline
+        popup.style.position = 'fixed';
+        popup.style.right = '20px';
+        popup.style.bottom = '20px';
+        popup.style.top = 'auto';
+        popup.style.left = 'auto';
+        popup.style.zIndex = '99999';
+        popup.style.margin = '0';
+        popup.style.padding = '0';
+        
         popup.classList.add('active');
-        loadConversations();
-        startPolling();
-        // Cacher le bouton
-        if (button) {
+        console.log('🔓 Messagerie ouverte');
+        
+        // Vérifier les styles calculés
+        const computedStyle = window.getComputedStyle(popup);
+        console.log('📐 Styles calculés:', {
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            zIndex: computedStyle.zIndex,
+            position: computedStyle.position,
+            right: computedStyle.right,
+            bottom: computedStyle.bottom,
+            width: computedStyle.width,
+            height: computedStyle.height,
+            parentElement: popup.parentElement.tagName
+        });
+        
+        // Forcer l'affichage au cas où
+        if (computedStyle.display === 'none') {
+            console.warn('⚠️ La popup a display:none, forçage de display:flex');
+            popup.style.display = 'flex';
+        }
+        
+        // Vérifier si le positionnement est vraiment fixed
+        if (computedStyle.position !== 'fixed') {
+            console.warn('⚠️ Position n\'est pas fixed, forçage...');
+            popup.style.position = 'fixed';
+        }
+        
+        if (typeof loadConversations === 'function') {
+            loadConversations();
+        }
+        if (typeof startPolling === 'function') {
+            startPolling();
+        }
+        // Cacher le bouton (seulement pour le bouton flottant)
+        if (button && button.classList.contains('floating-help-button')) {
             button.style.display = 'none';
         }
     }
 }
 
+// S'assurer que la fonction est accessible globalement
+window.toggleMessagerie = toggleMessagerie;
+
 // Charger les conversations
 async function loadConversations() {
     try {
-        const response = await window.fetch('/api/v1/messages/conversations', {
+        const rootPath = window.root_path || '';
+        const url = `${rootPath}/api/v1/messages/conversations`;
+        console.log('📡 Chargement des conversations depuis:', url);
+        
+        const response = await window.fetch(url, {
             credentials: 'same-origin'
         });
-        if (!response.ok) throw new Error('Erreur lors du chargement');
+        
+        if (!response.ok) {
+            console.error('❌ Erreur HTTP:', response.status, response.statusText);
+            throw new Error('Erreur lors du chargement');
+        }
         
         conversations = await response.json();
+        console.log('✅ Conversations chargées:', conversations.length);
         displayConversations();
-        updateUnreadBadge();
+        if (typeof updateUnreadBadge === 'function') {
+            updateUnreadBadge();
+        }
     } catch (error) {
-        console.error('Erreur:', error);
-        document.getElementById('conversationsContainer').innerHTML = 
-            '<div class="loading-messages">Erreur de chargement</div>';
+        console.error('❌ Erreur lors du chargement des conversations:', error);
+        const container = document.getElementById('conversationsContainer');
+        if (container) {
+            container.innerHTML = '<div class="loading-messages">Erreur de chargement</div>';
+        }
     }
 }
 
@@ -551,7 +641,8 @@ function backToConversations() {
 // Charger les messages d'une conversation
 async function loadMessages(conversationId) {
     try {
-        const response = await window.fetch(`/api/v1/messages/conversations/${conversationId}/messages`, {
+        const rootPath = window.root_path || '';
+        const response = await window.fetch(`${rootPath}/api/v1/messages/conversations/${conversationId}/messages`, {
             credentials: 'same-origin'
         });
         if (!response.ok) throw new Error('Erreur lors du chargement');
@@ -599,7 +690,8 @@ async function sendMessage() {
     }
     
     try {
-        const response = await window.fetch('/api/v1/messages/send', {
+        const rootPath = window.root_path || '';
+        const response = await window.fetch(`${rootPath}/api/v1/messages/send`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -650,7 +742,8 @@ async function searchUsers() {
         if (query.length < 2 && query.length > 0) return;
         
         try {
-            const url = query ? `/api/v1/messages/users/search?q=${encodeURIComponent(query)}` : '/api/v1/messages/users/search';
+            const rootPath = window.root_path || '';
+            const url = query ? `${rootPath}/api/v1/messages/users/search?q=${encodeURIComponent(query)}` : `${rootPath}/api/v1/messages/users/search`;
             const response = await window.fetch(url, {
                 credentials: 'same-origin'
             });
@@ -730,7 +823,8 @@ function stopPolling() {
 // Mettre à jour le badge de notifications
 async function updateUnreadBadge() {
     try {
-        const response = await window.fetch('/api/v1/messages/unread-count', {
+        const rootPath = window.root_path || '';
+        const response = await window.fetch(`${rootPath}/api/v1/messages/unread-count`, {
             credentials: 'same-origin'
         });
         if (!response.ok) return;
@@ -783,10 +877,57 @@ function handleMessageKeydown(event) {
     }
 }
 
-// Charger le badge au démarrage
-document.addEventListener('DOMContentLoaded', function() {
-    updateUnreadBadge();
-    setInterval(updateUnreadBadge, 10000); // Mettre à jour toutes les 10 secondes
-});
+// Charger le badge au démarrage et s'assurer que la popup est bien positionnée
+(function() {
+    function ensurePopupInBody() {
+        const popup = document.getElementById('messageriePopup');
+        if (!popup) return;
+        
+        // Vérifier si la popup est directement dans le body
+        if (popup.parentElement !== document.body) {
+            // Sauvegarder les classes et l'état
+            const classes = popup.className;
+            const isActive = popup.classList.contains('active');
+            
+            // Déplacer dans le body
+            document.body.appendChild(popup);
+            popup.className = classes;
+            if (isActive) {
+                popup.classList.add('active');
+            }
+            
+            console.log('✅ Popup déplacée dans le body');
+        }
+        
+        // Forcer le positionnement fixed
+        const style = window.getComputedStyle(popup);
+        if (style.position !== 'fixed') {
+            popup.style.position = 'fixed';
+            popup.style.right = '20px';
+            popup.style.bottom = '20px';
+            popup.style.top = 'auto';
+            popup.style.left = 'auto';
+            popup.style.zIndex = '99999';
+            console.log('✅ Positionnement fixed forcé');
+        }
+    }
+    
+    // Exécuter immédiatement si le DOM est déjà chargé
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            ensurePopupInBody();
+            if (typeof updateUnreadBadge === 'function') {
+                updateUnreadBadge();
+                setInterval(updateUnreadBadge, 10000);
+            }
+        });
+    } else {
+        ensurePopupInBody();
+        if (typeof updateUnreadBadge === 'function') {
+            updateUnreadBadge();
+            setInterval(updateUnreadBadge, 10000);
+        }
+    }
+})();
 </script>
 

@@ -11756,14 +11756,14 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
         HIÉRARCHIE COMPLÈTE :
         - OrientationStrategique
           └── ResultatStrategique
-              └── ObjectifPerformance (type=STRATEGIQUE, objectif global)
-                  └── ObjectifPerformance (type=OPERATIONNEL, objectif spécifique)
+              └── ObjectifPerformance (type=GLOBAL, objectif global, lié à un résultat stratégique)
+                  └── ObjectifPerformance (type=SPECIFIQUE, objectif spécifique, lié à un objectif global)
                       └── IndicateurPerformance
         
         NOTE IMPORTANTE :
         La table ObjectifPerformance gère DEUX types d'objectifs dans UNE seule table :
-        - Objectifs GLOBAUX (type_objectif=STRATEGIQUE) : liés à un résultat stratégique via resultat_strategique_id
-        - Objectifs SPÉCIFIQUES (type_objectif=OPERATIONNEL) : liés à un objectif global via objectif_global_id
+        - Objectifs GLOBAUX (type_objectif=GLOBAL) : liés à un résultat stratégique via resultat_strategique_id (OBLIGATOIRE)
+        - Objectifs SPÉCIFIQUES (type_objectif=SPECIFIQUE) : liés à un objectif global via objectif_global_id
         
         Cette méthode charge la hiérarchie jusqu'aux objectifs globaux pour le tableau de politique ministérielle.
         Les objectifs spécifiques sont chargés optionnellement pour référence mais ne sont pas affichés dans ce tableau.
@@ -11822,13 +11822,13 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                     })
                 else:
                     for resultat in resultats:
-                        # 3. Charger les objectifs globaux (STRATEGIQUE) pour ce résultat stratégique
+                        # 3. Charger les objectifs globaux (GLOBAL) pour ce résultat stratégique
                         objectifs_globaux = session.exec(
                             select(ObjectifPerformance)
                             .where(
                                 and_(
                                     ObjectifPerformance.resultat_strategique_id == resultat.id,
-                                    ObjectifPerformance.type_objectif == TypeObjectif.STRATEGIQUE
+                                    ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL
                                 )
                             )
                             .order_by(ObjectifPerformance.titre.asc())
@@ -11853,7 +11853,7 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                                         .where(
                                             and_(
                                                 ObjectifPerformance.objectif_global_id == obj_global.id,
-                                                ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL
+                                                ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE
                                             )
                                         )
                                         .order_by(ObjectifPerformance.titre.asc())
@@ -12514,29 +12514,29 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
             
             # 3. Charger les données de performance (objectifs et indicateurs)
             # Compter les objectifs globaux et spécifiques
-            # Les objectifs globaux sont généralement ceux de type STRATEGIQUE
-            # Les objectifs spécifiques sont ceux de type OPERATIONNEL
+            # Les objectifs globaux sont ceux de type GLOBAL (liés à un résultat stratégique)
+            # Les objectifs spécifiques sont ceux de type SPECIFIQUE (liés à un objectif global)
             nb_objectifs_globaux = 0
             nb_objectifs_specifiques = 0
             nb_indicateurs = 0
             cibles_atteintes = 0
             
             try:
-                # Objectifs globaux : type STRATEGIQUE et liés à un résultat stratégique
+                # Objectifs globaux : type GLOBAL et liés à un résultat stratégique (OBLIGATOIRE)
                 objectifs_globaux = session.exec(
                     select(ObjectifPerformance).where(
                         and_(
-                            ObjectifPerformance.type_objectif == TypeObjectif.STRATEGIQUE,
+                            ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL,
                             ObjectifPerformance.resultat_strategique_id.isnot(None)
                         )
                     )
                 ).all()
                 
-                # Objectifs spécifiques : type OPERATIONNEL et liés à un objectif global
+                # Objectifs spécifiques : type SPECIFIQUE et liés à un objectif global
                 objectifs_specifiques = session.exec(
                     select(ObjectifPerformance).where(
                         and_(
-                            ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL,
+                            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
                             ObjectifPerformance.objectif_global_id.isnot(None)
                         )
                     )
@@ -12609,13 +12609,13 @@ class RapportAnnuelPerformanceGeneratorSimpleDoc:
                 
                 # Pour chaque programme, compter les objectifs spécifiques atteints
                 # (On suppose que les objectifs sont liés aux programmes via une relation future)
-                # Charger les objectifs spécifiques (OPERATIONNEL) liés aux objectifs globaux
+                # Charger les objectifs spécifiques (SPECIFIQUE) liés aux objectifs globaux
                 # Note: La relation avec le programme n'est pas encore définie dans le modèle,
                 # donc on charge tous les objectifs opérationnels pour l'instant
                 objectifs_prog = session.exec(
                     select(ObjectifPerformance).where(
                         and_(
-                            ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL,
+                            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
                             ObjectifPerformance.objectif_global_id.isnot(None)  # Doit être lié à un objectif global
                         )
                     )

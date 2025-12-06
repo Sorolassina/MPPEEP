@@ -6,6 +6,7 @@ Modèles pour la gestion budgétaire
 from datetime import date, datetime
 from decimal import Decimal
 
+from sqlalchemy import Column, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -461,6 +462,101 @@ class SigobeExecution(SQLModel, table=True):
 
     # Métadonnées
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SuiviInvestissement(SQLModel, table=True):
+    """
+    Suivi des investissements SIGOBE
+    Permet de suivre les projets d'investissement avec leurs montants, financements et réalisations
+    """
+
+    __tablename__ = "suivi_investissement"
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    # Référence à l'exécution SIGOBE (optionnel, peut être libre)
+    sigobe_execution_id: int | None = Field(default=None, foreign_key="sigobe_execution.id", index=True)
+    chargement_id: int | None = Field(default=None, foreign_key="sigobe_chargement.id", index=True)
+
+    # Identification du projet
+    code_projet: str | None = Field(default=None, max_length=100, index=True)  # Code du projet
+    libelle_projet: str = Field(max_length=500)  # Libellé du projet
+    programme: str | None = Field(default=None, max_length=500)  # Programme SIGOBE
+    action: str | None = Field(default=None, max_length=500)  # Action SIGOBE
+
+    # Période du projet
+    annee_debut: int | None = Field(default=None, index=True)  # Année de démarrage
+    annee_fin: int | None = Field(default=None, index=True)  # Année de fin prévue
+    annee: int = Field(index=True)  # Année de référence pour le suivi
+
+    # Montants financiers (en FCFA)
+    cout_total_projet: Decimal = Field(default=0, decimal_places=2, max_digits=18)  # Coût total du projet
+    budget_mobilise_anterieur: Decimal = Field(default=0, decimal_places=2, max_digits=18)  # Budget déjà mobilisé au cours des exercices antérieurs
+    credits_budgetaires_inscrits: Decimal = Field(default=0, decimal_places=2, max_digits=18)  # Crédits budgétaires inscrits (LFI de l'année)
+    variation: Decimal | None = Field(default=None, decimal_places=2, max_digits=18)  # Variation (- ou +)
+    budget_actuel: Decimal = Field(default=0, decimal_places=2, max_digits=18)  # Budget Actuel
+    prise_en_charge: Decimal = Field(default=0, decimal_places=2, max_digits=18)  # Prise en charge (à la fin de la période concernée)
+
+    # Répartition du financement
+    financement_interieur: Decimal = Field(default=0, decimal_places=2, max_digits=18)  # Financement intérieur
+    financement_exterieur: Decimal = Field(default=0, decimal_places=2, max_digits=18)  # Financement extérieur
+
+    # Taux de réalisation (%)
+    taux_realisation_budgetaire: Decimal | None = Field(default=None, decimal_places=2, max_digits=5)  # % réal budgétaire
+    taux_realisation_physique: Decimal | None = Field(default=None, decimal_places=2, max_digits=5)  # % réal physique
+
+    # Métadonnées
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime | None = None
+    created_by_id: int | None = Field(default=None, foreign_key="user.id")
+    updated_by_id: int | None = Field(default=None, foreign_key="user.id")
+
+
+class SuiviActivite(SQLModel, table=True):
+    """
+    Suivi périodique des activités SIGOBE
+    Permet de suivre l'avancement des activités avec résultats attendus, opérationnels, preuves, etc.
+    """
+
+    __tablename__ = "suivi_activite"
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    # Référence à l'activité SIGOBE (optionnel, peut être libre)
+    sigobe_execution_id: int | None = Field(default=None, foreign_key="sigobe_execution.id", index=True)
+    chargement_id: int | None = Field(default=None, foreign_key="sigobe_chargement.id", index=True)
+
+    # Identification de l'activité
+    code_activite: str | None = Field(default=None, max_length=100, index=True)  # Code SIGOBE de l'activité
+    libelle_activite: str = Field(max_length=500)  # Libellé de l'action/activité
+    programme: str | None = Field(default=None, max_length=500)  # Programme SIGOBE
+    action: str | None = Field(default=None, max_length=500)  # Action SIGOBE
+
+    # Structures responsables
+    structures_responsables: str = Field(max_length=500)  # Ex: "DGPE"
+
+    # Résultats
+    resultat_attendu: str = Field(sa_column=Column(Text))  # Résultat attendu
+    resultat_operationnel: str | None = Field(default=None, sa_column=Column(Text))  # Résultat opérationnel
+
+    # Preuve de réalisation
+    preuve_realisation: str | None = Field(default=None, max_length=500)  # Chemin vers le document
+    preuve_filename: str | None = Field(default=None, max_length=255)  # Nom du fichier
+
+    # Observations
+    observations: str | None = Field(default=None, sa_column=Column(Text))
+
+    # Période de suivi
+    annee: int = Field(index=True)
+    periode_type: str = Field(max_length=20, index=True)  # "mois", "trimestre", "semestre", "annuel"
+    periode_valeur: int | None = Field(default=None)  # 1-12 pour mois, 1-4 pour trimestre, 1-2 pour semestre, None pour annuel
+    date_periode: date | None = Field(default=None, index=True)  # Date de début de période
+
+    # Métadonnées
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_by_id: int = Field(foreign_key="user.id")
+    updated_by_id: int | None = Field(default=None, foreign_key="user.id")
 
 
 class SigobeKpi(SQLModel, table=True):

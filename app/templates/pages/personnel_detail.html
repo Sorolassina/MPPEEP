@@ -4,7 +4,25 @@
 {% block title %}{{ agent.prenom }} {{ agent.nom }} - {{ app_name }}
 {% endblock %}
 
-{% block styles %}{% endblock %}
+{% block styles %}
+<style>
+  .personnel-detail-page .info-panel-value {
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    width: 100%;
+  }
+  
+  .personnel-detail-page .info-panel-body {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -40,7 +58,7 @@
             <li>📍 {{ service.libelle }}</li>
             {% endif %}
             {% if agent.fonction %}
-            <li>💼 {{ agent.fonction }}</li>
+            <li>💼 {{ agent.fonction }}{% if agent.role_budgetaire %}({{ agent.role_budgetaire }}) {% endif %}</li>
             {% endif %}
           </ul>
         </div>

@@ -101,13 +101,13 @@
                 </p>
                 <span class="template-badge badge-analytique">Annuel</span>
             </div>
-            <div class="template-card" onclick="useTemplate('RPROG')">
+            <div class="template-card" onclick="openRapportRPROGModal()">
                 <div class="template-icon">🧑‍💼</div>
-                <div class="template-name">Rapport Semestriel RPROG</div>
+                <div class="template-name">Rapport d'Activité RPROG</div>
                 <p class="template-description">
-                    Bilan semestriel des responsables de programme, indicateurs clés et besoins d'arbitrage.
+                    Rapport d'activité du RPROG avec couverture, sommaire, liste des tableaux et liste des figures.
                 </p>
-                <span class="template-badge badge-analytique">Semestriel</span>
+                <span class="template-badge badge-analytique">Rapport d'Activité</span>
             </div>
             <div class="template-card" onclick="useTemplate('DAF')">
                 <div class="template-icon">💼</div>
@@ -469,6 +469,107 @@
     </div>
 </div>
 
+<!-- Modal pour le rapport RPROG -->
+<div id="rapportRPROGModal" class="modal-fullscreen">
+    <div class="modal-content performance-engagement-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Générer le Rapport d'Activité RPROG</h2>
+            <button type="button" class="modal-close" onclick="closeRapportRPROGModal()">&times;</button>
+        </div>
+        <form id="rapportRPROGForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_rapport_activite_rprog_pdf') }}">
+            <p class="performance-engagement-intro">
+                Renseignez les informations ci-dessous pour générer le rapport d'activité RPROG (format paysage).
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                <!-- Ligne 1: Année | Section | Période | Date publication -->
+                <div style="display: flex; gap: 1rem; width: 100%;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="rprog_annee" class="form-label">Année du rapport *</label>
+                        <input type="number" id="rprog_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required onchange="updateRPROGTitreFromProgramme()">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="rprog_section" class="form-label">Section *</label>
+                        <input type="text" id="rprog_section" name="section" class="form-control" placeholder="SECTION 376" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="rprog_periode" class="form-label">Période *</label>
+                        <select id="rprog_periode" name="periode" class="form-control" required onchange="updateRPROGTitreFromProgramme()">
+                            <option value="PREMIER SEMESTRE">Premier Semestre</option>
+                            <option value="DEUXIÈME SEMESTRE">Deuxième Semestre</option>
+                            <option value="ANNÉE COMPLÈTE">Année Complète</option>
+                        </select>
+                        <span class="performance-engagement-hint">Période couverte par le rapport.</span>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="rprog_date_publication" class="form-label">Date de publication</label>
+                        <input type="month" id="rprog_date_publication" name="date_publication" class="form-control">
+                        <span class="performance-engagement-hint">Mois et année de publication (MM/AAAA).</span>
+                    </div>
+                </div>
+                
+                <!-- Ligne 2: Ministère | Programme -->
+                <div style="display: flex; gap: 1rem; width: 100%;">
+                    <div class="form-group" style="flex: 1; width: 100%;">
+                        <label for="rprog_ministere" class="form-label">Ministère *</label>
+                        <input type="text" id="rprog_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required style="width: 100%;">
+                    </div>
+                    <div class="form-group" style="flex: 1; width: 100%;">
+                        <label for="rprog_programme" class="form-label">Programme *</label>
+                        <select id="rprog_programme" name="programme" class="form-control" required onchange="handleProgrammeChange(this);">
+                            <option value="">-- Sélectionner un programme --</option>
+                            {% for programme in programmes %}
+                            <option value="{{ programme.libelle }}" data-programme-id="{{ programme.id }}">{{ programme.code }} - {{ programme.libelle }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="performance-engagement-hint">Sélectionnez le programme pour lequel vous générez le rapport.</span>
+                    </div>
+                </div>
+                
+                <!-- Ligne 3: Titre | Sous-titre -->
+                <div style="display: flex; gap: 1rem; width: 100%;">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="rprog_titre_rapport" class="form-label">Titre du rapport *</label>
+                        <textarea id="rprog_titre_rapport" name="titre_rapport" class="form-control" rows="4" placeholder="RAPPORT D'ACTIVITES DU PREMIER SEMESTRE 2024&#10;&#10;« PROGRAMME PORTEFEUILLE DE L'ETAT »" style="min-height: 100px; width: 100%;" required></textarea>
+                        <span class="performance-engagement-hint">Titre complet du rapport tel qu'il apparaîtra sur la page de couverture. Utilisez deux retours à la ligne pour séparer le titre principal du sous-titre du programme.</span>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="rprog_responsable_programme" class="form-label">Responsable de Programme *</label>
+                        <input type="text" id="rprog_responsable_programme" name="responsable_programme" class="form-control" placeholder="Monsieur Jean DUPONT" required>
+                        <span class="performance-engagement-hint">Nom complet du responsable du programme (ex: "Monsieur Jean DUPONT" ou "Madame Marie MARTIN").</span>
+                    </div>
+                </div>
+                
+                <!-- Section Références -->
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid rgba(232, 106, 10, 0.2);">
+                    <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 1rem;">
+                        📑 Références
+                    </h3>
+                    <div class="performance-upload-group">
+                        <label for="rprog_logo_path" class="form-label">Logo/Emblème</label>
+                        <div class="performance-upload-row">
+                            <input type="text" id="rprog_logo_path" name="logo_path" class="form-control" placeholder="images/logo.webp">
+                            <label class="performance-upload-button">
+                                <input type="file" id="rprog_logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('rprog_logo_path')">
+                                📁 Joindre
+                            </label>
+                        </div>
+                        <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5 MB)</span>
+                        <div class="performance-upload-preview" id="rprog_logo_path_preview_wrapper">
+                            <img id="rprog_logo_path_preview" alt="Prévisualisation du logo">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="modal-footer performance-engagement-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeRapportRPROGModal()">Annuler</button>
+            <button type="button" class="btn btn-info" onclick="generateRapportRPROG('brouillon')">📝 Générer brouillon</button>
+            <button type="button" class="btn btn-primary" onclick="generateRapportRPROG('final')">📄 Générer le rapport final</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal pour le cadre de performance -->
 <div id="cadrePerformanceModal" class="modal-fullscreen">
     <div class="modal-content performance-engagement-modal">
@@ -816,6 +917,266 @@ async function uploadEngagementPhoto(field) {
     } finally {
         if (typeof hideGlobalLoading === "function") {
             hideGlobalLoading();
+        }
+    }
+}
+
+// ============================================
+// RAPPORT D'ACTIVITÉ RPROG - MODAL
+// ============================================
+
+function openRapportRPROGModal() {
+    const modal = document.getElementById('rapportRPROGModal');
+    if (!modal) {
+        console.error("❌ Modal 'rapportRPROGModal' non trouvé");
+        return;
+    }
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+    
+    // Appliquer les valeurs par défaut
+    const form = document.getElementById('rapportRPROGForm');
+    if (form && rapportAnnuelDefaults) {
+        // Utiliser les mêmes valeurs par défaut que le RAP
+        setFieldValue('rprog_annee', rapportAnnuelDefaults.annee || new Date().getFullYear() - 1);
+        setFieldValue('rprog_section', rapportAnnuelDefaults.section || 'SECTION 376');
+        setFieldValue('rprog_ministere', rapportAnnuelDefaults.ministere || '');
+        setFieldValue('rprog_programme', rapportAnnuelDefaults.programme || 'PROGRAMME PORTEFEUILLE DE L\'ETAT');
+        setFieldValue('rprog_periode', rapportAnnuelDefaults.periode || 'PREMIER SEMESTRE');
+        setFieldValue('rprog_titre_rapport', rapportAnnuelDefaults.titre_rapport || 'RAPPORT D\'ACTIVITES DU PREMIER SEMESTRE 2024\n\n« PROGRAMME PORTEFEUILLE DE L\'ETAT »');
+        setFieldValue('rprog_responsable_programme', rapportAnnuelDefaults.responsable_programme || '');
+        setFieldValue('rprog_date_publication', rapportAnnuelDefaults.date_publication || '');
+        setFieldValue('rprog_logo_path', rapportAnnuelDefaults.logo_path || '');
+        
+        // Mettre à jour la prévisualisation du logo
+        if (rapportAnnuelDefaults.logo_path) {
+            updateEngagementPhotoPreview('rprog_logo_path', rapportAnnuelDefaults.logo_path);
+        }
+        
+        // Si un programme est sélectionné, charger automatiquement le responsable
+        const programmeSelect = document.getElementById('rprog_programme');
+        if (programmeSelect && programmeSelect.value) {
+            // Attendre un peu pour que le DOM soit complètement chargé
+            setTimeout(() => {
+                loadResponsableProgramme(programmeSelect.value);
+            }, 100);
+        }
+    }
+}
+
+function closeRapportRPROGModal() {
+    const modal = document.getElementById('rapportRPROGModal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+}
+
+// Fonction pour mettre à jour le titre du rapport quand le programme, la période ou l'année change
+function updateRPROGTitreFromProgramme() {
+    const programmeSelect = document.getElementById('rprog_programme');
+    const periodeSelect = document.getElementById('rprog_periode');
+    const titreRapportTextarea = document.getElementById('rprog_titre_rapport');
+    const anneeInput = document.getElementById('rprog_annee');
+    
+    if (!programmeSelect || !titreRapportTextarea) {
+        return;
+    }
+    
+    const selectedProgramme = programmeSelect.value;
+    const selectedPeriode = periodeSelect ? periodeSelect.value : 'PREMIER SEMESTRE';
+    const annee = anneeInput ? anneeInput.value : new Date().getFullYear();
+    
+    if (selectedProgramme && selectedPeriode) {
+        // Mettre à jour le titre avec le format : "RAPPORT D'ACTIVITES DU {periode} {annee}\n\n« {programme} »"
+        const titrePrincipal = `RAPPORT D'ACTIVITES DU ${selectedPeriode} ${annee}`;
+        const titreComplet = `${titrePrincipal}\n\n« ${selectedProgramme} »`;
+        titreRapportTextarea.value = titreComplet;
+    }
+}
+
+// Fonction pour gérer le changement de programme (mise à jour du titre et chargement du responsable)
+function handleProgrammeChange(selectElement) {
+    // Mettre à jour le titre
+    updateRPROGTitreFromProgramme();
+    // Charger le responsable
+    loadResponsableProgramme(selectElement.value);
+}
+
+// Fonction pour charger le responsable du programme depuis la base de données
+async function loadResponsableProgramme(programmeLibelle) {
+    const responsableInput = document.getElementById('rprog_responsable_programme');
+    const programmeSelect = document.getElementById('rprog_programme');
+    
+    if (!responsableInput || !programmeSelect) {
+        console.error('❌ Éléments du formulaire non trouvés');
+        return;
+    }
+    
+    // Si aucun programme n'est sélectionné, vider le champ
+    if (!programmeLibelle || programmeSelect.selectedIndex === 0) {
+        responsableInput.value = '';
+        return;
+    }
+    
+    // Trouver l'ID du programme sélectionné
+    const selectedOption = programmeSelect.options[programmeSelect.selectedIndex];
+    const programmeId = selectedOption ? selectedOption.getAttribute('data-programme-id') : null;
+    
+    if (!programmeId) {
+        console.warn('⚠️ Aucun ID de programme trouvé pour:', programmeLibelle);
+        responsableInput.value = '';
+        return;
+    }
+    
+    console.log('🔍 Chargement du responsable pour le programme ID:', programmeId);
+    
+    try {
+        // Récupérer les détails du programme depuis l'API
+        const response = await fetch(`/api/v1/referentiels/api/programmes/${programmeId}`);
+        
+        if (response.ok) {
+            const programme = await response.json();
+            console.log('✅ Programme récupéré:', programme);
+            
+            if (programme && programme.responsable_nom_complet) {
+                responsableInput.value = programme.responsable_nom_complet;
+                console.log('✅ Responsable chargé:', programme.responsable_nom_complet);
+            } else {
+                responsableInput.value = '';
+                console.log('ℹ️ Aucun responsable associé à ce programme');
+            }
+        } else {
+            const errorText = await response.text();
+            console.error('❌ Erreur HTTP:', response.status, errorText);
+            responsableInput.value = '';
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement du responsable:', error);
+        responsableInput.value = '';
+    }
+}
+
+async function generateRapportRPROG(mode = 'brouillon') {
+    const form = document.getElementById('rapportRPROGForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    // Récupérer les valeurs du formulaire
+    const annee = formData.get("annee");
+    const section = formData.get("section");
+    const ministere = formData.get("ministere");
+    const programme = formData.get("programme");
+    const periode = formData.get("periode");
+    const titre_rapport = formData.get("titre_rapport");
+    const titre_annee = formData.get("titre_annee");
+    const date_publication = formData.get("date_publication");
+    const logo_path = formData.get("logo_path");
+    const responsable_programme = formData.get("responsable_programme");
+
+    if (annee) {
+        params.append("annee", annee);
+    }
+    if (section) {
+        params.append("section", section);
+    }
+    if (ministere) {
+        params.append("ministere", ministere);
+    }
+    if (programme) {
+        params.append("programme", programme);
+    }
+    if (periode) {
+        params.append("periode", periode);
+    }
+    if (titre_rapport) {
+        params.append("titre_rapport", titre_rapport);
+    }
+    if (titre_annee) {
+        params.append("titre_annee", titre_annee);
+    }
+    if (date_publication) {
+        params.append("date_publication", date_publication);
+    }
+    if (logo_path) {
+        params.append("logo_path", logo_path);
+    }
+    if (responsable_programme) {
+        params.append("responsable_programme", responsable_programme);
+    }
+    
+    // Ajouter le paramètre mode (brouillon ou final)
+    params.append("mode", mode);
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    if (typeof showGlobalLoading === "function") {
+        const modeLabel = mode === 'brouillon' ? 'brouillon' : 'final';
+        showGlobalLoading(`Génération du PDF (${modeLabel})...`, "Veuillez patienter");
+    }
+
+    closeRapportRPROGModal();
+
+    try {
+        // Utiliser fetch pour télécharger le PDF et pouvoir masquer l'overlay après
+        const response = await fetch(targetUrl);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: "Erreur lors de la génération du PDF" }));
+            throw new Error(errorData.detail || `Erreur ${response.status}: ${response.statusText}`);
+        }
+
+        // Récupérer le blob
+        const blob = await response.blob();
+        
+        // Masquer l'overlay avant de déclencher le téléchargement
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        
+        // Créer un lien de téléchargement
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Déterminer le nom du fichier
+        const annee_val = annee || new Date().getFullYear();
+        const modeLabel = mode === 'brouillon' ? 'brouillon' : 'final';
+        a.download = `rapport_activite_rprog_${annee_val}_${modeLabel}.pdf`;
+        
+        // Déclencher le téléchargement
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        if (typeof showSuccess === "function") {
+            showSuccess("Rapport téléchargé avec succès !");
+        }
+    } catch (error) {
+        console.error("Erreur lors de la génération du rapport RPROG:", error);
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showError === "function") {
+            showError(`Erreur lors de la génération du rapport: ${error.message || error}`);
         }
     }
 }
@@ -1909,6 +2270,23 @@ function initRapportAnnuelModal() {
                 closeCadrePerformanceModal();
             }
         });
+    }
+    
+    // Modal rapport RPROG
+    const rapportRPROGModal = document.getElementById('rapportRPROGModal');
+    if (rapportRPROGModal) {
+        rapportRPROGModal.addEventListener('click', function(event) {
+            if (event.target === rapportRPROGModal) {
+                closeRapportRPROGModal();
+            }
+        });
+        
+        // Prévisualisation du logo
+        const logoInput = document.getElementById('rprog_logo_path');
+        if (logoInput) {
+            logoInput.addEventListener('change', () => updateEngagementPhotoPreview('rprog_logo_path'));
+            logoInput.addEventListener('blur', () => updateEngagementPhotoPreview('rprog_logo_path'));
+        }
     }
 }
 

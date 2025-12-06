@@ -52,10 +52,17 @@ class UserSession(SQLModel, table=True):
         """Vérifie si la session est expirée"""
         return datetime.now() > self.expires_at
 
-    def refresh(self, days: int = 7):
-        """Rafraîchit la session (met à jour last_activity et extends expiration)"""
+    def refresh(self, extend_expiration: bool = False, days: int = 7):
+        """
+        Rafraîchit la session (met à jour last_activity)
+        
+        Args:
+            extend_expiration: Si True, étend aussi la date d'expiration (par défaut False)
+            days: Nombre de jours pour l'extension (seulement si extend_expiration=True)
+        """
         self.last_activity = datetime.now()
-        self.expires_at = datetime.now() + timedelta(days=days)
+        if extend_expiration:
+            self.expires_at = datetime.now() + timedelta(days=days)
 
     def deactivate(self):
         """Désactive la session (logout)"""

@@ -30,6 +30,8 @@ from app.models.budget import (
     DocumentBudget,
     DocumentLigneBudgetaire,
     FicheTechnique,
+    SuiviActivite,
+    SuiviInvestissement,
     HistoriqueBudget,
     LigneBudgetaire,
     LigneBudgetaireDetail,
@@ -6019,6 +6021,50 @@ async def api_sigobe_preview(
         # Parser le fichier SIGOBE avec le service
         Result, Metadatafile, ColsToKeep = SigobeService.parse_fichier_excel(excel_file, annee, trimestre)
 
+        # VÉRIFICATION DES PROGRAMMES : Extraire tous les programmes uniques du fichier
+        programmes_fichier = set()
+        if "Programmes" in Result.columns:
+            programmes_fichier = set(
+                Result["Programmes"]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .apply(lambda x: x.split(" - ")[-1] if " - " in x else x)  # Extraire le libellé si format "Code - Libellé"
+                .unique()
+            )
+            programmes_fichier = {p for p in programmes_fichier if p}  # Retirer les chaînes vides
+
+        logger.info(f"🔍 Programmes trouvés dans le fichier : {len(programmes_fichier)} programmes uniques")
+
+        # Vérifier que tous les programmes existent dans la base de données
+        if programmes_fichier:
+            programmes_db = session.exec(select(Programme).where(Programme.actif)).all()
+            programmes_db_libelles = {p.libelle.strip() for p in programmes_db if p.libelle}
+            programmes_db_codes = {p.code.strip() for p in programmes_db if p.code}
+
+            # Vérifier chaque programme du fichier
+            programmes_manquants = []
+            for prog_fichier in programmes_fichier:
+                prog_normalized = prog_fichier.strip()
+                # Vérifier par libellé ou par code
+                if prog_normalized not in programmes_db_libelles and prog_normalized not in programmes_db_codes:
+                    programmes_manquants.append(prog_normalized)
+
+            if programmes_manquants:
+                # Annuler le processus et retourner une erreur
+                logger.error(f"❌ Programmes manquants dans la base de données : {programmes_manquants}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"❌ Le fichier contient {len(programmes_manquants)} programme(s) qui n'existent pas dans la base de données :\n\n"
+                        f"📋 Programmes manquants :\n"
+                        + "\n".join(f"  • {prog}" for prog in sorted(programmes_manquants))
+                        + f"\n\n💡 Veuillez d'abord créer ces programmes dans la page 'Référentiels' avant de charger le fichier SIGOBE."
+                    ),
+                )
+
+            logger.info(f"✅ Tous les programmes du fichier existent dans la base de données")
+
         # Statistiques
         stats = {
             "nb_lignes": len(Result),
@@ -6088,6 +6134,50 @@ async def api_sigobe_upload(
         Result, Metadatafile, ColsToKeep = SigobeService.parse_fichier_excel(excel_file, annee, trimestre)
 
         logger.info(f"✅ Parsing réussi : {len(Result)} lignes à importer")
+
+        # VÉRIFICATION DES PROGRAMMES : Extraire tous les programmes uniques du fichier
+        programmes_fichier = set()
+        if "Programmes" in Result.columns:
+            programmes_fichier = set(
+                Result["Programmes"]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .apply(lambda x: x.split(" - ")[-1] if " - " in x else x)  # Extraire le libellé si format "Code - Libellé"
+                .unique()
+            )
+            programmes_fichier = {p for p in programmes_fichier if p}  # Retirer les chaînes vides
+
+        logger.info(f"🔍 Programmes trouvés dans le fichier : {len(programmes_fichier)} programmes uniques")
+
+        # Vérifier que tous les programmes existent dans la base de données
+        if programmes_fichier:
+            programmes_db = session.exec(select(Programme).where(Programme.actif)).all()
+            programmes_db_libelles = {p.libelle.strip() for p in programmes_db if p.libelle}
+            programmes_db_codes = {p.code.strip() for p in programmes_db if p.code}
+
+            # Vérifier chaque programme du fichier
+            programmes_manquants = []
+            for prog_fichier in programmes_fichier:
+                prog_normalized = prog_fichier.strip()
+                # Vérifier par libellé ou par code
+                if prog_normalized not in programmes_db_libelles and prog_normalized not in programmes_db_codes:
+                    programmes_manquants.append(prog_normalized)
+
+            if programmes_manquants:
+                # Annuler le processus et retourner une erreur
+                logger.error(f"❌ Programmes manquants dans la base de données : {programmes_manquants}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"❌ Le fichier contient {len(programmes_manquants)} programme(s) qui n'existent pas dans la base de données :\n\n"
+                        f"📋 Programmes manquants :\n"
+                        + "\n".join(f"  • {prog}" for prog in sorted(programmes_manquants))
+                        + f"\n\n💡 Veuillez d'abord créer ces programmes dans la page 'Référentiels' avant de charger le fichier SIGOBE."
+                    ),
+                )
+
+            logger.info(f"✅ Tous les programmes du fichier existent dans la base de données")
 
         # Déterminer le libellé de période
         if trimestre:
@@ -6850,3 +6940,848 @@ def api_get_kpis_sigobe(
             for kpi in kpis
         ],
     }
+
+
+# ============================================
+# SUIVI DES ACTIVITÉS SIGOBE
+# ============================================
+
+
+@router.get("/activites", response_class=HTMLResponse, name="budget_activites")
+def budget_activites(
+    request: Request,
+    annee: int | None = None,
+    periode_type: str | None = None,
+    periode_valeur: str | None = None,
+    code_activite: str | None = None,
+    libelle_activite: str | None = None,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Page de suivi des activités SIGOBE"""
+    # Convertir periode_valeur de string à int ou None
+    periode_valeur_int = None
+    if periode_valeur is not None and str(periode_valeur).strip():
+        try:
+            periode_valeur_int = int(periode_valeur)
+        except (ValueError, TypeError):
+            periode_valeur_int = None
+    # Déterminer l'année à utiliser
+    if not annee:
+        dernier_chargement = session.exec(
+            select(SigobeChargement).order_by(SigobeChargement.annee.desc(), SigobeChargement.date_chargement.desc())
+        ).first()
+        annee = dernier_chargement.annee if dernier_chargement else datetime.now().year
+
+    # Récupérer les suivis d'activités
+    query = select(SuiviActivite).where(SuiviActivite.annee == annee)
+    
+    if periode_type:
+        query = query.where(SuiviActivite.periode_type == periode_type)
+    if periode_valeur_int is not None:
+        query = query.where(SuiviActivite.periode_valeur == periode_valeur_int)
+    if code_activite and code_activite.strip():
+        query = query.where(SuiviActivite.code_activite.ilike(f"%{code_activite.strip()}%"))
+    if libelle_activite and libelle_activite.strip():
+        query = query.where(SuiviActivite.libelle_activite.ilike(f"%{libelle_activite.strip()}%"))
+
+    suivis = session.exec(query.order_by(SuiviActivite.date_periode.desc(), SuiviActivite.created_at.desc())).all()
+
+    # Récupérer les activités SIGOBE disponibles pour référence
+    activites_sigobe = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.annee == annee)
+        .where(SigobeExecution.activites.isnot(None))
+        .where(SigobeExecution.activites != "")
+    ).all()
+
+    # Années disponibles
+    annees_query = select(SuiviActivite.annee).distinct()
+    annees_result = session.exec(annees_query).all()
+    annees = sorted(set(annees_result), reverse=True) if annees_result else [datetime.now().year]
+
+    context = get_template_context(
+        request,
+        suivis=suivis,
+        activites_sigobe=activites_sigobe,
+        annee=annee,
+        periode_type=periode_type,
+        periode_valeur=periode_valeur_int,
+        code_activite=code_activite,
+        libelle_activite=libelle_activite,
+        annees_disponibles=annees,
+        current_user=current_user,
+    )
+
+    return templates.TemplateResponse("pages/budget_activites.html", context)
+
+
+@router.get("/activites/nouveau", response_class=HTMLResponse, name="budget_activite_nouveau")
+def budget_activite_nouveau(
+    request: Request,
+    annee: int | None = None,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Formulaire de création d'un suivi d'activité"""
+    from app.templates import get_template_context, templates
+
+    if not annee:
+        dernier_chargement = session.exec(
+            select(SigobeChargement).order_by(SigobeChargement.annee.desc(), SigobeChargement.date_chargement.desc())
+        ).first()
+        annee = dernier_chargement.annee if dernier_chargement else datetime.now().year
+
+    # Récupérer les activités SIGOBE disponibles
+    activites_sigobe = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.annee == annee)
+        .where(SigobeExecution.activites.isnot(None))
+        .where(SigobeExecution.activites != "")
+        .order_by(SigobeExecution.activites)
+    ).all()
+
+    context = get_template_context(
+        request,
+        annee=annee,
+        activites_sigobe=activites_sigobe,
+        current_user=current_user,
+    )
+
+    return templates.TemplateResponse("pages/budget_activite_form.html", context)
+
+
+@router.get("/activites/{suivi_id}/edit", response_class=HTMLResponse, name="budget_activite_edit")
+def budget_activite_edit(
+    suivi_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Formulaire de modification d'un suivi d'activité"""
+    from app.templates import get_template_context, templates
+
+    suivi = session.get(SuiviActivite, suivi_id)
+    if not suivi:
+        raise HTTPException(status_code=404, detail="Suivi d'activité non trouvé")
+
+    # Récupérer les activités SIGOBE disponibles
+    activites_sigobe = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.annee == suivi.annee)
+        .where(SigobeExecution.activites.isnot(None))
+        .where(SigobeExecution.activites != "")
+        .order_by(SigobeExecution.activites)
+    ).all()
+
+    context = get_template_context(
+        request,
+        suivi=suivi,
+        activites_sigobe=activites_sigobe,
+        current_user=current_user,
+    )
+
+    return templates.TemplateResponse("pages/budget_activite_form.html", context)
+
+
+@router.post("/api/activites/suivi", response_class=HTMLResponse, name="api_create_suivi_activite")
+async def api_create_suivi_activite(
+    request: Request,
+    libelle_activite: str = Form(...),
+    structures_responsables: str = Form(...),
+    resultat_attendu: str = Form(...),
+    resultat_operationnel: str | None = Form(None),
+    preuve_realisation_file: UploadFile | None = File(None),
+    observations: str | None = Form(None),
+    annee: int = Form(...),
+    periode_type: str = Form(...),
+    periode_valeur: str = Form(default=""),
+    date_periode: str | None = Form(None),
+    code_activite: str | None = Form(None),
+    programme: str | None = Form(None),
+    action: str | None = Form(None),
+    sigobe_execution_id: str = Form(default=""),
+    chargement_id: str = Form(default=""),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Créer un suivi d'activité"""
+    from app.core.path_config import path_config
+    from uuid import uuid4
+
+    try:
+        # Convertir periode_valeur de string à int ou None
+        periode_valeur_int = None
+        if periode_valeur and periode_valeur.strip():
+            try:
+                periode_valeur_int = int(periode_valeur)
+            except ValueError:
+                periode_valeur_int = None
+        
+        # Convertir sigobe_execution_id de string à int ou None
+        sigobe_execution_id_int = None
+        if sigobe_execution_id and sigobe_execution_id.strip():
+            try:
+                sigobe_execution_id_int = int(sigobe_execution_id)
+            except ValueError:
+                sigobe_execution_id_int = None
+        
+        # Convertir chargement_id de string à int ou None
+        chargement_id_int = None
+        if chargement_id and chargement_id.strip():
+            try:
+                chargement_id_int = int(chargement_id)
+            except ValueError:
+                chargement_id_int = None
+        # Gérer l'upload du document de preuve
+        preuve_path = None
+        preuve_filename = None
+        
+        if preuve_realisation_file and preuve_realisation_file.filename:
+            try:
+                docs_dir = path_config.UPLOADS_DIR / "budget" / "activites" / "preuves"
+                path_config.ensure_directory_exists(docs_dir)
+                
+                file_extension = Path(preuve_realisation_file.filename).suffix
+                unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}{file_extension}"
+                file_path = docs_dir / unique_filename
+                
+                content = await preuve_realisation_file.read()
+                file_path.write_bytes(content)
+                
+                preuve_path = f"uploads/budget/activites/preuves/{unique_filename}"
+                preuve_filename = preuve_realisation_file.filename
+                logger.info(f"✅ Preuve de réalisation uploadée: {preuve_path}")
+            except Exception as e:
+                logger.error(f"❌ Erreur lors de l'upload de la preuve: {e}")
+                raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload de la preuve: {e}")
+
+        # Parser la date de période
+        date_periode_parsed = None
+        if date_periode:
+            try:
+                date_periode_parsed = datetime.strptime(date_periode, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        # Créer le suivi
+        suivi = SuiviActivite(
+            sigobe_execution_id=sigobe_execution_id_int,
+            chargement_id=chargement_id_int,
+            code_activite=code_activite,
+            libelle_activite=libelle_activite,
+            programme=programme,
+            action=action,
+            structures_responsables=structures_responsables,
+            resultat_attendu=resultat_attendu,
+            resultat_operationnel=resultat_operationnel,
+            preuve_realisation=preuve_path,
+            preuve_filename=preuve_filename,
+            observations=observations,
+            annee=annee,
+            periode_type=periode_type,
+            periode_valeur=periode_valeur_int,
+            date_periode=date_periode_parsed,
+            created_by_id=current_user.id,
+        )
+
+        session.add(suivi)
+        session.commit()
+        session.refresh(suivi)
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="create",
+            target_type="suivi_activite",
+            target_id=suivi.id,
+            description=f"Création du suivi d'activité: {libelle_activite}",
+            icon="📋",
+        )
+
+        from fastapi.responses import RedirectResponse
+        # Ne pas inclure periode_valeur dans l'URL si elle est None
+        redirect_url = request.url_for("budget_activites").include_query_params(annee=annee, periode_type=periode_type)
+        if periode_valeur_int is not None:
+            redirect_url = redirect_url.include_query_params(periode_valeur=periode_valeur_int)
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Erreur lors de la création du suivi d'activité: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la création: {e}")
+
+
+@router.put("/api/activites/suivi/{suivi_id}", response_class=HTMLResponse, name="api_update_suivi_activite")
+async def api_update_suivi_activite(
+    suivi_id: int,
+    request: Request,
+    libelle_activite: str = Form(...),
+    structures_responsables: str = Form(...),
+    resultat_attendu: str = Form(...),
+    resultat_operationnel: str | None = Form(None),
+    preuve_realisation_file: UploadFile | None = File(None),
+    preuve_delete: str | None = Form(None),
+    observations: str | None = Form(None),
+    annee: int = Form(...),
+    periode_type: str = Form(...),
+    periode_valeur: str | None = Form(None),
+    date_periode: str | None = Form(None),
+    code_activite: str | None = Form(None),
+    programme: str | None = Form(None),
+    action: str | None = Form(None),
+    sigobe_execution_id: str = Form(default=""),
+    chargement_id: str = Form(default=""),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Modifier un suivi d'activité"""
+    from app.core.path_config import path_config
+    from uuid import uuid4
+
+    suivi = session.get(SuiviActivite, suivi_id)
+    if not suivi:
+        raise HTTPException(status_code=404, detail="Suivi d'activité non trouvé")
+
+    try:
+        # Convertir periode_valeur de string à int ou None
+        periode_valeur_int = None
+        if periode_valeur is not None and str(periode_valeur).strip():
+            try:
+                periode_valeur_int = int(periode_valeur)
+            except (ValueError, TypeError):
+                periode_valeur_int = None
+        
+        # Convertir sigobe_execution_id de string à int ou None
+        sigobe_execution_id_int = None
+        if sigobe_execution_id and sigobe_execution_id.strip():
+            try:
+                sigobe_execution_id_int = int(sigobe_execution_id)
+            except ValueError:
+                sigobe_execution_id_int = None
+        
+        # Convertir chargement_id de string à int ou None
+        chargement_id_int = None
+        if chargement_id and chargement_id.strip():
+            try:
+                chargement_id_int = int(chargement_id)
+            except ValueError:
+                chargement_id_int = None
+        
+        # Gérer l'upload du document de preuve
+        if preuve_delete == "1":
+            preuve_path = None
+            preuve_filename = None
+        elif preuve_realisation_file and preuve_realisation_file.filename:
+            try:
+                docs_dir = path_config.UPLOADS_DIR / "budget" / "activites" / "preuves"
+                path_config.ensure_directory_exists(docs_dir)
+                
+                file_extension = Path(preuve_realisation_file.filename).suffix
+                unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}{file_extension}"
+                file_path = docs_dir / unique_filename
+                
+                content = await preuve_realisation_file.read()
+                file_path.write_bytes(content)
+                
+                preuve_path = f"uploads/budget/activites/preuves/{unique_filename}"
+                preuve_filename = preuve_realisation_file.filename
+                logger.info(f"✅ Preuve de réalisation uploadée: {preuve_path}")
+            except Exception as e:
+                logger.error(f"❌ Erreur lors de l'upload de la preuve: {e}")
+                raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload de la preuve: {e}")
+        else:
+            # Conserver le document existant
+            preuve_path = suivi.preuve_realisation
+            preuve_filename = suivi.preuve_filename
+
+        # Parser la date de période
+        date_periode_parsed = None
+        if date_periode:
+            try:
+                date_periode_parsed = datetime.strptime(date_periode, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        # Mettre à jour le suivi
+        suivi.libelle_activite = libelle_activite
+        suivi.structures_responsables = structures_responsables
+        suivi.resultat_attendu = resultat_attendu
+        suivi.resultat_operationnel = resultat_operationnel
+        suivi.preuve_realisation = preuve_path
+        suivi.preuve_filename = preuve_filename
+        suivi.observations = observations
+        suivi.annee = annee
+        suivi.periode_type = periode_type
+        suivi.periode_valeur = periode_valeur_int
+        suivi.date_periode = date_periode_parsed
+        suivi.code_activite = code_activite
+        suivi.programme = programme
+        suivi.action = action
+        suivi.sigobe_execution_id = sigobe_execution_id_int
+        suivi.chargement_id = chargement_id_int
+        suivi.updated_at = datetime.utcnow()
+        suivi.updated_by_id = current_user.id
+
+        session.add(suivi)
+        session.commit()
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="update",
+            target_type="suivi_activite",
+            target_id=suivi.id,
+            description=f"Modification du suivi d'activité: {libelle_activite}",
+            icon="✏️",
+        )
+
+        from fastapi.responses import RedirectResponse
+        # Ne pas inclure periode_valeur dans l'URL si elle est None
+        redirect_url = request.url_for("budget_activites").include_query_params(annee=annee, periode_type=periode_type)
+        if periode_valeur_int is not None:
+            redirect_url = redirect_url.include_query_params(periode_valeur=periode_valeur_int)
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Erreur lors de la modification du suivi d'activité: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la modification: {e}")
+
+
+@router.delete("/api/activites/suivi/{suivi_id}", response_class=HTMLResponse, name="api_delete_suivi_activite")
+def api_delete_suivi_activite(
+    suivi_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Supprimer un suivi d'activité"""
+    suivi = session.get(SuiviActivite, suivi_id)
+    if not suivi:
+        raise HTTPException(status_code=404, detail="Suivi d'activité non trouvé")
+
+    try:
+        libelle = suivi.libelle_activite
+        annee = suivi.annee
+        periode_type = suivi.periode_type
+        periode_valeur = suivi.periode_valeur
+
+        session.delete(suivi)
+        session.commit()
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="delete",
+            target_type="suivi_activite",
+            target_id=suivi_id,
+            description=f"Suppression du suivi d'activité: {libelle}",
+            icon="🗑️",
+        )
+
+        from fastapi.responses import RedirectResponse
+        # Ne pas inclure periode_valeur dans l'URL si elle est None
+        redirect_url = request.url_for("budget_activites").include_query_params(annee=annee, periode_type=periode_type)
+        if periode_valeur is not None:
+            redirect_url = redirect_url.include_query_params(periode_valeur=periode_valeur)
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Erreur lors de la suppression du suivi d'activité: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la suppression: {e}")
+
+
+# ============================================
+# SUIVI DES INVESTISSEMENTS
+# ============================================
+
+
+@router.get("/investissements", response_class=HTMLResponse, name="budget_investissements")
+def budget_investissements(
+    request: Request,
+    annee: int | None = None,
+    code_projet: str | None = None,
+    libelle_projet: str | None = None,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Page de suivi des investissements SIGOBE"""
+    # Déterminer l'année à utiliser
+    if not annee:
+        dernier_chargement = session.exec(
+            select(SigobeChargement).order_by(SigobeChargement.annee.desc(), SigobeChargement.date_chargement.desc())
+        ).first()
+        annee = dernier_chargement.annee if dernier_chargement else datetime.now().year
+
+    # Récupérer les suivis d'investissements
+    query = select(SuiviInvestissement).where(SuiviInvestissement.annee == annee)
+    
+    if code_projet and code_projet.strip():
+        query = query.where(SuiviInvestissement.code_projet.ilike(f"%{code_projet.strip()}%"))
+    if libelle_projet and libelle_projet.strip():
+        query = query.where(SuiviInvestissement.libelle_projet.ilike(f"%{libelle_projet.strip()}%"))
+
+    investissements = session.exec(query.order_by(SuiviInvestissement.libelle_projet, SuiviInvestissement.created_at.desc())).all()
+
+    # Récupérer les investissements SIGOBE disponibles (lignes avec nature=investissement)
+    investissements_sigobe = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.annee == annee)
+        .where(
+            (SigobeExecution.type_depense.ilike("%INVESTISSEMENT%")) |
+            (SigobeExecution.type_depense.ilike("%I -%")) |
+            (SigobeExecution.type_depense == "I")
+        )
+        .order_by(SigobeExecution.activites)
+    ).all()
+
+    # Années disponibles
+    annees_query = select(SuiviInvestissement.annee).distinct()
+    annees_result = session.exec(annees_query).all()
+    annees = sorted(set(annees_result), reverse=True) if annees_result else [datetime.now().year]
+
+    context = get_template_context(
+        request,
+        investissements=investissements,
+        investissements_sigobe=investissements_sigobe,
+        annee=annee,
+        code_projet=code_projet,
+        libelle_projet=libelle_projet,
+        annees_disponibles=annees,
+        current_user=current_user,
+    )
+
+    return templates.TemplateResponse("pages/budget_investissements.html", context)
+
+
+@router.get("/investissements/nouveau", response_class=HTMLResponse, name="budget_investissement_nouveau")
+def budget_investissement_nouveau(
+    request: Request,
+    annee: int | None = None,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Formulaire de création d'un suivi d'investissement"""
+    if not annee:
+        dernier_chargement = session.exec(
+            select(SigobeChargement).order_by(SigobeChargement.annee.desc(), SigobeChargement.date_chargement.desc())
+        ).first()
+        annee = dernier_chargement.annee if dernier_chargement else datetime.now().year
+
+    # Récupérer les investissements SIGOBE disponibles
+    investissements_sigobe = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.annee == annee)
+        .where(
+            (SigobeExecution.type_depense.ilike("%INVESTISSEMENT%")) |
+            (SigobeExecution.type_depense.ilike("%I -%")) |
+            (SigobeExecution.type_depense == "I")
+        )
+        .order_by(SigobeExecution.activites)
+    ).all()
+
+    context = get_template_context(
+        request,
+        annee=annee,
+        investissements_sigobe=investissements_sigobe,
+        current_user=current_user,
+    )
+
+    return templates.TemplateResponse("pages/budget_investissement_form.html", context)
+
+
+@router.get("/investissements/{investissement_id}/edit", response_class=HTMLResponse, name="budget_investissement_edit")
+def budget_investissement_edit(
+    investissement_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Formulaire de modification d'un suivi d'investissement"""
+    investissement = session.get(SuiviInvestissement, investissement_id)
+    if not investissement:
+        raise HTTPException(status_code=404, detail="Suivi d'investissement non trouvé")
+
+    # Récupérer les investissements SIGOBE disponibles
+    investissements_sigobe = session.exec(
+        select(SigobeExecution)
+        .where(SigobeExecution.annee == investissement.annee)
+        .where(
+            (SigobeExecution.type_depense.ilike("%INVESTISSEMENT%")) |
+            (SigobeExecution.type_depense.ilike("%I -%")) |
+            (SigobeExecution.type_depense == "I")
+        )
+        .order_by(SigobeExecution.activites)
+    ).all()
+
+    context = get_template_context(
+        request,
+        investissement=investissement,
+        investissements_sigobe=investissements_sigobe,
+        current_user=current_user,
+    )
+
+    return templates.TemplateResponse("pages/budget_investissement_form.html", context)
+
+
+@router.post("/api/investissements/suivi", response_class=HTMLResponse, name="api_create_suivi_investissement")
+async def api_create_suivi_investissement(
+    request: Request,
+    libelle_projet: str = Form(...),
+    annee: int = Form(...),
+    annee_debut: int | None = Form(None),
+    annee_fin: int | None = Form(None),
+    code_projet: str | None = Form(None),
+    programme: str | None = Form(None),
+    action: str | None = Form(None),
+    cout_total_projet: str = Form(default="0"),
+    budget_mobilise_anterieur: str = Form(default="0"),
+    credits_budgetaires_inscrits: str = Form(default="0"),
+    variation: str | None = Form(None),
+    budget_actuel: str = Form(default="0"),
+    prise_en_charge: str = Form(default="0"),
+    financement_interieur: str = Form(default="0"),
+    financement_exterieur: str = Form(default="0"),
+    taux_realisation_budgetaire: str | None = Form(None),
+    taux_realisation_physique: str | None = Form(None),
+    sigobe_execution_id: str = Form(default=""),
+    chargement_id: str = Form(default=""),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Créer un suivi d'investissement"""
+    try:
+        # Convertir les montants
+        def parse_decimal(value: str | None, default: Decimal = Decimal("0")) -> Decimal:
+            if not value or not value.strip():
+                return default
+            try:
+                return Decimal(str(value).replace(" ", "").replace(",", "."))
+            except:
+                return default
+
+        cout_total = parse_decimal(cout_total_projet)
+        budget_mobilise = parse_decimal(budget_mobilise_anterieur)
+        credits_inscrits = parse_decimal(credits_budgetaires_inscrits)
+        variation_val = parse_decimal(variation) if variation else None
+        budget_actuel_val = parse_decimal(budget_actuel)
+        prise_en_charge_val = parse_decimal(prise_en_charge)
+        financement_int = parse_decimal(financement_interieur)
+        financement_ext = parse_decimal(financement_exterieur)
+        taux_budgetaire = parse_decimal(taux_realisation_budgetaire) if taux_realisation_budgetaire else None
+        taux_physique = parse_decimal(taux_realisation_physique) if taux_realisation_physique else None
+
+        # Convertir sigobe_execution_id et chargement_id
+        sigobe_execution_id_int = None
+        if sigobe_execution_id and sigobe_execution_id.strip():
+            try:
+                sigobe_execution_id_int = int(sigobe_execution_id)
+            except ValueError:
+                sigobe_execution_id_int = None
+
+        chargement_id_int = None
+        if chargement_id and chargement_id.strip():
+            try:
+                chargement_id_int = int(chargement_id)
+            except ValueError:
+                chargement_id_int = None
+
+        # Créer l'investissement
+        investissement = SuiviInvestissement(
+            sigobe_execution_id=sigobe_execution_id_int,
+            chargement_id=chargement_id_int,
+            code_projet=code_projet,
+            libelle_projet=libelle_projet,
+            programme=programme,
+            action=action,
+            annee_debut=annee_debut,
+            annee_fin=annee_fin,
+            annee=annee,
+            cout_total_projet=cout_total,
+            budget_mobilise_anterieur=budget_mobilise,
+            credits_budgetaires_inscrits=credits_inscrits,
+            variation=variation_val,
+            budget_actuel=budget_actuel_val,
+            prise_en_charge=prise_en_charge_val,
+            financement_interieur=financement_int,
+            financement_exterieur=financement_ext,
+            taux_realisation_budgetaire=taux_budgetaire,
+            taux_realisation_physique=taux_physique,
+            created_by_id=current_user.id,
+        )
+
+        session.add(investissement)
+        session.commit()
+        session.refresh(investissement)
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="create",
+            target_type="suivi_investissement",
+            target_id=investissement.id,
+            description=f"Création du suivi d'investissement: {libelle_projet}",
+            icon="📋",
+        )
+
+        redirect_url = request.url_for("budget_investissements").include_query_params(annee=annee)
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Erreur lors de la création du suivi d'investissement: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la création: {e}")
+
+
+@router.put("/api/investissements/suivi/{investissement_id}", response_class=HTMLResponse, name="api_update_suivi_investissement")
+async def api_update_suivi_investissement(
+    investissement_id: int,
+    request: Request,
+    libelle_projet: str = Form(...),
+    annee: int = Form(...),
+    annee_debut: int | None = Form(None),
+    annee_fin: int | None = Form(None),
+    code_projet: str | None = Form(None),
+    programme: str | None = Form(None),
+    action: str | None = Form(None),
+    cout_total_projet: str = Form(default="0"),
+    budget_mobilise_anterieur: str = Form(default="0"),
+    credits_budgetaires_inscrits: str = Form(default="0"),
+    variation: str | None = Form(None),
+    budget_actuel: str = Form(default="0"),
+    prise_en_charge: str = Form(default="0"),
+    financement_interieur: str = Form(default="0"),
+    financement_exterieur: str = Form(default="0"),
+    taux_realisation_budgetaire: str | None = Form(None),
+    taux_realisation_physique: str | None = Form(None),
+    sigobe_execution_id: str = Form(default=""),
+    chargement_id: str = Form(default=""),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Modifier un suivi d'investissement"""
+    investissement = session.get(SuiviInvestissement, investissement_id)
+    if not investissement:
+        raise HTTPException(status_code=404, detail="Suivi d'investissement non trouvé")
+
+    try:
+        # Convertir les montants
+        def parse_decimal(value: str | None, default: Decimal = Decimal("0")) -> Decimal:
+            if not value or not value.strip():
+                return default
+            try:
+                return Decimal(str(value).replace(" ", "").replace(",", "."))
+            except:
+                return default
+
+        # Mettre à jour l'investissement
+        investissement.libelle_projet = libelle_projet
+        investissement.annee = annee
+        investissement.annee_debut = annee_debut
+        investissement.annee_fin = annee_fin
+        investissement.code_projet = code_projet
+        investissement.programme = programme
+        investissement.action = action
+        investissement.cout_total_projet = parse_decimal(cout_total_projet)
+        investissement.budget_mobilise_anterieur = parse_decimal(budget_mobilise_anterieur)
+        investissement.credits_budgetaires_inscrits = parse_decimal(credits_budgetaires_inscrits)
+        investissement.variation = parse_decimal(variation) if variation else None
+        investissement.budget_actuel = parse_decimal(budget_actuel)
+        investissement.prise_en_charge = parse_decimal(prise_en_charge)
+        investissement.financement_interieur = parse_decimal(financement_interieur)
+        investissement.financement_exterieur = parse_decimal(financement_exterieur)
+        investissement.taux_realisation_budgetaire = parse_decimal(taux_realisation_budgetaire) if taux_realisation_budgetaire else None
+        investissement.taux_realisation_physique = parse_decimal(taux_realisation_physique) if taux_realisation_physique else None
+
+        # Convertir sigobe_execution_id et chargement_id
+        sigobe_execution_id_int = None
+        if sigobe_execution_id and sigobe_execution_id.strip():
+            try:
+                sigobe_execution_id_int = int(sigobe_execution_id)
+            except ValueError:
+                sigobe_execution_id_int = None
+
+        chargement_id_int = None
+        if chargement_id and chargement_id.strip():
+            try:
+                chargement_id_int = int(chargement_id)
+            except ValueError:
+                chargement_id_int = None
+
+        investissement.sigobe_execution_id = sigobe_execution_id_int
+        investissement.chargement_id = chargement_id_int
+        investissement.updated_at = datetime.utcnow()
+        investissement.updated_by_id = current_user.id
+
+        session.add(investissement)
+        session.commit()
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="update",
+            target_type="suivi_investissement",
+            target_id=investissement.id,
+            description=f"Modification du suivi d'investissement: {libelle_projet}",
+            icon="✏️",
+        )
+
+        redirect_url = request.url_for("budget_investissements").include_query_params(annee=annee)
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Erreur lors de la modification du suivi d'investissement: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la modification: {e}")
+
+
+@router.delete("/api/investissements/{investissement_id}", response_class=HTMLResponse, name="api_delete_suivi_investissement")
+async def api_delete_suivi_investissement(
+    investissement_id: int,
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """API: Supprimer un suivi d'investissement"""
+    investissement = session.get(SuiviInvestissement, investissement_id)
+    if not investissement:
+        raise HTTPException(status_code=404, detail="Suivi d'investissement non trouvé")
+
+    try:
+        libelle = investissement.libelle_projet
+        annee = investissement.annee
+
+        session.delete(investissement)
+        session.commit()
+
+        ActivityService.log_activity(
+            db_session=session,
+            user_id=current_user.id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="delete",
+            target_type="suivi_investissement",
+            target_id=investissement_id,
+            description=f"Suppression du suivi d'investissement: {libelle}",
+            icon="🗑️",
+        )
+
+        redirect_url = request.url_for("budget_investissements").include_query_params(annee=annee)
+        return RedirectResponse(url=redirect_url, status_code=303)
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Erreur lors de la suppression du suivi d'investissement: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la suppression: {e}")

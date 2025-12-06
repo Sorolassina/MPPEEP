@@ -185,6 +185,14 @@
 
     <div class="navbar-menu">
       {% if current_user %}
+        <!-- Compteur de session (visible uniquement si utilisateur connecté) -->
+        <div id="session-timer" class="session-timer" style="display: none;">
+            <div class="session-timer-content">
+                <span class="session-timer-icon">⏱️</span>
+                <span class="session-timer-label">Session expire dans :</span>
+                <span class="session-timer-time" id="session-timer-time">--:--:--</span>
+            </div>
+        </div>
         <span class="nav-user">
           <img src="{{ profile_picture_url(current_user) }}" alt="Photo profil" class="nav-user-photo">
           {{ current_user.full_name or current_user.email }}

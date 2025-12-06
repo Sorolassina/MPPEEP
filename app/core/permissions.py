@@ -13,15 +13,15 @@ class PermissionManager:
     # Définition des permissions par type d'utilisateur
     PERMISSIONS_BY_TYPE = {
         UserType.ADMIN: {
-            "budget", "performance", "rh", "stocks", "personnel", 
+            "budget", "performance", "plannification", "rh", "stocks", "personnel", 
             "admin", "referentiels", "workflows", "system_settings"
         },
         UserType.DAF: {
-            "budget", "performance", "rh", "stocks", "personnel", 
+            "budget", "performance", "plannification", "rh", "stocks", "personnel", 
             "referentiels", "workflows"
         },
         UserType.SDB: {
-            "budget", "performance"
+            "budget", "performance", "plannification"
         },
         UserType.SDRH: {
             "rh", "personnel"

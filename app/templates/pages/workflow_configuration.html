@@ -1321,7 +1321,13 @@ select.form-control {
 
     <div class="tabs">
 
-        <button class="tab-button active" onclick="switchTab('templates')">
+        <button class="tab-button active" onclick="switchTab('custom-roles')">
+
+            👥 Rôles Personnalisés
+
+        </button>
+
+        <button class="tab-button" onclick="switchTab('templates')">
 
             📋 Templates de Workflows
 
@@ -1333,41 +1339,31 @@ select.form-control {
 
         </button>
 
-        <button class="tab-button" onclick="switchTab('custom-roles')">
-
-            👥 Rôles Personnalisés
-
-        </button>
-
     </div>
 
 
 
-    <!-- Tab 1: Templates -->
+    <!-- Tab 1: Custom Roles -->
 
-    <div id="tab-templates" class="tab-content active">
+    <div id="tab-custom-roles" class="tab-content active">
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
 
-            <h3>📋 Templates de Workflows</h3>
+            <h3>👥 Rôles Personnalisés</h3>
 
-            <div style="display: flex; gap: 0.5rem;">
+            <button class="action-btn" onclick="openCreateRoleModal()">
 
-                <button class="action-btn" onclick="openCreateTemplateModal()">
+                ➕ Créer un Rôle
 
-                    ➕ Créer un Template
-
-                </button>
-
-            </div>
+            </button>
 
         </div>
 
 
 
-    <div class="templates-grid" id="templates-container">
+        <div class="custom-roles-container" id="custom-roles-container">
 
-            <!-- Templates will be loaded here -->
+            <!-- Custom roles will be loaded here -->
 
         </div>
 
@@ -1403,27 +1399,31 @@ select.form-control {
 
 
 
-    <!-- Tab 3: Custom Roles -->
+    <!-- Tab 2: Templates -->
 
-    <div id="tab-custom-roles" class="tab-content">
+    <div id="tab-templates" class="tab-content">
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
 
-            <h3>👥 Rôles Personnalisés</h3>
+            <h3>📋 Templates de Workflows</h3>
 
-            <button class="action-btn" onclick="openCreateRoleModal()">
+            <div style="display: flex; gap: 0.5rem;">
 
-                ➕ Créer un Rôle
+                <button class="action-btn" onclick="openCreateTemplateModal()">
 
-            </button>
+                    ➕ Créer un Template
+
+                </button>
+
+            </div>
 
         </div>
 
 
 
-        <div class="roles-grid" id="roles-container">
+    <div class="templates-grid" id="templates-container">
 
-            <!-- Roles will be loaded here -->
+            <!-- Templates will be loaded here -->
 
         </div>
 
@@ -2179,11 +2179,11 @@ function switchTab(tabName) {
 
 document.addEventListener('DOMContentLoaded', function() {
 
+    loadCustomRoles();
+
     loadTemplates();
 
     loadRequestTypes();
-
-    loadCustomRoles();
 
     
     
@@ -3473,7 +3473,7 @@ async function loadCustomRoles() {
 
 function renderCustomRoles() {
 
-    const container = document.getElementById('roles-container');
+    const container = document.getElementById('custom-roles-container');
 
     
     

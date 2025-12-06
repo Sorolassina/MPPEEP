@@ -1,0 +1,437 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+{% block title %}Demande #{{ req.id }} · {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.wrap {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 2rem 1.5rem;
+    background: #f8f9fa;
+    box-sizing: border-box;
+}
+.meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.meta-label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.meta-value {
+    font-size: 1.1rem;
+    color: #212529;
+    font-weight: 500;
+}
+.current-state {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.assignee {
+    display: inline-block;
+    margin-left: 1rem;
+    padding: 0.5rem 1rem;
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+.workflow-circuit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 2rem 0;
+}
+.workflow-step {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-left: 4px solid #dee2e6;
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+.workflow-step.completed {
+    background: #d1e7dd;
+    border-left-color: #0f5132;
+}
+.workflow-step.current {
+    background: #cfe2ff;
+    border-left-color: #084298;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+}
+.workflow-step.pending {
+    opacity: 0.6;
+}
+.step-number {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.workflow-step.completed .step-number {
+    background: #0f5132;
+    color: white;
+}
+.workflow-step.current .step-number {
+    background: #084298;
+    color: white;
+}
+.step-info {
+    flex: 1;
+}
+.step-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+.step-role {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+.step-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.workflow-step.completed .step-icon {
+    background: #198754;
+}
+.workflow-step.completed .step-icon::before {
+    content: '✓';
+    color: white;
+    font-weight: bold;
+}
+.workflow-step.current .step-icon {
+    background: #0d6efd;
+}
+.workflow-step.current .step-icon::before {
+    content: '⏳';
+}
+.workflow-step.pending .step-icon {
+    background: #e9ecef;
+}
+.workflow-step.pending .step-icon::before {
+    content: '○';
+    color: #6c757d;
+}
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #dee2e6;
+}
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: #e5e7eb;
+}
+.t-item {
+    position: relative;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+.t-item::before {
+    content: '';
+    position: absolute;
+    left: -28px;
+    top: 20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #1f6feb;
+    border: 2px solid white;
+}
+.t-title {
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 0.5rem;
+    font-size: 1.05rem;
+}
+.t-meta {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+@media (max-width: 768px) {
+    .wrap {
+        padding: 1rem;
+    }
+    .meta {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .workflow-step {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .current-state,
+    .assignee {
+        display: block;
+        margin: 0.5rem 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set module_names = {
+    'rh': 'Ressources Humaines',
+    'budget': 'Budget',
+    'stock': 'Stock',
+    'performance': 'Performance',
+    'personnel': 'Personnel',
+    'besoins': 'Besoins'
+} %}
+{% set module_home_routes = {
+    'rh': 'rh_home',
+    'budget': 'budget_home',
+    'stock': 'stock_home',
+    'performance': 'performance_home',
+    'personnel': 'personnel_home',
+    'besoins': 'besoins_home'
+} %}
+{% set module_name = module_names.get(module, module|title) %}
+{% set module_home_route = module_home_routes.get(module, 'accueil') %}
+
+{{ page_header(
+    title='📄 Demande #' + req.id|string + ' - ' + req.type,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': module_name, 'url': url_for(module_home_route)},
+        {'name': 'Demande #' + req.id|string}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('generic_requests_list', module=module), 'primary': False}
+    ]
+) }}
+
+<div class="wrap">
+  <div class="card">
+    <div class="meta">
+      <div class="meta-item">
+        <span class="meta-label">Type de demande</span>
+        <span class="meta-value"><span class="badge">{{ req.type }}</span></span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Demandeur</span>
+        <span class="meta-value">#{{ req.demandeur_id }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Date de création</span>
+        <span class="meta-value">{{ req.created_at.strftime('%d/%m/%Y à %H:%M') if req.created_at else '—' }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Dernière modification</span>
+        <span class="meta-value">{{ req.updated_at.strftime('%d/%m/%Y à %H:%M') if req.updated_at else '—' }}</span>
+      </div>
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">Objet de la demande</span>
+        <span class="meta-value">{{ req.objet }}</span>
+      </div>
+      {% if req.motif %}
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">Motif détaillé</span>
+        <span class="meta-value">{{ req.motif }}</span>
+      </div>
+      {% endif %}
+      {% if req.description %}
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">Description</span>
+        <span class="meta-value">{{ req.description }}</span>
+      </div>
+      {% endif %}
+      {% if req.document_joint %}
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">📎 Document joint</span>
+        <span class="meta-value">
+          <a href="/{{ req.document_joint }}" target="_blank" style="color: var(--secondary-color); text-decoration: underline;">
+            📥 {{ req.document_filename or 'Télécharger le document' }}
+          </a>
+        </span>
+      </div>
+      {% endif %}
+      {% if req.date_debut %}
+      <div class="meta-item">
+        <span class="meta-label">Date de début</span>
+        <span class="meta-value">{{ req.date_debut.strftime('%d/%m/%Y') if req.date_debut else '—' }}</span>
+      </div>
+      {% endif %}
+      {% if req.date_fin %}
+      <div class="meta-item">
+        <span class="meta-label">Date de fin</span>
+        <span class="meta-value">{{ req.date_fin.strftime('%d/%m/%Y') if req.date_fin else '—' }}</span>
+      </div>
+      {% endif %}
+      <div class="meta-item" style="grid-column: 1/-1;">
+        <span class="meta-label">État actuel du circuit</span>
+        <span class="meta-value">
+          <span class="current-state">{{ req.current_state.value }}</span>
+          {% if req.current_assignee_role %}
+          <span class="assignee">En attente : {{ req.current_assignee_role }}</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔄 Circuit de Validation</h3>
+    {% if workflow_info and workflow_info.template_name %}
+    <p style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+      <strong>Template :</strong> {{ workflow_info.template_name }}
+    </p>
+    {% endif %}
+    <div class="workflow-circuit">
+      {% if workflow_circuit %}
+        {% set current_index = -1 %}
+        {% for state in workflow_circuit %}
+          {% if state.value == req.current_state.value %}
+            {% set current_index = loop.index0 %}
+          {% endif %}
+        {% endfor %}
+        {% for state in workflow_circuit %}
+          {% set is_current = (loop.index0 == current_index) %}
+          {% set is_completed = (loop.index0 < current_index) %}
+          {% set is_pending = (loop.index0 > current_index) %}
+          <div class="workflow-step {% if is_current %}current{% elif is_completed %}completed{% else %}pending{% endif %}">
+            <div class="step-number">{{ loop.index }}</div>
+            <div class="step-info">
+              <div class="step-title">{{ state.value }}</div>
+              {% if workflow_info and workflow_info.steps and workflow_info.steps.get(state.value) %}
+                <div class="step-role">👤 Validation : {{ workflow_info.steps.get(state.value).role_name }}</div>
+              {% endif %}
+            </div>
+            <div class="step-icon"></div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p style="color: #999; text-align: center; padding: 2rem;">Aucun circuit configuré</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if next_steps and next_steps|length > 0 %}
+  <div class="card">
+    <h3>✅ Actions possibles</h3>
+    <div class="actions">
+      {% for step in next_steps %}
+        <button type="button" class="btn btn-primary" onclick="transitionRequest('{{ step.to_state.value }}')">
+          ✅ Passer à : {{ step.to_state.value }}
+        </button>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if history and history|length > 0 %}
+  <div class="card">
+    <h3>📜 Historique</h3>
+    <div class="timeline">
+      {% for h in history %}
+      <div class="t-item">
+        <div class="t-title">{{ h.from_state.value }} → {{ h.to_state.value }}</div>
+        <div class="t-meta">
+          {% if h.acted_by_role %}
+          <strong>Rôle :</strong> {{ h.acted_by_role }}<br>
+          {% endif %}
+          <strong>Date :</strong> {{ h.acted_at.strftime('%d/%m/%Y à %H:%M') if h.acted_at else '—' }}
+          {% if h.comment %}
+          <br><strong>Commentaire :</strong> {{ h.comment }}
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function transitionRequest(toState) {
+  const confirmMsg = `Êtes-vous sûr de vouloir faire passer cette demande à l'état "${toState}" ?`;
+  if (!confirm(confirmMsg)) return;
+  
+  const formData = new FormData();
+  formData.append('to_state', toState);
+  
+  try {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+      overlay.querySelector('.loading-text').textContent = 'Transition en cours...';
+      overlay.classList.add('show');
+    }
+    
+    const res = await fetch("{{ url_for('generic_request_transition', module=module, request_id=req.id) }}", {
+      method: "POST",
+      body: formData
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      if (overlay) {
+        overlay.querySelector('.loading-text').textContent = '✅ Transition effectuée';
+      }
+      setTimeout(() => location.reload(), 500);
+    } else {
+      if (overlay) {
+        overlay.classList.remove('show');
+      }
+      alert("❌ Erreur : " + (data.message || "Transition refusée"));
+    }
+  } catch (error) {
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+      overlay.classList.remove('show');
+    }
+    console.error('Erreur:', error);
+    alert("❌ Erreur lors de la transition");
+  }
+}
+</script>
+{% endblock %}
+

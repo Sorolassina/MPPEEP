@@ -40,52 +40,180 @@
     font-size: 0.95rem;
 }
 
-/* KPIs */
-.kpis {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+/* KPIs - Catégories avec grilles */
+.kpi-category {
+    margin-bottom: 2.5rem;
 }
 
-.kpi {
-    padding: 1.5rem;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 12px;
-    border-left: 4px solid var(--primary-color);
-    transition: all 0.3s;
+.kpi-category:last-child {
+    margin-bottom: 0;
 }
 
-.kpi:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-.kpi.rupture {
-    border-left-color: var(--danger-color);
-    background: linear-gradient(135deg, #fee 0%, #fdd 100%);
-}
-
-.kpi.rupture:hover {
-    animation: pulse-danger 2s infinite;
-}
-
-@keyframes pulse-danger {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
-    50% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
-}
-
-.kpi .label {
-    font-size: 0.9rem;
-    color: #6c757d;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.kpi .val {
-    font-size: 2rem;
+.kpi-category-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #212529;
+    color: #1f2937;
+    margin: 0 0 1.25rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(15, 23, 42, 0.1);
+}
+
+.kpi-category-icon {
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.1), rgba(232, 106, 10, 0.1));
+    border-radius: 10px;
+}
+
+.kpis-unified {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.kpi-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
+    transition: width 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.kpi-card:hover::before {
+    width: 6px;
+}
+
+.kpi-card.kpi-primary::before {
+    background: linear-gradient(180deg, var(--primary-color), #059a17);
+}
+
+.kpi-card.kpi-success::before {
+    background: linear-gradient(180deg, #10b981, #059669);
+}
+
+.kpi-card.kpi-warning::before {
+    background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+
+.kpi-card.kpi-alert::before {
+    background: linear-gradient(180deg, #ef4444, #dc2626);
+}
+
+.kpi-icon {
+    font-size: 2.5rem;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.1), rgba(232, 106, 10, 0.1));
+    border-radius: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.kpi-card.kpi-primary .kpi-icon {
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.15), rgba(5, 154, 23, 0.08));
+}
+
+.kpi-card.kpi-success .kpi-icon {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08));
+}
+
+.kpi-card.kpi-warning .kpi-icon {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.08));
+}
+
+.kpi-card.kpi-alert .kpi-icon {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+}
+
+.kpi-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.kpi-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.kpi-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1f2937;
+    line-height: 1.2;
+}
+
+.kpi-card.kpi-primary .kpi-value {
+    color: var(--primary-color);
+}
+
+.kpi-card.kpi-success .kpi-value {
+    color: #10b981;
+}
+
+.kpi-card.kpi-warning .kpi-value {
+    color: #f59e0b;
+}
+
+.kpi-card.kpi-alert .kpi-value {
+    color: #ef4444;
+}
+
+@media (max-width: 768px) {
+    .kpis-unified {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .kpi-card {
+        padding: 1.25rem;
+    }
+    
+    .kpi-icon {
+        width: 56px;
+        height: 56px;
+        font-size: 2rem;
+    }
+    
+    .kpi-value {
+        font-size: 1.5rem;
+    }
 }
 
 /* Actions Grid - Une seule ligne */
@@ -126,6 +254,7 @@
         {'name': 'Stocks'}
     ],
     actions=[
+        {'label': '📋 Demandes', 'url': url_for('generic_requests_list', module='stock'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '❓ Aide', 'url': url_for('aide_stock'), 'primary': False, 'disabled': current_user.is_guest},
         {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
     ]
@@ -146,90 +275,150 @@
 
   <!-- KPIs et Statistiques -->
   <div class="card">
-    <h2 style="margin: 0 0 1.5rem 0; color: #222; font-size: 1.3rem;">📊 Statistiques et Indicateurs</h2>
+    <h2 style="margin: 0 0 2rem 0; color: #222; font-size: 1.5rem; font-weight: 700;">📊 Indicateurs Clés</h2>
     
-    <!-- KPIs Articles -->
-    <h3 style="font-size: 1rem; margin: 1rem 0 0.5rem 0; color: #666;">📦 Articles</h3>
-    <div class="kpis">
-      <div class="kpi">
-        <div class="label">Total Articles</div>
-        <div class="val" id="kpi-total-articles">
-          {% if current_user.is_guest %}{{ total_articles or 156 }}{% else %}—{% endif %}
+    <!-- Catégorie Articles -->
+    <div class="kpi-category">
+      <h3 class="kpi-category-title">
+        <span class="kpi-category-icon">📦</span>
+        <span>Articles</span>
+      </h3>
+      <div class="kpis-unified">
+        <div class="kpi-card">
+          <div class="kpi-icon">📦</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Total Articles</div>
+            <div class="kpi-value" id="kpi-total-articles">
+              {% if current_user.is_guest %}{{ total_articles or 156 }}{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kpi">
-        <div class="label">Articles Actifs</div>
-        <div class="val" id="kpi-actifs">
-          {% if current_user.is_guest %}{{ articles_en_stock or 142 }}{% else %}—{% endif %}
+        
+        <div class="kpi-card">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Articles Actifs</div>
+            <div class="kpi-value" id="kpi-actifs">
+              {% if current_user.is_guest %}{{ articles_en_stock or 142 }}{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kpi rupture">
-        <div class="label">En Rupture</div>
-        <div class="val" id="kpi-rupture">
-          {% if current_user.is_guest %}{{ articles_rupture or 14 }}{% else %}—{% endif %}
+        
+        <div class="kpi-card kpi-alert">
+          <div class="kpi-icon">⚠️</div>
+          <div class="kpi-content">
+            <div class="kpi-label">En Rupture</div>
+            <div class="kpi-value" id="kpi-rupture">
+              {% if current_user.is_guest %}{{ articles_rupture or 14 }}{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kpi">
-        <div class="label">Valeur Stock</div>
-        <div class="val" id="kpi-valeur">
-          {% if current_user.is_guest %}{{ "{:,.0f}".format(valeur_totale or 45000000) }} F{% else %}—{% endif %}
+        
+        <div class="kpi-card kpi-primary">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Valeur Stock</div>
+            <div class="kpi-value" id="kpi-valeur">
+              {% if current_user.is_guest %}{{ "{:,.0f}".format(valeur_totale or 45000000) }} F{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
     
-    <!-- KPIs Demandes -->
-    <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem 0; color: #666;">📋 Demandes</h3>
-    <div class="kpis">
-      <div class="kpi">
-        <div class="label">Total Demandes</div>
-        <div class="val" id="kpi-total-demandes">
-          {% if current_user.is_guest %}45{% else %}—{% endif %}
+    <!-- Catégorie Demandes -->
+    <div class="kpi-category">
+      <h3 class="kpi-category-title">
+        <span class="kpi-category-icon">📋</span>
+        <span>Demandes</span>
+      </h3>
+      <div class="kpis-unified">
+        <div class="kpi-card">
+          <div class="kpi-icon">📋</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Total Demandes</div>
+            <div class="kpi-value" id="kpi-total-demandes">
+              {% if current_user.is_guest %}45{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kpi">
-        <div class="label">En Attente</div>
-        <div class="val" id="kpi-demandes-attente">
-          {% if current_user.is_guest %}{{ demandes_en_cours or 8 }}{% else %}—{% endif %}
+        
+        <div class="kpi-card kpi-warning">
+          <div class="kpi-icon">⏳</div>
+          <div class="kpi-content">
+            <div class="kpi-label">En Attente</div>
+            <div class="kpi-value" id="kpi-demandes-attente">
+              {% if current_user.is_guest %}{{ demandes_en_cours or 8 }}{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kpi">
-        <div class="label">Validées</div>
-        <div class="val" id="kpi-demandes-validees">
-          {% if current_user.is_guest %}37{% else %}—{% endif %}
+        
+        <div class="kpi-card kpi-success">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Validées</div>
+            <div class="kpi-value" id="kpi-demandes-validees">
+              {% if current_user.is_guest %}37{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
     
-    <!-- KPIs Mouvements -->
-    <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem 0; color: #666;">🔄 Mouvements du Mois</h3>
-    <div class="kpis">
-      <div class="kpi">
-        <div class="label">Entrées</div>
-        <div class="val" id="kpi-entrees">
-          {% if current_user.is_guest %}{{ mouvements_jour or 23 }}{% else %}—{% endif %}
+    <!-- Catégorie Mouvements -->
+    <div class="kpi-category">
+      <h3 class="kpi-category-title">
+        <span class="kpi-category-icon">🔄</span>
+        <span>Mouvements du Mois</span>
+      </h3>
+      <div class="kpis-unified">
+        <div class="kpi-card">
+          <div class="kpi-icon">📥</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Entrées</div>
+            <div class="kpi-value" id="kpi-entrees">
+              {% if current_user.is_guest %}{{ mouvements_jour or 23 }}{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kpi">
-        <div class="label">Sorties</div>
-        <div class="val" id="kpi-sorties">
-          {% if current_user.is_guest %}18{% else %}—{% endif %}
+        
+        <div class="kpi-card">
+          <div class="kpi-icon">📤</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Sorties</div>
+            <div class="kpi-value" id="kpi-sorties">
+              {% if current_user.is_guest %}18{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
     
-    <!-- KPIs Péremption -->
-    <h3 style="font-size: 1rem; margin: 1.5rem 0 0.5rem 0; color: #666;">🍃 Alertes Péremption</h3>
-    <div class="kpis">
-      <div class="kpi" style="border-left-color: #f59e0b;">
-        <div class="label">Lots Proches Péremption</div>
-        <div class="val" id="kpi-lots-alerte">
-          {% if current_user.is_guest %}7{% else %}—{% endif %}
+    <!-- Catégorie Alertes Péremption -->
+    <div class="kpi-category">
+      <h3 class="kpi-category-title">
+        <span class="kpi-category-icon">🍃</span>
+        <span>Alertes Péremption</span>
+      </h3>
+      <div class="kpis-unified">
+        <div class="kpi-card kpi-warning">
+          <div class="kpi-icon">🍃</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Proches Péremption</div>
+            <div class="kpi-value" id="kpi-lots-alerte">
+              {% if current_user.is_guest %}7{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="kpi rupture">
-        <div class="label">Lots Périmés</div>
-        <div class="val" id="kpi-lots-perimes">
-          {% if current_user.is_guest %}3{% else %}—{% endif %}
+        
+        <div class="kpi-card kpi-alert">
+          <div class="kpi-icon">❌</div>
+          <div class="kpi-content">
+            <div class="kpi-label">Lots Périmés</div>
+            <div class="kpi-value" id="kpi-lots-perimes">
+              {% if current_user.is_guest %}3{% else %}—{% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>

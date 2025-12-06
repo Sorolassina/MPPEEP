@@ -20,6 +20,7 @@ from app.models.performance import (
     StatutObjectif,
     TypeObjectif,
 )
+from app.models.personnel import Programme
 
 logger = get_logger(__name__)
 
@@ -48,10 +49,35 @@ class PerformanceService:
             if progression > 0:
                 statut = StatutObjectif.EN_COURS
 
+            # Normaliser le type_objectif (convertir en minuscules pour correspondre à l'enum)
+            type_obj_str = objectif_data.get("type_objectif", "specifique")
+            logger.info(f"🔍 Type objectif reçu: {type_obj_str} (type: {type(type_obj_str)})")
+            
+            if isinstance(type_obj_str, str):
+                type_obj_lower = type_obj_str.lower()
+                # Pour "global" et "specifique", utiliser la valeur minuscule
+                if type_obj_lower in ["global", "specifique"]:
+                    type_obj_str = type_obj_lower
+                else:
+                    # Pour les autres types (FINANCIER, RH, etc.), garder en majuscules
+                    type_obj_str = type_obj_str.upper()
+            
+            logger.info(f"🔍 Type objectif normalisé: {type_obj_str}")
+            
+            # Valider avec l'enum mais stocker la string
+            # Vérifier que la valeur est valide en utilisant l'enum
+            try:
+                TypeObjectif(type_obj_str)  # Validation
+            except ValueError:
+                # Si ce n'est pas une valeur d'enum valide, utiliser la valeur par défaut
+                logger.warning(f"⚠️ Type objectif invalide '{type_obj_str}', utilisation de la valeur par défaut")
+                type_obj_str = TypeObjectif.SPECIFIQUE.value
+
             objectif = ObjectifPerformance(
+                code=objectif_data.get("code"),
                 titre=objectif_data["titre"],
                 description=objectif_data.get("description"),
-                type_objectif=TypeObjectif(objectif_data.get("type_objectif", "OPERATIONNEL")),
+                type_objectif=type_obj_str,  # Stocker directement la string
                 priorite=PrioriteObjectif(objectif_data.get("priorite", "NORMALE")),
                 date_debut=objectif_data.get("date_debut", date.today()),
                 date_fin=objectif_data["date_fin"],
@@ -59,8 +85,11 @@ class PerformanceService:
                 valeur_cible=Decimal(str(objectif_data["valeur_cible"])),
                 valeur_actuelle=Decimal(str(objectif_data.get("valeur_actuelle", 0))),
                 unite=objectif_data.get("unite", ""),
-                responsable_id=objectif_data["responsable_id"],
+                responsable_id=objectif_data.get("responsable_id"),
                 service_responsable=objectif_data.get("service_responsable"),
+                resultat_strategique_id=objectif_data.get("resultat_strategique_id"),
+                programme_id=objectif_data.get("programme_id"),
+                objectif_global_id=objectif_data.get("objectif_global_id"),
                 statut=statut,
                 progression_pourcentage=progression,
                 indicateurs_associes=objectif_data.get("indicateurs_associes"),
@@ -78,7 +107,10 @@ class PerformanceService:
 
         except Exception as e:
             session.rollback()
+            import traceback
+            error_details = traceback.format_exc()
             logger.error(f"Erreur lors de la création de l'objectif: {e}")
+            logger.error(f"Détails de l'erreur:\n{error_details}")
             raise
 
     @staticmethod
@@ -110,13 +142,22 @@ class PerformanceService:
             if responsable_id:
                 conditions.append(ObjectifPerformance.responsable_id == responsable_id)
             if type_objectif:
-                conditions.append(ObjectifPerformance.type_objectif == type_objectif)
+                # Normaliser le type_objectif pour la comparaison
+                type_obj_normalized = type_objectif.lower() if isinstance(type_objectif, str) else type_objectif
+                if type_obj_normalized not in ["global", "specifique"]:
+                    type_obj_normalized = type_objectif.upper() if isinstance(type_objectif, str) else type_objectif
+                conditions.append(ObjectifPerformance.type_objectif == type_obj_normalized)
 
             if conditions:
                 query = query.where(and_(*conditions))
 
-            # Tri par date de création décroissante
-            query = query.order_by(ObjectifPerformance.created_at.desc())
+            # Tri par code (si présent), puis par date de création décroissante
+            # Utiliser NULLS LAST pour que les objectifs sans code soient en dernier
+            from sqlalchemy import nullslast
+            query = query.order_by(
+                nullslast(ObjectifPerformance.code.asc()),
+                ObjectifPerformance.created_at.desc()
+            )
 
             # Pagination
             query = query.offset(skip).limit(limit)
@@ -139,11 +180,29 @@ class PerformanceService:
 
             # Mettre à jour les champs
             for field, value in objectif_data.items():
-                if hasattr(objectif, field) and value is not None:
-                    if field in ["valeur_cible", "valeur_actuelle"]:
-                        setattr(objectif, field, Decimal(str(value)))
-                    else:
-                        setattr(objectif, field, value)
+                if hasattr(objectif, field):
+                    # Pour les champs optionnels (code, objectif_global_id, resultat_strategique_id, programme_id), permettre None
+                    if field in ["code", "objectif_global_id", "resultat_strategique_id", "programme_id"]:
+                        setattr(objectif, field, value)  # Permettre None pour supprimer/délier
+                    elif value is not None:
+                        if field in ["valeur_cible", "valeur_actuelle"]:
+                            setattr(objectif, field, Decimal(str(value)))
+                        elif field == "type_objectif":
+                            # Normaliser le type_objectif (convertir en minuscules pour correspondre à l'enum)
+                            type_obj_str = value
+                            if isinstance(type_obj_str, str):
+                                type_obj_str = type_obj_str.lower()
+                            # Gérer les cas spéciaux (FINANCIER, RH, etc. restent en majuscules)
+                            if type_obj_str not in ["global", "specifique"]:
+                                type_obj_str = value.upper() if isinstance(value, str) else value
+                            # Valider avec l'enum mais stocker la string
+                            try:
+                                TypeObjectif(type_obj_str)  # Validation
+                                setattr(objectif, field, type_obj_str)  # Stocker directement la string
+                            except ValueError:
+                                logger.warning(f"⚠️ Type objectif invalide '{type_obj_str}', valeur non modifiée")
+                        else:
+                            setattr(objectif, field, value)
 
             # Recalculer la progression
             if objectif.valeur_cible and objectif.valeur_actuelle:
@@ -200,38 +259,71 @@ class PerformanceService:
 
     @staticmethod
     def get_kpis_objectifs(session: Session) -> dict[str, Any]:
-        """Récupère les KPIs des objectifs"""
+        """Récupère les KPIs des objectifs basés sur les valeurs réelles calculées en cascade"""
         try:
+            # S'assurer que les valeurs actuelles sont à jour
+            PerformanceService.calculer_valeurs_actuelles_cascade(session)
+            
             # Total objectifs
-            total_objectifs = session.exec(select(func.count(ObjectifPerformance.id))).one()
+            total_objectifs = session.exec(select(func.count(ObjectifPerformance.id))).one() or 0
 
             # Objectifs par statut
             objectifs_atteints = session.exec(
                 select(func.count(ObjectifPerformance.id)).where(ObjectifPerformance.statut == StatutObjectif.ATTEINT)
-            ).one()
+            ).one() or 0
 
             objectifs_en_cours = session.exec(
                 select(func.count(ObjectifPerformance.id)).where(ObjectifPerformance.statut == StatutObjectif.EN_COURS)
-            ).one()
+            ).one() or 0
 
             objectifs_en_retard = session.exec(
                 select(func.count(ObjectifPerformance.id)).where(ObjectifPerformance.statut == StatutObjectif.EN_RETARD)
-            ).one()
+            ).one() or 0
 
-            # Taux de réalisation global
+            # Taux de réalisation global basé sur les valeurs actuelles vs valeurs cibles
+            objectifs_avec_valeurs = session.exec(
+                select(ObjectifPerformance).where(
+                    ObjectifPerformance.valeur_cible > 0
+                )
+            ).all()
+            
             taux_realisation = 0
-            if total_objectifs > 0:
+            if objectifs_avec_valeurs:
+                taux_realisation_list = []
+                for obj in objectifs_avec_valeurs:
+                    if obj.valeur_cible and obj.valeur_cible > 0:
+                        valeur_actuelle = obj.valeur_actuelle or Decimal('0')
+                        taux = float(valeur_actuelle) / float(obj.valeur_cible) * 100
+                        taux_realisation_list.append(min(taux, 100))  # Limiter à 100%
+                
+                if taux_realisation_list:
+                    taux_realisation = sum(taux_realisation_list) / len(taux_realisation_list)
+            elif total_objectifs > 0:
+                # Fallback: utiliser le nombre d'objectifs atteints
                 taux_realisation = (objectifs_atteints / total_objectifs) * 100
 
-            # Progression moyenne
-            progression_moyenne = (
-                session.exec(
-                    select(func.avg(ObjectifPerformance.progression_pourcentage)).where(
-                        ObjectifPerformance.statut.in_([StatutObjectif.EN_COURS, StatutObjectif.ATTEINT])
-                    )
-                ).one()
-                or 0
-            )
+            # Progression moyenne basée sur les valeurs actuelles
+            progression_moyenne = 0
+            if objectifs_avec_valeurs:
+                progression_list = []
+                for obj in objectifs_avec_valeurs:
+                    if obj.valeur_cible and obj.valeur_cible > 0:
+                        valeur_actuelle = obj.valeur_actuelle or Decimal('0')
+                        progression = float(valeur_actuelle) / float(obj.valeur_cible) * 100
+                        progression_list.append(min(progression, 100))
+                
+                if progression_list:
+                    progression_moyenne = sum(progression_list) / len(progression_list)
+            else:
+                # Fallback: utiliser progression_pourcentage
+                progression_moyenne = (
+                    session.exec(
+                        select(func.avg(ObjectifPerformance.progression_pourcentage)).where(
+                            ObjectifPerformance.statut.in_([StatutObjectif.EN_COURS, StatutObjectif.ATTEINT])
+                        )
+                    ).one()
+                    or 0
+                )
 
             return {
                 "total_objectifs": total_objectifs,
@@ -263,6 +355,19 @@ class PerformanceService:
     ) -> IndicateurPerformance:
         """Crée un nouvel indicateur de performance"""
         try:
+            from datetime import datetime
+            
+            logger.info(f"🔍 [creer_indicateur] Données reçues: {list(indicateur_data.keys())}")
+            logger.info(f"🔍 [creer_indicateur] cible_N_plus_1 = {indicateur_data.get('cible_N_plus_1')}")
+            logger.info(f"🔍 [creer_indicateur] cible_N_plus_2 = {indicateur_data.get('cible_N_plus_2')}")
+            logger.info(f"🔍 [creer_indicateur] annee = {indicateur_data.get('annee')}")
+            
+            # Si annee n'est pas fournie, utiliser l'année actuelle par défaut
+            annee_value = indicateur_data.get("annee")
+            if annee_value is None:
+                annee_value = datetime.now().year
+                logger.info(f"🔍 [creer_indicateur] annee non fournie, utilisation de l'année actuelle: {annee_value}")
+            
             indicateur = IndicateurPerformance(
                 objectif_id=indicateur_data["objectif_id"],
                 nom=indicateur_data["nom"],
@@ -270,28 +375,53 @@ class PerformanceService:
                 formule_calcul=indicateur_data.get("formule_calcul"),
                 categorie=indicateur_data.get("categorie", "OPERATIONNEL"),
                 type_indicateur=indicateur_data.get("type_indicateur", "Nombre"),
+                annee=annee_value,
                 valeur_cible=indicateur_data.get("valeur_cible"),
                 valeur_actuelle=indicateur_data.get("valeur_actuelle", Decimal(0)),
                 unite=indicateur_data.get("unite_mesure", ""),
                 seuil_alerte_bas=indicateur_data.get("seuil_alerte_min"),
                 seuil_alerte_haut=indicateur_data.get("seuil_alerte_max"),
                 frequence_maj=indicateur_data.get("frequence_mesure", "MENSUEL"),
-                responsable_id=indicateur_data["responsable_id"],
+                responsable_id=indicateur_data.get("responsable_id"),
                 source_donnees=indicateur_data.get("source_donnees"),
+                methode=indicateur_data.get("methode"),
+                mode_collecte_donnees=indicateur_data.get("mode_collecte_donnees"),
+                derniere_valeur_connue=indicateur_data.get("derniere_valeur_connue"),
+                sens_appreciation=indicateur_data.get("sens_appreciation", "haut"),
+                doc_justif=indicateur_data.get("doc_justif"),
+                cible_N_plus_1=indicateur_data.get("cible_N_plus_1"),
+                cible_N_plus_2=indicateur_data.get("cible_N_plus_2"),
                 actif=indicateur_data.get("actif", True),
                 created_by_id=created_by_id,
             )
+            
+            logger.info(f"🔍 [creer_indicateur] Objet IndicateurPerformance créé")
+            logger.info(f"🔍 [creer_indicateur] indicateur.cible_N_plus_1 = {indicateur.cible_N_plus_1}")
+            logger.info(f"🔍 [creer_indicateur] indicateur.cible_N_plus_2 = {indicateur.cible_N_plus_2}")
 
+            logger.info(f"🔍 [creer_indicateur] Ajout de l'indicateur à la session...")
             session.add(indicateur)
+            logger.info(f"🔍 [creer_indicateur] Commit de la session...")
             session.commit()
+            logger.info(f"🔍 [creer_indicateur] Commit réussi, refresh de l'objet...")
             session.refresh(indicateur)
 
-            logger.info(f"Indicateur créé: {indicateur.nom} (ID: {indicateur.id})")
+            logger.info(f"✅ Indicateur créé: {indicateur.nom} (ID: {indicateur.id})")
+            
+            # Recalculer les valeurs actuelles en cascade
+            try:
+                PerformanceService.calculer_valeurs_actuelles_cascade(session, indicateur_id=indicateur.id)
+            except Exception as e:
+                logger.warning(f"Erreur lors du calcul en cascade après création de l'indicateur {indicateur.id}: {e}")
+            
             return indicateur
 
         except Exception as e:
             session.rollback()
-            logger.error(f"Erreur lors de la création de l'indicateur: {e}")
+            logger.error(f"❌ Erreur lors de la création de l'indicateur: {e}")
+            logger.error(f"❌ Type d'erreur: {type(e).__name__}")
+            import traceback
+            logger.error(f"❌ Traceback complet:\n{traceback.format_exc()}")
             raise
 
     @staticmethod
@@ -368,8 +498,10 @@ class PerformanceService:
                 # Mapper le nom du champ si nécessaire
                 model_field = field_mapping.get(field, field)
 
-                if hasattr(indicateur, model_field) and value is not None:
-                    setattr(indicateur, model_field, value)
+                # Permettre la mise à jour même si value est None (pour doc_justif notamment)
+                if hasattr(indicateur, model_field):
+                    if value is not None or field == "doc_justif":
+                        setattr(indicateur, model_field, value)
 
             indicateur.updated_at = datetime.now()
 
@@ -378,6 +510,13 @@ class PerformanceService:
             session.refresh(indicateur)
 
             logger.info(f"Indicateur modifié: {indicateur.nom} (ID: {indicateur.id})")
+            
+            # Recalculer les valeurs actuelles en cascade
+            try:
+                PerformanceService.calculer_valeurs_actuelles_cascade(session, indicateur_id=indicateur_id)
+            except Exception as e:
+                logger.warning(f"Erreur lors du calcul en cascade après modification de l'indicateur {indicateur_id}: {e}")
+            
             return indicateur
 
         except Exception as e:
@@ -399,6 +538,13 @@ class PerformanceService:
             session.commit()
 
             logger.info(f"Indicateur supprimé: {indicateur.nom} (ID: {indicateur_id})")
+            
+            # Recalculer les valeurs actuelles en cascade après suppression
+            try:
+                PerformanceService.calculer_valeurs_actuelles_cascade(session)
+            except Exception as e:
+                logger.warning(f"Erreur lors du calcul en cascade après suppression de l'indicateur {indicateur_id}: {e}")
+            
             return True
 
         except Exception as e:
@@ -641,3 +787,189 @@ class PerformanceService:
             session.rollback()
             logger.error(f"Erreur lors de la suppression du résultat stratégique {resultat_id}: {e}")
             return False
+
+    # ============================================
+    # CALCUL DES VALEURS ACTUELLES EN CASCADE
+    # ============================================
+
+    @staticmethod
+    def calculer_valeurs_actuelles_cascade(session: Session, indicateur_id: int | None = None) -> None:
+        """
+        Calcule les valeurs actuelles en cascade depuis les indicateurs jusqu'aux programmes.
+        
+        Hiérarchie :
+        - OS = moyenne des valeurs actuelles des indicateurs associés
+        - OG = moyenne des valeurs actuelles des OS associés
+        - RS = moyenne des valeurs actuelles des OG associés
+        - Orientation Stratégique = moyenne des valeurs actuelles des RS associés
+        - Programme = moyenne des valeurs actuelles des orientations stratégiques associées
+        
+        Args:
+            session: Session de base de données
+            indicateur_id: ID de l'indicateur modifié (optionnel, pour optimiser le recalcul)
+        """
+        try:
+            # 1. Calculer les valeurs des OS (Objectifs Spécifiques) = moyenne des indicateurs
+            logger.info("🔄 Calcul des valeurs actuelles des OS (moyenne des indicateurs)...")
+            os_list = session.exec(
+                select(ObjectifPerformance).where(
+                    ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE.value
+                )
+            ).all()
+            
+            for os in os_list:
+                # Récupérer tous les indicateurs associés à cet OS
+                indicateurs = session.exec(
+                    select(IndicateurPerformance).where(
+                        IndicateurPerformance.objectif_id == os.id
+                    )
+                ).all()
+                
+                if indicateurs:
+                    # Calculer la moyenne des valeurs actuelles normalisées (en tenant compte du sens_appreciation)
+                    valeurs_normalisees = []
+                    for ind in indicateurs:
+                        if ind.valeur_actuelle is not None and ind.valeur_cible is not None and ind.valeur_cible > 0:
+                            sens = getattr(ind, "sens_appreciation", "haut") or "haut"
+                            
+                            if sens == "haut":
+                                # Pour "haut" : taux = (valeur_actuelle / valeur_cible) * 100
+                                taux = float(ind.valeur_actuelle) / float(ind.valeur_cible) * 100
+                            else:  # sens == "bas"
+                                # Pour "bas" : taux = (valeur_cible / valeur_actuelle) * 100
+                                # Si valeur_actuelle = 0, on considère comme 0% de réalisation
+                                if ind.valeur_actuelle > 0:
+                                    taux = float(ind.valeur_cible) / float(ind.valeur_actuelle) * 100
+                                else:
+                                    taux = 0
+                            
+                            # Normaliser le taux (limiter à 100% pour éviter les valeurs aberrantes)
+                            taux_normalise = min(max(taux, 0), 100)
+                            valeurs_normalisees.append(taux_normalise)
+                    
+                    if valeurs_normalisees:
+                        # Calculer la moyenne des taux normalisés, puis convertir en valeur absolue
+                        # en utilisant la valeur_cible de l'OS comme référence
+                        moyenne_taux = sum(valeurs_normalisees) / len(valeurs_normalisees)
+                        # Convertir le taux moyen en valeur absolue basée sur la valeur_cible de l'OS
+                        if os.valeur_cible and os.valeur_cible > 0:
+                            os.valeur_actuelle = Decimal(str(round(float(os.valeur_cible) * moyenne_taux / 100, 2)))
+                        else:
+                            # Si pas de valeur_cible pour l'OS, utiliser la moyenne des valeurs brutes
+                            valeurs_brutes = [ind.valeur_actuelle for ind in indicateurs if ind.valeur_actuelle is not None]
+                            if valeurs_brutes:
+                                os.valeur_actuelle = Decimal(str(round(sum(valeurs_brutes) / len(valeurs_brutes), 2)))
+                            else:
+                                os.valeur_actuelle = Decimal('0')
+                        logger.debug(f"  OS {os.code or os.id}: {os.valeur_actuelle} (moyenne normalisée de {len(valeurs_normalisees)} indicateurs, taux moyen: {moyenne_taux:.1f}%)")
+                    else:
+                        os.valeur_actuelle = Decimal('0')
+                else:
+                    os.valeur_actuelle = Decimal('0')
+                session.add(os)
+            
+            session.commit()
+            logger.info(f"✅ {len(os_list)} OS mis à jour")
+            
+            # 2. Calculer les valeurs des OG (Objectifs Globaux) = moyenne des OS associés
+            logger.info("🔄 Calcul des valeurs actuelles des OG (moyenne des OS)...")
+            og_list = session.exec(
+                select(ObjectifPerformance).where(
+                    ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL.value
+                )
+            ).all()
+            
+            for og in og_list:
+                # Récupérer tous les OS associés à cet OG
+                os_associes = session.exec(
+                    select(ObjectifPerformance).where(
+                        and_(
+                            ObjectifPerformance.objectif_global_id == og.id,
+                            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE.value
+                        )
+                    )
+                ).all()
+                
+                if os_associes:
+                    # Calculer la moyenne des valeurs actuelles des OS
+                    valeurs = [os.valeur_actuelle for os in os_associes if os.valeur_actuelle is not None]
+                    if valeurs:
+                        moyenne = sum(valeurs) / len(valeurs)
+                        og.valeur_actuelle = Decimal(str(round(moyenne, 2)))
+                        logger.debug(f"  OG {og.code or og.id}: {og.valeur_actuelle} (moyenne de {len(valeurs)} OS)")
+                    else:
+                        og.valeur_actuelle = Decimal('0')
+                else:
+                    og.valeur_actuelle = Decimal('0')
+                session.add(og)
+            
+            session.commit()
+            logger.info(f"✅ {len(og_list)} OG mis à jour")
+            
+            # 3. Calculer les valeurs des RS (Résultats Stratégiques) = moyenne des OG associés
+            logger.info("🔄 Calcul des valeurs actuelles des RS (moyenne des OG)...")
+            rs_list = session.exec(select(ResultatStrategique)).all()
+            
+            for rs in rs_list:
+                # Récupérer tous les OG associés à ce RS
+                og_associes = session.exec(
+                    select(ObjectifPerformance).where(
+                        and_(
+                            ObjectifPerformance.resultat_strategique_id == rs.id,
+                            ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL.value
+                        )
+                    )
+                ).all()
+                
+                if og_associes:
+                    # Calculer la moyenne des valeurs actuelles des OG
+                    valeurs = [og.valeur_actuelle for og in og_associes if og.valeur_actuelle is not None]
+                    if valeurs:
+                        moyenne = sum(valeurs) / len(valeurs)
+                        rs.valeur_actuelle = Decimal(str(round(moyenne, 2)))
+                        logger.debug(f"  RS {rs.id}: {rs.valeur_actuelle} (moyenne de {len(valeurs)} OG)")
+                    else:
+                        rs.valeur_actuelle = Decimal('0')
+                else:
+                    rs.valeur_actuelle = Decimal('0')
+                session.add(rs)
+            
+            session.commit()
+            logger.info(f"✅ {len(rs_list)} RS mis à jour")
+            
+            # 4. Calculer les valeurs des Orientations Stratégiques = moyenne des RS associés
+            logger.info("🔄 Calcul des valeurs actuelles des Orientations Stratégiques (moyenne des RS)...")
+            orientations = session.exec(select(OrientationStrategique)).all()
+            
+            for orientation in orientations:
+                # Récupérer tous les RS associés à cette orientation
+                rs_associes = session.exec(
+                    select(ResultatStrategique).where(
+                        ResultatStrategique.orientation_id == orientation.id
+                    )
+                ).all()
+                
+                if rs_associes:
+                    # Calculer la moyenne des valeurs actuelles des RS
+                    valeurs = [rs.valeur_actuelle for rs in rs_associes if rs.valeur_actuelle is not None]
+                    if valeurs:
+                        moyenne = sum(valeurs) / len(valeurs)
+                        orientation.valeur_actuelle = Decimal(str(round(moyenne, 2)))
+                        logger.debug(f"  Orientation {orientation.id}: {orientation.valeur_actuelle} (moyenne de {len(valeurs)} RS)")
+                    else:
+                        orientation.valeur_actuelle = Decimal('0')
+                else:
+                    orientation.valeur_actuelle = Decimal('0')
+                session.add(orientation)
+            
+            session.commit()
+            logger.info(f"✅ {len(orientations)} Orientations Stratégiques mises à jour")
+            
+            # 5. Note: Pour les Programmes, on pourrait ajouter un champ valeur_actuelle si nécessaire
+            # Pour l'instant, on calcule mais on ne stocke pas (car Programme n'a pas ce champ)
+            logger.info("✅ Calcul en cascade terminé")
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"❌ Erreur lors du calcul en cascade: {e}", exc_info=True)
+            raise

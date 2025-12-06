@@ -1,0 +1,324 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Plannification - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.plannification-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.calendar-container {
+    background: linear-gradient(135deg, var(--white-color) 0%, color-mix(in srgb, var(--secondary-color) 3%, transparent) 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--gray-900) 8%, transparent), 0 0 0 1px color-mix(in srgb, var(--secondary-color) 10%, transparent);
+    margin-top: 2rem;
+    border: 1px solid color-mix(in srgb, var(--secondary-color) 10%, transparent);
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 3px solid color-mix(in srgb, var(--secondary-color) 20%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 5%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 2%, transparent) 100%);
+    border-radius: 12px;
+}
+
+.calendar-nav {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.calendar-nav a {
+    padding: 0.6rem 1.2rem;
+    border: 2px solid color-mix(in srgb, var(--secondary-color) 30%, transparent);
+    border-radius: 10px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 10%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 5%, transparent) 100%);
+    color: var(--secondary-color);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.calendar-nav a:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 20%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 15%, transparent) 100%);
+    border-color: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--secondary-color) 20%, transparent);
+}
+
+.calendar-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    text-shadow: 0 2px 4px color-mix(in srgb, var(--secondary-color) 10%, transparent);
+    padding: 0.5rem 1.5rem;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 10%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 5%, transparent) 100%);
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--secondary-color) 20%, transparent);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+}
+
+.calendar-day-header {
+    padding: 0.75rem;
+    text-align: center;
+    font-weight: 700;
+    color: var(--secondary-color);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 10%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 5%, transparent) 100%);
+    border-radius: 8px;
+}
+
+.calendar-day {
+    min-height: 100px;
+    padding: 0.5rem;
+    border: 2px solid color-mix(in srgb, var(--gray-900) 8%, transparent);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--white-color) 0%, color-mix(in srgb, var(--secondary-color) 2%, transparent) 100%);
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.calendar-day:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 8%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 15%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--secondary-color) 40%, transparent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--secondary-color) 15%, transparent);
+}
+
+.calendar-day.other-month {
+    opacity: 0.4;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--gray-900) 2%, transparent) 0%, color-mix(in srgb, var(--gray-900) 5%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--gray-900) 5%, transparent);
+}
+
+.calendar-day.other-month:hover {
+    opacity: 0.6;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 5%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 10%, transparent) 100%);
+}
+
+.calendar-day.today {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 15%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 25%, transparent) 100%);
+    border: 2px solid var(--secondary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-color) 20%, transparent);
+    font-weight: 700;
+}
+
+.calendar-day.today:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 25%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 35%, transparent) 100%);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--secondary-color) 30%, transparent);
+}
+
+.day-number {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--text-color) 80%, transparent);
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: color-mix(in srgb, var(--secondary-color) 10%, transparent);
+    border-radius: 6px;
+    display: inline-block;
+    min-width: 24px;
+    text-align: center;
+}
+
+.calendar-day.today .day-number {
+    background: var(--secondary-color);
+    color: var(--white-color);
+}
+
+.event-item {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.6rem;
+    margin-bottom: 0.3rem;
+    border-radius: 6px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 15%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 25%, transparent) 100%);
+    color: var(--secondary-color);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-left: 3px solid var(--secondary-color);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.event-item:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 25%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 35%, transparent) 100%);
+    transform: translateX(2px);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--secondary-color) 20%, transparent);
+}
+
+.event-item.priorite-basse {
+    background: linear-gradient(135deg, var(--success-light) 0%, color-mix(in srgb, var(--success-color) 25%, transparent) 100%);
+    color: var(--success-color);
+    border-left-color: var(--success-color);
+}
+
+.event-item.priorite-basse:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--success-color) 25%, transparent) 0%, color-mix(in srgb, var(--success-color) 35%, transparent) 100%);
+}
+
+.event-item.priorite-normale {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary-color) 15%, transparent) 0%, color-mix(in srgb, var(--secondary-color) 25%, transparent) 100%);
+    color: var(--secondary-color);
+    border-left-color: var(--secondary-color);
+}
+
+.event-item.priorite-haute {
+    background: linear-gradient(135deg, var(--warning-light) 0%, color-mix(in srgb, var(--warning-color) 25%, transparent) 100%);
+    color: var(--warning-color);
+    border-left-color: var(--warning-color);
+    font-weight: 600;
+}
+
+.event-item.priorite-haute:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--warning-color) 25%, transparent) 0%, color-mix(in srgb, var(--warning-color) 35%, transparent) 100%);
+}
+
+.event-item.priorite-urgente {
+    background: linear-gradient(135deg, var(--danger-light) 0%, color-mix(in srgb, var(--danger-color) 30%, transparent) 100%);
+    color: var(--danger-color);
+    border-left-color: var(--danger-color);
+    font-weight: 700;
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--danger-color) 20%, transparent);
+}
+
+.event-item.priorite-urgente:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--danger-color) 30%, transparent) 0%, color-mix(in srgb, var(--danger-color) 40%, transparent) 100%);
+    box-shadow: 0 4px 8px color-mix(in srgb, var(--danger-color) 30%, transparent);
+}
+
+/* Couleurs par type d'événement */
+.event-item.type-reunion {
+    background: linear-gradient(135deg, var(--info-light) 0%, color-mix(in srgb, var(--info-color) 25%, transparent) 100%);
+    color: var(--info-color);
+    border-left-color: var(--info-color);
+}
+
+.event-item.type-formation {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 15%, transparent) 0%, color-mix(in srgb, var(--accent-color) 25%, transparent) 100%);
+    color: var(--accent-color);
+    border-left-color: var(--accent-color);
+}
+
+.event-item.type-activite {
+    background: linear-gradient(135deg, var(--success-light) 0%, color-mix(in srgb, var(--success-color) 25%, transparent) 100%);
+    color: var(--success-color);
+    border-left-color: var(--success-color);
+}
+
+.event-item.type-deadline {
+    background: linear-gradient(135deg, var(--warning-light) 0%, color-mix(in srgb, var(--warning-color) 25%, transparent) 100%);
+    color: var(--warning-color);
+    border-left-color: var(--warning-color);
+}
+
+.event-item.type-autre {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--gray-600) 15%, transparent) 0%, color-mix(in srgb, var(--gray-600) 25%, transparent) 100%);
+    color: var(--gray-600);
+    border-left-color: var(--gray-600);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-500);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='🗓️ Gestion de la Plannification',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Plannification'}
+    ],
+    actions=[
+        {'label': '➕ Nouvel Événement', 'url': url_for('plannification_evenement_nouveau'), 'primary': True, 'disabled': current_user.is_guest},
+        {'label': '← Retour Accueil', 'url': url_for('accueil'), 'primary': False}
+    ]
+) }}
+
+<div class="plannification-page">
+    {% if current_user.is_guest %}
+    <div class="demo-notice">
+        <div class="demo-banner">
+            <span class="demo-icon">🎯</span>
+            <span class="demo-text">Mode Démonstration - Données fictives</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <div class="calendar-nav">
+                {% set mois_precedent = mois - 1 if mois > 1 else 12 %}
+                {% set annee_precedente = annee if mois > 1 else annee - 1 %}
+                {% set mois_suivant = mois + 1 if mois < 12 else 1 %}
+                {% set annee_suivante = annee if mois < 12 else annee + 1 %}
+                <a href="{{ url_for('plannification_home') }}?annee={{ annee_precedente }}&mois={{ mois_precedent }}" class="btn btn-premium btn-secondary">← Mois précédent</a>
+                <span class="calendar-title">
+                    {% set mois_noms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'] %}
+                    {{ mois_noms[mois-1] }} {{ annee }}
+                </span>
+                <a href="{{ url_for('plannification_home') }}?annee={{ annee_suivante }}&mois={{ mois_suivant }}" class="btn btn-premium btn-secondary">Mois suivant →</a>
+            </div>
+        </div>
+
+        <div class="calendar-grid">
+            <!-- En-têtes des jours -->
+            <div class="calendar-day-header">Lun</div>
+            <div class="calendar-day-header">Mar</div>
+            <div class="calendar-day-header">Mer</div>
+            <div class="calendar-day-header">Jeu</div>
+            <div class="calendar-day-header">Ven</div>
+            <div class="calendar-day-header">Sam</div>
+            <div class="calendar-day-header">Dim</div>
+
+            <!-- Jours du calendrier -->
+            {% for jour_data in jours_calendrier %}
+                <div class="calendar-day {% if not jour_data.mois_courant %}other-month{% endif %} {% if jour_data.aujourdhui %}today{% endif %}" 
+                     onclick="window.location.href='{{ url_for('plannification_evenement_nouveau') }}?date_selected={{ jour_data.date.isoformat() }}'">
+                    <div class="day-number">{{ jour_data.jour }}</div>
+                    {% for evt in jour_data.evenements %}
+                    <div class="event-item priorite-{{ evt.priorite.lower() }} type-{{ evt.type_evenement.lower() }}" 
+                         onclick="event.stopPropagation(); window.location.href='{{ url_for('plannification_evenement_edit', evenement_id=evt.id) }}'"
+                         title="{{ evt.titre }}{% if evt.heure_debut %} - {{ evt.heure_debut.strftime('%H:%M') }}{% endif %}"
+                         style="{% if evt.couleur %}border-left-color: {{ evt.couleur }}; background: linear-gradient(135deg, {{ evt.couleur }}15 0%, {{ evt.couleur }}25 100%); color: {{ evt.couleur }};{% endif %}">
+                        {{ evt.titre }}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

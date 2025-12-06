@@ -1,0 +1,445 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}Suivi des Investissements - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.investissements-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.filters-section {
+    background: linear-gradient(135deg, rgba(5, 154, 23, 0.08) 0%, rgba(232, 106, 10, 0.08) 100%);
+    border-radius: 20px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.filters-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.85);
+    font-size: 0.95rem;
+}
+
+.filter-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(15, 23, 42, 0.1);
+    border-radius: 12px;
+    background: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.filter-select[type="text"] {
+    cursor: text;
+}
+
+.filter-select:hover {
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.investissements-table-container {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    overflow-x: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.investissements-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    min-width: 1400px;
+}
+
+.investissements-table thead {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
+}
+
+.investissements-table th {
+    padding: 0.6rem 0.5rem;
+    text-align: left;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.9);
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    white-space: nowrap;
+    font-size: 0.8rem;
+}
+
+.investissements-table td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.investissements-table tbody tr:hover {
+    background: rgba(102, 126, 234, 0.03);
+}
+
+.investissements-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.projet-libelle {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.95);
+    margin-bottom: 0.2rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.projet-code {
+    font-size: 0.7rem;
+    color: rgba(15, 23, 42, 0.6);
+    line-height: 1.3;
+}
+
+.montant {
+    font-size: 0.75rem;
+    color: rgba(15, 23, 42, 0.85);
+    white-space: nowrap;
+}
+
+.taux {
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.taux-budgetaire {
+    color: #3b82f6;
+}
+
+.taux-physique {
+    color: #10b981;
+}
+
+.actions-cell {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.btn-action-small {
+    padding: 0.3rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    white-space: nowrap;
+}
+
+.btn-edit {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.btn-edit:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(15, 23, 42, 0.6);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: rgba(15, 23, 42, 0.85);
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .investissements-page {
+        padding: 1rem;
+    }
+    
+    .investissements-table-container {
+        padding: 1rem;
+    }
+    
+    .investissements-table {
+        font-size: 0.7rem;
+    }
+    
+    .investissements-table th,
+    .investissements-table td {
+        padding: 0.5rem 0.4rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title='💰 Suivi des Investissements',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Investissements'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('budget_home'), 'primary': False},
+        {'label': '➕ Nouveau Suivi', 'url': url_for('budget_investissement_nouveau'), 'primary': True, 'disabled': current_user.is_guest}
+    ]
+) }}
+
+<div class="investissements-page">
+    {% if current_user.is_guest %}
+    <div class="notice-banner" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%); border-left: 4px solid #f59e0b; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+        <span style="font-size: 1.5rem; margin-right: 0.75rem;">🎯</span>
+        <div style="display: inline-block;">
+            <strong>Mode Démonstration</strong>
+            <p style="margin: 0.25rem 0 0 0; color: rgba(15, 23, 42, 0.7);">Vous consultez des données fictives pour explorer les fonctionnalités.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filtres -->
+    <div class="filters-section">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">🧭</span>
+            <div>
+                <h3 style="margin: 0; font-size: 1.2rem; color: rgba(15, 23, 42, 0.95);">Filtres de recherche</h3>
+                <p style="margin: 0.25rem 0 0 0; color: rgba(15, 23, 42, 0.7); font-size: 0.9rem;">Filtrez les investissements par année, code ou libellé</p>
+            </div>
+        </div>
+        
+        <form method="get" action="{{ url_for('budget_investissements') }}" id="filterForm">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label class="filter-label" for="annee">📅 Année</label>
+                    <select id="annee" name="annee" class="filter-select" onchange="document.getElementById('filterForm').submit()">
+                        {% for an in annees_disponibles %}
+                        <option value="{{ an }}" {% if an == annee %}selected{% endif %}>{{ an }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="code_projet">🔖 Code Projet</label>
+                    <input type="text" id="code_projet" name="code_projet" class="filter-select" 
+                           value="{{ code_projet or '' }}" 
+                           placeholder="Rechercher par code..."
+                           onchange="document.getElementById('filterForm').submit()">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="libelle_projet">📝 Libellé Projet</label>
+                    <input type="text" id="libelle_projet" name="libelle_projet" class="filter-select" 
+                           value="{{ libelle_projet or '' }}" 
+                           placeholder="Rechercher par libellé..."
+                           onchange="document.getElementById('filterForm').submit()">
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tableau des investissements -->
+    <div class="investissements-table-container">
+        {% if investissements and investissements|length > 0 %}
+        <table class="investissements-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Projets</th>
+                    <th style="width: 10%;">Coût total du projet</th>
+                    <th style="width: 10%;">Budget déjà mobilisé (exercices antérieurs)</th>
+                    <th style="width: 10%;">Crédits budgétaires inscrits (LFI {{ annee }})</th>
+                    <th style="width: 8%;">Variation (- ou +)</th>
+                    <th style="width: 10%;">Budget Actuel</th>
+                    <th style="width: 10%;">Prise en charge</th>
+                    <th style="width: 8%;">% réal budgétaire</th>
+                    <th style="width: 8%;">% réal physique</th>
+                    <th style="width: 6%;">Période</th>
+                    <th style="width: 5%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in investissements %}
+                <tr>
+                    <td>
+                        <div class="projet-libelle">{{ inv.libelle_projet }}</div>
+                        {% if inv.code_projet %}
+                        <div class="projet-code">Code: {{ inv.code_projet }}</div>
+                        {% endif %}
+                        {% if inv.programme %}
+                        <div class="projet-code">Programme: {{ inv.programme }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="montant">{{ "{:,.0f}".format(inv.cout_total_projet) }} FCFA</div>
+                    </td>
+                    <td>
+                        <div class="montant">{{ "{:,.0f}".format(inv.budget_mobilise_anterieur) }} FCFA</div>
+                    </td>
+                    <td>
+                        <div class="montant">{{ "{:,.0f}".format(inv.credits_budgetaires_inscrits) }} FCFA</div>
+                    </td>
+                    <td>
+                        {% if inv.variation is not none %}
+                        {% if inv.variation < 0 %}
+                        <div class="montant" style="color: #ef4444;">
+                        {% elif inv.variation > 0 %}
+                        <div class="montant" style="color: #10b981;">
+                        {% else %}
+                        <div class="montant" style="color: #6b7280;">
+                        {% endif %}
+                            {{ "{:+,.0f}".format(inv.variation) }} FCFA
+                        </div>
+                        {% else %}
+                        <span style="color: rgba(15, 23, 42, 0.5); font-size: 0.75rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="montant">{{ "{:,.0f}".format(inv.budget_actuel) }} FCFA</div>
+                    </td>
+                    <td>
+                        <div class="montant">{{ "{:,.0f}".format(inv.prise_en_charge) }} FCFA</div>
+                    </td>
+                    <td>
+                        {% if inv.taux_realisation_budgetaire is not none %}
+                        <div class="taux taux-budgetaire">{{ "{:.2f}".format(inv.taux_realisation_budgetaire) }}%</div>
+                        {% else %}
+                        <span style="color: rgba(15, 23, 42, 0.5); font-size: 0.75rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inv.taux_realisation_physique is not none %}
+                        <div class="taux taux-physique">{{ "{:.2f}".format(inv.taux_realisation_physique) }}%</div>
+                        {% else %}
+                        <span style="color: rgba(15, 23, 42, 0.5); font-size: 0.75rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inv.annee_debut or inv.annee_fin %}
+                        <div style="font-size: 0.75rem; color: rgba(15, 23, 42, 0.85);">
+                            {% if inv.annee_debut %}{{ inv.annee_debut }}{% endif %}
+                            {% if inv.annee_debut and inv.annee_fin %} - {% endif %}
+                            {% if inv.annee_fin %}{{ inv.annee_fin }}{% endif %}
+                        </div>
+                        {% else %}
+                        <span style="color: rgba(15, 23, 42, 0.5); font-size: 0.75rem;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions-cell">
+                            <a href="{{ url_for('budget_investissement_edit', investissement_id=inv.id) }}" class="btn-action-small btn-edit" title="Modifier">
+                                ✏️
+                            </a>
+                            <button class="btn-action-small btn-delete" title="Supprimer" 
+                                    data-investissement-id="{{ inv.id }}" 
+                                    data-investissement-libelle="{{ inv.libelle_projet }}">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">💰</div>
+            <h3>Aucun investissement</h3>
+            <p>Aucun investissement trouvé pour les critères sélectionnés.</p>
+            <a href="{{ url_for('budget_investissement_nouveau') }}" class="btn btn-premium btn-primary" style="margin-top: 1.5rem;">
+                ➕ Créer le premier suivi
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function deleteInvestissement(id, libelle) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le suivi d'investissement "${libelle}" ?\n\nCette action est irréversible.`)) {
+        return;
+    }
+    
+    fetch(`/api/v1/budget/api/investissements/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Erreur lors de la suppression');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur lors de la suppression');
+    });
+}
+
+// Attacher les événements de suppression
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-delete[data-investissement-id]').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-investissement-id');
+            const libelle = this.getAttribute('data-investissement-libelle');
+            deleteInvestissement(parseInt(id), libelle);
+        });
+    });
+});
+</script>
+{% endblock %}
+

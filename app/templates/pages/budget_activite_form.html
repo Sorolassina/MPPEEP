@@ -1,0 +1,560 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}{% if suivi %}Modifier{% else %}Nouveau{% endif %} Suivi d'Activité - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.activite-form-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.form-container {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+
+.form-section {
+    margin-bottom: 2.5rem;
+}
+
+.form-section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.95);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.85);
+    font-size: 0.95rem;
+}
+
+.form-label .required {
+    color: #ef4444;
+    margin-left: 0.25rem;
+}
+
+.form-control,
+.form-select,
+.form-textarea {
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(15, 23, 42, 0.1);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-textarea.large {
+    min-height: 200px;
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: rgba(15, 23, 42, 0.6);
+    margin-top: 0.25rem;
+}
+
+.info-box {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border-left: 4px solid #3b82f6;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-box p {
+    margin: 0;
+    color: rgba(15, 23, 42, 0.85);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.file-preview {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.file-preview span {
+    color: rgba(15, 23, 42, 0.85);
+    font-weight: 600;
+}
+
+.file-preview a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.file-preview a:hover {
+    text-decoration: underline;
+}
+
+.btn-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid rgba(15, 23, 42, 0.08);
+}
+
+.sigobe-activity-selector {
+    background: rgba(102, 126, 234, 0.05);
+    border: 2px dashed rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.sigobe-activity-selector select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 8px;
+    background: white;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.sigobe-activity-selector select:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+@media (max-width: 768px) {
+    .activite-form-page {
+        padding: 1rem;
+    }
+    
+    .form-container {
+        padding: 1.5rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title=('✏️ Modifier' if suivi else '➕ Nouveau') + ' Suivi d\'Activité',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Activités', 'url': url_for('budget_activites')},
+        {'name': 'Modifier' if suivi else 'Nouveau'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('budget_activites'), 'primary': False}
+    ]
+) }}
+
+<div class="activite-form-page">
+    <div class="form-container">
+        <form id="activiteForm" method="post" enctype="multipart/form-data" action="{% if suivi %}{{ url_for('api_update_suivi_activite', suivi_id=suivi.id) }}{% else %}{{ url_for('api_create_suivi_activite') }}{% endif %}">
+            
+            <!-- Section: Informations de l'activité -->
+            <div class="form-section">
+                <h2 class="form-section-title">📋 Informations de l'Activité</h2>
+                
+                {% if activites_sigobe and activites_sigobe|length > 0 %}
+                <div class="sigobe-activity-selector">
+                    <label class="form-label" for="sigobe_activity_select">🔗 Charger depuis SIGOBE (optionnel)</label>
+                    <select id="sigobe_activity_select" onchange="loadSigobeActivity(this.value)">
+                        <option value="">— Sélectionner une activité SIGOBE —</option>
+                        {% for act in activites_sigobe %}
+                        <option value="{{ act.id }}" 
+                            data-code="{{ act.activites or '' }}"
+                            data-libelle="{{ act.activites or '' }}"
+                            data-programme="{{ act.programmes or '' }}"
+                            data-action="{{ act.actions or '' }}"
+                            data-chargement-id="{{ act.chargement_id }}">
+                            {{ act.activites or 'Sans libellé' }} {% if act.programmes %}({{ act.programmes }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="form-help">Sélectionnez une activité SIGOBE pour pré-remplir automatiquement les champs</p>
+                </div>
+                {% endif %}
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="libelle_activite" class="form-label">
+                            Action/Activités <span class="required">*</span>
+                        </label>
+                        <input type="text" id="libelle_activite" name="libelle_activite" class="form-control" 
+                               value="{{ suivi.libelle_activite if suivi else '' }}" required>
+                        <p class="form-help">Libellé de l'action ou activité à suivre</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="code_activite" class="form-label">Code Activité</label>
+                        <input type="text" id="code_activite" name="code_activite" class="form-control" 
+                               value="{{ suivi.code_activite if suivi else '' }}">
+                        <p class="form-help">Code SIGOBE de l'activité (ex: 2208701)</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="programme" class="form-label">Programme</label>
+                        <input type="text" id="programme" name="programme" class="form-control" 
+                               value="{{ suivi.programme if suivi else '' }}">
+                        <p class="form-help">Programme SIGOBE associé</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="action" class="form-label">Action</label>
+                        <input type="text" id="action" name="action" class="form-control" 
+                               value="{{ suivi.action if suivi else '' }}">
+                        <p class="form-help">Action SIGOBE associée</p>
+                    </div>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="structures_responsables" class="form-label">
+                        Structures Responsables <span class="required">*</span>
+                    </label>
+                    <input type="text" id="structures_responsables" name="structures_responsables" class="form-control" 
+                           value="{{ suivi.structures_responsables if suivi else '' }}" required>
+                    <p class="form-help">Ex: DGPE, Direction X, Service Y</p>
+                </div>
+            </div>
+
+            <!-- Section: Résultats -->
+            <div class="form-section">
+                <h2 class="form-section-title">🎯 Résultats</h2>
+                
+                <div class="form-group full-width">
+                    <label for="resultat_attendu" class="form-label">
+                        Résultat Attendu <span class="required">*</span>
+                    </label>
+                    <textarea id="resultat_attendu" name="resultat_attendu" class="form-textarea large" required>{{ suivi.resultat_attendu if suivi else '' }}</textarea>
+                    <p class="form-help">Décrivez le résultat attendu de cette activité</p>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="resultat_operationnel" class="form-label">Résultat Opérationnel</label>
+                    <textarea id="resultat_operationnel" name="resultat_operationnel" class="form-textarea large">{{ suivi.resultat_operationnel if suivi else '' }}</textarea>
+                    <p class="form-help">Décrivez le résultat opérationnel obtenu (état d'avancement, taux de réalisation, etc.)</p>
+                </div>
+            </div>
+
+            <!-- Section: Preuve et Observations -->
+            <div class="form-section">
+                <h2 class="form-section-title">📎 Preuve et Observations</h2>
+                
+                <div class="form-group full-width">
+                    <label for="preuve_realisation_file" class="form-label">Preuve de Réalisation</label>
+                    <input type="file" id="preuve_realisation_file" name="preuve_realisation_file" class="form-control" 
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                    <p class="form-help">Joindre un document justifiant la réalisation (compte rendu, rapport, etc.)</p>
+                    
+                    {% if suivi and suivi.preuve_realisation %}
+                    <div class="file-preview">
+                        <span>📄 {{ suivi.preuve_filename or 'Document joint' }}</span>
+                        <div>
+                            <a href="/{{ suivi.preuve_realisation }}" target="_blank">Voir</a>
+                            <button type="button" onclick="deletePreuve()" style="margin-left: 1rem; color: #ef4444; background: none; border: none; cursor: pointer; font-weight: 600;">Supprimer</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="preuve_delete" name="preuve_delete" value="0">
+                    {% endif %}
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="observations" class="form-label">Observations</label>
+                    <textarea id="observations" name="observations" class="form-textarea">{{ suivi.observations if suivi else '' }}</textarea>
+                    <p class="form-help">Ajoutez des observations ou commentaires (ex: RAS, difficultés rencontrées, etc.)</p>
+                </div>
+            </div>
+
+            <!-- Section: Période -->
+            <div class="form-section">
+                <h2 class="form-section-title">📅 Période de Suivi</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="annee" class="form-label">
+                            Année <span class="required">*</span>
+                        </label>
+                        <input type="number" id="annee" name="annee" class="form-control" 
+                               value="{{ suivi.annee if suivi else annee }}" min="2000" max="2100" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="periode_type" class="form-label">
+                            Type de Période <span class="required">*</span>
+                        </label>
+                        <select id="periode_type" name="periode_type" class="form-select" required onchange="updatePeriodeValeur()">
+                            <option value="mois" {% if suivi and suivi.periode_type == 'mois' %}selected{% endif %}>Mensuel</option>
+                            <option value="trimestre" {% if suivi and suivi.periode_type == 'trimestre' %}selected{% elif not suivi %}selected{% endif %}>Trimestriel</option>
+                            <option value="semestre" {% if suivi and suivi.periode_type == 'semestre' %}selected{% endif %}>Semestriel</option>
+                            <option value="annuel" {% if suivi and suivi.periode_type == 'annuel' %}selected{% endif %}>Annuel</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="periode_valeur_group">
+                        <label for="periode_valeur" class="form-label">Période</label>
+                        <select id="periode_valeur" name="periode_valeur" class="form-select">
+                            <option value="">—</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="date_periode" class="form-label">Date de Période</label>
+                        <input type="date" id="date_periode" name="date_periode" class="form-control" 
+                               value="{{ suivi.date_periode.strftime('%Y-%m-%d') if suivi and suivi.date_periode else '' }}">
+                        <p class="form-help">Date de début de la période (optionnel)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Champs cachés pour SIGOBE -->
+            <input type="hidden" id="sigobe_execution_id" name="sigobe_execution_id" value="{{ suivi.sigobe_execution_id if suivi else '' }}">
+            <input type="hidden" id="chargement_id" name="chargement_id" value="{{ suivi.chargement_id if suivi else '' }}">
+
+            <!-- Boutons -->
+            <div class="btn-group">
+                <a href="{{ url_for('budget_activites') }}" class="btn btn-premium btn-secondary">Annuler</a>
+                <button type="submit" class="btn btn-premium btn-primary">
+                    {% if suivi %}💾 Enregistrer les modifications{% else %}➕ Créer le suivi{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// URLs pour les endpoints
+const API_CREATE_URL = "{{ url_for('api_create_suivi_activite') }}";
+{% if suivi %}
+const API_UPDATE_URL = "{{ url_for('api_update_suivi_activite', suivi_id=suivi.id) }}";
+const IS_EDIT_MODE = true;
+{% else %}
+const IS_EDIT_MODE = false;
+{% endif %}
+
+// Charger les données SIGOBE dans le formulaire
+function loadSigobeActivity(executionId) {
+    if (!executionId) return;
+    
+    const option = document.getElementById('sigobe_activity_select').options[document.getElementById('sigobe_activity_select').selectedIndex];
+    if (!option) return;
+    
+    // Pré-remplir les champs
+    if (option.dataset.code) {
+        document.getElementById('code_activite').value = option.dataset.code;
+    }
+    if (option.dataset.libelle) {
+        document.getElementById('libelle_activite').value = option.dataset.libelle;
+    }
+    if (option.dataset.programme) {
+        document.getElementById('programme').value = option.dataset.programme;
+    }
+    if (option.dataset.action) {
+        document.getElementById('action').value = option.dataset.action;
+    }
+    if (option.dataset.chargementId) {
+        document.getElementById('chargement_id').value = option.dataset.chargementId;
+    }
+    document.getElementById('sigobe_execution_id').value = executionId;
+}
+
+// Mettre à jour les options de période_valeur selon le type
+function updatePeriodeValeur() {
+    const periodeType = document.getElementById('periode_type').value;
+    const periodeValeurGroup = document.getElementById('periode_valeur_group');
+    const periodeValeur = document.getElementById('periode_valeur');
+    
+    periodeValeur.innerHTML = '<option value="">—</option>';
+    
+    if (periodeType === 'mois') {
+        periodeValeurGroup.style.display = 'block';
+        for (let i = 1; i <= 12; i++) {
+            const selected = {% if suivi and suivi.periode_type == 'mois' and suivi.periode_valeur == i %}true{% else %}false{% endif %};
+            periodeValeur.innerHTML += `<option value="${i}" ${selected ? 'selected' : ''}>Mois ${i}</option>`;
+        }
+    } else if (periodeType === 'trimestre') {
+        periodeValeurGroup.style.display = 'block';
+        for (let i = 1; i <= 4; i++) {
+            const selected = {% if suivi and suivi.periode_type == 'trimestre' and suivi.periode_valeur == i %}true{% else %}false{% endif %};
+            periodeValeur.innerHTML += `<option value="${i}" ${selected ? 'selected' : ''}>Trimestre ${i}</option>`;
+        }
+    } else if (periodeType === 'semestre') {
+        periodeValeurGroup.style.display = 'block';
+        for (let i = 1; i <= 2; i++) {
+            const selected = {% if suivi and suivi.periode_type == 'semestre' and suivi.periode_valeur == i %}true{% else %}false{% endif %};
+            periodeValeur.innerHTML += `<option value="${i}" ${selected ? 'selected' : ''}>Semestre ${i}</option>`;
+        }
+    } else {
+        periodeValeurGroup.style.display = 'none';
+        periodeValeur.value = '';
+    }
+}
+
+// Supprimer la preuve existante
+function deletePreuve() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer le document de preuve ?')) {
+        document.getElementById('preuve_delete').value = '1';
+        document.querySelector('.file-preview').style.display = 'none';
+    }
+}
+
+// Intercepter la soumission du formulaire
+document.getElementById('activiteForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    // S'assurer que les champs cachés sont bien remplis
+    const sigobeExecutionId = document.getElementById('sigobe_execution_id').value || '';
+    const chargementId = document.getElementById('chargement_id').value || '';
+    
+    // Toujours définir les champs (même vides) car le backend les accepte maintenant
+    formData.set('sigobe_execution_id', sigobeExecutionId);
+    formData.set('chargement_id', chargementId);
+    
+    // Gérer periode_valeur : si vide ou si période_type est 'annuel', envoyer une chaîne vide
+    const periodeType = formData.get('periode_type');
+    const periodeValeur = formData.get('periode_valeur') || '';
+    // Toujours forcer une chaîne vide si la valeur est vide ou si le type est annuel
+    if (periodeType === 'annuel' || !periodeValeur || periodeValeur.trim() === '' || periodeValeur === '—') {
+        formData.set('periode_valeur', '');
+    } else {
+        // S'assurer que la valeur est bien une chaîne (même si c'est un nombre)
+        formData.set('periode_valeur', String(periodeValeur));
+    }
+    
+    showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
+    
+    try {
+        // Utiliser getAttribute pour éviter les conflits avec les éléments ayant l'id "action"
+        // form.action peut retourner un élément HTML si un élément avec id="action" existe
+        let url = form.getAttribute('action');
+        if (!url || typeof url !== 'string') {
+            // Fallback : utiliser les URLs définies en haut du script
+            url = IS_EDIT_MODE ? API_UPDATE_URL : API_CREATE_URL;
+        }
+        const method = IS_EDIT_MODE ? 'PUT' : 'POST';
+        
+        // Utiliser submitFormAsJson avec forceFormData pour s'assurer que tous les champs sont envoyés
+        const response = await submitFormAsJson(url, formData, method, true);
+        
+        // L'endpoint retourne une RedirectResponse (303), donc on suit la redirection
+        if (response.redirected || response.status === 303 || response.status === 302) {
+            // Suivre la redirection
+            window.location.href = response.url || "{{ url_for('budget_activites') }}";
+            return;
+        }
+        
+        // Si ce n'est pas une redirection, vérifier le statut
+        if (response.ok) {
+            // Succès - l'endpoint devrait rediriger, mais si ce n'est pas le cas, rediriger manuellement
+            hideGlobalLoading();
+            showSuccess('Enregistrement réussi');
+            setTimeout(() => {
+                window.location.href = "{{ url_for('budget_activites') }}";
+            }, 1000);
+        } else {
+            // Erreur - essayer de parser la réponse JSON pour obtenir les détails
+            await handleFetchError(response, 'Erreur lors de l\'enregistrement');
+        }
+    } catch (error) {
+        hideGlobalLoading();
+        console.error('Erreur lors de la soumission:', error);
+        showError('Erreur lors de l\'enregistrement: ' + error.message);
+    }
+});
+
+// Initialiser au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    updatePeriodeValeur();
+    
+    // Si on modifie, pré-remplir periode_valeur après la mise à jour des options
+    setTimeout(function() {
+        {% if suivi and suivi.periode_valeur %}
+        const periodeValeur = document.getElementById('periode_valeur');
+        if (periodeValeur) {
+            periodeValeur.value = '{{ suivi.periode_valeur }}';
+        }
+        {% endif %}
+        
+        // Si on modifie et qu'il y a un sigobe_execution_id, sélectionner automatiquement l'activité SIGOBE
+        {% if suivi and suivi.sigobe_execution_id %}
+        const sigobeExecutionId = {{ suivi.sigobe_execution_id }};
+        const sigobeSelect = document.getElementById('sigobe_activity_select');
+        if (sigobeSelect) {
+            // Chercher l'option correspondant au sigobe_execution_id
+            for (let i = 0; i < sigobeSelect.options.length; i++) {
+                if (parseInt(sigobeSelect.options[i].value) === sigobeExecutionId) {
+                    sigobeSelect.selectedIndex = i;
+                    // Optionnel : déclencher loadSigobeActivity pour s'assurer que tous les champs sont remplis
+                    // (mais normalement ils sont déjà remplis depuis le serveur)
+                    break;
+                }
+            }
+        }
+        {% endif %}
+    }, 100);
+});
+</script>
+{% endblock %}
+

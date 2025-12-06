@@ -20,6 +20,8 @@ from app.models.budget import (
     SigobeChargement,
     SigobeExecution,
     SigobeKpi,
+    SuiviActivite,
+    SuiviInvestissement,
 )
 from app.models.file import File
 from app.models.personnel import (
@@ -40,6 +42,8 @@ from app.models.performance import (
     RapportPerformance,
     ResultatStrategique,
 )
+from app.models.plannification import EvenementPlannification
+from app.models.generic_request import GenericRequest, GenericWorkflowHistory
 from app.models.rh import Agent, Grade, HRRequest, WorkflowHistory, WorkflowStep
 from app.models.session import UserSession
 from app.models.workflow_config import (
@@ -83,10 +87,13 @@ __all__ = [
     "DocumentLigneBudgetaire",
     "EvaluationAgent",
     "EvaluationPerformance",
+    "EvenementPlannification",
     "ExecutionBudgetaire",
     "FicheTechnique",
     "File",
     "Fournisseur",
+    "GenericRequest",
+    "GenericWorkflowHistory",
     "Grade",
     "GradeComplet",
     "HRRequest",
@@ -111,7 +118,9 @@ __all__ = [
     "SigobeChargement",
     "SigobeExecution",
     "SigobeKpi",
+    "SuiviActivite",
     "SuiviBesoin",
+    "SuiviInvestissement",
     "SystemSettings",
     "User",
     "UserSession",

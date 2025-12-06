@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlmodel import Session
 
 from app.core.config import settings
@@ -447,6 +447,51 @@ async def privacy_policy_post(
 
 
 # ===== ROUTE DE DÉCONNEXION =====
+
+
+@router.get("/session/remaining-time", response_class=JSONResponse, name="get_session_remaining_time")
+async def get_session_remaining_time(
+    session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
+    db_session: Session = Depends(get_session),
+):
+    """
+    Retourne le temps restant avant l'expiration de la session en secondes
+    """
+    from datetime import datetime
+    
+    if not session_token:
+        return JSONResponse(
+            status_code=401,
+            content={"remaining_seconds": 0, "expired": True, "message": "No session token"}
+        )
+    
+    user_session = SessionService.get_session_by_token(db_session=db_session, session_token=session_token)
+    
+    if not user_session:
+        return JSONResponse(
+            status_code=401,
+            content={"remaining_seconds": 0, "expired": True, "message": "Session not found or expired"}
+        )
+    
+    # Calculer le temps restant
+    now = datetime.now()
+    expires_at = user_session.expires_at
+    
+    if now >= expires_at:
+        return JSONResponse(
+            status_code=401,
+            content={"remaining_seconds": 0, "expired": True, "message": "Session expired"}
+        )
+    
+    remaining_seconds = int((expires_at - now).total_seconds())
+    
+    return JSONResponse(
+        content={
+            "remaining_seconds": remaining_seconds,
+            "expired": False,
+            "expires_at": expires_at.isoformat()
+        }
+    )
 
 
 @router.get("/logout", response_class=HTMLResponse, name="logout")

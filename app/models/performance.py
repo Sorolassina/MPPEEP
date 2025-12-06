@@ -7,7 +7,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy import String
+from sqlmodel import Field, SQLModel, Column
 
 # ============================================
 # ENUMS
@@ -36,12 +37,27 @@ class PrioriteObjectif(str, Enum):
 class TypeObjectif(str, Enum):
     """Types d'objectifs"""
 
-    STRATEGIQUE = "STRATEGIQUE"
-    OPERATIONNEL = "OPERATIONNEL"
+    GLOBAL = "global"  # Objectif Global (lié à un résultat stratégique)
+    SPECIFIQUE = "specifique"  # Objectif Spécifique (lié à un objectif global)
     FINANCIER = "FINANCIER"
     RH = "RH"
     QUALITE = "QUALITE"
     CLIENT = "CLIENT"
+
+
+class ModeCollecteDonnees(str, Enum):
+    """Modes de collecte des données pour les indicateurs"""
+
+    ROUTINE = "routine"
+    ENQUETE = "enquête"
+    AUTRES = "autres"
+
+
+class SensAppreciation(str, Enum):
+    """Sens d'appréciation d'un indicateur"""
+
+    HAUT = "haut"  # Plus le taux est élevé, plus on est satisfait
+    BAS = "bas"  # Plus le taux est bas, plus on est satisfait
 
 
 # ============================================
@@ -62,6 +78,9 @@ class OrientationStrategique(SQLModel, table=True):
 
     # Ordre d'affichage
     ordre: int | None = Field(default=None, index=True)  # Ordre d'affichage
+
+    # Valeur actuelle (calculée automatiquement comme moyenne des RS)
+    valeur_actuelle: Decimal | None = Field(default=0, max_digits=15, decimal_places=2)
 
     # Statut
     actif: bool = Field(default=True, index=True)
@@ -94,6 +113,9 @@ class ResultatStrategique(SQLModel, table=True):
     # Ordre d'affichage
     ordre: int | None = Field(default=None, index=True)  # Ordre d'affichage au sein de l'orientation
 
+    # Valeur actuelle (calculée automatiquement comme moyenne des OG)
+    valeur_actuelle: Decimal | None = Field(default=0, max_digits=15, decimal_places=2)
+
     # Statut
     actif: bool = Field(default=True, index=True)
 
@@ -116,17 +138,23 @@ class ObjectifPerformance(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     # Informations générales
+    code: str | None = Field(default=None, max_length=50, index=True)  # Code de l'objectif (ex: OG01, OS01)
     titre: str = Field(max_length=200, index=True)
     description: str | None = None
 
     # Classification
-    type_objectif: TypeObjectif = Field(default=TypeObjectif.OPERATIONNEL)
+    # Stocké en string dans la DB, mais validé avec l'enum Python côté backend
+    type_objectif: str = Field(
+        default=TypeObjectif.SPECIFIQUE.value,
+        sa_column=Column(String(50), default=TypeObjectif.SPECIFIQUE.value)
+    )
     priorite: PrioriteObjectif = Field(default=PrioriteObjectif.NORMALE)
 
     # Relations hiérarchiques
-    # Pour les objectifs globaux (type STRATEGIQUE) : lié à un résultat stratégique
+    # Pour les objectifs globaux (type GLOBAL) : lié à un résultat stratégique et optionnellement à un programme
     resultat_strategique_id: int | None = Field(default=None, foreign_key="resultat_strategique.id", index=True)
-    # Pour les objectifs spécifiques (type OPERATIONNEL) : lié à un objectif global (STRATEGIQUE)
+    programme_id: int | None = Field(default=None, foreign_key="programme.id", index=True)  # Programme associé (pour les OG)
+    # Pour les objectifs spécifiques (type SPECIFIQUE) : lié à un objectif global (GLOBAL)
     objectif_global_id: int | None = Field(default=None, foreign_key="objectif_performance.id", index=True)
 
     # Période et échéances
@@ -140,7 +168,7 @@ class ObjectifPerformance(SQLModel, table=True):
     unite: str = Field(max_length=50)  # "%", "€", "nombre", "heures"
 
     # Responsabilité
-    responsable_id: int = Field(foreign_key="user.id")
+    responsable_id: int | None = Field(default=None, foreign_key="user.id")
     service_responsable: str | None = Field(default=None, max_length=100)
 
     # Statut et progression
@@ -197,6 +225,14 @@ class IndicateurPerformance(SQLModel, table=True):
 
     # Valeurs cibles futures (format texte : "100% en 2024, 100% en 2025, 100% en 2026")
     valeurs_cibles_futures: str | None = Field(default=None, max_length=500)
+    
+    # Cibles pour les années suivantes
+    cible_N_plus_1: Decimal | None = Field(
+        default=None, max_digits=15, decimal_places=2, sa_column_kwargs={"name": "cible_n_plus_1"}
+    )  # Cible pour N+1
+    cible_N_plus_2: Decimal | None = Field(
+        default=None, max_digits=15, decimal_places=2, sa_column_kwargs={"name": "cible_n_plus_2"}
+    )  # Cible pour N+2
 
     # Seuils d'alerte
     seuil_alerte_bas: Decimal | None = Field(default=None, max_digits=15, decimal_places=2)
@@ -206,11 +242,26 @@ class IndicateurPerformance(SQLModel, table=True):
     frequence_maj: str = Field(max_length=50)  # "Quotidien", "Hebdomadaire", "Mensuel", "Trimestriel"
 
     # Responsabilité
-    responsable_id: int = Field(foreign_key="user.id")
+    responsable_id: int | None = Field(default=None, foreign_key="user.id")
     service_responsable: str | None = Field(default=None, max_length=100)
 
     # Source de données
     source_donnees: str | None = Field(default=None, max_length=200)
+
+    # Méthode et collecte des données
+    methode: str | None = Field(default=None, max_length=500)  # Méthode de calcul/évaluation
+    mode_collecte_donnees: str | None = Field(default=None, max_length=50)  # routine, enquête, autres
+    derniere_valeur_connue: Decimal | None = Field(default=None, max_digits=15, decimal_places=2)  # Dernière valeur connue
+    
+    # Sens d'appréciation
+    sens_appreciation: str | None = Field(
+        default=SensAppreciation.HAUT.value,
+        max_length=10,
+        sa_column=Column(String(10), default=SensAppreciation.HAUT.value)
+    )  # "haut" = plus élevé = mieux, "bas" = plus bas = mieux
+    
+    # Document justificatif
+    doc_justif: str | None = Field(default=None, max_length=500)  # Chemin du document justifiant la valeur actuelle
 
     # Commentaires
     commentaires: str | None = None
@@ -252,7 +303,7 @@ class EvaluationPerformance(SQLModel, table=True):
     statut: str = Field(max_length=50, default="PLANIFIEE")  # "PLANIFIEE", "EN_COURS", "TERMINEE"
 
     # Responsabilité
-    responsable_id: int = Field(foreign_key="user.id")
+    responsable_id: int | None = Field(default=None, foreign_key="user.id")
 
     # Traçabilité
     created_at: datetime = Field(default_factory=datetime.now)

@@ -8,9 +8,13 @@
 <style>
 /* ========== SIGOBE PAGE STYLES ========== */
 .sigobe-container {
-    padding: 2rem 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
     background: #f8f9fa;
     min-height: 100vh;
+    margin: 0;
+    box-sizing: border-box;
 }
 
 /* Filtres */
@@ -159,7 +163,7 @@
     ]
 ) }}
 
-<div class="sigobe-container container">
+<div class="sigobe-container">
 
   <!-- Filtres -->
   <div class="filters-section">
@@ -410,7 +414,9 @@ async function handleUpload(event) {
       afficherPrevisualisation(result);
     } else {
       hideGlobalLoading();
-      showError(result.detail || 'Erreur lors de l\'analyse');
+      // Afficher le message d'erreur détaillé (peut contenir plusieurs lignes)
+      const errorMessage = result.detail || result.message || 'Erreur lors de l\'analyse';
+      showError(errorMessage, 'Erreur de validation');
     }
   } catch (error) {
     hideGlobalLoading();
@@ -573,7 +579,9 @@ async function confirmerImport() {
       setTimeout(() => location.reload(), 1000);
     } else {
       hideGlobalLoading();
-      showError(result.detail || 'Erreur lors de l\'import');
+      // Afficher le message d'erreur détaillé (peut contenir plusieurs lignes)
+      const errorMessage = result.detail || result.message || 'Erreur lors de l\'import';
+      showError(errorMessage, 'Erreur de validation');
     }
   } catch (error) {
     hideGlobalLoading();

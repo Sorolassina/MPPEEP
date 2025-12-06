@@ -3,7 +3,224 @@
 
 {% block title %}Objectifs de Performance - {{ app_name }}{% endblock %}
 
-{% block styles %}{% endblock %}
+{% block styles %}
+<style>
+    .objectives-section {
+        margin-bottom: 2rem;
+    }
+    
+    .objectives-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .objectives-section-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .objectives-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        height: 32px;
+        padding: 0 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 16px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    
+    .objectives-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .objectives-hierarchy {
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+    }
+    
+    .programme-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(139, 92, 246, 0.06));
+        border: 2px solid rgba(102, 126, 234, 0.15);
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.08);
+    }
+    
+    .programme-group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.12));
+        border: 1px solid rgba(102, 126, 234, 0.25);
+        margin-bottom: 0.5rem;
+    }
+    
+    .programme-group-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .programme-group-icon {
+        font-size: 2.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: rgba(102, 126, 234, 0.2);
+        color: rgba(102, 126, 234, 0.95);
+    }
+    
+    .programme-group-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        flex: 1;
+    }
+    
+    .programme-group-title {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: rgba(15, 23, 42, 0.92);
+    }
+    
+    .programme-group-description {
+        margin: 0;
+        font-size: 0.9rem;
+        color: rgba(15, 23, 42, 0.7);
+        line-height: 1.5;
+    }
+    
+    .programme-group-count {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: rgba(102, 126, 234, 0.95);
+        background: rgba(102, 126, 234, 0.18);
+        padding: 0.5rem 1rem;
+        border-radius: 14px;
+    }
+    
+    .programme-group-ogs {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-left: 1rem;
+        padding-left: 1.5rem;
+        border-left: 3px solid rgba(102, 126, 234, 0.4);
+        position: relative;
+    }
+    
+    .programme-group-ogs::before {
+        content: '';
+        position: absolute;
+        left: -3px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, rgba(102, 126, 234, 0.5) 0%, transparent 100%);
+    }
+    
+    .objective-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .objective-group-header {
+        margin-bottom: 0.5rem;
+    }
+    
+    
+    .objective-group-os {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-left: 2rem;
+        padding-left: 1.5rem;
+        border-left: 3px solid #667eea;
+        position: relative;
+    }
+    
+    .objective-group-os::before {
+        content: '';
+        position: absolute;
+        left: -3px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, #667eea 0%, transparent 100%);
+    }
+    
+    .objective-group-os-title {
+        grid-column: 1 / -1;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .objective-group-os-title::before {
+        content: '└─';
+        color: #667eea;
+        font-weight: bold;
+    }
+    
+    .objective-title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+    }
+    
+    .objective-top-badges {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .objective-code {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 48px;
+        height: 24px;
+        padding: 0 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -14,7 +231,8 @@
     ],
     actions=[
         {'label': '← Retour Performance', 'url': url_for('performance_home'), 'primary': False},
-        {'label': '➕ Nouvel Objectif', 'onclick': 'openCreateModal()', 'primary': True}
+        {'label': '➕ Nouvel Objectif', 'onclick': 'openCreateModal()', 'primary': True},
+        {'label': '🔄 Actualiser', 'onclick': 'loadObjectives()', 'primary': False}
     ]
 ) }}
 
@@ -24,10 +242,6 @@
             <div class="objectives-cta-text">
                 <h2>Cartographier vos objectifs</h2>
                 <p>Centralisez vos objectifs stratégiques et opérationnels, suivez leur progression et priorisez les actions.</p>
-            </div>
-            <div class="objectives-cta-actions">
-                <button type="button" class="btn btn-premium btn-primary" onclick="openCreateModal()">➕ Nouvel objectif</button>
-                <button type="button" class="btn btn-premium btn-secondary" onclick="loadObjectives()">🔄 Actualiser</button>
             </div>
         </div>
     </section>
@@ -68,8 +282,8 @@
                 <label class="filter-label" for="filter-type">🎯 Type</label>
                 <select id="filter-type" class="form-control" onchange="filterObjectives()">
                     <option value="">Tous</option>
-                    <option value="STRATEGIQUE">Stratégique</option>
-                    <option value="OPERATIONNEL">Opérationnel</option>
+                    <option value="global">Objectif Global</option>
+                    <option value="specifique">Objectif Spécifique</option>
                     <option value="FINANCIER">Financier</option>
                     <option value="RH">RH</option>
                     <option value="QUALITE">Qualité</option>
@@ -80,8 +294,26 @@
     </section>
 
     <section class="objectives-list-section">
-        <div id="objectives-list" class="objectives-grid">
-            <!-- objectifs dynamiques -->
+        <!-- Section Objectifs Globaux avec leurs OS -->
+        <div class="objectives-section">
+            <div class="objectives-section-header">
+                <h3 class="objectives-section-title">🎯 Objectifs Globaux (OG)</h3>
+                <span id="og-count" class="objectives-count">0</span>
+            </div>
+            <div id="objectives-globaux" class="objectives-hierarchy">
+                <!-- objectifs globaux avec leurs OS dynamiques -->
+            </div>
+        </div>
+
+        <!-- Section Objectifs Spécifiques sans OG -->
+        <div class="objectives-section" style="margin-top: 2rem;">
+            <div class="objectives-section-header">
+                <h3 class="objectives-section-title">📋 Objectifs Spécifiques (OS)</h3>
+                <span id="os-count" class="objectives-count">0</span>
+            </div>
+            <div id="objectives-specifiques" class="objectives-grid">
+                <!-- objectifs spécifiques sans OG dynamiques -->
+            </div>
         </div>
     </section>
 </div>
@@ -96,27 +328,22 @@
         <form id="objectiveForm" class="modal-body">
             <input type="hidden" id="objectiveId" name="objective_id">
             
-            <div class="form-group">
-                <label for="titre" class="form-label">Titre *</label>
-                <input type="text" id="titre" name="titre" class="form-control" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="description" class="form-label">Description</label>
-                <textarea id="description" name="description" class="form-control" rows="3"></textarea>
-            </div>
-            
             <div class="form-row">
                 <div class="form-group">
-                    <label for="type_objectif" class="form-label">Type</label>
-                    <select id="type_objectif" name="type_objectif" class="form-control">
-                        <option value="OPERATIONNEL">Opérationnel</option>
-                        <option value="STRATEGIQUE">Stratégique</option>
+                    <label for="type_objectif" class="form-label">Type *</label>
+                    <select id="type_objectif" name="type_objectif" class="form-control" onchange="handleTypeChange()" required>
+                        <option value="specifique">Objectif Spécifique</option>
+                        <option value="global">Objectif Global</option>
                         <option value="FINANCIER">Financier</option>
                         <option value="RH">RH</option>
                         <option value="QUALITE">Qualité</option>
                         <option value="CLIENT">Client</option>
                     </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="code" class="form-label">Code</label>
+                    <input type="text" id="code" name="code" class="form-control" placeholder="Ex: OG01, OS01" maxlength="50">
                 </div>
                 
                 <div class="form-group">
@@ -128,6 +355,40 @@
                         <option value="CRITIQUE">Critique</option>
                     </select>
                 </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="titre" class="form-label">Titre *</label>
+                <input type="text" id="titre" name="titre" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <!-- Champ conditionnel pour Objectif Global : Sélection du Résultat Stratégique -->
+            <div class="form-group" id="resultat_strategique_group" style="display: none;">
+                <label for="resultat_strategique_id" class="form-label">Résultat Stratégique *</label>
+                <select id="resultat_strategique_id" name="resultat_strategique_id" class="form-control">
+                    <option value="">Chargement des résultats stratégiques...</option>
+                </select>
+            </div>
+            
+            <!-- Champ conditionnel pour Objectif Global : Sélection du Programme -->
+            <div class="form-group" id="programme_group" style="display: none;">
+                <label for="programme_id" class="form-label">Programme</label>
+                <select id="programme_id" name="programme_id" class="form-control">
+                    <option value="">Chargement des programmes...</option>
+                </select>
+            </div>
+            
+            <!-- Champ conditionnel pour Objectif Spécifique : Sélection de l'Objectif Global -->
+            <div class="form-group" id="objectif_global_group" style="display: none;">
+                <label for="objectif_global_id" class="form-label">Objectif Global *</label>
+                <select id="objectif_global_id" name="objectif_global_id" class="form-control">
+                    <option value="">Chargement des objectifs globaux...</option>
+                </select>
             </div>
             
             <div class="form-row">
@@ -176,8 +437,8 @@
             </div>
             
             <div class="form-group">
-                <label for="responsable_id" class="form-label">Responsable *</label>
-                <select id="responsable_id" name="responsable_id" class="form-control" required>
+                <label for="responsable_id" class="form-label">Responsable</label>
+                <select id="responsable_id" name="responsable_id" class="form-control">
                     <option value="">Sélectionner d'abord un service...</option>
                 </select>
             </div>
@@ -211,14 +472,18 @@ let editingObjectiveId = null;
 let allUsers = []; // Stocker tous les utilisateurs
 
 // Charger les objectifs au démarrage
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const overlay = document.getElementById('globalLoadingOverlay');
     if (overlay) {
         overlay.classList.remove('show');
     }
+    // Charger les programmes en premier pour l'affichage hiérarchique
+    await loadProgrammes();
     loadObjectives();
     loadUsers();
     loadServices();
+    loadResultatsStrategiques();
+    loadObjectifsGlobaux();
 });
 
 // Charger la liste des objectifs
@@ -319,36 +584,198 @@ async function loadServices() {
     }
 }
 
-// Afficher les objectifs
-function displayObjectives(objectives) {
-    const container = document.getElementById('objectives-list');
+// Charger les résultats stratégiques pour les objectifs globaux
+let allResultatsStrategiques = [];
+async function loadResultatsStrategiques() {
+    try {
+        const url = "{{ url_for('get_resultats_api') }}";
+        console.log('🔍 Chargement des résultats stratégiques depuis:', url);
+        
+        const response = await fetch(url);
+        console.log('📡 Réponse reçue:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            console.error('❌ Erreur HTTP:', response.status, response.statusText);
+            const select = document.getElementById('resultat_strategique_id');
+            if (select) {
+                select.innerHTML = '<option value="">Erreur de chargement (HTTP ' + response.status + ')</option>';
+            }
+            return;
+        }
+        
+        const result = await response.json();
+        console.log('📦 Données reçues:', result);
+        
+        if (result.success && result.data) {
+            allResultatsStrategiques = result.data;
+            console.log('✅ Nombre de résultats stratégiques chargés:', result.data.length);
+            
+            const select = document.getElementById('resultat_strategique_id');
+            if (!select) {
+                console.warn('⚠️ Select resultat_strategique_id non trouvé');
+                return;
+            }
+            
+            select.innerHTML = '<option value="">Sélectionner un résultat stratégique...</option>';
+            
+            if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+                result.data.forEach(resultat => {
+                    const option = document.createElement('option');
+                    option.value = resultat.id;
+                    option.textContent = resultat.libelle || `Résultat #${resultat.id}`;
+                    select.appendChild(option);
+                });
+                console.log('✅ Options ajoutées au select');
+            } else {
+                console.warn('⚠️ Aucun résultat stratégique dans les données');
+                select.innerHTML += '<option value="" disabled>Aucun résultat stratégique disponible</option>';
+            }
+        } else {
+            console.warn('⚠️ Réponse API invalide:', result);
+            const select = document.getElementById('resultat_strategique_id');
+            if (select) {
+                select.innerHTML = '<option value="">Aucun résultat stratégique disponible</option>';
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement des résultats stratégiques:', error);
+        const select = document.getElementById('resultat_strategique_id');
+        if (select) {
+            select.innerHTML = '<option value="">Erreur de chargement</option>';
+        }
+    }
+}
+
+// Charger les programmes pour les objectifs globaux
+let allProgrammes = [];
+async function loadProgrammes() {
+    try {
+        const response = await fetch("{{ url_for('list_programmes_api') }}");
+        const programmes = await response.json();
+        
+        if (programmes && Array.isArray(programmes)) {
+            // Trier les programmes par code
+            allProgrammes = programmes.sort((a, b) => {
+                const codeA = (a.code || '').toUpperCase();
+                const codeB = (b.code || '').toUpperCase();
+                return codeA.localeCompare(codeB);
+            });
+            
+            const select = document.getElementById('programme_id');
+            if (select) {
+                select.innerHTML = '<option value="">Sélectionner un programme (optionnel)...</option>';
+                
+                allProgrammes.forEach(programme => {
+                    const option = document.createElement('option');
+                    option.value = programme.id;
+                    option.textContent = `${programme.code} - ${programme.libelle}`;
+                    select.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des programmes:', error);
+        const select = document.getElementById('programme_id');
+        if (select) {
+            select.innerHTML = '<option value="">Erreur de chargement</option>';
+        }
+    }
+}
+
+// Charger les objectifs globaux pour les objectifs spécifiques
+let allObjectifsGlobaux = [];
+async function loadObjectifsGlobaux() {
+    try {
+        const response = await fetch(API_URLS.list + "?type_objectif=global");
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            // Filtrer uniquement les objectifs globaux (type = global)
+            allObjectifsGlobaux = result.data.filter(obj => obj.type_objectif === 'global');
+            
+            const select = document.getElementById('objectif_global_id');
+            select.innerHTML = '<option value="">Sélectionner un objectif global...</option>';
+            
+            if (allObjectifsGlobaux.length > 0) {
+                allObjectifsGlobaux.forEach(objectif => {
+                    const option = document.createElement('option');
+                    option.value = objectif.id;
+                    option.textContent = `${objectif.titre}${objectif.periode ? ' (' + objectif.periode + ')' : ''}`;
+                    select.appendChild(option);
+                });
+            } else {
+                select.innerHTML += '<option value="" disabled>Aucun objectif global disponible</option>';
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des objectifs globaux:', error);
+        document.getElementById('objectif_global_id').innerHTML = '<option value="">Erreur de chargement</option>';
+    }
+}
+
+// Gérer le changement de type d'objectif
+function handleTypeChange() {
+    const typeSelect = document.getElementById('type_objectif');
+    const typeValue = typeSelect.value;
     
-    if (objectives.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🎯</div>
-                <h3 class="empty-state-title">Aucun objectif de performance</h3>
-                <p class="empty-state-message">
-                    Vous n'avez pas encore défini d'objectifs de performance.<br>
-                    Commencez par créer votre premier objectif pour suivre et améliorer vos résultats.
-                </p>
-                <button class="btn btn-premium btn-primary" onclick="openCreateModal()">
-                    ➕ Créer mon premier objectif
-                </button>
-            </div>
-        `;
-        return;
+    const resultatGroup = document.getElementById('resultat_strategique_group');
+    const programmeGroup = document.getElementById('programme_group');
+    const objectifGlobalGroup = document.getElementById('objectif_global_group');
+    const resultatSelect = document.getElementById('resultat_strategique_id');
+    const programmeSelect = document.getElementById('programme_id');
+    const objectifGlobalSelect = document.getElementById('objectif_global_id');
+    
+    // Masquer tous les groupes par défaut
+    resultatGroup.style.display = 'none';
+    programmeGroup.style.display = 'none';
+    objectifGlobalGroup.style.display = 'none';
+    
+    // Réinitialiser les valeurs UNIQUEMENT si on change de type (pas lors de l'édition)
+    // On vérifie si on est en mode édition en regardant si editingObjectiveId est défini
+    if (!editingObjectiveId) {
+        resultatSelect.value = '';
+        programmeSelect.value = '';
+        objectifGlobalSelect.value = '';
     }
     
-    container.innerHTML = objectives.map(obj => `
+    // Afficher le champ approprié selon le type
+    if (typeValue === 'global') {
+        resultatGroup.style.display = 'block';
+        programmeGroup.style.display = 'block';
+        resultatSelect.required = true;
+        programmeSelect.required = false; // Optionnel
+        objectifGlobalSelect.required = false;
+        // Charger les programmes si pas encore chargés
+        loadProgrammes();
+    } else if (typeValue === 'specifique') {
+        objectifGlobalGroup.style.display = 'block';
+        objectifGlobalSelect.required = true;
+        resultatSelect.required = false;
+        programmeSelect.required = false;
+    } else {
+        // Pour les autres types (FINANCIER, RH, etc.), aucun champ n'est requis
+        resultatSelect.required = false;
+        programmeSelect.required = false;
+        objectifGlobalSelect.required = false;
+    }
+}
+
+// Fonction pour créer une carte d'objectif
+function createObjectiveCard(obj) {
+    return `
         <article class="objective-card" data-id="${obj.id}">
             <div class="objective-top">
                 <div class="objective-icon">${getTypeIcon(obj.type_objectif)}</div>
-                <span class="objective-status status-badge status-${obj.statut.toLowerCase().replace('_', '-')}">${getStatusLabel(obj.statut)}</span>
+                <div class="objective-top-badges">
+                    ${obj.code ? `<span class="objective-code">${obj.code}</span>` : ''}
+                    <span class="objective-status status-badge status-${obj.statut.toLowerCase().replace('_', '-')}">${getStatusLabel(obj.statut)}</span>
+                </div>
             </div>
 
             <div class="objective-header">
-                <h3 class="objective-title">${obj.titre}</h3>
+                <div class="objective-title-wrapper">
+                    <h3 class="objective-title">${obj.titre}</h3>
+                </div>
                 <div class="objective-actions">
                     <button type="button" class="btn-action btn-premium btn-secondary btn-compact" onclick="editObjective(${obj.id})" title="Modifier">✏️</button>
                     <button type="button" class="btn-action btn-premium btn-danger btn-compact" onclick="deleteObjective(${obj.id}, '${obj.titre.replace(/'/g, '&#39;')}')" title="Supprimer">🗑️</button>
@@ -378,7 +805,251 @@ function displayObjectives(objectives) {
                 </div>
             </div>
         </article>
-    `).join('');
+    `;
+}
+
+// Afficher les objectifs avec hiérarchie Programme -> OG -> OS
+function displayObjectives(objectives) {
+    const containerGlobaux = document.getElementById('objectives-globaux');
+    const containerSpecifiques = document.getElementById('objectives-specifiques');
+    const countOG = document.getElementById('og-count');
+    const countOS = document.getElementById('os-count');
+    
+    // Séparer les objectifs par type
+    let objectifsGlobaux = objectives.filter(obj => obj.type_objectif === 'global' || obj.type_objectif === 'GLOBAL');
+    let objectifsSpecifiques = objectives.filter(obj => obj.type_objectif === 'specifique' || obj.type_objectif === 'SPECIFIQUE');
+    
+    // Trier par code (les objectifs sans code en dernier)
+    const sortByCode = (a, b) => {
+        if (!a.code && !b.code) return 0;
+        if (!a.code) return 1;
+        if (!b.code) return -1;
+        return a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+    };
+    objectifsGlobaux.sort(sortByCode);
+    objectifsSpecifiques.sort(sortByCode);
+    
+    // Séparer les OS avec et sans OG rattaché
+    const osAvecOG = objectifsSpecifiques.filter(os => {
+        const ogId = os.objectif_global_id;
+        return ogId != null && ogId !== '' && ogId !== 'null' && ogId !== 'undefined';
+    });
+    const osSansOG = objectifsSpecifiques.filter(os => {
+        const ogId = os.objectif_global_id;
+        return !ogId || ogId === '' || ogId === 'null' || ogId === 'undefined';
+    });
+    
+    // Grouper les OS par objectif_global_id (convertir en string pour la clé)
+    const osParOG = {};
+    osAvecOG.forEach(os => {
+        const ogId = String(os.objectif_global_id);
+        if (!osParOG[ogId]) {
+            osParOG[ogId] = [];
+        }
+        osParOG[ogId].push(os);
+    });
+    
+    // Trier les OS dans chaque groupe par code
+    Object.keys(osParOG).forEach(ogId => {
+        osParOG[ogId].sort(sortByCode);
+    });
+    
+    // Séparer les OG avec et sans programme
+    const ogAvecProgramme = objectifsGlobaux.filter(og => {
+        const progId = og.programme_id;
+        return progId != null && progId !== '' && progId !== 'null' && progId !== 'undefined';
+    });
+    const ogSansProgramme = objectifsGlobaux.filter(og => {
+        const progId = og.programme_id;
+        return !progId || progId === '' || progId === 'null' || progId === 'undefined';
+    });
+    
+    // Grouper les OG par programme_id
+    const ogParProgramme = {};
+    ogAvecProgramme.forEach(og => {
+        const progId = String(og.programme_id);
+        if (!ogParProgramme[progId]) {
+            ogParProgramme[progId] = [];
+        }
+        ogParProgramme[progId].push(og);
+    });
+    
+    // Trier les OG dans chaque programme par code
+    Object.keys(ogParProgramme).forEach(progId => {
+        ogParProgramme[progId].sort(sortByCode);
+    });
+    
+    // Mettre à jour les compteurs
+    countOG.textContent = objectifsGlobaux.length;
+    countOS.textContent = osSansOG.length;
+    
+    // Afficher les objectifs globaux groupés par programme
+    if (objectifsGlobaux.length === 0 && osAvecOG.length === 0) {
+        containerGlobaux.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">🎯</div>
+                <h4 class="empty-state-title">Aucun objectif global</h4>
+                <p class="empty-state-message">
+                    Vous n'avez pas encore défini d'objectif global.<br>
+                    Les objectifs globaux sont liés aux résultats stratégiques.
+                </p>
+            </div>
+        `;
+    } else {
+        let html = '';
+        
+        // Trier les programmes par code
+        const programmesIds = Object.keys(ogParProgramme).sort((a, b) => {
+            const progA = allProgrammes.find(p => String(p.id) === a);
+            const progB = allProgrammes.find(p => String(p.id) === b);
+            const codeA = progA ? (progA.code || '').toUpperCase() : '';
+            const codeB = progB ? (progB.code || '').toUpperCase() : '';
+            return codeA.localeCompare(codeB);
+        });
+        
+        // Pour chaque programme, afficher le programme, ses OG et leurs OS
+        programmesIds.forEach(progId => {
+            const programme = allProgrammes.find(p => String(p.id) === progId);
+            const ogsDuProgramme = ogParProgramme[progId];
+            
+            if (programme) {
+                html += `
+                    <div class="programme-group">
+                        <div class="programme-group-header">
+                            <div class="programme-group-info">
+                                <span class="programme-group-icon">📁</span>
+                                <div class="programme-group-details">
+                                    <h3 class="programme-group-title">${programme.code} - ${programme.libelle}</h3>
+                                    <p class="programme-group-description">${programme.description || 'Aucune description'}</p>
+                                </div>
+                            </div>
+                            <span class="programme-group-count">${ogsDuProgramme.length} objectif${ogsDuProgramme.length > 1 ? 's' : ''} global${ogsDuProgramme.length > 1 ? 'aux' : ''}</span>
+                        </div>
+                        <div class="programme-group-ogs">
+                `;
+                
+                // Pour chaque OG du programme, afficher l'OG et ses OS
+                ogsDuProgramme.forEach(og => {
+                    const ogId = String(og.id);
+                    const osRattaches = (osParOG[ogId] || []).sort((a, b) => {
+                        const codeA = (a.code || '').toUpperCase();
+                        const codeB = (b.code || '').toUpperCase();
+                        return codeA.localeCompare(codeB);
+                    });
+                    
+                    html += `
+                        <div class="objective-group">
+                            <div class="objective-group-og">
+                                ${createObjectiveCard(og)}
+                            </div>
+                            ${osRattaches.length > 0 ? `
+                                <div class="objective-group-os">
+                                    <div class="objective-group-os-title">
+                                        Objectifs Spécifiques rattachés (${osRattaches.length})
+                                    </div>
+                                    ${osRattaches.map(os => createObjectiveCard(os)).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        // Afficher les OG sans programme dans une section séparée
+        if (ogSansProgramme.length > 0) {
+            html += `
+                <div class="programme-group">
+                    <div class="programme-group-header">
+                        <div class="programme-group-info">
+                            <span class="programme-group-icon">🎯</span>
+                            <div class="programme-group-details">
+                                <h3 class="programme-group-title">Objectifs Globaux sans Programme</h3>
+                                <p class="programme-group-description">Ces objectifs globaux ne sont pas rattachés à un programme</p>
+                            </div>
+                        </div>
+                        <span class="programme-group-count">${ogSansProgramme.length} objectif${ogSansProgramme.length > 1 ? 's' : ''} global${ogSansProgramme.length > 1 ? 'aux' : ''}</span>
+                    </div>
+                    <div class="programme-group-ogs">
+            `;
+            
+            ogSansProgramme.forEach(og => {
+                const ogId = String(og.id);
+                const osRattaches = (osParOG[ogId] || []).sort((a, b) => {
+                    const codeA = (a.code || '').toUpperCase();
+                    const codeB = (b.code || '').toUpperCase();
+                    return codeA.localeCompare(codeB);
+                });
+                
+                html += `
+                    <div class="objective-group">
+                        <div class="objective-group-og">
+                            ${createObjectiveCard(og)}
+                        </div>
+                        ${osRattaches.length > 0 ? `
+                            <div class="objective-group-os">
+                                <div class="objective-group-os-title">
+                                    Objectifs Spécifiques rattachés (${osRattaches.length})
+                                </div>
+                                ${osRattaches.map(os => createObjectiveCard(os)).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        containerGlobaux.innerHTML = html;
+    }
+    
+    // Afficher les objectifs spécifiques sans OG
+    if (osSansOG.length === 0) {
+        containerSpecifiques.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">📋</div>
+                <h4 class="empty-state-title">Aucun objectif spécifique sans objectif global</h4>
+                <p class="empty-state-message">
+                    Tous les objectifs spécifiques sont rattachés à un objectif global.
+                </p>
+            </div>
+        `;
+    } else {
+        // Trier les OS sans OG par code
+        const osSansOGTries = osSansOG.sort((a, b) => {
+            const codeA = (a.code || '').toUpperCase();
+            const codeB = (b.code || '').toUpperCase();
+            return codeA.localeCompare(codeB);
+        });
+        containerSpecifiques.innerHTML = osSansOGTries.map(obj => createObjectiveCard(obj)).join('');
+    }
+    
+    // Si aucun objectif du tout, afficher un message global
+    if (objectives.length === 0) {
+        containerGlobaux.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">🎯</div>
+                <h3 class="empty-state-title">Aucun objectif de performance</h3>
+                <p class="empty-state-message">
+                    Vous n'avez pas encore défini d'objectifs de performance.<br>
+                    Commencez par créer votre premier objectif pour suivre et améliorer vos résultats.
+                </p>
+                <button class="btn btn-premium btn-primary" onclick="openCreateModal()">
+                    ➕ Créer mon premier objectif
+                </button>
+            </div>
+        `;
+        containerSpecifiques.innerHTML = '';
+    }
 }
 
 // Fonctions pour gérer les modales
@@ -416,6 +1087,7 @@ function editObjective(id) {
     
     // Remplir le formulaire
     document.getElementById('objectiveId').value = objective.id;
+    document.getElementById('code').value = objective.code || '';
     document.getElementById('titre').value = objective.titre;
     document.getElementById('description').value = objective.description || '';
     document.getElementById('type_objectif').value = objective.type_objectif;
@@ -424,9 +1096,95 @@ function editObjective(id) {
     document.getElementById('date_fin').value = objective.date_fin;
     document.getElementById('periode').value = objective.periode || '';
     document.getElementById('valeur_cible').value = objective.valeur_cible;
+    
+    // Appeler handleTypeChange pour afficher/masquer les champs conditionnels
+    handleTypeChange();
+    
+    // Pré-remplir les champs conditionnels après un court délai pour s'assurer que les listes sont chargées
+    setTimeout(() => {
+        // Pré-remplir resultat_strategique_id si c'est un objectif global
+        if (objective.type_objectif === 'global' && objective.resultat_strategique_id) {
+            document.getElementById('resultat_strategique_id').value = objective.resultat_strategique_id;
+        }
+        
+        // Pré-remplir programme_id si c'est un objectif global
+        if (objective.type_objectif === 'global' && objective.programme_id) {
+            document.getElementById('programme_id').value = objective.programme_id;
+        }
+        
+        // Pré-remplir objectif_global_id si c'est un objectif spécifique
+        if (objective.type_objectif === 'specifique' && objective.objectif_global_id) {
+            document.getElementById('objectif_global_id').value = objective.objectif_global_id;
+        }
+    }, 300);
     document.getElementById('valeur_actuelle').value = objective.valeur_actuelle;
     document.getElementById('unite').value = objective.unite;
     document.getElementById('commentaires').value = objective.commentaires || '';
+    
+    // Gérer les champs conditionnels selon le type (affiche/masque les champs)
+    handleTypeChange();
+    
+    // Pré-remplir les champs de relation si présents
+    // Utiliser une fonction async pour attendre le chargement des listes
+    (async () => {
+        console.log('🔍 Édition objectif:', objective);
+        console.log('🔍 resultat_strategique_id:', objective.resultat_strategique_id);
+        console.log('🔍 objectif_global_id:', objective.objectif_global_id);
+        
+        // Si c'est un objectif global, charger les résultats stratégiques et programmes
+        if (objective.type_objectif === 'global') {
+            if (objective.resultat_strategique_id) {
+                const resultatSelect = document.getElementById('resultat_strategique_id');
+                if (resultatSelect) {
+                    console.log('📋 Chargement des résultats stratégiques pour objectif global');
+                    // Toujours recharger pour être sûr que la liste est à jour
+                    await loadResultatsStrategiques();
+                    // Attendre un peu pour que le DOM soit mis à jour
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    // Définir la valeur après le chargement
+                    resultatSelect.value = String(objective.resultat_strategique_id);
+                    console.log('✅ Valeur définie pour resultat_strategique_id:', resultatSelect.value);
+                }
+            }
+            
+            if (objective.programme_id) {
+                const programmeSelect = document.getElementById('programme_id');
+                if (programmeSelect) {
+                    console.log('📋 Chargement des programmes pour objectif global');
+                    // Toujours recharger pour être sûr que la liste est à jour
+                    await loadProgrammes();
+                    // Attendre un peu pour que le DOM soit mis à jour
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    // Définir la valeur après le chargement
+                    programmeSelect.value = String(objective.programme_id);
+                    console.log('✅ Valeur définie pour programme_id:', programmeSelect.value);
+                }
+            }
+        }
+        
+        // Si c'est un objectif spécifique, charger les objectifs globaux
+        if (objective.type_objectif === 'specifique') {
+            // S'assurer que programme_id est vidé pour un OS
+            const programmeSelect = document.getElementById('programme_id');
+            if (programmeSelect) {
+                programmeSelect.value = '';
+            }
+            
+            if (objective.objectif_global_id) {
+                const objectifGlobalSelect = document.getElementById('objectif_global_id');
+                if (objectifGlobalSelect) {
+                    console.log('📋 Chargement des objectifs globaux pour objectif spécifique');
+                    // Toujours recharger pour être sûr que la liste est à jour
+                    await loadObjectifsGlobaux();
+                    // Attendre un peu pour que le DOM soit mis à jour
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    // Définir la valeur après le chargement
+                    objectifGlobalSelect.value = String(objective.objectif_global_id);
+                    console.log('✅ Valeur définie pour objectif_global_id:', objectifGlobalSelect.value);
+                }
+            }
+        }
+    })();
     
     // Trouver l'ID du service à partir du libellé
     const serviceLibelle = objective.service_responsable || '';
@@ -482,6 +1240,10 @@ function closeModal() {
     hideModal('objectiveModal');
     document.getElementById('objectiveForm').reset();
     editingObjectiveId = null;
+    
+    // Masquer les champs conditionnels
+    document.getElementById('resultat_strategique_group').style.display = 'none';
+    document.getElementById('objectif_global_group').style.display = 'none';
 }
 
 // Soumettre le formulaire
@@ -500,20 +1262,100 @@ document.getElementById('objectiveForm').addEventListener('submit', async functi
             formData.set('service_responsable', selectedOption.getAttribute('data-libelle'));
         }
         
+        // Gérer les champs conditionnels : ne pas envoyer si le type ne correspond pas
+        const typeObjectif = formData.get('type_objectif');
+        
+        // Pour resultat_strategique_id : ne l'envoyer que si c'est un objectif global ET qu'il a une valeur
+        if (typeObjectif !== 'global') {
+            formData.delete('resultat_strategique_id');
+        } else {
+            const resultatId = formData.get('resultat_strategique_id');
+            if (!resultatId || resultatId === '' || resultatId === 'null') {
+                formData.delete('resultat_strategique_id');
+            }
+        }
+        
+        // Pour programme_id : ne l'envoyer que si c'est un objectif global
+        if (typeObjectif !== 'global') {
+            formData.delete('programme_id');
+        } else {
+            const programmeId = formData.get('programme_id');
+            if (!programmeId || programmeId === '' || programmeId === 'null') {
+                formData.delete('programme_id');
+            }
+        }
+        
+        // Pour objectif_global_id : ne l'envoyer que si c'est un objectif spécifique
+        // IMPORTANT: Pour la modification, on doit toujours l'envoyer (même vide) pour permettre de délier
+        if (typeObjectif !== 'specifique') {
+            formData.delete('objectif_global_id');
+        } else {
+            // Si c'est une modification, toujours envoyer objectif_global_id (même vide) pour permettre de le mettre à None
+            // Si c'est une création, ne l'envoyer que s'il a une valeur
+            const objectifGlobalId = formData.get('objectif_global_id');
+            if (!editingObjectiveId) {
+                // Création : ne pas envoyer si vide
+                if (!objectifGlobalId || objectifGlobalId === '' || objectifGlobalId === 'null') {
+                    formData.delete('objectif_global_id');
+                }
+            } else {
+                // Modification : toujours envoyer, même si vide (pour permettre de délier)
+                if (!objectifGlobalId || objectifGlobalId === '' || objectifGlobalId === 'null') {
+                    formData.set('objectif_global_id', ''); // Envoyer une chaîne vide qui sera convertie en None côté serveur
+                }
+            }
+        }
+        
+        // Pour responsable_id : ne pas envoyer si vide (FastAPI le traitera comme None)
+        const responsableId = formData.get('responsable_id');
+        if (!responsableId || responsableId === '' || responsableId === 'null') {
+            formData.delete('responsable_id');
+        }
+        
+        // S'assurer que le code est toujours présent dans le FormData (même vide)
+        // car cleanFormData le gardera grâce à optionalFieldsToKeep
+        const codeValue = formData.get('code');
+        if (codeValue === null || codeValue === undefined) {
+            // Si le code n'est pas dans le FormData, l'ajouter comme chaîne vide
+            formData.set('code', '');
+        }
+        
+        // Log des données avant envoi (pour debug)
+        console.log('📤 Données du formulaire avant envoi:');
+        for (const [key, value] of formData.entries()) {
+            console.log(`  ${key}: ${value} (type: ${typeof value})`);
+        }
+        
         const url = editingObjectiveId 
             ? API_URLS.update(editingObjectiveId)
             : API_URLS.create;
         const method = editingObjectiveId ? 'PUT' : 'POST';
         
         const response = await submitFormAsJson(url, formData, method, true);
+        
+        // Afficher les détails de l'erreur si c'est une 422
+        if (!response.ok && response.status === 422) {
+            const errorData = await response.json();
+            console.error('❌ Erreur 422 - Détails FastAPI:', errorData);
+            const errorMessage = errorData.detail 
+                ? (Array.isArray(errorData.detail) 
+                    ? errorData.detail.map(e => `${e.loc?.join('.')}: ${e.msg}`).join('\n')
+                    : JSON.stringify(errorData.detail, null, 2))
+                : JSON.stringify(errorData, null, 2);
+            showError('Erreur de validation:\n' + errorMessage);
+            return;
+        }
+        
         const result = await response.json();
+        console.log('📥 Réponse du serveur:', result);
         
         if (result.success) {
             showSuccess(result.message);
             closeModal();
             loadObjectives();
         } else {
-            showError(result.error);
+            console.error('❌ Erreur retournée par le serveur:', result);
+            showError(result.error || 'Erreur lors de l\'enregistrement');
         }
     } catch (error) {
         console.error('Erreur:', error);
@@ -566,8 +1408,8 @@ function getStatusLabel(statut) {
 
 function getTypeLabel(type) {
     const labels = {
-        'STRATEGIQUE': 'Stratégique',
-        'OPERATIONNEL': 'Opérationnel',
+        'global': 'Objectif Global',
+        'specifique': 'Objectif Spécifique',
         'FINANCIER': 'Financier',
         'RH': 'RH',
         'QUALITE': 'Qualité',
@@ -578,8 +1420,8 @@ function getTypeLabel(type) {
 
 function getTypeIcon(type) {
     const icons = {
-        'STRATEGIQUE': '🎯',
-        'OPERATIONNEL': '⚙️',
+        'global': '🎯',
+        'specifique': '⚙️',
         'FINANCIER': '💰',
         'RH': '👥',
         'QUALITE': '⭐',

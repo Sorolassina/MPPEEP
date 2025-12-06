@@ -245,14 +245,15 @@ async function getJSON(url){
     console.log('📊 KPIs reçus:', k);
     
     // KPIs Agents
-    document.getElementById('kpi-total-agents').textContent = k.total_agents ?? 0;
-  document.getElementById('kpi-actifs').textContent = k.actifs ?? 0;
+    const kpiTotalAgents = document.getElementById('kpi-total-agents');
+    const kpiActifs = document.getElementById('kpi-actifs');
+    const kpiDemandesCours = document.getElementById('kpi-demandes-cours');
+    const kpiTauxTraitement = document.getElementById('kpi-taux-traitement');
     
-    // KPIs Demandes
-    document.getElementById('kpi-total-demandes').textContent = k.total_demandes ?? 0;
-    document.getElementById('kpi-demandes-cours').textContent = k.demandes_en_cours ?? 0;
-    document.getElementById('kpi-demandes-archivees').textContent = k.demandes_archivees ?? 0;
-    document.getElementById('kpi-taux-traitement').textContent = `${k.taux_traitement ?? 0}%`;
+    if (kpiTotalAgents) kpiTotalAgents.textContent = k.total_agents ?? 0;
+    if (kpiActifs) kpiActifs.textContent = k.actifs ?? 0;
+    if (kpiDemandesCours) kpiDemandesCours.textContent = k.demandes_en_cours ?? 0;
+    if (kpiTauxTraitement) kpiTauxTraitement.textContent = `${k.taux_traitement ?? 0}%`;
     
     // Circuit - En attente par état (dynamique)
     const kpisEtatsContainer = document.getElementById('kpis-etats');
@@ -278,38 +279,74 @@ async function getJSON(url){
     }
 
   // Évolution
-  const evo = await getJSON("{{ url_for('rh_home') }}api/evolution".replace(/\/$/, ""));
-  new Chart(document.getElementById('chart-evolution').getContext('2d'), {
-    type:'line',
-    data:{
-      labels: evo.map(x=>x.annee),
-      datasets:[{label:'Effectif', data:evo.map(x=>x.effectif)}]
+  const chartEvolution = document.getElementById('chart-evolution');
+  if (chartEvolution) {
+    try {
+      const evo = await getJSON("{{ url_for('rh_home') }}api/evolution".replace(/\/$/, ""));
+      if (evo && evo.length > 0) {
+        new Chart(chartEvolution.getContext('2d'), {
+          type:'line',
+          data:{
+            labels: evo.map(x=>x.annee),
+            datasets:[{label:'Effectif', data:evo.map(x=>x.effectif)}]
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Erreur chargement évolution:', e);
     }
-  });
+  }
 
   // Grade
-  const grd = await getJSON("{{ url_for('rh_home') }}api/grade".replace(/\/$/, ""));
-  new Chart(document.getElementById('chart-grade').getContext('2d'), {
-    type:'bar',
-    data:{ labels: grd.map(x=>x.grade), datasets:[{label:'Agents', data: grd.map(x=>x.nb)}] }
-  });
+  const chartGrade = document.getElementById('chart-grade');
+  if (chartGrade) {
+    try {
+      const grd = await getJSON("{{ url_for('rh_home') }}api/grade".replace(/\/$/, ""));
+      if (grd && grd.length > 0) {
+        new Chart(chartGrade.getContext('2d'), {
+          type:'bar',
+          data:{ labels: grd.map(x=>x.grade), datasets:[{label:'Agents', data: grd.map(x=>x.nb)}] }
+        });
+      }
+    } catch (e) {
+      console.error('Erreur chargement grade:', e);
+    }
+  }
 
   // Service
-  const svc = await getJSON("{{ url_for('rh_home') }}api/service".replace(/\/$/, ""));
-  new Chart(document.getElementById('chart-service').getContext('2d'), {
-    type:'bar',
-    data:{ labels: svc.map(x=>x.service), datasets:[{label:'Agents', data: svc.map(x=>x.nb)}] }
-  });
+  const chartService = document.getElementById('chart-service');
+  if (chartService) {
+    try {
+      const svc = await getJSON("{{ url_for('rh_home') }}api/service".replace(/\/$/, ""));
+      if (svc && svc.length > 0) {
+        new Chart(chartService.getContext('2d'), {
+          type:'bar',
+          data:{ labels: svc.map(x=>x.service), datasets:[{label:'Agents', data: svc.map(x=>x.nb)}] }
+        });
+      }
+    } catch (e) {
+      console.error('Erreur chargement service:', e);
+    }
+  }
 
     // Satisfaction exprimés vs satisfaits
-    const sat = await getJSON("{{ url_for('rh_home') }}api/satisfaction-besoins".replace(/\/$/, ""));
-    new Chart(document.getElementById('chart-satisfaction').getContext('2d'), {
-      type:'bar',
-      data:{
-        labels:['Exprimés','Satisfaits'],
-        datasets:[{label:'Besoins', data:[sat.exprimes, sat.satisfaits]}]
+    const chartSatisfaction = document.getElementById('chart-satisfaction');
+    if (chartSatisfaction) {
+      try {
+        const sat = await getJSON("{{ url_for('rh_home') }}api/satisfaction-besoins".replace(/\/$/, ""));
+        if (sat) {
+          new Chart(chartSatisfaction.getContext('2d'), {
+            type:'bar',
+            data:{
+              labels:['Exprimés','Satisfaits'],
+              datasets:[{label:'Besoins', data:[sat.exprimes, sat.satisfaits]}]
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Erreur chargement satisfaction:', e);
       }
-    });
+    }
     
   } catch(error) {
     console.error('❌ Erreur chargement données RH:', error);

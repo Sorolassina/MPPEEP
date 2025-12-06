@@ -1,0 +1,309 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+{% block title %}Nouvelle demande {{ module|upper }} · {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+/* Styles identiques à rh_demande_new.html */
+.rh-demande-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    background: #f8f9fa;
+    min-height: 100vh;
+    margin: 0;
+    box-sizing: border-box;
+}
+.form-container-premium {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+.form-section-premium {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+.form-section-premium:last-child {
+    border-bottom: none;
+}
+.form-section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.form-grid-premium {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+.form-group-premium {
+    display: flex;
+    flex-direction: column;
+}
+.form-group-premium label {
+    font-weight: 600;
+    color: #000000;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+.form-group-premium label.required::after {
+    content: " *";
+    color: #dc3545;
+}
+.form-group-premium input,
+.form-group-premium select,
+.form-group-premium textarea {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    background: #fff;
+    color: #000000;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+.form-group-premium input:focus,
+.form-group-premium select:focus,
+.form-group-premium textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+.file-input-group {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+.file-input-group:hover {
+    background: #e9ecef;
+    border-color: var(--primary-color);
+}
+.file-input-group input[type="file"] {
+    display: none;
+}
+.file-input-label {
+    display: block;
+    cursor: pointer;
+    color: #666;
+    font-weight: 500;
+}
+.form-actions-premium {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set module_names = {
+    'rh': 'Ressources Humaines',
+    'budget': 'Budget',
+    'stock': 'Stock',
+    'performance': 'Performance',
+    'personnel': 'Personnel',
+    'besoins': 'Besoins'
+} %}
+{% set module_home_routes = {
+    'rh': 'rh_home',
+    'budget': 'budget_home',
+    'stock': 'stock_home',
+    'performance': 'performance_home',
+    'personnel': 'personnel_home',
+    'besoins': 'besoins_home'
+} %}
+{% set module_name = module_names.get(module, module|title) %}
+{% set module_home_route = module_home_routes.get(module, 'accueil') %}
+
+{{ page_header(
+    title='📝 Nouvelle Demande ' + module_name,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': module_name, 'url': url_for(module_home_route)},
+        {'name': 'Nouvelle Demande'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for(module_home_route), 'primary': False}
+    ]
+) }}
+
+<div class="rh-demande-container">
+  <div class="form-container-premium">
+  <form method="post" action="{{ url_for('generic_request_create', module=module) }}" enctype="multipart/form-data" id="requestForm">
+    
+    <div class="form-section-premium">
+      <div class="form-section-title">📋 Informations de base</div>
+      
+      <div class="form-grid-premium">
+        <div class="form-group-premium">
+          <label for="agent_id" class="required">Agent demandeur</label>
+          {% if agent %}
+            <input type="number" name="agent_id" id="agent_id" required readonly
+                   value="{{ agent.id }}"
+                   style="background-color: #f0f0f0; cursor: not-allowed;">
+            <small style="color: #666; display: block; margin-top: 0.25rem;">
+              📋 {{ agent.matricule }} - {{ agent.prenom }} {{ agent.nom }}
+            </small>
+          {% else %}
+            <input type="number" name="agent_id" id="agent_id" required readonly
+                   value=""
+                   style="background-color: #fff5f5; border-color: #dc3545;">
+            <small style="color: #dc3545; display: block; margin-top: 0.25rem;">
+              ⚠️ Votre compte utilisateur n'est pas lié à un agent. Contactez l'administrateur.
+            </small>
+          {% endif %}
+        </div>
+
+        <div class="form-group-premium">
+          <label for="type" class="required">Type de demande</label>
+          <select name="type" id="type" required>
+            <option value="">-- Sélectionnez un type --</option>
+            {% if request_types %}
+              {% for rt in request_types %}
+                <option value="{{ rt.code }}">{{ rt.icone or '📄' }} {{ rt.libelle }}</option>
+              {% endfor %}
+            {% else %}
+              <option value="" disabled style="color: #999;">Aucun type de demande configuré</option>
+            {% endif %}
+          </select>
+          {% if not request_types %}
+            <small style="color: #e74c3c; display: block; margin-top: 0.5rem;">
+              ⚠️ Aucun type de demande n'est configuré. 
+              <a href="{{ url_for('workflow_config_home') }}" target="_blank" style="color: #0066cc;">Configurez-en ici</a>
+            </small>
+          {% endif %}
+        </div>
+
+        <div class="form-group-premium" style="grid-column: 1 / -1;">
+          <label for="objet" class="required">Objet de la demande</label>
+          <input type="text" name="objet" id="objet" required placeholder="Résumé de votre demande">
+        </div>
+
+        <div class="form-group-premium" style="grid-column: 1 / -1;">
+          <label for="motif">Motif détaillé (optionnel)</label>
+          <textarea name="motif" id="motif" rows="4" placeholder="Expliquez le contexte et les raisons de votre demande"></textarea>
+        </div>
+
+        <div class="form-group-premium" style="grid-column: 1 / -1;">
+          <label for="description">Description (optionnel)</label>
+          <textarea name="description" id="description" rows="3" placeholder="Description complémentaire"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div id="dates_section" class="form-section-premium" style="display: none;">
+      <div class="form-section-title">📅 Dates</div>
+      <div class="form-grid-premium">
+        <div class="form-group-premium">
+          <label for="date_debut">Date de début</label>
+          <input type="date" name="date_debut" id="date_debut">
+        </div>
+        <div class="form-group-premium">
+          <label for="date_fin">Date de fin</label>
+          <input type="date" name="date_fin" id="date_fin">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section-premium">
+      <div class="form-section-title">📎 Document Joint (Optionnel)</div>
+      <div class="form-grid-premium">
+        <div class="form-group-premium" style="grid-column: 1 / -1;">
+        <label for="document">Joindre un fichier</label>
+        <div class="file-input-group">
+          <input type="file" name="document" id="document" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+          <label for="document" class="file-input-label">
+            <span>📁</span>
+            <span id="file-label">Cliquez pour sélectionner un fichier</span>
+          </label>
+        </div>
+        <div class="file-name" id="file-name"></div>
+          <small style="color: #666; font-size: 0.8rem; margin-top: 0.25rem;">Formats acceptés : PDF, Word, Images (JPG, PNG) - Taille max : 10 Mo</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions-premium">
+      <button type="submit" class="btn btn-primary">📤 Créer la demande</button>
+      <a href="{{ url_for(module_home) if module_home in url_for.__globals__ else url_for('accueil') }}" class="btn btn-secondary">❌ Annuler</a>
+    </div>
+  </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.getElementById('document');
+  const fileLabel = document.getElementById('file-label');
+  const fileName = document.getElementById('file-name');
+
+  fileInput.addEventListener('change', function() {
+    if (this.files && this.files.length > 0) {
+      const file = this.files[0];
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      if (file.size > 10 * 1024 * 1024) {
+        alert('⚠️ Le fichier est trop volumineux (max 10 Mo)');
+        this.value = '';
+        fileLabel.textContent = 'Cliquez pour sélectionner un fichier';
+        fileName.textContent = '';
+        return;
+      }
+      fileLabel.textContent = file.name;
+      fileName.textContent = `✅ Fichier sélectionné : ${file.name} (${sizeMB} Mo)`;
+      fileName.style.color = '#198754';
+    } else {
+      fileLabel.textContent = 'Cliquez pour sélectionner un fichier';
+      fileName.textContent = '';
+    }
+  });
+
+  document.getElementById('requestForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+      overlay.querySelector('.loading-text').textContent = 'Création de la demande...';
+      overlay.classList.add('show');
+    }
+
+    const formData = new FormData(this);
+    
+    try {
+      const response = await fetch(this.action, {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.request_id) {
+        // Rediriger vers la page de détail
+        window.location.href = `/api/v1/{{ module }}/demandes/${result.request_id}`;
+      } else {
+        hideGlobalLoading();
+        alert('❌ Erreur lors de la création : ' + (result.message || 'Erreur inconnue'));
+      }
+    } catch (error) {
+      hideGlobalLoading();
+      console.error('Erreur:', error);
+      alert('❌ Erreur lors de la création de la demande');
+    }
+  });
+});
+</script>
+{% endblock %}
+

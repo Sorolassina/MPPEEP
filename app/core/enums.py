@@ -173,10 +173,10 @@ class ServiceType(str, Enum):
 class GradeCategory(str, Enum):
     """Catégories de grades de la fonction publique"""
 
-    A = "Catégorie A - Cadres supérieurs"
-    B = "Catégorie B - Cadres moyens"
-    C = "Catégorie C - Agents d'exécution"
-    D = "Catégorie D - Personnel de soutien"
+    A = "Catégorie A - Cadres supérieurs / Attachés / Administrateurs (Bac+4 et plus)"
+    B = "Catégorie B - Agents de maîtrise / Contrôleurs (Bac, Bac+2 ou équivalent)"
+    C = "Catégorie C - Adjoints administratifs / Agents d'exécution (BEPC ou CAP)"
+    D = "Catégorie D - Agents d'exécution de base (Niveau primaire ou sans diplôme)"
 
     def __str__(self):
         return self.value
@@ -231,6 +231,18 @@ class TypeDocument(str, Enum):
         return self.value
 
 
+class RoleBudgetaire(str, Enum):
+    """Rôles budgétaires d'un agent"""
+
+    RPROG = "RPROG"  # Responsable de Programme
+    RFFIM = "RFFIM"  # Responsable Financier et Financier
+    RUO = "RUO"  # Responsable d'Unité Opérationnelle
+    RBOP = "RBOP"  # Responsable Budget Opérationnel de Programme
+
+    def __str__(self):
+        return self.value
+
+
 # Pour faciliter les imports
 __all__ = [
     "ActeAdministratifType",
@@ -242,6 +254,7 @@ __all__ = [
     "PositionAdministrative",
     "ProgramType",
     "RequestType",
+    "RoleBudgetaire",
     "ServiceType",
     "SituationFamiliale",
     "TypeDocument",

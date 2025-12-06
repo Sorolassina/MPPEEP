@@ -3,7 +3,335 @@
 
 {% block title %}Indicateurs de Performance - {{ app_name }}{% endblock %}
 
-{% block styles %}{% endblock %}
+{% block styles %}
+<style>
+    .performance-indicators-page {
+        width: 100%;
+        max-width: 100%;
+        padding: 2rem 1.5rem;
+        margin: 0;
+        box-sizing: border-box;
+    }
+    
+    .indicators-hierarchy {
+        display: flex;
+        flex-direction: column;
+        gap: 2.5rem;
+    }
+    
+    /* Styles pour les groupes de programmes */
+    .programme-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(139, 92, 246, 0.06));
+        border: 2px solid rgba(102, 126, 234, 0.15);
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.08);
+    }
+    
+    .programme-group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.12));
+        border: 1px solid rgba(102, 126, 234, 0.25);
+        margin-bottom: 0.5rem;
+    }
+    
+    .programme-group-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+    
+    .programme-group-icon {
+        font-size: 2.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: rgba(102, 126, 234, 0.2);
+        color: rgba(102, 126, 234, 0.95);
+    }
+    
+    .programme-group-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        flex: 1;
+    }
+    
+    .programme-group-title {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: rgba(15, 23, 42, 0.92);
+    }
+    
+    .programme-group-description {
+        margin: 0;
+        font-size: 0.9rem;
+        color: rgba(15, 23, 42, 0.7);
+        line-height: 1.5;
+    }
+    
+    .programme-group-ogs {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-left: 1rem;
+        padding-left: 1.5rem;
+        border-left: 3px solid rgba(102, 126, 234, 0.4);
+        position: relative;
+    }
+    
+    .programme-group-ogs::before {
+        content: '';
+        position: absolute;
+        left: -3px;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, rgba(102, 126, 234, 0.5) 0%, transparent 100%);
+    }
+    
+    /* Styles pour les groupes d'OG */
+    .indicator-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .indicator-group-og-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-radius: 14px;
+        background: linear-gradient(135deg, rgba(232, 106, 10, 0.12), rgba(255, 159, 10, 0.1));
+        border: 2px solid rgba(232, 106, 10, 0.2);
+        box-shadow: 0 6px 20px rgba(232, 106, 10, 0.1);
+    }
+    
+    .indicator-group-og-info {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        flex: 1;
+    }
+    
+    .indicator-group-og-icon {
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(232, 106, 10, 0.18);
+        color: rgba(232, 106, 10, 0.95);
+    }
+    
+    .indicator-group-og-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        flex: 1;
+    }
+    
+    .indicator-group-og-title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: rgba(15, 23, 42, 0.9);
+    }
+    
+    .indicator-group-og-description {
+        margin: 0;
+        font-size: 0.85rem;
+        color: rgba(15, 23, 42, 0.65);
+        line-height: 1.4;
+    }
+    
+    .indicator-group-os-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        margin-left: 1rem;
+        padding-left: 1.25rem;
+        border-left: 2px solid rgba(232, 106, 10, 0.3);
+        position: relative;
+    }
+    
+    .indicator-group-os-list::before {
+        content: '';
+        position: absolute;
+        left: -2px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(180deg, rgba(232, 106, 10, 0.4) 0%, transparent 100%);
+    }
+    
+    /* Styles pour les groupes d'OS */
+    .indicator-group-os {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .indicator-group-os-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.9rem 1.1rem;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(139, 92, 246, 0.1));
+        border: 2px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 6px 18px rgba(102, 126, 234, 0.08);
+    }
+    
+    .indicator-group-os-info {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        flex: 1;
+    }
+    
+    .indicator-group-os-icon {
+        font-size: 1.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(102, 126, 234, 0.15);
+        color: rgba(102, 126, 234, 0.9);
+    }
+    
+    .indicator-group-os-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        flex: 1;
+    }
+    
+    .indicator-group-os-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: rgba(15, 23, 42, 0.9);
+    }
+    
+    .indicator-group-os-description {
+        margin: 0;
+        font-size: 0.8rem;
+        color: rgba(15, 23, 42, 0.65);
+        line-height: 1.4;
+    }
+    
+    .indicator-group-os-count {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: rgba(102, 126, 234, 0.9);
+        background: rgba(102, 126, 234, 0.15);
+        padding: 0.35rem 0.8rem;
+        border-radius: 10px;
+    }
+    
+    .indicator-group-indicators {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-left: 1.5rem;
+        padding-left: 1.25rem;
+        border-left: 2px solid rgba(102, 126, 234, 0.25);
+        position: relative;
+    }
+    
+    .indicator-group-indicators::before {
+        content: '';
+        position: absolute;
+        left: -2px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(180deg, rgba(102, 126, 234, 0.35) 0%, transparent 100%);
+    }
+    
+    /* Styles pour l'année dans les cartes d'indicateurs */
+    .indicator-top-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .indicator-year {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: rgba(102, 126, 234, 0.9);
+        background: rgba(102, 126, 234, 0.12);
+        padding: 0.3rem 0.7rem;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+    
+    /* Style pour la flèche du sens d'appréciation */
+    .sens-arrow {
+        display: inline-block;
+        margin-left: 0.4rem;
+        font-size: 1rem;
+        font-weight: 700;
+        color: rgba(102, 126, 234, 0.8);
+        vertical-align: middle;
+        line-height: 1;
+    }
+    
+    .current-value {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    @media (max-width: 768px) {
+        .programme-group-ogs,
+        .indicator-group-os-list,
+        .indicator-group-indicators {
+            margin-left: 0;
+            padding-left: 0;
+            border-left: none;
+        }
+        
+        .programme-group-ogs::before,
+        .indicator-group-os-list::before,
+        .indicator-group-indicators::before {
+            display: none;
+        }
+        
+        .programme-group-header,
+        .indicator-group-og-header,
+        .indicator-group-os-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        
+        .indicator-title-wrapper {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 {{ page_header(
@@ -14,7 +342,8 @@
     ],
     actions=[
         {'label': '← Retour Performance', 'url': url_for('performance_home'), 'primary': False},
-        {'label': '➕ Nouvel Indicateur', 'onclick': 'openCreateModal()', 'primary': True}
+        {'label': '➕ Nouvel Indicateur', 'onclick': 'openCreateModal()', 'primary': True},
+        {'label': '🔄 Actualiser', 'onclick': 'loadIndicateurs()', 'primary': False}
     ]
 ) }}
 
@@ -24,10 +353,7 @@
             <h2>Mesurez ce qui compte</h2>
             <p>Consolidez les indicateurs clés pour suivre la performance et déclencher les actions correctives au bon moment.</p>
         </div>
-        <div class="indicators-hero-actions">
-            <button type="button" class="btn btn-premium btn-primary" onclick="openCreateModal()">➕ Nouvel indicateur</button>
-            <button type="button" class="btn btn-premium btn-secondary" onclick="loadIndicateurs()">🔄 Actualiser</button>
-        </div>
+       
     </section>
 
     <section class="indicators-filters card filters-panel compact">
@@ -77,8 +403,8 @@
     </section>
 
     <section class="indicators-list-section">
-        <div id="indicators-list" class="indicators-grid">
-            <!-- indicateurs dynamiques -->
+        <div id="indicators-list" class="indicators-hierarchy">
+            <!-- indicateurs groupés par OS dynamiques -->
         </div>
     </section>
 </div>
@@ -94,11 +420,11 @@
             <input type="hidden" id="indicatorId" name="indicator_id">
             
             <div class="form-group">
-                <label for="objectif_id" class="form-label">Objectif associé *</label>
+                <label for="objectif_id" class="form-label">Objectif Spécifique (OS) associé *</label>
                 <select id="objectif_id" name="objectif_id" class="form-control" required>
-                    <option value="">Chargement des objectifs...</option>
+                    <option value="">Chargement des objectifs spécifiques...</option>
                 </select>
-                <small class="form-help-text">Un indicateur doit être rattaché à un objectif de performance</small>
+                <small class="form-help-text">Un indicateur doit être rattaché à un objectif spécifique (OS)</small>
             </div>
             
             <div class="form-group">
@@ -120,6 +446,7 @@
                         <option value="FINANCIER">Financier</option>
                         <option value="RH">RH</option>
                         <option value="OPERATIONNEL">Opérationnel</option>
+                        <option value="QUANTITATIF">Quantitatif</option>
                     </select>
                 </div>
                 
@@ -132,6 +459,11 @@
                         <option value="TRIMESTRIEL">Trimestriel</option>
                         <option value="ANNUEL">Annuel</option>
                     </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="annee" class="form-label">Année *</label>
+                    <input type="number" id="annee" name="annee" class="form-control" min="2000" max="2100" required>
                 </div>
             </div>
             
@@ -149,6 +481,27 @@
                 <div class="form-group">
                     <label for="unite_mesure" class="form-label">Unité *</label>
                     <input type="text" id="unite_mesure" name="unite_mesure" class="form-control" placeholder="%, €, h, unités..." required>
+                </div>
+            </div>
+            
+            <div class="form-group" id="doc_justif_group">
+                <label for="doc_justif_file" class="form-label">
+                    Document justificatif
+                    <span class="text-muted" style="font-size: 0.85rem; font-weight: normal;">(requis si valeur actuelle ≠ 0)</span>
+                </label>
+                <input type="file" id="doc_justif_file" name="doc_justif_file" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+                <small class="form-text text-muted">
+                    Joindre un document justifiant la valeur actuelle renseignée (PDF, Word, Excel, images). 
+                    Ce document est obligatoire lorsque la valeur actuelle est différente de 0 pour éviter les biais.
+                </small>
+                <div id="doc_justif_preview" style="margin-top: 0.5rem; display: none;">
+                    <span id="doc_justif_filename" style="color: #28a745; font-weight: 600;"></span>
+                    <button type="button" class="btn btn-sm btn-link text-danger" onclick="clearDocJustif()" style="padding: 0; margin-left: 0.5rem;">✕ Supprimer</button>
+                </div>
+                <div id="doc_justif_existing" style="margin-top: 0.5rem; display: none;">
+                    <span id="doc_justif_existing_filename" style="color: #007bff; font-weight: 600;"></span>
+                    <a id="doc_justif_existing_link" href="#" target="_blank" class="btn btn-sm btn-link" style="padding: 0; margin-left: 0.5rem;">📄 Voir</a>
+                    <button type="button" class="btn btn-sm btn-link text-danger" onclick="clearDocJustifExisting()" style="padding: 0; margin-left: 0.5rem;">✕ Supprimer</button>
                 </div>
             </div>
             
@@ -172,8 +525,8 @@
             </div>
             
             <div class="form-group">
-                <label for="responsable_id" class="form-label">Responsable *</label>
-                <select id="responsable_id" name="responsable_id" class="form-control" required>
+                <label for="responsable_id" class="form-label">Responsable</label>
+                <select id="responsable_id" name="responsable_id" class="form-control">
                     <option value="">Sélectionner d'abord un service...</option>
                 </select>
             </div>
@@ -181,6 +534,46 @@
             <div class="form-group">
                 <label for="source_donnees" class="form-label">Source des données</label>
                 <input type="text" id="source_donnees" name="source_donnees" class="form-control" placeholder="ex: Système, Enquêtes, Comptabilité...">
+            </div>
+            
+            <div class="form-group">
+                <label for="methode" class="form-label">Méthode</label>
+                <textarea id="methode" name="methode" class="form-control" rows="2" placeholder="Méthode de calcul/évaluation de l'indicateur"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="sens_appreciation" class="form-label">Sens d'appréciation *</label>
+                <select id="sens_appreciation" name="sens_appreciation" class="form-control" required>
+                    <option value="haut">Haut (plus le taux est élevé, plus on est satisfait)</option>
+                    <option value="bas">Bas (plus le taux est bas, plus on est satisfait)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="mode_collecte_donnees" class="form-label">Mode de collecte des données</label>
+                <select id="mode_collecte_donnees" name="mode_collecte_donnees" class="form-control">
+                    <option value="">Sélectionner un mode...</option>
+                    <option value="routine">Routine</option>
+                    <option value="enquête">Enquête</option>
+                    <option value="autres">Autres</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="derniere_valeur_connue" class="form-label">Dernière valeur connue</label>
+                <input type="number" id="derniere_valeur_connue" name="derniere_valeur_connue" class="form-control" step="0.01" placeholder="Dernière valeur connue">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="cible_N_plus_1" class="form-label">Cible N+1</label>
+                    <input type="number" id="cible_N_plus_1" name="cible_N_plus_1" class="form-control" step="0.01" placeholder="Cible pour l'année suivante">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cible_N_plus_2" class="form-label">Cible N+2</label>
+                    <input type="number" id="cible_N_plus_2" name="cible_N_plus_2" class="form-control" step="0.01" placeholder="Cible pour N+2">
+                </div>
             </div>
             
             <div class="form-group">
@@ -210,18 +603,23 @@ let currentIndicateurs = [];
 let editingIndicateurId = null;
 let allUsers = []; // Stocker tous les utilisateurs
 let allServices = []; // Stocker tous les services avec leurs IDs
-let allObjectifs = []; // Stocker tous les objectifs
+let allObjectifs = []; // Stocker tous les objectifs (OS uniquement pour le formulaire)
+let allObjectifsComplets = []; // Stocker tous les objectifs (OS + OG) pour l'affichage hiérarchique
+let allProgrammes = []; // Stocker tous les programmes
 
 // Charger les indicateurs au démarrage
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const overlay = document.getElementById('globalLoadingOverlay');
     if (overlay) {
         overlay.classList.remove('show');
     }
+    // Charger les programmes et tous les objectifs en premier pour l'affichage hiérarchique
+    await loadProgrammes();
+    await loadObjectifsComplets();
+    await loadObjectifs();
     loadIndicateurs();
     loadUsers();
     loadServices();
-    loadObjectifs();
 });
 
 // Charger la liste des indicateurs
@@ -321,25 +719,93 @@ async function loadServices() {
     }
 }
 
-// Charger la liste des objectifs
+// Charger tous les objectifs (OS + OG) pour l'affichage hiérarchique
+async function loadObjectifsComplets() {
+    try {
+        const response = await fetch("{{ url_for('get_objectifs_api') }}");
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            allObjectifsComplets = result.data; // Stocker tous les objectifs (OS + OG)
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des objectifs complets:', error);
+    }
+}
+
+// Charger les programmes
+async function loadProgrammes() {
+    try {
+        const response = await fetch("{{ url_for('list_programmes_api') }}");
+        const programmes = await response.json();
+        
+        if (programmes && Array.isArray(programmes)) {
+            // Trier les programmes par code
+            allProgrammes = programmes.sort((a, b) => {
+                const codeA = (a.code || '').toUpperCase();
+                const codeB = (b.code || '').toUpperCase();
+                return codeA.localeCompare(codeB);
+            });
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des programmes:', error);
+    }
+}
+
+// Charger la liste des objectifs (uniquement les Objectifs Spécifiques - OS) pour le formulaire
 async function loadObjectifs() {
     try {
         const response = await fetch("{{ url_for('get_objectifs_api') }}");
         const result = await response.json();
         
         if (result.success && result.data) {
-            allObjectifs = result.data;
+            // Filtrer uniquement les Objectifs Spécifiques (OS)
+            const objectifsSpecifiques = result.data.filter(obj => 
+                obj.type_objectif === 'specifique' || obj.type_objectif === 'SPECIFIQUE'
+            );
+            
+            allObjectifs = objectifsSpecifiques;
             
             const select = document.getElementById('objectif_id');
-            select.innerHTML = '<option value="">Sélectionner un objectif...</option>';
+            select.innerHTML = '<option value="">Sélectionner un objectif spécifique...</option>';
             
-            if (result.data && Array.isArray(result.data)) {
-                result.data.forEach(objectif => {
+            if (objectifsSpecifiques && Array.isArray(objectifsSpecifiques) && objectifsSpecifiques.length > 0) {
+                objectifsSpecifiques.forEach(objectif => {
                     const option = document.createElement('option');
                     option.value = objectif.id;
-                    option.textContent = `${objectif.titre} (${objectif.periode || 'Période non définie'})`;
+                    
+                    // Trouver le code du programme via l'OG parent
+                    let codeProgramme = '';
+                    if (objectif.objectif_global_id) {
+                        const og = allObjectifsComplets.find(obj => 
+                            String(obj.id) === String(objectif.objectif_global_id) && 
+                            (obj.type_objectif === 'global' || obj.type_objectif === 'GLOBAL')
+                        );
+                        if (og && og.programme_id) {
+                            const programme = allProgrammes.find(p => String(p.id) === String(og.programme_id));
+                            if (programme && programme.code) {
+                                codeProgramme = `[${programme.code}] `;
+                            }
+                        }
+                    }
+                    
+                    // Afficher le code du programme, le code de l'OS, le titre et la période
+                    let displayText = '';
+                    if (codeProgramme) {
+                        displayText += codeProgramme;
+                    }
+                    if (objectif.code) {
+                        displayText += `${objectif.code} - ${objectif.titre}`;
+                    } else {
+                        displayText += objectif.titre;
+                    }
+                    displayText += ` (${objectif.periode || 'Période non définie'})`;
+                    
+                    option.textContent = displayText;
                     select.appendChild(option);
                 });
+            } else {
+                select.innerHTML = '<option value="">Aucun objectif spécifique disponible</option>';
             }
         } else {
             document.getElementById('objectif_id').innerHTML = '<option value="">Aucun objectif disponible</option>';
@@ -350,7 +816,51 @@ async function loadObjectifs() {
     }
 }
 
-// Afficher les indicateurs
+// Fonction pour créer une carte d'indicateur
+function createIndicatorCard(ind) {
+    return `
+        <article class="indicator-card" data-id="${ind.id}">
+            <div class="indicator-top">
+                <div class="indicator-top-left">
+                    <div class="indicator-icon">${getCategoryIcon(ind.categorie)}</div>
+                    <span class="indicator-category category-${ind.categorie.toLowerCase()}">${getCategoryLabel(ind.categorie)}</span>
+                </div>
+                ${ind.annee ? `<span class="indicator-year">${ind.annee}</span>` : ''}
+            </div>
+
+            <div class="indicator-header">
+                <h3 class="indicator-title">${ind.nom}</h3>
+                <div class="indicator-actions">
+                    <button type="button" class="btn-action btn-premium btn-secondary btn-compact" onclick="editIndicateur(${ind.id})" title="Modifier">✏️</button>
+                    <button type="button" class="btn-action btn-premium btn-danger btn-compact" onclick="deleteIndicateur(${ind.id}, '${ind.nom.replace(/'/g, '&#39;')}')" title="Supprimer">🗑️</button>
+                </div>
+            </div>
+
+            <p class="indicator-description">${ind.description || 'Aucune description'}</p>
+
+            <div class="indicator-value">
+                <div class="current-value">
+                    ${ind.valeur_actuelle || 0} ${ind.unite_mesure}
+                    ${(ind.sens_appreciation && ind.sens_appreciation === 'bas') ? '<span class="sens-arrow" title="Plus bas = mieux">↓</span>' : '<span class="sens-arrow" title="Plus haut = mieux">↑</span>'}
+                </div>
+                <div class="target-value">Cible&nbsp;: ${ind.valeur_cible} ${ind.unite_mesure}</div>
+            </div>
+
+            <div class="indicator-meta">
+                <div class="meta-item">
+                    <div class="meta-label">Fréquence</div>
+                    <div class="meta-value">${getFrequenceLabel(ind.frequence_mesure)}</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">Source</div>
+                    <div class="meta-value">${ind.source_donnees || 'Non définie'}</div>
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+// Afficher les indicateurs groupés par Programme -> OG -> OS
 function displayIndicateurs(indicateurs) {
     const container = document.getElementById('indicators-list');
     
@@ -372,40 +882,336 @@ function displayIndicateurs(indicateurs) {
         return;
     }
     
-    container.innerHTML = indicateurs.map(ind => `
-        <article class="indicator-card" data-id="${ind.id}">
-            <div class="indicator-top">
-                <div class="indicator-icon">${getCategoryIcon(ind.categorie)}</div>
-                <span class="indicator-category category-${ind.categorie.toLowerCase()}">${getCategoryLabel(ind.categorie)}</span>
-            </div>
-
-            <div class="indicator-header">
-                <h3 class="indicator-title">${ind.nom}</h3>
-                <div class="indicator-actions">
-                    <button type="button" class="btn-action btn-premium btn-secondary btn-compact" onclick="editIndicateur(${ind.id})" title="Modifier">✏️</button>
-                    <button type="button" class="btn-action btn-premium btn-danger btn-compact" onclick="deleteIndicateur(${ind.id}, '${ind.nom.replace(/'/g, '&#39;')}')" title="Supprimer">🗑️</button>
+    // Grouper les indicateurs par objectif_id (OS)
+    const indicateursParOS = {};
+    const indicateursSansOS = [];
+    
+    indicateurs.forEach(ind => {
+        const objectifId = ind.objectif_id;
+        if (objectifId && objectifId !== null && objectifId !== 'null' && objectifId !== 'undefined') {
+            const osId = String(objectifId);
+            if (!indicateursParOS[osId]) {
+                indicateursParOS[osId] = [];
+            }
+            indicateursParOS[osId].push(ind);
+        } else {
+            indicateursSansOS.push(ind);
+        }
+    });
+    
+    // Pour chaque OS, trouver son OG parent et son programme
+    // Structure: programme_id -> og_id -> os_id -> indicateurs[]
+    const structureParProgramme = {};
+    const osSansOG = {};
+    const osSansProgramme = {};
+    
+    Object.keys(indicateursParOS).forEach(osId => {
+        const os = allObjectifsComplets.find(obj => String(obj.id) === osId && (obj.type_objectif === 'specifique' || obj.type_objectif === 'SPECIFIQUE'));
+        const indicateursOS = indicateursParOS[osId];
+        
+        if (os && os.objectif_global_id) {
+            // OS a un OG parent
+            const ogId = String(os.objectif_global_id);
+            const og = allObjectifsComplets.find(obj => String(obj.id) === ogId && (obj.type_objectif === 'global' || obj.type_objectif === 'GLOBAL'));
+            
+            if (og && og.programme_id) {
+                // OG a un programme
+                const progId = String(og.programme_id);
+                if (!structureParProgramme[progId]) {
+                    structureParProgramme[progId] = {};
+                }
+                if (!structureParProgramme[progId][ogId]) {
+                    structureParProgramme[progId][ogId] = {};
+                }
+                structureParProgramme[progId][ogId][osId] = {
+                    os: os,
+                    indicateurs: indicateursOS
+                };
+            } else {
+                // OG sans programme
+                if (!osSansProgramme[ogId]) {
+                    osSansProgramme[ogId] = {
+                        og: og || { id: ogId, titre: 'Objectif Global non trouvé' },
+                        os: {}
+                    };
+                }
+                osSansProgramme[ogId].os[osId] = {
+                    os: os,
+                    indicateurs: indicateursOS
+                };
+            }
+        } else {
+            // OS sans OG
+            osSansOG[osId] = {
+                os: os || { id: osId, titre: 'Objectif Spécifique non trouvé' },
+                indicateurs: indicateursOS
+            };
+        }
+    });
+    
+    // Construire le HTML avec la hiérarchie Programme -> OG -> OS -> Indicateurs
+    let html = '';
+    
+    // Trier les programmes par code
+    const programmesIds = Object.keys(structureParProgramme).sort((a, b) => {
+        const progA = allProgrammes.find(p => String(p.id) === a);
+        const progB = allProgrammes.find(p => String(p.id) === b);
+        const codeA = progA ? (progA.code || '').toUpperCase() : '';
+        const codeB = progB ? (progB.code || '').toUpperCase() : '';
+        return codeA.localeCompare(codeB);
+    });
+    
+    // Pour chaque programme, afficher le programme, ses OG, leurs OS et leurs indicateurs
+    programmesIds.forEach(progId => {
+        const programme = allProgrammes.find(p => String(p.id) === progId);
+        const ogsDuProgramme = structureParProgramme[progId];
+        
+        if (programme) {
+            html += `
+                <div class="programme-group">
+                    <div class="programme-group-header">
+                        <div class="programme-group-info">
+                            <span class="programme-group-icon">📁</span>
+                            <div class="programme-group-details">
+                                <h3 class="programme-group-title">${programme.code} - ${programme.libelle}</h3>
+                                <p class="programme-group-description">${programme.description || 'Aucune description'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="programme-group-ogs">
+            `;
+            
+            // Pour chaque OG du programme
+            Object.keys(ogsDuProgramme).forEach(ogId => {
+                const og = allObjectifsComplets.find(obj => String(obj.id) === ogId);
+                const osDeLOg = ogsDuProgramme[ogId];
+                
+                if (og) {
+                    const ogDisplayName = og.code ? `${og.code} - ${og.titre}` : og.titre;
+                    html += `
+                        <div class="indicator-group">
+                            <div class="indicator-group-og-header">
+                                <div class="indicator-group-og-info">
+                                    <span class="indicator-group-og-icon">🎯</span>
+                                    <div class="indicator-group-og-details">
+                                        <h4 class="indicator-group-og-title">${ogDisplayName}</h4>
+                                        <p class="indicator-group-og-description">${og.description || 'Aucune description'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="indicator-group-os-list">
+                    `;
+                    
+                    // Trier les OS par code
+                    const osIds = Object.keys(osDeLOg).sort((a, b) => {
+                        const osA = osDeLOg[a].os;
+                        const osB = osDeLOg[b].os;
+                        const codeA = (osA?.code || '').toUpperCase();
+                        const codeB = (osB?.code || '').toUpperCase();
+                        return codeA.localeCompare(codeB);
+                    });
+                    
+                    // Pour chaque OS de l'OG
+                    osIds.forEach(osId => {
+                        const osData = osDeLOg[osId];
+                        const os = osData.os;
+                        const indicateursOS = osData.indicateurs;
+                        const osDisplayName = os.code ? `${os.code} - ${os.titre}` : os.titre;
+                        
+                        html += `
+                            <div class="indicator-group-os">
+                                <div class="indicator-group-os-header">
+                                    <div class="indicator-group-os-info">
+                                        <span class="indicator-group-os-icon">📋</span>
+                                        <div class="indicator-group-os-details">
+                                            <h5 class="indicator-group-os-title">${osDisplayName}</h5>
+                                            <p class="indicator-group-os-description">${os.description || 'Aucune description'}</p>
+                                        </div>
+                                    </div>
+                                    <span class="indicator-group-os-count">${indicateursOS.length} indicateur${indicateursOS.length > 1 ? 's' : ''}</span>
+                                </div>
+                                <div class="indicator-group-indicators">
+                                    ${indicateursOS.map(ind => createIndicatorCard(ind)).join('')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    // Afficher les OG sans programme avec leurs OS et indicateurs
+    if (Object.keys(osSansProgramme).length > 0) {
+        html += `
+            <div class="programme-group">
+                <div class="programme-group-header">
+                    <div class="programme-group-info">
+                        <span class="programme-group-icon">🎯</span>
+                        <div class="programme-group-details">
+                            <h3 class="programme-group-title">Objectifs Globaux sans Programme</h3>
+                            <p class="programme-group-description">Ces objectifs globaux ne sont pas rattachés à un programme</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="programme-group-ogs">
+        `;
+        
+        Object.keys(osSansProgramme).forEach(ogId => {
+            const ogData = osSansProgramme[ogId];
+            const og = ogData.og;
+            const osDeLOg = ogData.os;
+            const ogDisplayName = og.code ? `${og.code} - ${og.titre}` : og.titre;
+            
+            html += `
+                <div class="indicator-group">
+                    <div class="indicator-group-og-header">
+                        <div class="indicator-group-og-info">
+                            <span class="indicator-group-og-icon">🎯</span>
+                            <div class="indicator-group-og-details">
+                                <h4 class="indicator-group-og-title">${ogDisplayName}</h4>
+                                <p class="indicator-group-og-description">${og.description || 'Aucune description'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="indicator-group-os-list">
+            `;
+            
+            // Trier les OS par code
+            const osIdsSansProg = Object.keys(osDeLOg).sort((a, b) => {
+                const osA = osDeLOg[a].os;
+                const osB = osDeLOg[b].os;
+                const codeA = (osA?.code || '').toUpperCase();
+                const codeB = (osB?.code || '').toUpperCase();
+                return codeA.localeCompare(codeB);
+            });
+            
+            osIdsSansProg.forEach(osId => {
+                const osData = osDeLOg[osId];
+                const os = osData.os;
+                const indicateursOS = osData.indicateurs;
+                const osDisplayName = os.code ? `${os.code} - ${os.titre}` : os.titre;
+                
+                html += `
+                    <div class="indicator-group-os">
+                        <div class="indicator-group-os-header">
+                            <div class="indicator-group-os-info">
+                                <span class="indicator-group-os-icon">📋</span>
+                                <div class="indicator-group-os-details">
+                                    <h5 class="indicator-group-os-title">${osDisplayName}</h5>
+                                    <p class="indicator-group-os-description">${os.description || 'Aucune description'}</p>
+                                </div>
+                            </div>
+                            <span class="indicator-group-os-count">${indicateursOS.length} indicateur${indicateursOS.length > 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="indicator-group-indicators">
+                            ${indicateursOS.map(ind => createIndicatorCard(ind)).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
                 </div>
             </div>
-
-            <p class="indicator-description">${ind.description || 'Aucune description'}</p>
-
-            <div class="indicator-value">
-                <div class="current-value">${ind.valeur_actuelle || 0} ${ind.unite_mesure}</div>
-                <div class="target-value">Cible&nbsp;: ${ind.valeur_cible} ${ind.unite_mesure}</div>
-            </div>
-
-            <div class="indicator-meta">
-                <div class="meta-item">
-                    <div class="meta-label">Fréquence</div>
-                    <div class="meta-value">${getFrequenceLabel(ind.frequence_mesure)}</div>
+        `;
+    }
+    
+    // Afficher les OS sans OG avec leurs indicateurs
+    if (Object.keys(osSansOG).length > 0) {
+        html += `
+            <div class="programme-group">
+                <div class="programme-group-header">
+                    <div class="programme-group-info">
+                        <span class="programme-group-icon">📋</span>
+                        <div class="programme-group-details">
+                            <h3 class="programme-group-title">Objectifs Spécifiques sans Objectif Global</h3>
+                            <p class="programme-group-description">Ces objectifs spécifiques ne sont pas rattachés à un objectif global</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="meta-item">
-                    <div class="meta-label">Source</div>
-                    <div class="meta-value">${ind.source_donnees || 'Non définie'}</div>
+                <div class="programme-group-ogs">
+        `;
+        
+        // Trier les OS sans OG par code
+        const osSansOGIds = Object.keys(osSansOG).sort((a, b) => {
+            const osA = osSansOG[a].os;
+            const osB = osSansOG[b].os;
+            const codeA = (osA?.code || '').toUpperCase();
+            const codeB = (osB?.code || '').toUpperCase();
+            return codeA.localeCompare(codeB);
+        });
+        
+        osSansOGIds.forEach(osId => {
+            const osData = osSansOG[osId];
+            const os = osData.os;
+            const indicateursOS = osData.indicateurs;
+            const osDisplayName = os.code ? `${os.code} - ${os.titre}` : os.titre;
+            
+            html += `
+                <div class="indicator-group">
+                    <div class="indicator-group-os-header">
+                        <div class="indicator-group-os-info">
+                            <span class="indicator-group-os-icon">📋</span>
+                            <div class="indicator-group-os-details">
+                                <h4 class="indicator-group-os-title">${osDisplayName}</h4>
+                                <p class="indicator-group-os-description">${os.description || 'Aucune description'}</p>
+                            </div>
+                        </div>
+                        <span class="indicator-group-os-count">${indicateursOS.length} indicateur${indicateursOS.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="indicator-group-indicators">
+                        ${indicateursOS.map(ind => createIndicatorCard(ind)).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
                 </div>
             </div>
-        </article>
-    `).join('');
+        `;
+    }
+    
+    // Afficher les indicateurs sans OS dans une section séparée
+    if (indicateursSansOS.length > 0) {
+        html += `
+            <div class="programme-group">
+                <div class="programme-group-header">
+                    <div class="programme-group-info">
+                        <span class="programme-group-icon">📊</span>
+                        <div class="programme-group-details">
+                            <h3 class="programme-group-title">Indicateurs sans Objectif Spécifique</h3>
+                            <p class="programme-group-description">Ces indicateurs ne sont pas rattachés à un objectif spécifique</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="programme-group-ogs">
+                    <div class="indicator-group-indicators">
+                        ${indicateursSansOS.map(ind => createIndicatorCard(ind)).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
 }
 
 // Fonctions pour gérer les modales
@@ -430,6 +1236,10 @@ function openCreateModal() {
     editingIndicateurId = null;
     document.getElementById('modalTitle').textContent = 'Nouvel Indicateur';
     document.getElementById('indicatorForm').reset();
+    
+    // Initialiser l'année avec l'année actuelle par défaut
+    const currentYear = new Date().getFullYear();
+    document.getElementById('annee').value = currentYear;
     
     // S'assurer que les objectifs sont chargés
     if (allObjectifs.length === 0) {
@@ -456,13 +1266,34 @@ function editIndicateur(id) {
     document.getElementById('description').value = indicateur.description || '';
     document.getElementById('categorie').value = indicateur.categorie;
     document.getElementById('frequence_mesure').value = indicateur.frequence_mesure;
+    document.getElementById('annee').value = indicateur.annee || '';
     document.getElementById('valeur_cible').value = indicateur.valeur_cible;
     document.getElementById('valeur_actuelle').value = indicateur.valeur_actuelle;
     document.getElementById('unite_mesure').value = indicateur.unite_mesure;
     document.getElementById('seuil_alerte_min').value = indicateur.seuil_alerte_min || '';
     document.getElementById('seuil_alerte_max').value = indicateur.seuil_alerte_max || '';
     document.getElementById('source_donnees').value = indicateur.source_donnees || '';
+    document.getElementById('methode').value = indicateur.methode || '';
+    document.getElementById('mode_collecte_donnees').value = indicateur.mode_collecte_donnees || '';
+    document.getElementById('derniere_valeur_connue').value = indicateur.derniere_valeur_connue || '';
+    document.getElementById('sens_appreciation').value = indicateur.sens_appreciation || 'haut';
+    document.getElementById('cible_N_plus_1').value = indicateur.cible_N_plus_1 || '';
+    document.getElementById('cible_N_plus_2').value = indicateur.cible_N_plus_2 || '';
     document.getElementById('commentaires').value = indicateur.commentaires || '';
+    
+    // Gérer le document justificatif existant
+    if (indicateur.doc_justif) {
+        const docJustifExisting = document.getElementById('doc_justif_existing');
+        const docJustifExistingFilename = document.getElementById('doc_justif_existing_filename');
+        const docJustifExistingLink = document.getElementById('doc_justif_existing_link');
+        
+        docJustifExisting.style.display = 'block';
+        docJustifExistingFilename.textContent = indicateur.doc_justif.split('/').pop();
+        docJustifExistingLink.href = '/' + indicateur.doc_justif;
+        docJustifExistingLink.setAttribute('data-doc-path', indicateur.doc_justif);
+    } else {
+        document.getElementById('doc_justif_existing').style.display = 'none';
+    }
     
     // Trouver l'ID du service à partir du libellé
     const serviceLibelle = indicateur.service_responsable || '';
@@ -517,7 +1348,44 @@ async function deleteIndicateur(id, nom) {
 function closeModal() {
     hideModal('indicatorModal');
     document.getElementById('indicatorForm').reset();
+    document.getElementById('doc_justif_preview').style.display = 'none';
+    document.getElementById('doc_justif_existing').style.display = 'none';
     editingIndicateurId = null;
+}
+
+// Gérer l'affichage du document justificatif sélectionné
+document.getElementById('doc_justif_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const preview = document.getElementById('doc_justif_preview');
+    const filename = document.getElementById('doc_justif_filename');
+    
+    if (file) {
+        preview.style.display = 'block';
+        filename.textContent = file.name;
+    } else {
+        preview.style.display = 'none';
+    }
+});
+
+// Supprimer le document justificatif sélectionné
+function clearDocJustif() {
+    document.getElementById('doc_justif_file').value = '';
+    document.getElementById('doc_justif_preview').style.display = 'none';
+}
+
+// Supprimer le document justificatif existant (marquer pour suppression)
+function clearDocJustifExisting() {
+    document.getElementById('doc_justif_existing').style.display = 'none';
+    // Ajouter un champ caché pour indiquer qu'on supprime le document existant
+    let hiddenInput = document.getElementById('doc_justif_delete');
+    if (!hiddenInput) {
+        hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.id = 'doc_justif_delete';
+        hiddenInput.name = 'doc_justif_delete';
+        hiddenInput.value = '1';
+        document.getElementById('indicatorForm').appendChild(hiddenInput);
+    }
 }
 
 // Soumettre le formulaire
@@ -525,6 +1393,28 @@ document.getElementById('indicatorForm').addEventListener('submit', async functi
     e.preventDefault();
     
     try {
+        // Validation : si valeur_actuelle != 0, alors doc_justif_file doit être fourni
+        const valeurActuelle = parseFloat(document.getElementById('valeur_actuelle').value) || 0;
+        const docJustifFile = document.getElementById('doc_justif_file').files[0];
+        const docJustifExisting = document.getElementById('doc_justif_existing').style.display !== 'none';
+        
+        if (valeurActuelle !== 0 && !docJustifFile && !docJustifExisting) {
+            // Fermer l'overlay de manière agressive avant d'afficher l'erreur
+            const overlay = document.getElementById('globalLoadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+                overlay.style.display = 'none';
+            }
+            // Forcer la fermeture via la fonction aussi
+            hideGlobalLoading();
+            // Attendre un peu pour que l'overlay se ferme complètement
+            setTimeout(() => {
+                hideGlobalLoading(); // Double vérification
+                showError('Un document justificatif est requis lorsque la valeur actuelle est différente de 0. Cela permet de justifier la valeur renseignée et de détecter d\'éventuels biais.');
+            }, 50);
+            return;
+        }
+        
         showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
         
         const formData = new FormData(this);
@@ -536,25 +1426,54 @@ document.getElementById('indicatorForm').addEventListener('submit', async functi
             formData.set('service_responsable', selectedOption.getAttribute('data-libelle'));
         }
         
+        // Si on modifie et qu'on veut supprimer le document existant
+        if (editingIndicateurId && docJustifExisting && !docJustifFile) {
+            // On envoie un champ spécial pour indiquer qu'on garde le document existant
+            // (le backend vérifiera si un nouveau fichier est fourni)
+        }
+        
         const url = editingIndicateurId 
             ? API_URLS.update(editingIndicateurId)
             : API_URLS.create;
         const method = editingIndicateurId ? 'PUT' : 'POST';
         
-        const response = await submitFormAsJson(url, formData, method, true);
-        const result = await response.json();
+        let response;
+        try {
+            response = await submitFormAsJson(url, formData, method, true);
+        } catch (fetchError) {
+            console.error('Erreur lors de la requête:', fetchError);
+            showError('Erreur de connexion lors de l\'enregistrement. Veuillez réessayer.');
+            hideGlobalLoading(); // Fermer l'overlay en cas d'erreur de fetch
+            return;
+        }
+        
+        let result;
+        try {
+            result = await response.json();
+        } catch (jsonError) {
+            console.error('Erreur lors du parsing JSON:', jsonError);
+            showError('Erreur lors du traitement de la réponse. Veuillez réessayer.');
+            hideGlobalLoading(); // Fermer l'overlay en cas d'erreur de parsing
+            return;
+        }
+        
+        // Fermer l'overlay avant d'afficher les messages
+        hideGlobalLoading();
         
         if (result.success) {
             showSuccess(result.message);
             closeModal();
             loadIndicateurs();
         } else {
-            showError(result.error);
+            showError(result.error || 'Erreur lors de l\'enregistrement');
         }
     } catch (error) {
-        console.error('Erreur:', error);
+        console.error('Erreur inattendue:', error);
+        // Fermer l'overlay avant d'afficher l'erreur
+        hideGlobalLoading();
         showError('Erreur lors de l\'enregistrement');
     } finally {
+        // S'assurer que l'overlay est fermé (au cas où)
         hideGlobalLoading();
     }
 });

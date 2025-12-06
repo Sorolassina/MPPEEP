@@ -49,7 +49,6 @@
             <label for="matricule" class="required">Matricule</label>
             <input type="text" id="matricule" name="matricule" required 
                    placeholder="Ex: AG2024001" value="{{ agent.matricule if mode == 'edit' else '' }}">
-            <small>Identifiant unique de l'agent</small>
           </div>
           
           <div class="form-group">
@@ -102,13 +101,13 @@
           <div class="form-group">
             <label for="lieu_naissance">Lieu de naissance</label>
             <input type="text" id="lieu_naissance" name="lieu_naissance" 
-                   placeholder="Ex: Dakar" value="{{ agent.lieu_naissance if mode == 'edit' else '' }}">
+                   placeholder="Ex: Abidjan" value="{{ agent.lieu_naissance if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="nationalite">Nationalité</label>
             <input type="text" id="nationalite" name="nationalite" 
-                   value="{{ agent.nationalite if mode == 'edit' else 'Sénégalaise' }}" placeholder="Ex: Sénégalaise">
+                   value="{{ agent.nationalite if mode == 'edit' else 'Ivoirienne' }}" placeholder="Ex: Ivoirienne">
           </div>
           
           <div class="form-group">
@@ -157,7 +156,6 @@
               📷 Choisir une photo
             </label>
             <input type="file" id="photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
-            <small>Formats acceptés : JPG, PNG, GIF (max 5 MB)</small>
             <button type="button" class="btn btn-secondary" id="clearPhotoBtn" onclick="clearPhoto()">🗑️ Supprimer</button>
           </div>
         </div>
@@ -176,27 +174,25 @@
           <div class="form-group">
             <label for="email_professionnel">Email professionnel</label>
             <input type="text" id="email_professionnel" name="email_professionnel" 
-                   placeholder="prenom.nom@ministere.sn" value="{{ agent.email_professionnel if mode == 'edit' and agent.email_professionnel else '' }}">
-            <small>Format: exemple@domaine.com</small>
+                   placeholder="prenom.nom@ministere.ci" value="{{ agent.email_professionnel if mode == 'edit' and agent.email_professionnel else '' }}">
           </div>
           
           <div class="form-group">
             <label for="email_personnel">Email personnel</label>
             <input type="text" id="email_personnel" name="email_personnel" 
                    placeholder="exemple@email.com" value="{{ agent.email_personnel if mode == 'edit' and agent.email_personnel else '' }}">
-            <small>Format: exemple@domaine.com</small>
           </div>
           
           <div class="form-group">
             <label for="telephone_1">Téléphone 1</label>
             <input type="tel" id="telephone_1" name="telephone_1" 
-                   placeholder="77 123 45 67" value="{{ agent.telephone_1 or '' if mode == 'edit' else '' }}">
+                   placeholder="07 12 34 56 78" value="{{ agent.telephone_1 or '' if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
             <label for="telephone_2">Téléphone 2</label>
             <input type="tel" id="telephone_2" name="telephone_2" 
-                   placeholder="33 123 45 67" value="{{ agent.telephone_2 or '' if mode == 'edit' else '' }}">
+                   placeholder="05 12 34 56 78" value="{{ agent.telephone_2 or '' if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group" style="grid-column: 1 / -1;">
@@ -208,7 +204,7 @@
           <div class="form-group">
             <label for="ville">Ville</label>
             <input type="text" id="ville" name="ville" 
-                   placeholder="Ex: Dakar" value="{{ agent.ville if mode == 'edit' else '' }}">
+                   placeholder="Ex: Abidjan" value="{{ agent.ville if mode == 'edit' else '' }}">
           </div>
           
           <div class="form-group">
@@ -275,13 +271,6 @@
               <option value="{{ grade.id }}" {{ 'selected' if mode == 'edit' and agent.grade_id == grade.id else '' }}>{{ grade.code }} - {{ grade.libelle }}</option>
               {% endfor %}
             </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
-              {% if grades %}
-                {{ grades|length }} grade(s) disponible(s)
-              {% else %}
-                ⚠️ Aucun grade - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des grades</a>
-              {% endif %}
-            </small>
           </div>
           
           <div class="form-group">
@@ -294,68 +283,60 @@
             <label for="indice">Indice</label>
             <input type="number" id="indice" name="indice" 
                    placeholder="Ex: 600" value="{{ agent.indice if mode == 'edit' else '' }}">
-            <small>Indice de rémunération</small>
           </div>
           
           <div class="form-group">
-            <label for="programme_id">Programme <span class="required-asterisk">*</span></label>
-            <select id="programme_id" name="programme_id" required>
-              <option value="">-- Sélectionner --</option>
-              {% for prog in programmes %}
-              <option value="{{ prog.id }}" {{ 'selected' if mode == 'edit' and agent.programme_id == prog.id else '' }}>{{ prog.code }} - {{ prog.libelle }}</option>
-              {% endfor %}
-            </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
-              {% if programmes %}
-                {{ programmes|length }} programme(s) disponible(s)
-              {% else %}
-                ⚠️ Aucun programme - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des programmes</a>
-              {% endif %}
-            </small>
-          </div>
-          
-          <div class="form-group">
-            <label for="direction_id">Direction <span class="required-asterisk">*</span></label>
-            <select id="direction_id" name="direction_id" required>
-              <option value="">-- Sélectionner --</option>
-              {% for dir in directions %}
-              <option value="{{ dir.id }}" data-programme="{{ dir.programme_id }}" {{ 'selected' if mode == 'edit' and agent.direction_id == dir.id else '' }}>
-                {{ dir.code }} - {{ dir.libelle }}
-              </option>
-              {% endfor %}
-            </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
-              {% if directions %}
-                {{ directions|length }} direction(s) disponible(s)
-              {% else %}
-                ⚠️ Aucune direction - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des directions</a>
-              {% endif %}
-            </small>
-          </div>
-          
-          <div class="form-group">
-            <label for="service_id">Service <span class="required-asterisk">*</span></label>
-            <select id="service_id" name="service_id" required>
-              <option value="">-- Sélectionner --</option>
+            <label for="service_id">Service</label>
+            <select id="service_id" name="service_id">
+              <option value="">-- Aucun service (rattachement direct) --</option>
               {% for serv in services %}
-              <option value="{{ serv.id }}" data-direction="{{ serv.direction_id }}" {{ 'selected' if mode == 'edit' and agent.service_id == serv.id else '' }}>
+              <option value="{{ serv.id }}" data-sous-direction="{{ serv.sous_direction_id }}" data-direction="{{ serv.direction_id }}" {{ 'selected' if mode == 'edit' and agent.service_id == serv.id else '' }}>
                 {{ serv.code }} - {{ serv.libelle }}
               </option>
               {% endfor %}
             </select>
-            <small style="color: var(--gray-600); font-size: 0.85rem;">
-              {% if services %}
-                {{ services|length }} service(s) disponible(s)
-              {% else %}
-                ⚠️ Aucun service - <a href="{{ url_for('referentiels_home') }}" target="_blank" style="color: #0066cc;">Créer des services</a>
-              {% endif %}
-            </small>
+          </div>
+          
+          <div class="form-group" id="sous-direction-group" style="display: none;">
+            <label for="sous_direction_id">Sous-direction</label>
+            <select id="sous_direction_id" name="sous_direction_id">
+              <option value="">-- Sélectionner --</option>
+              {% for sous_dir in sous_directions %}
+              <option value="{{ sous_dir.id }}" data-direction="{{ sous_dir.direction_id }}" {{ 'selected' if mode == 'edit' and agent.sous_direction_id == sous_dir.id else '' }}>
+                {{ sous_dir.code }} - {{ sous_dir.libelle }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="form-group" id="direction-group" style="display: none;">
+            <label for="direction_id">Direction</label>
+            <select id="direction_id" name="direction_id">
+              <option value="">-- Sélectionner --</option>
+              {% for dir in directions %}
+              <option value="{{ dir.id }}" {{ 'selected' if mode == 'edit' and agent.direction_id == dir.id else '' }}>
+                {{ dir.code }} - {{ dir.libelle }}
+              </option>
+              {% endfor %}
+            </select>
           </div>
           
           <div class="form-group" style="grid-column: 1 / -1;">
             <label for="fonction">Fonction <span class="required-asterisk">*</span></label>
             <input type="text" id="fonction" name="fonction" 
                    placeholder="Ex: Chef de division comptabilité" value="{{ agent.fonction if mode == 'edit' else '' }}" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="role_budgetaire">Rôle budgétaire</label>
+            <select id="role_budgetaire" name="role_budgetaire">
+              <option value="">-- Aucun --</option>
+              {% for role in RoleBudgetaire %}
+              <option value="{{ role.value }}" {{ 'selected' if (mode == 'edit' and agent and agent.role_budgetaire == role.value) else '' }}>
+                {{ role.value }}
+              </option>
+              {% endfor %}
+            </select>
           </div>
         </div>
       </section>
@@ -374,14 +355,12 @@
             <label for="solde_conges_annuel">Solde de congés restant</label>
             <input type="number" id="solde_conges_annuel" name="solde_conges_annuel" 
                    min="0" step="0.5" value="{{ agent.solde_conges_annuel if mode == 'edit' else '30' }}" placeholder="30">
-            <small>Jours de congé disponibles</small>
           </div>
           
           <div class="form-group">
             <label for="conges_annee_en_cours">Congés alloués cette année</label>
             <input type="number" id="conges_annee_en_cours" name="conges_annee_en_cours" 
                    min="0" value="{{ agent.conges_annee_en_cours if mode == 'edit' else '30' }}" placeholder="30">
-            <small>Nombre de jours de congé par an</small>
           </div>
         </div>
       </section>
@@ -415,57 +394,71 @@
 </div>
 
 <script>
-// Filtrage hiérarchique Programme → Direction → Service
-const programmeSelect = document.getElementById('programme_id');
-const directionSelect = document.getElementById('direction_id');
+// Gestion de l'affectation : Service optionnel, sinon Sous-direction ou Direction
 const serviceSelect = document.getElementById('service_id');
+const sousDirectionSelect = document.getElementById('sous_direction_id');
+const directionSelect = document.getElementById('direction_id');
+const sousDirectionGroup = document.getElementById('sous-direction-group');
+const directionGroup = document.getElementById('direction-group');
 
 // Sauvegarder toutes les options
+const allSousDirections = Array.from(sousDirectionSelect.querySelectorAll('option')).slice(1);
 const allDirections = Array.from(directionSelect.querySelectorAll('option')).slice(1);
-const allServices = Array.from(serviceSelect.querySelectorAll('option')).slice(1);
 
-// Filtrer les directions en fonction du programme
-programmeSelect.addEventListener('change', function() {
-  const programmeId = this.value;
+// Fonction pour gérer l'affichage des champs selon la sélection du service
+function updateAffectationFields() {
+  const serviceId = serviceSelect.value;
   
-  // Réinitialiser direction et service
-  directionSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-  serviceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-  
-  if (!programmeId) {
-    // Remettre toutes les directions
-    allDirections.forEach(opt => directionSelect.appendChild(opt.cloneNode(true)));
-    allServices.forEach(opt => serviceSelect.appendChild(opt.cloneNode(true)));
-    return;
+  if (serviceId) {
+    // Si un service est sélectionné, masquer sous-direction et direction
+    sousDirectionGroup.style.display = 'none';
+    directionGroup.style.display = 'none';
+    sousDirectionSelect.value = '';
+    directionSelect.value = '';
+  } else {
+    // Si aucun service, afficher sous-direction et direction
+    sousDirectionGroup.style.display = 'block';
+    directionGroup.style.display = 'block';
   }
   
-  // Filtrer les directions
-  allDirections.forEach(opt => {
-    if (opt.dataset.programme === programmeId) {
-      directionSelect.appendChild(opt.cloneNode(true));
-    }
-  });
+  // Si une sous-direction est sélectionnée, masquer la direction
+  if (sousDirectionSelect.value) {
+    directionGroup.style.display = 'none';
+    directionSelect.value = '';
+  }
+}
+
+// Écouter les changements sur le service
+serviceSelect.addEventListener('change', updateAffectationFields);
+
+// Écouter les changements sur la sous-direction
+sousDirectionSelect.addEventListener('change', function() {
+  if (this.value) {
+    directionGroup.style.display = 'none';
+    directionSelect.value = '';
+  } else {
+    directionGroup.style.display = 'block';
+  }
 });
 
-// Filtrer les services en fonction de la direction
-directionSelect.addEventListener('change', function() {
-  const directionId = this.value;
-  
-  // Réinitialiser service
-  serviceSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
-  
-  if (!directionId) {
-    allServices.forEach(opt => serviceSelect.appendChild(opt.cloneNode(true)));
-    return;
-  }
-  
-  // Filtrer les services
-  allServices.forEach(opt => {
-    if (opt.dataset.direction === directionId) {
-      serviceSelect.appendChild(opt.cloneNode(true));
+// Initialiser l'affichage au chargement de la page
+// Si on est en mode édition, vérifier les valeurs existantes
+{% if mode == 'edit' %}
+  // Si l'agent a un service, masquer les autres champs
+  if (serviceSelect.value) {
+    updateAffectationFields();
+  } else {
+    // Sinon, afficher les champs de rattachement direct
+    sousDirectionGroup.style.display = 'block';
+    directionGroup.style.display = 'block';
+    // Si une sous-direction est sélectionnée, masquer la direction
+    if (sousDirectionSelect.value) {
+      directionGroup.style.display = 'none';
     }
-  });
-});
+  }
+{% else %}
+  updateAffectationFields();
+{% endif %}
 
 // Prévisualisation de la photo
 function previewPhoto(event) {
@@ -611,10 +604,41 @@ document.querySelector('form').addEventListener('submit', async function(e) {
   // Utiliser FormData directement pour gérer les fichiers
   const formData = new FormData(this);
   
+  // Nettoyer les champs d'affectation selon la logique :
+  // - Si service_id est rempli, supprimer sous_direction_id et direction_id
+  // - Si sous_direction_id est rempli, supprimer direction_id
+  // - Supprimer programme_id (déprécié, plus utilisé)
+  const serviceId = formData.get('service_id');
+  const sousDirectionId = formData.get('sous_direction_id');
+  const directionId = formData.get('direction_id');
+  
+  // Supprimer programme_id s'il existe (champ déprécié)
+  formData.delete('programme_id');
+  
+  // Si un service est sélectionné, supprimer les autres rattachements
+  if (serviceId && serviceId !== '') {
+    formData.delete('sous_direction_id');
+    formData.delete('direction_id');
+  } else if (sousDirectionId && sousDirectionId !== '') {
+    // Si une sous-direction est sélectionnée, supprimer la direction
+    formData.delete('direction_id');
+  }
+  
+  // Supprimer les champs vides (sera fait aussi par cleanFormData, mais on le fait ici pour être sûr)
+  if (!serviceId || serviceId === '') {
+    formData.delete('service_id');
+  }
+  if (!sousDirectionId || sousDirectionId === '') {
+    formData.delete('sous_direction_id');
+  }
+  if (!directionId || directionId === '') {
+    formData.delete('direction_id');
+  }
+  
   // 🔍 LOG : Afficher le contenu du FormData avant envoi
   console.log('📤 ENVOI AU SERVEUR - Mode:', mode, '| Agent ID:', agentId);
   console.log('═══════════════════════════════════════════════════════');
-  console.log('📋 Contenu du FormData :');
+  console.log('📋 Contenu du FormData (après nettoyage) :');
   for (const [key, value] of formData.entries()) {
     if (value instanceof File) {
       console.log(`  ${key}: [FILE] ${value.name} (${value.size} bytes)`);
@@ -654,7 +678,22 @@ document.querySelector('form').addEventListener('submit', async function(e) {
     } else {
       console.error('❌ Erreur lors de la sauvegarde - Status:', response.status);
       console.error('❌ Détails:', result);
-      await handleFetchError(response, mode === 'edit' ? 'Impossible de modifier l\'agent' : 'Impossible de créer l\'agent');
+      
+      // Afficher les détails de l'erreur si c'est une 422 (validation FastAPI)
+      if (response.status === 422 && result.detail) {
+        let errorMessage = 'Erreur de validation:\n\n';
+        if (Array.isArray(result.detail)) {
+          errorMessage += result.detail.map(e => {
+            const field = e.loc ? e.loc.join('.') : 'champ inconnu';
+            return `• ${field}: ${e.msg}`;
+          }).join('\n');
+        } else {
+          errorMessage += JSON.stringify(result.detail, null, 2);
+        }
+        showError(errorMessage);
+      } else {
+        await handleFetchError(response, mode === 'edit' ? 'Impossible de modifier l\'agent' : 'Impossible de créer l\'agent');
+      }
     }
   } catch (error) {
     console.error('❌ EXCEPTION:', error);
@@ -670,7 +709,7 @@ document.querySelector('form').addEventListener('submit', async function(e) {
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🔄 Mode édition - Pré-remplissage des champs...');
   console.log('Agent ID:', '{{ agent.id }}');
-  console.log('Programme ID:', '{{ agent.programme_id }}');
+  console.log('Sous-direction ID:', '{{ agent.sous_direction_id }}');
   console.log('Direction ID:', '{{ agent.direction_id }}');
   console.log('Service ID:', '{{ agent.service_id }}');
   console.log('Grade ID:', '{{ agent.grade_id }}');
@@ -680,16 +719,16 @@ document.addEventListener('DOMContentLoaded', function() {
   // Mais on affiche quand même les valeurs pour debug
   
   setTimeout(() => {
-    const prog = document.getElementById('programme_id').value;
-    const dir = document.getElementById('direction_id').value;
-    const serv = document.getElementById('service_id').value;
-    const grade = document.getElementById('grade_id').value;
-    const pos = document.getElementById('position_administrative').value;
+    const serv = document.getElementById('service_id')?.value || '';
+    const sousDir = document.getElementById('sous_direction_id')?.value || '';
+    const dir = document.getElementById('direction_id')?.value || '';
+    const grade = document.getElementById('grade_id')?.value || '';
+    const pos = document.getElementById('position_administrative')?.value || '';
     
     console.log('📊 Valeurs sélectionnées:');
-    console.log('  Programme:', prog || 'Aucun');
-    console.log('  Direction:', dir || 'Aucune');
     console.log('  Service:', serv || 'Aucun');
+    console.log('  Sous-direction:', sousDir || 'Aucune');
+    console.log('  Direction:', dir || 'Aucune');
     console.log('  Grade:', grade || 'Aucun');
     console.log('  Position:', pos || 'Aucune');
   }, 500);

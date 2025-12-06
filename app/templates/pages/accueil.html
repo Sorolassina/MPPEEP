@@ -594,7 +594,7 @@ Accueil
 
             <!-- Module Plannification -->
             {% if current_user.type_user == 'admin' or current_user.type_user == 'daf' or current_user.type_user == 'sdb' %}
-            <a href="#" class="action-button" title="Module Plannification (bientôt disponible)">
+            <a href="{{ url_for('plannification_home') }}" class="action-button">
                 <span class="action-icon">🗓️</span>
                 <span class="action-text">Gestion de la plannification</span>
             </a>

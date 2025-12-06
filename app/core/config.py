@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     # APPLICATION
     # ==========================================
     APP_NAME: str = "SYGEP"
-    ENV: Literal["dev", "staging", "prod"] = "prod"
-    DEBUG: bool = False
+    ENV: Literal["dev", "staging", "prod"] = "dev"
+    DEBUG: bool = True
     SECRET_KEY: str = "changeme-in-production"
 
     # ROOT_PATH configuré dynamiquement selon l'environnement
@@ -113,6 +113,11 @@ class Settings(BaseSettings):
     # Charte de confidentialité
     PRIVACY_POLICY_VERSION: str = "1.0"  # Version actuelle de la charte
     PRIVACY_POLICY_REQUIRED: bool = True  # Forcer l'acceptation
+
+    # ============================================
+    # OLLAMA (Chatbot)
+    # ============================================
+    OLLAMA_URL: str = "http://localhost:11434"  # URL de l'instance Ollama
 
     # ==========================================
     # PROPERTIES DYNAMIQUES (selon DEBUG/ENV)

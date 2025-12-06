@@ -65,8 +65,18 @@ def performance_home(
     
     try:
         from sqlmodel import func
+        from decimal import Decimal
 
         from app.templates import get_template_context, templates
+        from app.services.performance_service import PerformanceService
+
+        # S'assurer que les valeurs actuelles sont à jour (calcul en cascade)
+        # Note: Le calcul en cascade est aussi appelé dans get_kpis_objectifs, mais on le fait ici
+        # pour garantir que les valeurs sont à jour avant de calculer les KPIs
+        try:
+            PerformanceService.calculer_valeurs_actuelles_cascade(db)
+        except Exception as e:
+            logger.warning(f"Erreur lors du calcul en cascade des valeurs actuelles: {e}")
 
         # Calculer les vrais KPIs depuis la base de données
 
@@ -101,24 +111,64 @@ def performance_home(
         total_indicateurs = db.exec(select(func.count(IndicateurPerformance.id))).one() or 0
 
         # Indicateurs en alerte (ceux qui n'ont pas atteint la cible)
+        # Tenir compte du sens_appreciation :
+        # - "haut" : alerte si valeur_actuelle < valeur_cible
+        # - "bas" : alerte si valeur_actuelle > valeur_cible
+        from sqlalchemy import or_, and_
         indicateurs_alerte = (
             db.exec(
                 select(func.count(IndicateurPerformance.id)).where(
-                    IndicateurPerformance.valeur_actuelle < IndicateurPerformance.valeur_cible
+                    and_(
+                        IndicateurPerformance.valeur_cible.isnot(None),
+                        IndicateurPerformance.valeur_actuelle.isnot(None),
+                        or_(
+                            and_(
+                                or_(
+                                    IndicateurPerformance.sens_appreciation == "haut",
+                                    IndicateurPerformance.sens_appreciation.is_(None)
+                                ),
+                                IndicateurPerformance.valeur_actuelle < IndicateurPerformance.valeur_cible
+                            ),
+                            and_(
+                                IndicateurPerformance.sens_appreciation == "bas",
+                                IndicateurPerformance.valeur_actuelle > IndicateurPerformance.valeur_cible
+                            )
+                        )
+                    )
                 )
             ).one()
             or 0
         )
 
-        # Taux de réalisation moyen
-        if total_objectifs > 0:
-            taux_realisation = round((objectifs_atteints / total_objectifs) * 100, 1)
+        # Taux de réalisation moyen basé sur les valeurs actuelles vs valeurs cibles
+        # Calculer la moyenne des taux de réalisation de tous les objectifs
+        objectifs_avec_valeurs = db.exec(
+            select(ObjectifPerformance).where(
+                ObjectifPerformance.valeur_cible > 0
+            )
+        ).all()
+        
+        if objectifs_avec_valeurs:
+            taux_realisation_list = []
+            for obj in objectifs_avec_valeurs:
+                if obj.valeur_cible and obj.valeur_cible > 0:
+                    valeur_actuelle = obj.valeur_actuelle or Decimal('0')
+                    taux = float(valeur_actuelle) / float(obj.valeur_cible) * 100
+                    taux_realisation_list.append(min(taux, 100))  # Limiter à 100%
+            
+            if taux_realisation_list:
+                taux_realisation = round(sum(taux_realisation_list) / len(taux_realisation_list), 1)
+            else:
+                taux_realisation = 0
         else:
-            taux_realisation = 0
+            # Fallback: utiliser le nombre d'objectifs atteints
+            if total_objectifs > 0:
+                taux_realisation = round((objectifs_atteints / total_objectifs) * 100, 1)
+            else:
+                taux_realisation = 0
 
-        # Score global (moyenne pondérée selon priorité)
-        # Pour simplifier, on calcule juste le % d'objectifs atteints
-        score_global = round((objectifs_atteints / total_objectifs * 10), 1) if total_objectifs > 0 else 0
+        # Score global basé sur le taux de réalisation moyen
+        score_global = round(taux_realisation / 10, 1) if taux_realisation > 0 else 0
 
         # Nombre de rapports générés
         total_rapports = db.exec(select(func.count(RapportPerformance.id))).one() or 0
@@ -1051,6 +1101,97 @@ def save_rap_data_api(
 
 
 @router.get(
+    "/rapport-activite-rprog/pdf",
+    response_class=StreamingResponse,
+    name="performance_rapport_activite_rprog_pdf",
+)
+def generate_rapport_activite_rprog_pdf(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Génère le rapport d'activité RPROG en mode paysage.
+    Les données sont chargées depuis la base de données."""
+    try:
+        from app.services.rapport_activite_rprog_generator import (
+            RPROGPDFGenerator
+        )
+        from app.services.system_settings_service import SystemSettingsService
+        from datetime import datetime
+        
+        data: dict[str, Any] = {}
+        
+        # Récupérer les paramètres généraux du formulaire
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            final_value = transform(value) if transform else value
+            data[target_key] = final_value
+        
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("section", "section")
+        optional_param("ministere", "ministere")
+        optional_param("programme", "programme")
+        optional_param("periode", "periode")
+        optional_param("titre_rapport", "titre_rapport")
+        optional_param("titre_annee", "titre_annee")
+        optional_param("date_publication", "date_publication")
+        optional_param("logo_path", "logo_path")
+        optional_param("responsable_programme", "responsable_programme")
+        
+        # Récupérer le mode depuis les paramètres de requête (brouillon ou final)
+        mode_param = request.query_params.get("mode", "brouillon")
+        data["mode"] = mode_param if mode_param in ["brouillon", "final"] else "brouillon"
+        
+        # Récupérer les paramètres système pour les valeurs par défaut
+        system_settings = SystemSettingsService.get_settings_as_dict(db)
+        logo_path_from_settings = system_settings.get("logo_path", "")
+        current_year = datetime.now().year
+        
+        # Appliquer les valeurs par défaut si non fournies
+        if "annee" not in data:
+            data["annee"] = RPROGPDFGenerator.DEFAULT_DATA.get("annee", current_year - 1)
+        if "section" not in data:
+            data["section"] = RPROGPDFGenerator.DEFAULT_DATA.get("section", "SECTION 376")
+        if "ministere" not in data:
+            data["ministere"] = system_settings.get("ministere", RPROGPDFGenerator.DEFAULT_DATA.get("ministere", ""))
+        if "programme" not in data:
+            data["programme"] = RPROGPDFGenerator.DEFAULT_DATA.get("programme", "PROGRAMME PORTEFEUILLE DE L'ETAT")
+        if "periode" not in data:
+            data["periode"] = RPROGPDFGenerator.DEFAULT_DATA.get("periode", "PREMIER SEMESTRE")
+        if "titre_rapport" not in data:
+            data["titre_rapport"] = RPROGPDFGenerator.DEFAULT_DATA.get("titre_rapport", "RAPPORT D'ACTIVITÉ")
+        if "titre_annee" not in data:
+            data["titre_annee"] = RPROGPDFGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE")
+        if "date_publication" not in data:
+            data["date_publication"] = datetime.now().strftime("%Y-%m")
+        if "logo_path" not in data:
+            data["logo_path"] = logo_path_from_settings if logo_path_from_settings else RPROGPDFGenerator.DEFAULT_DATA.get("logo_path", "")
+        if "responsable_programme" not in data:
+            data["responsable_programme"] = RPROGPDFGenerator.DEFAULT_DATA.get("responsable_programme", "")
+        
+        # Générer le PDF avec les données
+        pdf_buffer = RPROGPDFGenerator.generate_pdf(data, session=db)
+        
+        year = data.get("annee", 2024)
+        filename = f"rapport_activite_rprog_{year}.pdf"
+        
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération du rapport RPROG: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la génération du rapport: {str(e)}"
+        )
+
+
+@router.get(
     "/rapport-annuel-performance/pdf-simpledoc",
     response_class=StreamingResponse,
     name="performance_rapport_annuel_pdf_simpledoc",
@@ -1613,6 +1754,7 @@ def get_objectifs_api(
             "data": [
                 {
                     "id": obj.id,
+                    "code": obj.code,
                     "titre": obj.titre,
                     "description": obj.description,
                     "type_objectif": obj.type_objectif,
@@ -1625,6 +1767,9 @@ def get_objectifs_api(
                     "unite": obj.unite,
                     "responsable_id": obj.responsable_id,
                     "service_responsable": obj.service_responsable,
+                    "resultat_strategique_id": obj.resultat_strategique_id,
+                    "programme_id": obj.programme_id,
+                    "objectif_global_id": obj.objectif_global_id,
                     "statut": obj.statut,
                     "progression_pourcentage": float(obj.progression_pourcentage) if obj.progression_pourcentage else 0,
                     "commentaires": obj.commentaires,
@@ -1652,6 +1797,7 @@ def get_objectif_api(objectif_id: int, db: Session = Depends(get_session)):
             "success": True,
             "data": {
                 "id": objectif.id,
+                "code": objectif.code,
                 "titre": objectif.titre,
                 "description": objectif.description,
                 "type_objectif": objectif.type_objectif,
@@ -1664,6 +1810,9 @@ def get_objectif_api(objectif_id: int, db: Session = Depends(get_session)):
                 "unite": objectif.unite,
                 "responsable_id": objectif.responsable_id,
                 "service_responsable": objectif.service_responsable,
+                "resultat_strategique_id": objectif.resultat_strategique_id,
+                "programme_id": objectif.programme_id,
+                "objectif_global_id": objectif.objectif_global_id,
                 "statut": objectif.statut,
                 "progression_pourcentage": float(objectif.progression_pourcentage)
                 if objectif.progression_pourcentage
@@ -1683,9 +1832,10 @@ def get_objectif_api(objectif_id: int, db: Session = Depends(get_session)):
 
 @router.post("/api/objectifs", response_class=JSONResponse)
 def create_objectif_api(
+    code: str | None = Form(None),
     titre: str = Form(...),
     description: str | None = Form(None),
-    type_objectif: str = Form("OPERATIONNEL"),
+    type_objectif: str = Form("specifique"),
     priorite: str = Form("NORMALE"),
     date_debut: str = Form(...),
     date_fin: str = Form(...),
@@ -1693,8 +1843,11 @@ def create_objectif_api(
     valeur_cible: str = Form(...),
     valeur_actuelle: str = Form("0"),
     unite: str = Form(...),
-    responsable_id: int = Form(...),
+    responsable_id: int | None = Form(None),
     service_responsable: str | None = Form(None),
+    resultat_strategique_id: int | None = Form(None),
+    programme_id: int | None = Form(None),
+    objectif_global_id: int | None = Form(None),
     indicateurs_associes: str | None = Form(None),
     commentaires: str | None = Form(None),
     notes_internes: str | None = Form(None),
@@ -1703,7 +1856,22 @@ def create_objectif_api(
 ):
     """API: Crée un nouvel objectif"""
     try:
+        logger.info(f"📥 Création d'objectif - Données reçues:")
+        logger.info(f"  - code: {code} (type: {type(code)})")
+        logger.info(f"  - titre: {titre}")
+        logger.info(f"  - type_objectif: {type_objectif}")
+        logger.info(f"  - resultat_strategique_id: {resultat_strategique_id}")
+        logger.info(f"  - objectif_global_id: {objectif_global_id}")
+        logger.info(f"  - responsable_id: {responsable_id}")
+        
+        # Traiter le code : si fourni et non vide, le nettoyer, sinon None
+        code_value = None
+        if code and isinstance(code, str) and code.strip():
+            code_value = code.strip()
+        logger.info(f"  - code_value traité: {code_value}")
+        
         objectif_data = {
+            "code": code_value,
             "titre": titre,
             "description": description,
             "type_objectif": type_objectif,
@@ -1714,14 +1882,20 @@ def create_objectif_api(
             "valeur_cible": valeur_cible,
             "valeur_actuelle": valeur_actuelle,
             "unite": unite,
-            "responsable_id": responsable_id,
+            "responsable_id": responsable_id if responsable_id else None,
             "service_responsable": service_responsable,
+            "resultat_strategique_id": int(resultat_strategique_id) if resultat_strategique_id and str(resultat_strategique_id).strip() else None,
+            "programme_id": int(programme_id) if programme_id and str(programme_id).strip() else None,
+            "objectif_global_id": int(objectif_global_id) if objectif_global_id and str(objectif_global_id).strip() else None,
             "indicateurs_associes": indicateurs_associes,
             "commentaires": commentaires,
             "notes_internes": notes_internes,
         }
+        
+        logger.info(f"📦 Données préparées pour creer_objectif: {objectif_data}")
 
         objectif = PerformanceService.creer_objectif(db, objectif_data, current_user.id)
+        logger.info(f"✅ Objectif créé avec succès: ID={objectif.id}, titre={objectif.titre}")
 
         # Logger l'activité
         ActivityService.log_activity(
@@ -1743,13 +1917,17 @@ def create_objectif_api(
         }
 
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"Erreur API create_objectif: {e}")
-        return {"success": False, "error": "Erreur lors de la création de l'objectif"}
+        logger.error(f"Détails de l'erreur:\n{error_details}")
+        return {"success": False, "error": f"Erreur lors de la création de l'objectif: {str(e)}"}
 
 
 @router.put("/api/objectifs/{objectif_id}", response_class=JSONResponse)
 def update_objectif_api(
     objectif_id: int,
+    code: str | None = Form(None),
     titre: str | None = Form(None),
     description: str | None = Form(None),
     type_objectif: str | None = Form(None),
@@ -1762,6 +1940,9 @@ def update_objectif_api(
     unite: str | None = Form(None),
     responsable_id: int | None = Form(None),
     service_responsable: str | None = Form(None),
+    resultat_strategique_id: int | None = Form(None),
+    programme_id: int | None = Form(None),
+    objectif_global_id: int | None = Form(None),
     statut: str | None = Form(None),
     indicateurs_associes: str | None = Form(None),
     commentaires: str | None = Form(None),
@@ -1771,9 +1952,27 @@ def update_objectif_api(
 ):
     """API: Modifie un objectif existant"""
     try:
+        # Récupérer l'objectif existant pour connaître son type
+        existing_objectif = db.exec(select(ObjectifPerformance).where(ObjectifPerformance.id == objectif_id)).first()
+        if not existing_objectif:
+            return {"success": False, "error": "Objectif non trouvé"}
+        
         objectif_data = {}
 
         # Construire le dictionnaire avec seulement les champs fournis
+        # Pour le code : toujours traiter s'il est fourni (même vide, pour permettre de le supprimer)
+        # Si code est None, c'est que le champ n'a pas été envoyé, on ne le modifie pas
+        # Si code est une chaîne vide "", on le convertit en None pour le supprimer
+        # IMPORTANT: Avec optionalFieldsToKeep, le code est toujours envoyé (même vide), donc code ne sera jamais None
+        # mais pourra être une chaîne vide ""
+        if code is not None:
+            # Si c'est une chaîne vide ou ne contient que des espaces, mettre à None
+            if isinstance(code, str):
+                code_cleaned = code.strip()
+                objectif_data["code"] = code_cleaned if code_cleaned else None
+            else:
+                objectif_data["code"] = code
+        # Si code n'est pas dans objectif_data, on ne le modifie pas (garde la valeur existante)
         if titre is not None:
             objectif_data["titre"] = titre
         if description is not None:
@@ -1798,6 +1997,64 @@ def update_objectif_api(
             objectif_data["responsable_id"] = responsable_id
         if service_responsable is not None:
             objectif_data["service_responsable"] = service_responsable
+        
+        # Déterminer le type d'objectif (utiliser celui fourni ou celui existant)
+        current_type = type_objectif or existing_objectif.type_objectif
+        
+        # Gérer resultat_strategique_id : toujours traiter si c'est un objectif global
+        # (pour permettre de le mettre à None si nécessaire)
+        if current_type and (current_type.lower() == 'global' or current_type == 'GLOBAL'):
+            # Convertir en int si c'est une chaîne non vide, sinon None
+            if isinstance(resultat_strategique_id, str):
+                if resultat_strategique_id.strip() == '' or resultat_strategique_id.strip() == 'null':
+                    objectif_data["resultat_strategique_id"] = None
+                else:
+                    try:
+                        objectif_data["resultat_strategique_id"] = int(resultat_strategique_id) if resultat_strategique_id else None
+                    except (ValueError, TypeError):
+                        objectif_data["resultat_strategique_id"] = None
+            elif resultat_strategique_id is not None:
+                objectif_data["resultat_strategique_id"] = int(resultat_strategique_id)
+            else:
+                objectif_data["resultat_strategique_id"] = None
+            # Gérer programme_id pour les objectifs globaux
+            # Toujours traiter programme_id s'il est fourni (même vide, pour permettre de le mettre à None)
+            if programme_id is not None:
+                if isinstance(programme_id, str):
+                    if programme_id.strip() == '' or programme_id.strip() == 'null':
+                        objectif_data["programme_id"] = None
+                    else:
+                        try:
+                            objectif_data["programme_id"] = int(programme_id) if programme_id else None
+                        except (ValueError, TypeError):
+                            objectif_data["programme_id"] = None
+                else:
+                    # programme_id est un int ou None
+                    objectif_data["programme_id"] = int(programme_id) if programme_id else None
+        else:
+            # Pour les autres types, mettre à None si fourni explicitement
+            if programme_id is not None:
+                objectif_data["programme_id"] = None
+        
+        # Gérer objectif_global_id : toujours traiter si c'est un objectif spécifique
+        # (pour permettre de le mettre à None si nécessaire)
+        if current_type and (current_type.lower() == 'specifique' or current_type == 'SPECIFIQUE'):
+            # Convertir en int si c'est une chaîne non vide, sinon None
+            if isinstance(objectif_global_id, str):
+                if objectif_global_id.strip() == '' or objectif_global_id.strip() == 'null':
+                    objectif_data["objectif_global_id"] = None
+                else:
+                    try:
+                        objectif_data["objectif_global_id"] = int(objectif_global_id) if objectif_global_id else None
+                    except (ValueError, TypeError):
+                        objectif_data["objectif_global_id"] = None
+            elif objectif_global_id is not None:
+                objectif_data["objectif_global_id"] = int(objectif_global_id)
+            else:
+                # Si le champ n'a pas été envoyé mais que c'est une modification d'un OS,
+                # on ne le modifie pas (on garde la valeur existante)
+                pass
+        
         if statut is not None:
             objectif_data["statut"] = statut
         if indicateurs_associes is not None:
@@ -1806,6 +2063,12 @@ def update_objectif_api(
             objectif_data["commentaires"] = commentaires
         if notes_internes is not None:
             objectif_data["notes_internes"] = notes_internes
+
+        logger.info(f"📥 Modification d'objectif - Données préparées: {objectif_data}")
+        logger.info(f"  - type_objectif: {current_type}")
+        logger.info(f"  - code reçu: {code}, traité: {objectif_data.get('code')}")
+        logger.info(f"  - objectif_global_id reçu: {objectif_global_id}, traité: {objectif_data.get('objectif_global_id')}")
+        logger.info(f"  - resultat_strategique_id reçu: {resultat_strategique_id}, traité: {objectif_data.get('resultat_strategique_id')}")
 
         objectif = PerformanceService.modifier_objectif(db, objectif_id, objectif_data)
 
@@ -1920,6 +2183,7 @@ def get_indicateurs_api(
                 "description": ind.description,
                 "categorie": ind.categorie,
                 "frequence_mesure": ind.frequence_maj,
+                "annee": ind.annee,
                 "valeur_cible": float(ind.valeur_cible) if ind.valeur_cible else 0,
                 "valeur_actuelle": float(ind.valeur_actuelle) if ind.valeur_actuelle else 0,
                 "unite_mesure": ind.unite,
@@ -1928,6 +2192,13 @@ def get_indicateurs_api(
                 "responsable_id": ind.responsable_id,
                 "service_responsable": getattr(ind, "service_responsable", None),
                 "source_donnees": ind.source_donnees,
+                "methode": getattr(ind, "methode", None),
+                "mode_collecte_donnees": getattr(ind, "mode_collecte_donnees", None),
+                "derniere_valeur_connue": float(ind.derniere_valeur_connue) if getattr(ind, "derniere_valeur_connue", None) else None,
+                "sens_appreciation": getattr(ind, "sens_appreciation", "haut"),
+                "doc_justif": getattr(ind, "doc_justif", None),
+                "cible_N_plus_1": float(ind.cible_N_plus_1) if getattr(ind, "cible_N_plus_1", None) else None,
+                "cible_N_plus_2": float(ind.cible_N_plus_2) if getattr(ind, "cible_N_plus_2", None) else None,
                 "commentaires": getattr(ind, "commentaires", None),
                 "created_at": ind.created_at.isoformat() if ind.created_at else None,
                 "updated_at": ind.updated_at.isoformat() if ind.updated_at else None,
@@ -1957,6 +2228,7 @@ def get_indicateur_api(indicateur_id: int, db: Session = Depends(get_session)):
             "description": indicateur.description,
             "categorie": indicateur.categorie,
             "frequence_mesure": indicateur.frequence_maj,
+            "annee": indicateur.annee,
             "valeur_cible": float(indicateur.valeur_cible) if indicateur.valeur_cible else 0,
             "valeur_actuelle": float(indicateur.valeur_actuelle) if indicateur.valeur_actuelle else 0,
             "unite_mesure": indicateur.unite,
@@ -1965,6 +2237,13 @@ def get_indicateur_api(indicateur_id: int, db: Session = Depends(get_session)):
             "responsable_id": indicateur.responsable_id,
             "service_responsable": getattr(indicateur, "service_responsable", None),
             "source_donnees": indicateur.source_donnees,
+            "methode": getattr(indicateur, "methode", None),
+            "mode_collecte_donnees": getattr(indicateur, "mode_collecte_donnees", None),
+            "derniere_valeur_connue": float(indicateur.derniere_valeur_connue) if getattr(indicateur, "derniere_valeur_connue", None) else None,
+            "sens_appreciation": getattr(indicateur, "sens_appreciation", "haut"),
+            "doc_justif": getattr(indicateur, "doc_justif", None),
+            "cible_N_plus_1": float(indicateur.cible_N_plus_1) if getattr(indicateur, "cible_N_plus_1", None) else None,
+            "cible_N_plus_2": float(indicateur.cible_N_plus_2) if getattr(indicateur, "cible_N_plus_2", None) else None,
             "commentaires": getattr(indicateur, "commentaires", None),
         }
 
@@ -1976,32 +2255,85 @@ def get_indicateur_api(indicateur_id: int, db: Session = Depends(get_session)):
 
 
 @router.post("/api/indicateurs", response_class=JSONResponse, name="create_indicateur_api")
-def create_indicateur_api(
+async def create_indicateur_api(
     objectif_id: int = Form(...),
     nom: str = Form(...),
     description: str | None = Form(None),
     categorie: str = Form("OPERATIONNEL"),
     frequence_mesure: str = Form("MENSUEL"),
+    annee: int = Form(...),
     valeur_cible: str = Form(...),
     valeur_actuelle: str = Form("0"),
     unite_mesure: str = Form(...),
     seuil_alerte_min: str | None = Form(None),
     seuil_alerte_max: str | None = Form(None),
-    responsable_id: int = Form(...),
+    responsable_id: int | None = Form(None),
     service_responsable: str | None = Form(None),
     source_donnees: str | None = Form(None),
+    methode: str | None = Form(None),
+    mode_collecte_donnees: str | None = Form(None),
+    derniere_valeur_connue: str | None = Form(None),
+    sens_appreciation: str | None = Form(None),
+    cible_N_plus_1: str | None = Form(None),
+    cible_N_plus_2: str | None = Form(None),
+    doc_justif_file: UploadFile | None = FastAPIFile(None),
     commentaires: str | None = Form(None),
     db: Session = Depends(get_session),
     current_user: dict = Depends(require_roles("admin", "user")),
 ):
     """API: Crée un nouvel indicateur"""
     try:
+        logger.info(f"🔍 [create_indicateur_api] Données reçues du formulaire:")
+        logger.info(f"   - cible_N_plus_1 (raw): {cible_N_plus_1}")
+        logger.info(f"   - cible_N_plus_2 (raw): {cible_N_plus_2}")
+        
+        cible_n1_value = Decimal(cible_N_plus_1) if cible_N_plus_1 and cible_N_plus_1.strip() else None
+        cible_n2_value = Decimal(cible_N_plus_2) if cible_N_plus_2 and cible_N_plus_2.strip() else None
+        
+        logger.info(f"🔍 [create_indicateur_api] Valeurs converties:")
+        logger.info(f"   - cible_N_plus_1 (Decimal): {cible_n1_value}")
+        logger.info(f"   - cible_N_plus_2 (Decimal): {cible_n2_value}")
+        
+        # Gérer l'upload du document justificatif
+        doc_justif_path = None
+        valeur_actuelle_decimal = Decimal(valeur_actuelle) if valeur_actuelle and valeur_actuelle.strip() else Decimal(0)
+        
+        # Validation : si valeur_actuelle != 0, alors doc_justif doit être fourni
+        if valeur_actuelle_decimal != 0 and not doc_justif_file:
+            raise HTTPException(
+                status_code=400,
+                detail="Un document justificatif est requis lorsque la valeur actuelle est différente de 0. Cela permet de justifier la valeur renseignée et de détecter d'éventuels biais."
+            )
+        
+        if doc_justif_file and doc_justif_file.filename:
+            try:
+                # Créer le dossier pour les documents justificatifs
+                docs_dir = path_config.UPLOADS_DIR / "performance" / "indicateurs" / "doc_justif"
+                path_config.ensure_directory_exists(docs_dir)
+                
+                # Générer un nom de fichier unique
+                file_extension = Path(doc_justif_file.filename).suffix
+                unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}{file_extension}"
+                file_path = docs_dir / unique_filename
+                
+                # Sauvegarder le fichier
+                content = await doc_justif_file.read()
+                file_path.write_bytes(content)
+                
+                # Stocker le chemin relatif
+                doc_justif_path = f"uploads/performance/indicateurs/doc_justif/{unique_filename}"
+                logger.info(f"✅ Document justificatif uploadé: {doc_justif_path}")
+            except Exception as e:
+                logger.error(f"❌ Erreur lors de l'upload du document justificatif: {e}")
+                raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload du document justificatif: {e}")
+        
         indicateur_data = {
             "objectif_id": objectif_id,
             "nom": nom,
             "description": description,
             "categorie": categorie,
             "frequence_mesure": frequence_mesure,
+            "annee": annee,
             "valeur_cible": Decimal(valeur_cible),
             "valeur_actuelle": Decimal(valeur_actuelle) if valeur_actuelle else Decimal(0),
             "unite_mesure": unite_mesure,
@@ -2010,8 +2342,19 @@ def create_indicateur_api(
             "responsable_id": responsable_id,
             "service_responsable": service_responsable,
             "source_donnees": source_donnees,
+            "methode": methode.strip() if methode and methode.strip() else None,
+            "mode_collecte_donnees": mode_collecte_donnees.strip() if mode_collecte_donnees and mode_collecte_donnees.strip() else None,
+            "derniere_valeur_connue": Decimal(derniere_valeur_connue) if derniere_valeur_connue and derniere_valeur_connue.strip() else None,
+            "sens_appreciation": sens_appreciation.strip().lower() if sens_appreciation and sens_appreciation.strip() else "haut",
+            "doc_justif": doc_justif_path,
+            "cible_N_plus_1": cible_n1_value,
+            "cible_N_plus_2": cible_n2_value,
             "commentaires": commentaires,
         }
+        
+        logger.info(f"🔍 [create_indicateur_api] indicateur_data final: {list(indicateur_data.keys())}")
+        logger.info(f"🔍 [create_indicateur_api] indicateur_data['cible_N_plus_1'] = {indicateur_data.get('cible_N_plus_1')}")
+        logger.info(f"🔍 [create_indicateur_api] indicateur_data['cible_N_plus_2'] = {indicateur_data.get('cible_N_plus_2')}")
 
         # Récupérer l'ID utilisateur (current_user est un objet User)
         user_id = current_user.id if hasattr(current_user, "id") else current_user.get("user_id", 1)
@@ -2041,13 +2384,14 @@ def create_indicateur_api(
 
 
 @router.put("/api/indicateurs/{indicateur_id}", response_class=JSONResponse)
-def update_indicateur_api(
+async def update_indicateur_api(
     indicateur_id: int,
     objectif_id: int | None = Form(None),
     nom: str | None = Form(None),
     description: str | None = Form(None),
     categorie: str | None = Form(None),
     frequence_mesure: str | None = Form(None),
+    annee: int | None = Form(None),
     valeur_cible: str | None = Form(None),
     valeur_actuelle: str | None = Form(None),
     unite_mesure: str | None = Form(None),
@@ -2056,12 +2400,68 @@ def update_indicateur_api(
     responsable_id: int | None = Form(None),
     service_responsable: str | None = Form(None),
     source_donnees: str | None = Form(None),
+    methode: str | None = Form(None),
+    mode_collecte_donnees: str | None = Form(None),
+    derniere_valeur_connue: str | None = Form(None),
+    sens_appreciation: str | None = Form(None),
+    cible_N_plus_1: str | None = Form(None),
+    cible_N_plus_2: str | None = Form(None),
+    doc_justif_file: UploadFile | None = FastAPIFile(None),
+    doc_justif_delete: str | None = Form(None),
     commentaires: str | None = Form(None),
     db: Session = Depends(get_session),
     current_user: dict = Depends(require_roles("admin", "user")),
 ):
     """API: Modifie un indicateur existant"""
     try:
+        # Récupérer l'indicateur existant pour vérifier la valeur actuelle actuelle
+        indicateur_existant = db.exec(
+            select(IndicateurPerformance).where(IndicateurPerformance.id == indicateur_id)
+        ).first()
+        
+        if not indicateur_existant:
+            return {"success": False, "error": "Indicateur non trouvé"}
+        
+        # Gérer l'upload du document justificatif
+        doc_justif_path = None
+        valeur_actuelle_decimal = None
+        
+        if valeur_actuelle is not None:
+            valeur_actuelle_decimal = Decimal(valeur_actuelle) if valeur_actuelle and valeur_actuelle.strip() else Decimal(0)
+            
+            # Si on demande la suppression du document existant
+            if doc_justif_delete == "1":
+                doc_justif_path = None
+            # Si un nouveau fichier est fourni, l'utiliser
+            elif doc_justif_file and doc_justif_file.filename:
+                try:
+                    docs_dir = path_config.UPLOADS_DIR / "performance" / "indicateurs" / "doc_justif"
+                    path_config.ensure_directory_exists(docs_dir)
+                    
+                    file_extension = Path(doc_justif_file.filename).suffix
+                    unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:8]}{file_extension}"
+                    file_path = docs_dir / unique_filename
+                    
+                    content = await doc_justif_file.read()
+                    file_path.write_bytes(content)
+                    
+                    doc_justif_path = f"uploads/performance/indicateurs/doc_justif/{unique_filename}"
+                    logger.info(f"✅ Document justificatif uploadé: {doc_justif_path}")
+                except Exception as e:
+                    logger.error(f"❌ Erreur lors de l'upload du document justificatif: {e}")
+                    raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload du document justificatif: {e}")
+            # Validation : si valeur_actuelle != 0, alors doc_justif doit être fourni (nouveau ou existant)
+            elif valeur_actuelle_decimal != 0:
+                # Vérifier si un document existe déjà
+                if not indicateur_existant.doc_justif:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Un document justificatif est requis lorsque la valeur actuelle est différente de 0. Cela permet de justifier la valeur renseignée et de détecter d'éventuels biais."
+                    )
+                else:
+                    # Conserver le document existant
+                    doc_justif_path = indicateur_existant.doc_justif
+        
         indicateur_data = {}
 
         if objectif_id is not None:
@@ -2074,6 +2474,8 @@ def update_indicateur_api(
             indicateur_data["categorie"] = categorie
         if frequence_mesure is not None:
             indicateur_data["frequence_mesure"] = frequence_mesure
+        if annee is not None:
+            indicateur_data["annee"] = annee
         if valeur_cible is not None:
             indicateur_data["valeur_cible"] = Decimal(valeur_cible)
         if valeur_actuelle is not None:
@@ -2090,6 +2492,21 @@ def update_indicateur_api(
             indicateur_data["service_responsable"] = service_responsable
         if source_donnees is not None:
             indicateur_data["source_donnees"] = source_donnees
+        if methode is not None:
+            indicateur_data["methode"] = methode.strip() if methode and methode.strip() else None
+        if mode_collecte_donnees is not None:
+            indicateur_data["mode_collecte_donnees"] = mode_collecte_donnees.strip() if mode_collecte_donnees and mode_collecte_donnees.strip() else None
+        if derniere_valeur_connue is not None:
+            indicateur_data["derniere_valeur_connue"] = Decimal(derniere_valeur_connue) if derniere_valeur_connue and derniere_valeur_connue.strip() else None
+        if sens_appreciation is not None:
+            indicateur_data["sens_appreciation"] = sens_appreciation.strip().lower() if sens_appreciation and sens_appreciation.strip() else "haut"
+        if doc_justif_path is not None or doc_justif_delete == "1":
+            # Mettre à jour doc_justif si un nouveau fichier a été uploadé ou si on demande la suppression
+            indicateur_data["doc_justif"] = None if doc_justif_delete == "1" else doc_justif_path
+        if cible_N_plus_1 is not None:
+            indicateur_data["cible_N_plus_1"] = Decimal(cible_N_plus_1) if cible_N_plus_1 and cible_N_plus_1.strip() else None
+        if cible_N_plus_2 is not None:
+            indicateur_data["cible_N_plus_2"] = Decimal(cible_N_plus_2) if cible_N_plus_2 and cible_N_plus_2.strip() else None
         if commentaires is not None:
             indicateur_data["commentaires"] = commentaires
 

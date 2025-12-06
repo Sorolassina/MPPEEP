@@ -7,8 +7,8 @@ La hiérarchie complète de performance est la suivante :
 ```
 Orientation Stratégique
   └── Résultat Stratégique
-      └── Objectif Global (type=STRATEGIQUE)
-          └── Objectif Spécifique (type=OPERATIONNEL)
+      └── Objectif Global (type=global)
+          └── Objectif Spécifique (type=specifique)
               └── Indicateur de Performance
 ```
 
@@ -16,17 +16,18 @@ Orientation Stratégique
 
 **Important :** Il n'y a qu'**une seule table** `ObjectifPerformance` qui gère les deux types d'objectifs via le champ `type_objectif` :
 
-### Objectifs Globaux (STRATEGIQUE)
-- **Type** : `type_objectif = TypeObjectif.STRATEGIQUE`
-- **Relation** : Lié à un `ResultatStrategique` via `resultat_strategique_id`
+### Objectifs Globaux (global)
+- **Type** : `type_objectif = TypeObjectif.GLOBAL`
+- **Relation** : Lié à un `ResultatStrategique` via `resultat_strategique_id` (OBLIGATOIRE)
 - **Caractéristiques** :
   - Représente les objectifs stratégiques de haut niveau
   - Déclinent les résultats stratégiques en objectifs concrets
   - Utilisés dans le tableau de politique ministérielle
+  - **Un Objectif Global est toujours lié à un Résultat Stratégique**
 
-### Objectifs Spécifiques (OPERATIONNEL)
-- **Type** : `type_objectif = TypeObjectif.OPERATIONNEL`
-- **Relation** : Lié à un `ObjectifPerformance` de type STRATEGIQUE via `objectif_global_id`
+### Objectifs Spécifiques (specifique)
+- **Type** : `type_objectif = TypeObjectif.SPECIFIQUE`
+- **Relation** : Lié à un `ObjectifPerformance` de type GLOBAL via `objectif_global_id`
 - **Caractéristiques** :
   - Représente les objectifs opérationnels de terrain
   - Déclinent les objectifs globaux en actions concrètes
@@ -37,16 +38,16 @@ Orientation Stratégique
 ```python
 class ObjectifPerformance(SQLModel, table=True):
     # Classification
-    type_objectif: TypeObjectif = Field(default=TypeObjectif.OPERATIONNEL)
+    type_objectif: TypeObjectif = Field(default=TypeObjectif.SPECIFIQUE)
     
     # Relations hiérarchiques
-    # Pour les objectifs globaux (STRATEGIQUE) :
+    # Pour les objectifs globaux (GLOBAL) : lié à un résultat stratégique
     resultat_strategique_id: int | None = Field(
         default=None, 
         foreign_key="resultat_strategique.id"
     )
     
-    # Pour les objectifs spécifiques (OPERATIONNEL) :
+    # Pour les objectifs spécifiques (SPECIFIQUE) : lié à un objectif global
     objectif_global_id: int | None = Field(
         default=None, 
         foreign_key="objectif_performance.id"  # Auto-référence !
@@ -57,25 +58,25 @@ class ObjectifPerformance(SQLModel, table=True):
 
 ### Dans `_load_performance_hierarchy_from_db` :
 
-1. **Charge les objectifs globaux** (STRATEGIQUE) liés aux résultats stratégiques :
+1. **Charge les objectifs globaux** (GLOBAL) liés aux résultats stratégiques :
    ```python
    objectifs_globaux = session.exec(
        select(ObjectifPerformance).where(
            and_(
                ObjectifPerformance.resultat_strategique_id == resultat.id,
-               ObjectifPerformance.type_objectif == TypeObjectif.STRATEGIQUE
+               ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL
            )
        )
    ).all()
    ```
 
-2. **Charge optionnellement les objectifs spécifiques** (OPERATIONNEL) liés aux objectifs globaux :
+2. **Charge optionnellement les objectifs spécifiques** (SPECIFIQUE) liés aux objectifs globaux :
    ```python
    objectifs_specifiques = session.exec(
        select(ObjectifPerformance).where(
            and_(
                ObjectifPerformance.objectif_global_id == obj_global.id,
-               ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL
+               ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE
            )
        )
    ).all()
@@ -88,7 +89,7 @@ class ObjectifPerformance(SQLModel, table=True):
    objectifs_globaux = session.exec(
        select(ObjectifPerformance).where(
            and_(
-               ObjectifPerformance.type_objectif == TypeObjectif.STRATEGIQUE,
+               ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL,
                ObjectifPerformance.resultat_strategique_id.isnot(None)
            )
        )
@@ -100,7 +101,7 @@ class ObjectifPerformance(SQLModel, table=True):
    objectifs_specifiques = session.exec(
        select(ObjectifPerformance).where(
            and_(
-               ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL,
+               ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
                ObjectifPerformance.objectif_global_id.isnot(None)
            )
        )
@@ -116,24 +117,24 @@ class ObjectifPerformance(SQLModel, table=True):
 
 ## Exemple de Données
 
-### Objectif Global (STRATEGIQUE)
+### Objectif Global (global)
 ```python
 {
     "id": 1,
     "titre": "Améliorer la gouvernance du secteur",
-    "type_objectif": "STRATEGIQUE",
-    "resultat_strategique_id": 1,  # Lié au résultat stratégique
+    "type_objectif": "global",
+    "resultat_strategique_id": 1,  # Lié au résultat stratégique (OBLIGATOIRE)
     "objectif_global_id": None,     # Pas de parent
     ...
 }
 ```
 
-### Objectif Spécifique (OPERATIONNEL)
+### Objectif Spécifique (specifique)
 ```python
 {
     "id": 5,
     "titre": "Mettre en place un système de suivi des décisions",
-    "type_objectif": "OPERATIONNEL",
+    "type_objectif": "specifique",
     "resultat_strategique_id": None,  # Pas directement lié
     "objectif_global_id": 1,          # Lié à l'objectif global #1
     ...
@@ -143,8 +144,12 @@ class ObjectifPerformance(SQLModel, table=True):
 ## Utilisation dans le Rapport
 
 - **Section "I.2. Politique ministérielle"** : Affiche la hiérarchie Orientation → Résultat → Objectif Global
-- **Sections programmes** : Utilise les objectifs spécifiques (OPERATIONNEL) pour détailler les actions
-- **Tableaux d'indicateurs** : Les indicateurs sont liés aux objectifs spécifiques (OPERATIONNEL) via `objectif_id`
+- **Sections programmes** : Utilise les objectifs spécifiques (SPECIFIQUE) pour détailler les actions
+- **Tableaux d'indicateurs** : Les indicateurs sont liés aux objectifs spécifiques (SPECIFIQUE) via `objectif_id`
+
+## Règle importante
+
+**Un Objectif Global (OG) est toujours lié à un Résultat Stratégique** via `resultat_strategique_id`. C'est une contrainte logique du système.
 
 
 

@@ -18,20 +18,34 @@ window.apiUrl = window.apiUrl || function(path) {
 /**
  * Wrapper de fetch qui préfixe automatiquement les URLs API
  * Remplace le fetch natif pour gérer automatiquement le root_path
+ * IMPORTANT: Toujours renvoyer une Response ou jeter l'erreur, jamais undefined
  */
 (function() {
     const originalFetch = window.fetch;
+    // Exposer originalFetch pour permettre l'utilisation du fetch natif si nécessaire
+    window.originalFetch = originalFetch;
     
-    window.fetch = function(url, options) {
-        // Si l'URL est une chaîne et commence par /api/, /static/, ou /uploads/
-        if (typeof url === 'string') {
-            if (url.startsWith('/api/') || url.startsWith('/static/') || url.startsWith('/uploads/')) {
-                url = window.apiUrl(url);
+    window.fetch = async function(url, options) {
+        try {
+            // Si l'URL est une chaîne et commence par /api/, /static/, ou /uploads/
+            if (typeof url === 'string') {
+                if (url.startsWith('/api/') || url.startsWith('/static/') || url.startsWith('/uploads/')) {
+                    url = window.apiUrl(url);
+                }
             }
+            
+            // Appeler le fetch original avec l'URL préfixée
+            const response = await originalFetch(url, options);
+            
+            // Toujours renvoyer la Response, même si elle n'est pas OK (400, 500, etc.)
+            // C'est à l'appelant de vérifier response.ok
+            return response;
+        } catch (error) {
+            // En cas d'erreur réseau (net::ERR_FAILED, etc.), on jette l'erreur
+            // On ne retourne JAMAIS undefined silencieusement
+            console.error('🔥 [fetch wrapper] Network error:', error);
+            throw error;
         }
-        
-        // Appeler le fetch original avec l'URL préfixée
-        return originalFetch(url, options);
     };
 })();
 
@@ -91,27 +105,54 @@ window.formDataHasFiles = function(formData) {
  * Nettoie un FormData en supprimant toutes les valeurs vides
  * Les champs vides ne seront pas envoyés (= null côté serveur pour champs optionnels)
  * 
+ * IMPORTANT: Pour les fichiers, on les ajoute directement sans itérer pour éviter de les consommer
+ * 
  * @param {FormData} formData - Le FormData à nettoyer
  * @returns {FormData} - Nouveau FormData nettoyé
  */
 window.cleanFormData = function(formData) {
     const cleaned = new FormData();
     
+    // Liste des champs obligatoires qui ne doivent JAMAIS être supprimés même s'ils sont vides
+    // (pour que FastAPI puisse lever une erreur de validation)
+    const requiredFields = ['sous_direction_id']; // Ajouter d'autres champs obligatoires si nécessaire
+    
+    // Liste des champs optionnels qui doivent être envoyés même s'ils sont vides
+    // (pour permettre de les mettre à None lors d'une modification)
+    const optionalFieldsToKeep = ['code', 'objectif_global_id', 'resultat_strategique_id', 'programme_id'];
+    
+    // Pour les fichiers, on doit les traiter différemment pour éviter de les consommer
+    // On itère une seule fois et on ajoute directement les fichiers
     for (const [key, value] of formData.entries()) {
-        // Si c'est un fichier, toujours l'ajouter
+        // Si c'est un fichier, toujours l'ajouter directement (sans modification)
         if (value instanceof File) {
             // N'ajouter que si le fichier a du contenu
             if (value.size > 0) {
                 cleaned.append(key, value);
             }
         }
-        // Si la valeur est vide, l'envoyer comme chaîne vide (le serveur convertira en null si besoin)
+        // Si c'est un champ obligatoire, toujours l'envoyer (même vide) pour que FastAPI puisse valider
+        else if (requiredFields.includes(key)) {
+            const finalValue = value === null || value === undefined ? '' : String(value);
+            cleaned.append(key, finalValue);
+        }
+        // Si c'est un champ optionnel spécial (objectif_global_id, resultat_strategique_id),
+        // toujours l'envoyer même s'il est vide (pour permettre de le mettre à None lors d'une modification)
+        else if (optionalFieldsToKeep.includes(key)) {
+            const finalValue = value === null || value === undefined ? '' : String(value);
+            cleaned.append(key, finalValue);
+        }
+        // Si la valeur est vide, ne pas l'envoyer (le serveur traitera comme None pour les champs optionnels)
+        // IMPORTANT: Pour les champs ID optionnels (qui se terminent par _id), on ne les envoie JAMAIS s'ils sont vides
+        // car FastAPI ne peut pas convertir une chaîne vide en int | None
         else if (value === '' || value === 'null' || value === 'undefined') {
-            cleaned.append(key, '');  // Envoyer explicitement la chaîne vide
+            // Ne pas ajouter les champs vides optionnels
+            // FastAPI traitera l'absence du champ comme None pour les paramètres optionnels (Form(None))
         }
         // Si la valeur est remplie, l'ajouter après nettoyage des espaces
         else {
-            cleaned.append(key, typeof value === 'string' ? value.trim() : value);
+            const trimmedValue = typeof value === 'string' ? value.trim() : value;
+            cleaned.append(key, trimmedValue);
         }
     }
     
@@ -132,13 +173,32 @@ window.cleanFormData = function(formData) {
  */
 window.submitFormAsJson = async function(url, formData, method = 'POST', forceFormData = false) {
     // Si le formulaire contient des fichiers ou forceFormData=true, envoyer en multipart/form-data
+    // IMPORTANT: Si forceFormData=true, ne pas appeler formDataHasFiles car cela itère sur formData.entries()
+    // et peut consommer le fichier avant qu'on puisse l'envoyer
     if (forceFormData || window.formDataHasFiles(formData)) {
         // Nettoyer le FormData (supprimer les valeurs vides des champs ID)
+        // ATTENTION: cleanFormData itère aussi sur formData.entries(), mais c'est nécessaire
+        // pour nettoyer les valeurs. Le fichier sera ajouté tel quel au nouveau FormData.
         const cleanedFormData = window.cleanFormData(formData);
-        return fetch(url, {
-            method: method,
-            body: cleanedFormData  // Pas de Content-Type, le navigateur le gère automatiquement
-        });
+        
+        try {
+            // Le wrapper fetch va automatiquement préfixer l'URL si elle commence par /api/
+            // Pour FormData, le navigateur gère automatiquement le Content-Type avec la boundary appropriée
+            const response = await window.fetch(url, {
+                method: method,
+                body: cleanedFormData
+            });
+            
+            // Vérifier que response existe (ne devrait jamais arriver avec le wrapper corrigé, mais sécurité)
+            if (!response) {
+                throw new Error('Aucune réponse du serveur (response est undefined)');
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('[submitFormAsJson] Erreur fetch:', error);
+            throw error;
+        }
     }
     
     // Sinon, convertir en JSON et nettoyer
@@ -240,6 +300,12 @@ window.hideLoading = window.hideLoading || function() {
             document.body.style.transition = 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out';
             document.body.style.opacity = '1';
             document.body.style.transform = 'translateY(0)';
+            
+            // Retirer le transform après l'animation pour permettre le positionnement fixed
+            setTimeout(function() {
+                document.body.style.transition = 'opacity 0.4s ease-in-out';
+                document.body.style.transform = '';
+            }, 400); // Après la durée de l'animation (0.4s)
         }, 10);
     });
 })();

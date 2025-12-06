@@ -21,6 +21,11 @@
   <!-- Statistiques -->
   <div class="stats-grid">
     <div class="stat-card">
+      <div class="stat-label">Cabinet</div>
+      <div class="stat-number">{{ nb_cabinets }}</div>
+    </div>
+    
+    <div class="stat-card">
       <div class="stat-label">Programmes</div>
       <div class="stat-number">{{ nb_programmes }}</div>
     </div>
@@ -28,6 +33,11 @@
     <div class="stat-card success">
       <div class="stat-label">Directions</div>
       <div class="stat-number">{{ nb_directions }}</div>
+    </div>
+    
+    <div class="stat-card info">
+      <div class="stat-label">Sous-directions</div>
+      <div class="stat-number">{{ nb_sous_directions }}</div>
     </div>
     
     <div class="stat-card secondary">
@@ -44,15 +54,48 @@
   <!-- Onglets -->
   <div class="card">
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('programmes')">📁 Programmes</button>
+      <button class="tab active" onclick="switchTab('cabinet')">🏛️ Cabinet</button>
+      <button class="tab" onclick="switchTab('programmes')">📁 Programmes</button>
       <button class="tab" onclick="switchTab('directions')">🏢 Directions</button>
+      <button class="tab" onclick="switchTab('sous-directions')">🏛️ Sous-directions</button>
       <button class="tab" onclick="switchTab('services')">📋 Services</button>
       <button class="tab" onclick="switchTab('grades')">🎓 Grades</button>
       <button class="tab" onclick="switchTab('categories')">📦 Catégories</button>
     </div>
 
+    <!-- TAB CABINET -->
+    <div id="tab-cabinet" class="tab-content active">
+      <div class="table-header">
+        <h3>🏛️ Cabinet du Ministre</h3>
+        <button id="btn-new-cabinet" class="btn btn-primary" onclick="openModal('cabinet')">➕ Nouveau Cabinet</button>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Responsable</th>
+              <th>Description</th>
+              <th>Statut</th>
+              <th class="is-centered">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="cabinet-tbody">
+            <tr class="loading-row">
+              <td colspan="6" class="table-placeholder">
+                <div class="placeholder-icon">⏳</div>
+                <p class="placeholder-text">Chargement...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- TAB PROGRAMMES -->
-    <div id="tab-programmes" class="tab-content active">
+    <div id="tab-programmes" class="tab-content">
       <div class="table-header">
         <h3>📁 Programmes Budgétaires</h3>
         <button class="btn btn-primary" onclick="openModal('programme')">➕ Nouveau Programme</button>
@@ -95,13 +138,44 @@
             <tr>
               <th>Code</th>
               <th>Libellé</th>
-              <th>Programme</th>
+              <th>Programme/Cabinet</th>
           <th>Directeur</th>
           <th>Statut</th>
           <th class="is-centered">Actions</th>
             </tr>
           </thead>
           <tbody id="directions-tbody">
+            <tr class="loading-row">
+              <td colspan="6" class="table-placeholder">
+                <div class="placeholder-icon">⏳</div>
+                <p class="placeholder-text">Chargement...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB SOUS-DIRECTIONS -->
+    <div id="tab-sous-directions" class="tab-content">
+      <div class="table-header">
+        <h3>🏛️ Sous-directions</h3>
+        <button class="btn btn-primary" onclick="openModal('sous-direction')">➕ Nouvelle Sous-direction</button>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Rattachement</th>
+              <th>Sous-directeur</th>
+              <th>Statut</th>
+              <th class="is-centered">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sous-directions-tbody">
             <tr class="loading-row">
               <td colspan="6" class="table-placeholder">
                 <div class="placeholder-icon">⏳</div>
@@ -126,7 +200,7 @@
             <tr>
               <th>Code</th>
               <th>Libellé</th>
-              <th>Direction</th>
+              <th>Rattachement</th>
               <th>Chef de Service</th>
           <th>Statut</th>
           <th class="is-centered">Actions</th>
@@ -208,43 +282,380 @@
 </div>
 
 <!-- Modal CRUD -->
-<div id="crudModal" class="modal">
+<div id="crudModal" class="modal-xl">
   <div class="modal-content">
     <div class="modal-header">
-      <h2 id="modal-title">Titre</h2>
-      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <h2 id="modal-title" class="modal-title">Titre</h2>
+      <span class="close" onclick="closeModal()">&times;</span>
     </div>
     
-    <form id="crudForm" onsubmit="handleSubmit(event)">
-      <div class="form-grid" id="modal-form-content">
+    <form id="crudForm" class="modal-body" onsubmit="handleSubmit(event)">
+      <div id="modal-form-content">
         <!-- Contenu dynamique -->
       </div>
-      
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
-      </div>
     </form>
+    
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button type="submit" form="crudForm" class="btn btn-primary">Enregistrer</button>
+    </div>
   </div>
 </div>
 
 {% endblock %}
 
-{% block styles %}{% endblock %}
+{% block styles %}
+<style>
+/* ========================================
+   PAGE RÉFÉRENTIELS - Styles spécifiques
+   ======================================== */
+
+.referentials-page {
+  padding: 0 1rem 3rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Statistiques */
+.referentials-page .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.referentials-page .stat-card {
+  background: var(--white-color);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-left: 4px solid var(--primary-color);
+}
+
+.referentials-page .stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.referentials-page .stat-card.success {
+  border-left-color: var(--success-color, #28a745);
+}
+
+.referentials-page .stat-card.secondary {
+  border-left-color: var(--secondary-color);
+}
+
+.referentials-page .stat-card.warning {
+  border-left-color: var(--warning-color, #ffc107);
+}
+
+.referentials-page .stat-label {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.referentials-page .stat-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  line-height: 1;
+}
+
+.referentials-page .stat-card.success .stat-number {
+  color: var(--success-color, #28a745);
+}
+
+.referentials-page .stat-card.secondary .stat-number {
+  color: var(--secondary-color);
+}
+
+.referentials-page .stat-card.warning .stat-number {
+  color: var(--warning-color, #ffc107);
+}
+
+.referentials-page .stat-card.info {
+  border-left-color: var(--info-color, #17a2b8);
+}
+
+.referentials-page .stat-card.info .stat-number {
+  color: var(--info-color, #17a2b8);
+}
+
+/* Onglets */
+.referentials-page .card {
+  background: var(--white-color);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.referentials-page .tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 2px solid var(--gray-200);
+  background: var(--gray-50);
+  overflow-x: auto;
+}
+
+.referentials-page .tab {
+  padding: 0.85rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gray-600);
+  transition: all 0.3s;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  border-radius: 6px 6px 0 0;
+}
+
+.referentials-page .tab:hover {
+  color: var(--primary-color);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.referentials-page .tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+  background: var(--white-color);
+}
+
+/* Contenu des onglets */
+.referentials-page .tab-content {
+  display: none;
+  padding: 1.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.referentials-page .tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* En-tête de table */
+.referentials-page .table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.referentials-page .table-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+/* Table responsive */
+.referentials-page .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* État de chargement */
+.referentials-page .loading-row {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.referentials-page .table-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: var(--gray-500);
+}
+
+.referentials-page .placeholder-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.referentials-page .placeholder-text {
+  font-size: 1rem;
+  color: var(--gray-500);
+}
+
+/* État vide */
+.referentials-page .empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.referentials-page .empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  background: var(--gray-50);
+  border-radius: 12px;
+  border: 2px dashed var(--gray-300);
+}
+
+.referentials-page .empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.referentials-page .empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 0.5rem;
+}
+
+.referentials-page .empty-state-text {
+  font-size: 0.95rem;
+  color: var(--gray-600);
+  line-height: 1.6;
+  max-width: 500px;
+}
+
+/* Modal - Structure fixe pour footer */
+#crudModal .modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 4rem);
+}
+
+#crudModal .modal-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+#crudModal .modal-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* Modal - Formulaire */
+#crudModal #modal-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+#crudModal #modal-form-content .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+#crudModal #modal-form-content .form-group label {
+  font-weight: 600;
+  color: var(--gray-700);
+  font-size: 0.9rem;
+}
+
+#crudModal #modal-form-content .form-group .form-control {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#crudModal #modal-form-content .form-group .form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+#crudModal #modal-form-content .form-group textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+#crudModal #modal-form-content .form-group .form-text {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  margin-top: 0.25rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .referentials-page {
+    padding: 0 0.5rem 2rem;
+  }
+  
+  .referentials-page .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+  
+  .referentials-page .tabs {
+    padding: 0.75rem 1rem;
+    gap: 0.25rem;
+  }
+  
+  .referentials-page .tab {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .referentials-page .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .referentials-page .tab-content {
+    padding: 1rem;
+  }
+}
+</style>
+{% endblock %}
 
 {% block scripts %}
 <script>
 let currentType = '';
 let editingId = null;
 let agents = []; // Liste des agents pour les responsables
+let cabinets = []; // Liste des cabinets
 let programmes = []; // Liste des programmes pour les directions
-let directions = []; // Liste des directions pour les services
+let directions = []; // Liste des directions pour les sous-directions
+let sousDirections = []; // Liste des sous-directions pour les services
 
 // Charger les données au démarrage
 document.addEventListener('DOMContentLoaded', function() {
   loadAgents(); // Charger la liste des agents
+  loadCabinets();
   loadProgrammes();
   loadDirections();
+  loadSousDirections();
   loadServices();
   loadGrades();
   loadCategories();
@@ -282,11 +693,17 @@ function switchTab(tabName) {
 // Fonction helper pour recharger les données d'une table
 async function reloadTableData(type) {
   switch(type) {
+    case 'cabinet':
+      await loadCabinets();
+      break;
     case 'programme':
       await loadProgrammes();
       break;
     case 'direction':
       await loadDirections();
+      break;
+    case 'sous-direction':
+      await loadSousDirections();
       break;
     case 'service':
       await loadServices();
@@ -297,6 +714,103 @@ async function reloadTableData(type) {
     case 'categorie':
       await loadCategories();
       break;
+  }
+}
+
+async function loadCabinets() {
+  try {
+    const response = await fetch("{{ url_for('api_list_cabinets_ref') }}");
+    cabinets = await response.json(); // Stocker dans la variable globale
+    
+    // Vérifier s'il y a un cabinet actif
+    const hasActiveCabinet = cabinets.some(c => c.actif === true);
+    
+    // Désactiver/activer le bouton "Nouveau Cabinet" selon qu'un cabinet actif existe
+    const newCabinetBtn = document.getElementById('btn-new-cabinet');
+    if (newCabinetBtn) {
+      if (hasActiveCabinet) {
+        newCabinetBtn.disabled = true;
+        newCabinetBtn.title = "Un cabinet actif existe déjà. Désactivez-le d'abord pour en créer un nouveau.";
+        newCabinetBtn.classList.add('disabled');
+        newCabinetBtn.style.opacity = '0.6';
+        newCabinetBtn.style.cursor = 'not-allowed';
+      } else {
+        newCabinetBtn.disabled = false;
+        newCabinetBtn.title = "";
+        newCabinetBtn.classList.remove('disabled');
+        newCabinetBtn.style.opacity = '1';
+        newCabinetBtn.style.cursor = 'pointer';
+      }
+    }
+    
+    const tbody = document.getElementById('cabinet-tbody');
+    
+    // Si aucun cabinet, afficher le message vide
+    if (cabinets.length === 0) {
+      tbody.innerHTML = `
+        <tr class="empty-state">
+          <td colspan="6">
+            <div class="empty-state-card">
+              <div class="empty-state-icon">🏛️</div>
+              <h4 class="empty-state-title">Aucun cabinet enregistré</h4>
+              <p class="empty-state-text">
+                Cliquez sur « ➕ Nouveau Cabinet » pour créer le cabinet du ministre.
+              </p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    tbody.innerHTML = cabinets.map(c => `
+      <tr>
+        <td><strong>${c.code}</strong></td>
+        <td>${c.libelle}</td>
+        <td>${c.responsable_nom || '<span class="text-muted">—</span>'}</td>
+        <td>${c.description || '<span class="text-muted">—</span>'}</td>
+        <td>
+          <span class="badge ${c.actif ? 'badge-success' : 'badge-secondary'}">
+            ${c.actif ? 'Actif' : 'Inactif'}
+          </span>
+        </td>
+        <td class="actions-cell">
+          <div class="action-buttons">
+            <button class="btn btn-sm btn-primary" onclick="openModal('cabinet', ${c.id})" title="Modifier">
+              ✏️
+            </button>
+            ${!c.actif ? `
+              <button class="btn btn-sm btn-success" onclick="reactivateItem('cabinet', ${c.id})" title="Réactiver">
+                ♻️
+              </button>
+            ` : `
+              <button class="btn btn-sm btn-warning" onclick="deactivateItem('cabinet', ${c.id})" title="Désactiver">
+                ⏸️
+              </button>
+            `}
+            <button class="btn btn-sm btn-danger" onclick="deleteItem('cabinet', ${c.id})" title="Supprimer définitivement">
+              🗑️
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  } catch (error) {
+    console.error('Erreur chargement cabinets:', error);
+    const tbody = document.getElementById('cabinet-tbody');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr class="empty-state">
+          <td colspan="6">
+            <div class="empty-state-card">
+              <div class="empty-state-icon">⚠️</div>
+              <h4 class="empty-state-title">Erreur de chargement</h4>
+              <p class="empty-state-text">Impossible de charger les cabinets. Veuillez réessayer.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
@@ -315,7 +829,7 @@ async function loadProgrammes() {
             <div class="empty-state-icon">📁</div>
             <h4 class="empty-state-title">Aucun programme enregistré</h4>
             <p class="empty-state-text">
-              Cliquez sur « ➕ Nouveau Programme » pour créer votre premier programme budgétaire.
+              Cliquez sur « ➕ Nouveau Programme » pour créer votre premier programme budgétaire.
             </p>
           </div>
         </td>
@@ -386,7 +900,7 @@ async function loadDirections() {
       <tr>
         <td><strong>${d.code}</strong></td>
         <td>${d.libelle}</td>
-        <td>${d.programme_libelle || '<span class="text-muted">—</span>'}</td>
+        <td>${d.programme_libelle || d.cabinet_libelle || '<span class="text-muted">—</span>'}</td>
         <td>${d.directeur_nom || '<span class="text-muted">—</span>'}</td>
         <td>
           <span class="badge ${d.actif ? 'badge-success' : 'badge-danger'}">
@@ -414,6 +928,118 @@ async function loadDirections() {
         </td>
       </tr>
   `).join('');
+}
+
+async function loadSousDirections() {
+  try {
+    const response = await fetch("{{ url_for('api_list_sous_directions_ref') }}");
+    
+    if (!response.ok) {
+      console.error('Erreur chargement sous-directions:', response.status, response.statusText);
+      const tbody = document.getElementById('sous-directions-tbody');
+      tbody.innerHTML = `
+        <tr class="empty-state">
+          <td colspan="6">
+            <div class="empty-state-card">
+              <div class="empty-state-icon">⚠️</div>
+              <h4 class="empty-state-title">Erreur de chargement</h4>
+              <p class="empty-state-text">
+                Impossible de charger les sous-directions. Vérifiez que la table existe dans la base de données.
+              </p>
+            </div>
+          </td>
+        </tr>
+      `;
+      sousDirections = []; // Initialiser comme tableau vide
+      return;
+    }
+    
+    const data = await response.json();
+    // S'assurer que data est un tableau
+    sousDirections = Array.isArray(data) ? data : []; // Stocker dans la variable globale
+    
+    const tbody = document.getElementById('sous-directions-tbody');
+    
+    // Si aucune sous-direction, afficher le message vide
+    if (sousDirections.length === 0) {
+      tbody.innerHTML = `
+        <tr class="empty-state">
+          <td colspan="6">
+            <div class="empty-state-card">
+              <div class="empty-state-icon">🏛️</div>
+              <h4 class="empty-state-title">Aucune sous-direction enregistrée</h4>
+              <p class="empty-state-text">
+                Cliquez sur « ➕ Nouvelle Sous-direction » pour créer votre première sous-direction.
+              </p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    tbody.innerHTML = sousDirections.map(sd => {
+      let parentLabel = '<span class="text-muted">—</span>';
+      if (sd.direction_libelle) {
+        parentLabel = `<span title="Direction">🏢 ${sd.direction_libelle}</span>`;
+      } else if (sd.programme_libelle) {
+        parentLabel = `<span title="Programme">📁 ${sd.programme_libelle}</span>`;
+      } else if (sd.cabinet_libelle) {
+        parentLabel = `<span title="Cabinet">🏛️ ${sd.cabinet_libelle}</span>`;
+      }
+      return `
+        <tr>
+          <td><strong>${sd.code}</strong></td>
+          <td>${sd.libelle}</td>
+          <td>${parentLabel}</td>
+          <td>${sd.chef_sous_direction_nom || '<span class="text-muted">—</span>'}</td>
+          <td>
+            <span class="badge ${sd.actif ? 'badge-success' : 'badge-danger'}">
+              ${sd.actif ? 'Actif' : 'Inactif'}
+            </span>
+          </td>
+          <td class="actions-cell">
+            <div class="action-buttons">
+              <button class="btn btn-sm btn-primary" onclick="openModal('sous-direction', ${sd.id})" title="Modifier">
+                ✏️
+              </button>
+              ${!sd.actif ? `
+                <button class="btn btn-sm btn-success" onclick="reactivateItem('sous-direction', ${sd.id})" title="Réactiver">
+                  ♻️
+                </button>
+              ` : `
+                <button class="btn btn-sm btn-warning" onclick="deactivateItem('sous-direction', ${sd.id})" title="Désactiver">
+                  ⏸️
+                </button>
+              `}
+              <button class="btn btn-sm btn-danger" onclick="deleteItem('sous-direction', ${sd.id})" title="Supprimer définitivement">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Erreur chargement sous-directions:', error);
+    const tbody = document.getElementById('sous-directions-tbody');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr class="empty-state">
+          <td colspan="6">
+            <div class="empty-state-card">
+              <div class="empty-state-icon">⚠️</div>
+              <h4 class="empty-state-title">Erreur de chargement</h4>
+              <p class="empty-state-text">
+                Une erreur s'est produite lors du chargement des sous-directions.
+              </p>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+    sousDirections = []; // Initialiser comme tableau vide
+  }
 }
 
 async function loadServices() {
@@ -446,11 +1072,22 @@ async function loadServices() {
     return;
   }
   
-  tbody.innerHTML = services.map(s => `
+  tbody.innerHTML = services.map(s => {
+    let parentLabel = '<span class="text-muted">—</span>';
+    if (s.sous_direction_libelle) {
+      parentLabel = `<span title="Sous-direction">🏛️ ${s.sous_direction_libelle}</span>`;
+    } else if (s.direction_libelle) {
+      parentLabel = `<span title="Direction">🏢 ${s.direction_libelle}</span>`;
+    } else if (s.programme_libelle) {
+      parentLabel = `<span title="Programme">📁 ${s.programme_libelle}</span>`;
+    } else if (s.cabinet_libelle) {
+      parentLabel = `<span title="Cabinet">🏛️ ${s.cabinet_libelle}</span>`;
+    }
+    return `
       <tr>
         <td><strong>${s.code}</strong></td>
         <td>${s.libelle}</td>
-        <td>${s.direction_libelle || '<span class="text-muted">—</span>'}</td>
+        <td>${parentLabel}</td>
         <td>${s.chef_service_nom || '<span class="text-muted">—</span>'}</td>
         <td>
           <span class="badge ${s.actif ? 'badge-success' : 'badge-danger'}">
@@ -475,9 +1112,39 @@ async function loadServices() {
               🗑️
             </button>
           </div>
-      </td>
-    </tr>
-  `).join('');
+        </td>
+      </tr>
+      `;
+    }).join('');
+}
+
+// Fonction pour extraire la lettre de catégorie (A, B, C, D) - GLOBALE
+function extractCategoryLetter(categorie) {
+  if (!categorie) return '';
+  const catStr = String(categorie).trim();
+  
+  // Si c'est juste une lettre (A, B, C, D), retourner en majuscule
+  if (catStr.length === 1) {
+    return catStr.toUpperCase();
+  }
+  
+  // Split sur "-" et prendre la partie de gauche
+  if (catStr.includes('-')) {
+    const leftPart = catStr.split('-')[0].trim();
+    // Si ça commence par "Catégorie ", enlever ce préfixe
+    if (leftPart.startsWith('Catégorie ')) {
+      return leftPart.replace(/^Catégorie\s+/, '').trim().toUpperCase();
+    }
+    return leftPart.toUpperCase();
+  }
+  
+  return catStr.toUpperCase();
+}
+
+// Fonction pour formater l'affichage de la catégorie - GLOBALE
+function formatCategory(categorie) {
+  if (!categorie) return '—';
+  return extractCategoryLetter(categorie);
 }
 
 async function loadGrades() {
@@ -495,7 +1162,7 @@ async function loadGrades() {
             <div class="empty-state-icon">🎓</div>
             <h4 class="empty-state-title">Aucun grade enregistré</h4>
             <p class="empty-state-text">
-              Cliquez sur « ➕ Nouveau Grade » pour créer votre premier grade de la fonction publique.
+              Cliquez sur « ➕ Nouveau Grade » pour créer votre premier grade de la fonction publique.
             </p>
           </div>
         </td>
@@ -504,11 +1171,25 @@ async function loadGrades() {
     return;
   }
   
-  tbody.innerHTML = grades.map(g => `
+  // Fonction pour obtenir la couleur du badge selon la catégorie
+  function getCategoryBadgeClass(categorie) {
+    if (!categorie) return 'badge-info';
+    const cat = categorie.toString().toUpperCase();
+    if (cat.startsWith('A')) return 'badge-primary';
+    if (cat.startsWith('B')) return 'badge-info';
+    if (cat.startsWith('C')) return 'badge-warning';
+    if (cat.startsWith('D')) return 'badge-secondary';
+    return 'badge-info';
+  }
+  
+  tbody.innerHTML = grades.map(g => {
+    const categoryDisplay = formatCategory(g.categorie);
+    const categoryFull = g.categorie || '';
+    return `
     <tr>
       <td><strong>${g.code}</strong></td>
       <td>${g.libelle}</td>
-      <td><span class="badge badge-info">${g.categorie}</span></td>
+      <td><span class="badge ${getCategoryBadgeClass(g.categorie)}" title="${categoryFull}">${categoryDisplay}</span></td>
       <td>${g.echelon_min} - ${g.echelon_max}</td>
       <td>
         <span class="badge ${g.actif ? 'badge-success' : 'badge-danger'}">
@@ -535,7 +1216,8 @@ async function loadGrades() {
         </div>
       </td>
     </tr>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // ============================================
@@ -585,6 +1267,15 @@ async function loadCategories() {
 }
 
 function openModal(type, id = null) {
+  // Vérifier si on essaie de créer un nouveau cabinet alors qu'un cabinet actif existe
+  if (type === 'cabinet' && !id) {
+    const hasActiveCabinet = cabinets.some(c => c.actif === true);
+    if (hasActiveCabinet) {
+      showError("Un cabinet actif existe déjà. Désactivez-le d'abord pour en créer un nouveau.");
+      return;
+    }
+  }
+  
   currentType = type;
   editingId = id;
   
@@ -594,8 +1285,10 @@ function openModal(type, id = null) {
   
   // Définir le titre
   const titles = {
+    'cabinet': id ? 'Modifier Cabinet' : 'Nouveau Cabinet',
     'programme': id ? 'Modifier Programme' : 'Nouveau Programme',
     'direction': id ? 'Modifier Direction' : 'Nouvelle Direction',
+    'sous-direction': id ? 'Modifier Sous-direction' : 'Nouvelle Sous-direction',
     'service': id ? 'Modifier Service' : 'Nouveau Service',
     'grade': id ? 'Modifier Grade' : 'Nouveau Grade',
     'categorie': id ? 'Modifier Catégorie' : 'Nouvelle Catégorie'
@@ -603,7 +1296,41 @@ function openModal(type, id = null) {
   title.textContent = titles[type];
   
   // Générer le formulaire selon le type
-  if (type === 'programme') {
+  if (type === 'cabinet') {
+    formContent.innerHTML = `
+      <div class="form-group">
+        <label>Code *</label>
+        <input type="text" name="code" id="field-code" required placeholder="Ex: CAB" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Libellé *</label>
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Cabinet du Ministre" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" id="field-description" rows="3" class="form-control"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Responsable du Cabinet</label>
+        <select name="responsable_id" id="field-responsable_id" class="form-control">
+          <option value="">-- Aucun responsable --</option>
+          ${agents.map(a => `<option value="${a.id}">${a.nom} ${a.prenom} (${a.matricule})</option>`).join('')}
+        </select>
+      </div>
+      ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
+    `;
+    
+    // Charger les données si on édite
+    if (id) {
+      const cabinet = cabinets.find(c => c.id === id);
+      if (cabinet) {
+        document.getElementById('field-code').value = cabinet.code || '';
+        document.getElementById('field-libelle').value = cabinet.libelle || '';
+        document.getElementById('field-description').value = cabinet.description || '';
+        document.getElementById('field-responsable_id').value = cabinet.responsable_id || '';
+      }
+    }
+  } else if (type === 'programme') {
     formContent.innerHTML = `
       <div class="form-group">
         <label>Code *</label>
@@ -667,14 +1394,60 @@ function openModal(type, id = null) {
       <div class="form-group">
         <label>Programme</label>
         <select name="programme_id" id="field-programme_id" class="form-control">
-          <option value="">-- Aucun --</option>
+          <option value="">-- Aucun (rattaché au Cabinet) --</option>
           ${programmes.map(p => `<option value="${p.id}">${p.code} - ${p.libelle}</option>`).join('')}
         </select>
+        <small class="form-text text-muted">Si aucun programme n'est sélectionné, la direction sera automatiquement rattachée au Cabinet.</small>
       </div>
       <div class="form-group">
         <label>Directeur</label>
         <select name="directeur_id" id="field-directeur_id" class="form-control">
           <option value="">-- Aucun directeur --</option>
+          ${agents.map(a => `<option value="${a.id}">${a.nom} ${a.prenom} (${a.matricule})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" id="field-description" rows="3" class="form-control"></textarea>
+      </div>
+      ${id ? '<input type="hidden" name="actif" id="field-actif" value="true">' : ''}
+    `;
+  } else if (type === 'sous-direction') {
+    formContent.innerHTML = `
+      <div class="form-group">
+        <label>Code *</label>
+        <input type="text" name="code" id="field-code" required placeholder="Ex: SD01" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Libellé *</label>
+        <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Sous-direction Administrative" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Rattachement *</label>
+        <small class="form-text text-muted" style="display: block; margin-bottom: 0.5rem;">Sélectionnez un seul parent (Direction, Programme ou Cabinet)</small>
+        <select name="direction_id" id="field-direction_id" class="form-control" onchange="handleParentSelection('sous-direction')">
+          <option value="">-- Direction --</option>
+          ${directions.map(d => `<option value="${d.id}">${d.code} - ${d.libelle}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <select name="programme_id" id="field-programme_id" class="form-control" onchange="handleParentSelection('sous-direction')">
+          <option value="">-- Programme --</option>
+          ${programmes.map(p => `<option value="${p.id}">${p.code} - ${p.libelle}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <select name="cabinet_id" id="field-cabinet_id" class="form-control" onchange="handleParentSelection('sous-direction')">
+          <option value="">-- Cabinet --</option>
+          ${cabinets.filter(c => c.actif).map(c => `<option value="${c.id}">${c.code} - ${c.libelle}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sous-directeur</label>
+        <select name="chef_sous_direction_id" id="field-chef_sous_direction_id" class="form-control">
+          <option value="">-- Aucun chef --</option>
           ${agents.map(a => `<option value="${a.id}">${a.nom} ${a.prenom} (${a.matricule})</option>`).join('')}
         </select>
       </div>
@@ -695,10 +1468,32 @@ function openModal(type, id = null) {
         <input type="text" name="libelle" id="field-libelle" required placeholder="Ex: Service Comptabilité" class="form-control">
       </div>
       <div class="form-group">
-        <label>Direction</label>
-        <select name="direction_id" id="field-direction_id" class="form-control">
-          <option value="">-- Aucune --</option>
+        <label>Rattachement *</label>
+        <small class="form-text text-muted" style="display: block; margin-bottom: 0.5rem;">Sélectionnez un seul parent (Sous-direction, Direction, Programme ou Cabinet)</small>
+        <select name="sous_direction_id" id="field-sous_direction_id" class="form-control" onchange="handleParentSelection('service')">
+          <option value="">-- Sous-direction --</option>
+          ${sousDirections.map(sd => `<option value="${sd.id}">${sd.code} - ${sd.libelle}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <select name="direction_id" id="field-direction_id" class="form-control" onchange="handleParentSelection('service')">
+          <option value="">-- Direction --</option>
           ${directions.map(d => `<option value="${d.id}">${d.code} - ${d.libelle}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <select name="programme_id" id="field-programme_id" class="form-control" onchange="handleParentSelection('service')">
+          <option value="">-- Programme --</option>
+          ${programmes.map(p => `<option value="${p.id}">${p.code} - ${p.libelle}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <select name="cabinet_id" id="field-cabinet_id" class="form-control" onchange="handleParentSelection('service')">
+          <option value="">-- Cabinet --</option>
+          ${cabinets.filter(c => c.actif).map(c => `<option value="${c.id}">${c.code} - ${c.libelle}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
@@ -727,11 +1522,17 @@ function openModal(type, id = null) {
       <div class="form-group">
         <label>Catégorie *</label>
         <select name="categorie" id="field-categorie" required class="form-control">
-          <option value="A">A - Cadres supérieurs</option>
-          <option value="B">B - Cadres moyens</option>
-          <option value="C">C - Agents d'exécution</option>
-          <option value="D">D - Personnel de soutien</option>
+          <option value="A">A - Cadres supérieurs / Attachés / Administrateurs (Bac+4 et plus)</option>
+          <option value="B">B - Agents de maîtrise / Contrôleurs (Bac, Bac+2 ou équivalent)</option>
+          <option value="C">C - Adjoints administratifs / Agents d'exécution (BEPC ou CAP)</option>
+          <option value="D">D - Agents d'exécution de base (Niveau primaire ou sans diplôme)</option>
         </select>
+        <small class="form-text text-muted">
+          <strong>Catégorie A:</strong> Administrateurs, Inspecteurs, Conseillers, Directeurs<br>
+          <strong>Catégorie B:</strong> Contrôleurs, Techniciens supérieurs, Secrétaires administratifs<br>
+          <strong>Catégorie C:</strong> Adjoints administratifs, Agents de bureau, Agents techniques<br>
+          <strong>Catégorie D:</strong> Manœuvres, Agents d'entretien, Coursiers, Ouvriers d'État
+        </small>
       </div>
       <div class="form-group">
         <label>Échelon Min *</label>
@@ -765,27 +1566,106 @@ function openModal(type, id = null) {
     loadFormData(type, id);
   }
   
-  modal.classList.add('show');
+  showModal('crudModal');
+}
+
+// Fonctions pour gérer les modales
+function showModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+  }
+}
+
+function hideModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+  }
 }
 
 function closeModal() {
-  const modal = document.getElementById('crudModal');
-  modal.classList.remove('show');
+  hideModal('crudModal');
   document.getElementById('crudForm').reset();
   editingId = null;
 }
 
+// Fonction pour gérer l'exclusion mutuelle des champs de rattachement
+function handleParentSelection(type) {
+  if (type === 'sous-direction') {
+    const directionId = document.getElementById('field-direction_id');
+    const programmeId = document.getElementById('field-programme_id');
+    const cabinetId = document.getElementById('field-cabinet_id');
+    
+    const selectedFields = [directionId, programmeId, cabinetId].filter(f => f && f.value);
+    
+    if (selectedFields.length > 1) {
+      // Si plusieurs champs sont sélectionnés, réinitialiser tous sauf celui qui vient d'être modifié
+      const changedField = event.target;
+      [directionId, programmeId, cabinetId].forEach(field => {
+        if (field && field !== changedField && field.value) {
+          field.value = '';
+        }
+      });
+    }
+  } else if (type === 'service') {
+    const sousDirectionId = document.getElementById('field-sous_direction_id');
+    const directionId = document.getElementById('field-direction_id');
+    const programmeId = document.getElementById('field-programme_id');
+    const cabinetId = document.getElementById('field-cabinet_id');
+    
+    const selectedFields = [sousDirectionId, directionId, programmeId, cabinetId].filter(f => f && f.value);
+    
+    if (selectedFields.length > 1) {
+      // Si plusieurs champs sont sélectionnés, réinitialiser tous sauf celui qui vient d'être modifié
+      const changedField = event.target;
+      [sousDirectionId, directionId, programmeId, cabinetId].forEach(field => {
+        if (field && field !== changedField && field.value) {
+          field.value = '';
+        }
+      });
+    }
+  }
+}
+
 async function loadFormData(type, id) {
-  const response = await fetch(`/api/v1/referentiels/api/${type}s`);
+  // Gérer le cas spécial de 'sous-direction' qui utilise un tiret
+  let apiType;
+  if (type === 'sous-direction') {
+    apiType = 'sous-directions';
+  } else if (type === 'cabinet') {
+    apiType = 'cabinets';
+  } else {
+    apiType = `${type}s`;
+  }
+  const response = await fetch(`/api/v1/referentiels/api/${apiType}`);
   const items = await response.json();
   const item = items.find(i => i.id === id);
   
   if (item) {
     Object.keys(item).forEach(key => {
       const field = document.getElementById(`field-${key}`);
-      if (field && item[key] != null && item[key] !== '' && item[key] !== "None") {
-        // Ne remplir que si la valeur existe (évite les problèmes de validation sur champs vides)
-        field.value = item[key];
+      if (field) {
+        // Gestion spéciale pour le champ categorie (grade)
+        if (key === 'categorie' && type === 'grade') {
+          const categorieValue = item[key];
+          if (categorieValue) {
+            // Utiliser la fonction extractCategoryLetter pour extraire la lettre (A, B, C, D)
+            field.value = extractCategoryLetter(categorieValue);
+          }
+        } else {
+          // Pour les autres champs
+          // Pour les champs select (comme sous_direction_id), on doit gérer null/undefined différemment
+          if (item[key] != null && item[key] !== '' && item[key] !== "None") {
+            // Convertir en string pour les champs select
+            field.value = String(item[key]);
+          } else if (field.tagName === 'SELECT') {
+            // Pour les selects, laisser vide si la valeur est null/undefined
+            field.value = '';
+          }
+        }
       }
     });
   }
@@ -806,11 +1686,17 @@ async function handleSubmit(event) {
   if (editingId && editingId !== null && editingId !== 'null') {
     // Modification
     switch(currentType) {
+      case 'cabinet':
+        url = "{{ url_for('api_update_cabinet', cabinet_id=0) }}".replace('/0', `/${editingId}`);
+        break;
       case 'programme':
         url = "{{ url_for('api_update_programme', programme_id=0) }}".replace('/0', `/${editingId}`);
         break;
       case 'direction':
         url = "{{ url_for('api_update_direction', direction_id=0) }}".replace('/0', `/${editingId}`);
+        break;
+      case 'sous-direction':
+        url = "{{ url_for('api_update_sous_direction', sous_direction_id=0) }}".replace('/0', `/${editingId}`);
         break;
       case 'service':
         url = "{{ url_for('api_update_service', service_id=0) }}".replace('/0', `/${editingId}`);
@@ -825,11 +1711,17 @@ async function handleSubmit(event) {
   } else {
     // Création
     switch(currentType) {
+      case 'cabinet':
+        url = "{{ url_for('api_create_cabinet') }}";
+        break;
       case 'programme':
         url = "{{ url_for('api_create_programme') }}";
         break;
       case 'direction':
         url = "{{ url_for('api_create_direction') }}";
+        break;
+      case 'sous-direction':
+        url = "{{ url_for('api_create_sous_direction') }}";
         break;
       case 'service':
         url = "{{ url_for('api_create_service') }}";
@@ -855,11 +1747,17 @@ async function handleSubmit(event) {
       
       // Recharger uniquement les données de la table concernée
       switch(currentType) {
+        case 'cabinet':
+          await loadCabinets();
+          break;
         case 'programme':
           await loadProgrammes();
           break;
         case 'direction':
           await loadDirections();
+          break;
+        case 'sous-direction':
+          await loadSousDirections();
           break;
         case 'service':
           await loadServices();
@@ -933,11 +1831,17 @@ async function reactivateItem(type, id) {
   // Construire l'URL avec url_for selon le type
   let url;
   switch(type) {
+    case 'cabinet':
+      url = "{{ url_for('api_reactivate_cabinet', cabinet_id=0) }}".replace('/0', `/${id}`);
+      break;
     case 'programme':
       url = "{{ url_for('api_reactivate_programme', programme_id=0) }}".replace('/0', `/${id}`);
       break;
     case 'direction':
       url = "{{ url_for('api_reactivate_direction', direction_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'sous-direction':
+      url = "{{ url_for('api_reactivate_sous_direction', sous_direction_id=0) }}".replace('/0', `/${id}`);
       break;
     case 'service':
       url = "{{ url_for('api_reactivate_service', service_id=0) }}".replace('/0', `/${id}`);
@@ -1002,11 +1906,17 @@ async function deactivateItem(type, id) {
   // Construire l'URL avec url_for selon le type
   let url;
   switch(type) {
+    case 'cabinet':
+      url = "{{ url_for('api_delete_cabinet', cabinet_id=0) }}".replace('/0', `/${id}`);
+      break;
     case 'programme':
       url = "{{ url_for('api_delete_programme', programme_id=0) }}".replace('/0', `/${id}`);
       break;
     case 'direction':
       url = "{{ url_for('api_delete_direction', direction_id=0) }}".replace('/0', `/${id}`);
+      break;
+    case 'sous-direction':
+      url = "{{ url_for('api_delete_sous_direction', sous_direction_id=0) }}".replace('/0', `/${id}`);
       break;
     case 'service':
       url = "{{ url_for('api_delete_service', service_id=0) }}".replace('/0', `/${id}`);
@@ -1074,11 +1984,17 @@ async function deleteItem(type, id) {
   // Construire l'URL avec url_for selon le type (avec hard_delete=true)
   let url;
   switch(type) {
+    case 'cabinet':
+      url = "{{ url_for('api_delete_cabinet', cabinet_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
+      break;
     case 'programme':
       url = "{{ url_for('api_delete_programme', programme_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
       break;
     case 'direction':
       url = "{{ url_for('api_delete_direction', direction_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
+      break;
+    case 'sous-direction':
+      url = "{{ url_for('api_delete_sous_direction', sous_direction_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';
       break;
     case 'service':
       url = "{{ url_for('api_delete_service', service_id=0) }}".replace('/0', `/${id}`) + '?hard_delete=true';

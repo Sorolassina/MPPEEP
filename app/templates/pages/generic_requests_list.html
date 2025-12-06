@@ -1,0 +1,172 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}{{ module|upper }} – Demandes · {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.rh-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set module_names = {
+    'rh': 'Ressources Humaines',
+    'budget': 'Budget',
+    'stock': 'Stock',
+    'performance': 'Performance',
+    'personnel': 'Personnel',
+    'besoins': 'Besoins'
+} %}
+{% set module_home_routes = {
+    'rh': 'rh_home',
+    'budget': 'budget_home',
+    'stock': 'stock_home',
+    'performance': 'performance_home',
+    'personnel': 'personnel_home',
+    'besoins': 'besoins_home'
+} %}
+{% set module_name = module_names.get(module, module|title) %}
+{% set module_home_route = module_home_routes.get(module, 'accueil') %}
+
+{{ page_header(
+    title='📋 Demandes ' + module_name,
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': module_name, 'url': url_for(module_home_route)},
+        {'name': 'Demandes'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for(module_home_route), 'primary': False},
+        {'label': '📝 Nouvelle demande', 'url': url_for('generic_request_new', module=module), 'primary': True, 'disabled': current_user.is_guest}
+    ]
+) }}
+
+<div class="rh-page">
+  {% if current_user.is_guest %}
+  <div class="notice-banner">
+    <span class="banner-icon">🎯</span>
+    <div class="banner-content">
+      <strong>Mode Démonstration</strong>
+      <p>Vous consultez des données fictives pour explorer les fonctionnalités.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Liste des demandes récentes -->
+  <section class="rh-table-card">
+    <header class="section-header">
+      <div class="section-header-icon">📋</div>
+      <div class="section-header-text">
+        <h3>Demandes récentes ({{ demandes|length }})</h3>
+        <p>Dernières demandes soumises</p>
+      </div>
+    </header>
+    {% if demandes and demandes|length > 0 %}
+    <div class="data-table">
+    <table class="rh-data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Objet</th>
+          <th>Demandeur</th>
+          <th>État</th>
+          <th>Créée le</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for demande in demandes %}
+        <tr>
+          <td>#{{ demande.id }}</td>
+          <td><span class="badge">{{ demande.type }}</span></td>
+          <td>{{ demande.objet[:50] }}{% if demande.objet|length > 50 %}...{% endif %}</td>
+          <td>#{{ demande.demandeur_id }}</td>
+          <td>
+            <span class="badge badge-{{ demande.current_state.value|lower|replace(' ', '-') }}">
+              {{ demande.current_state.value }}
+            </span>
+          </td>
+          <td>{{ demande.created_at.strftime('%d/%m/%Y %H:%M') if demande.created_at else '—' }}</td>
+          <td>
+            <a href="{{ url_for('generic_request_detail', module=module, request_id=demande.id) }}" class="btn btn-sm btn-primary">
+              👁️ Voir
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <h3>Aucune demande</h3>
+      <p>Il n'y a pas encore de demandes dans ce module.</p>
+      {% if not current_user.is_guest %}
+      <a href="{{ url_for('generic_request_new', module=module) }}" class="btn btn-primary">
+        ➕ Créer une demande
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Demandes en attente de validation -->
+  {% if pending_requests and pending_requests|length > 0 %}
+  <section class="rh-table-card">
+    <header class="section-header">
+      <div class="section-header-icon">⏳</div>
+      <div class="section-header-text">
+        <h3>Demandes en attente de validation ({{ pending_requests|length }})</h3>
+        <p>Demandes nécessitant votre action</p>
+      </div>
+    </header>
+    <div class="data-table">
+    <table class="rh-data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Objet</th>
+          <th>Demandeur</th>
+          <th>État</th>
+          <th>Créée le</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for demande in pending_requests %}
+        <tr>
+          <td>#{{ demande.id }}</td>
+          <td><span class="badge">{{ demande.type }}</span></td>
+          <td>{{ demande.objet[:50] }}{% if demande.objet|length > 50 %}...{% endif %}</td>
+          <td>#{{ demande.demandeur_id }}</td>
+          <td>
+            <span class="badge badge-warning">
+              {{ demande.current_state.value }}
+            </span>
+          </td>
+          <td>{{ demande.created_at.strftime('%d/%m/%Y %H:%M') if demande.created_at else '—' }}</td>
+          <td>
+            <a href="{{ url_for('generic_request_detail', module=module, request_id=demande.id) }}" class="btn btn-sm btn-primary">
+              ✅ Valider
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+

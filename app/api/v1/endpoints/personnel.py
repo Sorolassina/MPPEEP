@@ -14,7 +14,7 @@ from sqlmodel import Session, func, or_, select
 
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.config import settings
-from app.core.enums import GradeCategory, PositionAdministrative, SituationFamiliale, TypeDocument
+from app.core.enums import GradeCategory, PositionAdministrative, RoleBudgetaire, SituationFamiliale, TypeDocument
 from app.core.logging_config import get_logger
 from app.core.permission_decorators import require_data_access, require_module_dep
 from app.db.session import get_session
@@ -143,8 +143,18 @@ def personnel_nouveau(
     services = session.exec(select(Service).where(Service.actif).order_by(Service.libelle)).all()
 
     directions = session.exec(select(Direction).where(Direction.actif).order_by(Direction.libelle)).all()
+    
+    # Charger les sous-directions (avec gestion d'erreur si la table n'existe pas)
+    from app.models.personnel import SousDirection
+    try:
+        sous_directions = session.exec(select(SousDirection).where(SousDirection.actif).order_by(SousDirection.libelle)).all()
+    except Exception:
+        sous_directions = []
 
     programmes = session.exec(select(Programme).where(Programme.actif).order_by(Programme.libelle)).all()
+
+    # Convertir l'enum en liste pour l'itération dans Jinja2
+    role_budgetaire_list = list(RoleBudgetaire)
 
     return templates.TemplateResponse(
         "pages/personnel_form.html",
@@ -154,9 +164,11 @@ def personnel_nouveau(
             grades=grades,
             services=services,
             directions=directions,
+            sous_directions=sous_directions,
             programmes=programmes,
             PositionAdministrative=PositionAdministrative,
             SituationFamiliale=SituationFamiliale,
+            RoleBudgetaire=role_budgetaire_list,
             current_user=current_user,
         ),
     )
@@ -180,8 +192,18 @@ def personnel_edit(
     services = session.exec(select(Service).where(Service.actif).order_by(Service.libelle)).all()
 
     directions = session.exec(select(Direction).where(Direction.actif).order_by(Direction.libelle)).all()
+    
+    # Charger les sous-directions (avec gestion d'erreur si la table n'existe pas)
+    from app.models.personnel import SousDirection
+    try:
+        sous_directions = session.exec(select(SousDirection).where(SousDirection.actif).order_by(SousDirection.libelle)).all()
+    except Exception:
+        sous_directions = []
 
     programmes = session.exec(select(Programme).where(Programme.actif).order_by(Programme.libelle)).all()
+
+    # Convertir l'enum en liste pour l'itération dans Jinja2
+    role_budgetaire_list = list(RoleBudgetaire)
 
     return templates.TemplateResponse(
         "pages/personnel_form.html",
@@ -192,9 +214,11 @@ def personnel_edit(
             grades=grades,
             services=services,
             directions=directions,
+            sous_directions=sous_directions,
             programmes=programmes,
             PositionAdministrative=PositionAdministrative,
             SituationFamiliale=SituationFamiliale,
+            RoleBudgetaire=role_budgetaire_list,
             current_user=current_user,
         ),
     )
@@ -215,8 +239,10 @@ def personnel_detail(
     # Récupérer le grade
     grade = session.get(GradeComplet, agent.grade_id) if agent.grade_id else None
 
-    # Récupérer le service/direction/programme
+    # Récupérer le service/sous-direction/direction/programme
     service = session.get(Service, agent.service_id) if agent.service_id else None
+    from app.models.personnel import SousDirection
+    sous_direction = session.get(SousDirection, agent.sous_direction_id) if agent.sous_direction_id else None
     direction = session.get(Direction, agent.direction_id) if agent.direction_id else None
     programme = session.get(Programme, agent.programme_id) if agent.programme_id else None
 
@@ -247,6 +273,7 @@ def personnel_detail(
             agent=agent,
             grade=grade,
             service=service,
+            sous_direction=sous_direction,
             direction=direction,
             programme=programme,
             documents=documents,
@@ -312,9 +339,10 @@ async def api_create_agent(
     date_recrutement: str = Form(...),  # Obligatoire
     date_prise_service: str = Form(...),  # Obligatoire
     grade_id: str = Form(...),  # Obligatoire
-    programme_id: str = Form(...),  # Obligatoire
-    direction_id: str = Form(...),  # Obligatoire
-    service_id: str = Form(...),  # Obligatoire
+    service_id: str | None = Form(None),  # Optionnel
+    sous_direction_id: str | None = Form(None),  # Optionnel
+    direction_id: str | None = Form(None),  # Optionnel
+    programme_id: str | None = Form(None),  # Optionnel (déprécié, conservé pour compatibilité)
     fonction: str = Form(...),  # Obligatoire
     numero_cni: str | None = Form(None),
     numero_passeport: str | None = Form(None),
@@ -338,6 +366,7 @@ async def api_create_agent(
     indice: str | None = Form(None),  # Reçu comme string du formulaire
     solde_conges_annuel: str | None = Form(None),  # Reçu comme string du formulaire
     conges_annee_en_cours: str | None = Form(None),  # Reçu comme string du formulaire
+    role_budgetaire: str | None = Form(None),
     notes: str | None = Form(None),
     photo: UploadFile | None = File(None),
     session: Session = Depends(get_session),
@@ -356,9 +385,12 @@ async def api_create_agent(
 
         # Convertir les champs numériques obligatoires
         grade_id_int = int(grade_id) if grade_id and grade_id.strip() else None
-        programme_id_int = int(programme_id) if programme_id and programme_id.strip() else None
-        direction_id_int = int(direction_id) if direction_id and direction_id.strip() else None
-        service_id_int = int(service_id) if service_id and service_id.strip() else None
+        
+        # Convertir les champs d'affectation (optionnels)
+        service_id_int = parse_int_or_none(service_id)
+        sous_direction_id_int = parse_int_or_none(sous_direction_id)
+        direction_id_int = parse_int_or_none(direction_id)
+        programme_id_int = parse_int_or_none(programme_id)  # Déprécié, conservé pour compatibilité
 
         # Convertir les champs numériques optionnels
         nombre_enfants_int = parse_int_or_none(nombre_enfants)
@@ -386,7 +418,16 @@ async def api_create_agent(
         # date_recrutement, date_prise_service, fonction, grade_id, programme_id, direction_id, service_id sont obligatoires
         date_depart_retraite_prevue = clean_str_or_none(date_depart_retraite_prevue)
         position_administrative = clean_str_or_none(position_administrative)
+        role_budgetaire_clean = clean_str_or_none(role_budgetaire)
         notes = clean_str_or_none(notes)
+        
+        # Valider et convertir role_budgetaire si fourni
+        role_budgetaire_enum = None
+        if role_budgetaire_clean:
+            try:
+                role_budgetaire_enum = RoleBudgetaire(role_budgetaire_clean.upper())
+            except ValueError:
+                raise HTTPException(400, f"Rôle budgétaire invalide: {role_budgetaire_clean}. Valeurs acceptées: RPROG, RFFIM, RUO, RBOP")
 
         # Valider les champs obligatoires
         if not date_recrutement or date_recrutement.strip() == "":
@@ -398,17 +439,19 @@ async def api_create_agent(
         if not grade_id_int:
             raise HTTPException(400, "Le champ 'Grade' est obligatoire")
 
-        if not programme_id_int:
-            raise HTTPException(400, "Le champ 'Programme' est obligatoire")
-
-        if not direction_id_int:
-            raise HTTPException(400, "Le champ 'Direction' est obligatoire")
-
-        if not service_id_int:
-            raise HTTPException(400, "Le champ 'Service' est obligatoire")
-
         if not fonction or fonction.strip() == "":
             raise HTTPException(400, "Le champ 'Fonction' est obligatoire")
+        
+        # Validation de l'affectation : exclusion mutuelle entre les rattachements
+        # Note: Aucun rattachement n'est obligatoire, un agent peut exister sans service/sous-direction/direction
+        
+        # Si un service est sélectionné, les autres ne doivent pas l'être
+        if service_id_int and (sous_direction_id_int or direction_id_int):
+            raise HTTPException(400, "Si un service est sélectionné, vous ne pouvez pas sélectionner de sous-direction ou direction")
+        
+        # Si une sous-direction est sélectionnée, la direction ne doit pas l'être
+        if sous_direction_id_int and direction_id_int:
+            raise HTTPException(400, "Si une sous-direction est sélectionnée, vous ne pouvez pas sélectionner de direction")
 
         # Valider les emails s'ils sont remplis
         if email_professionnel and email_professionnel.strip():
@@ -453,9 +496,11 @@ async def api_create_agent(
             "echelon": echelon_int,
             "indice": indice_int,
             "service_id": service_id_int,
+            "sous_direction_id": sous_direction_id_int,
             "direction_id": direction_id_int,
-            "programme_id": programme_id_int,
+            "programme_id": programme_id_int,  # Déprécié, conservé pour compatibilité
             "fonction": fonction,
+            "role_budgetaire": role_budgetaire_enum.value if role_budgetaire_enum else None,
             "solde_conges_annuel": solde_conges_annuel_int,
             "conges_annee_en_cours": conges_annee_en_cours_int,
             "notes": notes,
@@ -610,9 +655,11 @@ async def api_update_agent(
     echelon: int | None = Form(None),
     indice: int | None = Form(None),
     service_id: int | None = Form(None),
+    sous_direction_id: int | None = Form(None),
     direction_id: int | None = Form(None),
-    programme_id: int | None = Form(None),
+    programme_id: int | None = Form(None),  # Déprécié, conservé pour compatibilité
     fonction: str | None = Form(None),
+    role_budgetaire: str | None = Form(None),
     solde_conges_annuel: int | None = Form(None),
     conges_annee_en_cours: int | None = Form(None),
     notes: str | None = Form(None),
@@ -688,14 +735,43 @@ async def api_update_agent(
             agent.echelon = echelon
         if indice is not None:
             agent.indice = indice
-        if service_id is not None:
-            agent.service_id = service_id
-        if direction_id is not None:
-            agent.direction_id = direction_id
+        # Gestion de l'affectation avec validation
+        # Note: Aucun rattachement n'est obligatoire, un agent peut exister sans service/sous-direction/direction
+        if service_id is not None or sous_direction_id is not None or direction_id is not None:
+            # Si des valeurs sont fournies, les appliquer
+            final_service_id = service_id if service_id is not None else agent.service_id
+            final_sous_direction_id = sous_direction_id if sous_direction_id is not None else agent.sous_direction_id
+            final_direction_id = direction_id if direction_id is not None else agent.direction_id
+            
+            # Validation de l'affectation : exclusion mutuelle entre les rattachements
+            
+            # Si un service est sélectionné, les autres ne doivent pas l'être
+            if final_service_id and (final_sous_direction_id or final_direction_id):
+                raise HTTPException(400, "Si un service est sélectionné, vous ne pouvez pas sélectionner de sous-direction ou direction")
+            
+            # Si une sous-direction est sélectionnée, la direction ne doit pas l'être
+            if final_sous_direction_id and final_direction_id:
+                raise HTTPException(400, "Si une sous-direction est sélectionnée, vous ne pouvez pas sélectionner de direction")
+            
+            # Appliquer les valeurs
+            agent.service_id = final_service_id
+            agent.sous_direction_id = final_sous_direction_id
+            agent.direction_id = final_direction_id
+        
         if programme_id is not None:
-            agent.programme_id = programme_id
+            agent.programme_id = programme_id  # Déprécié, conservé pour compatibilité
         if fonction is not None:
             agent.fonction = clean_str_or_none(fonction)
+        if role_budgetaire is not None:
+            role_budgetaire_clean = clean_str_or_none(role_budgetaire)
+            if role_budgetaire_clean:
+                try:
+                    role_budgetaire_enum = RoleBudgetaire(role_budgetaire_clean.upper())
+                    agent.role_budgetaire = role_budgetaire_enum.value
+                except ValueError:
+                    raise HTTPException(400, f"Rôle budgétaire invalide: {role_budgetaire_clean}. Valeurs acceptées: RPROG, RFFIM, RUO, RBOP")
+            else:
+                agent.role_budgetaire = None
         if solde_conges_annuel is not None:
             agent.solde_conges_annuel = solde_conges_annuel
         if conges_annee_en_cours is not None:

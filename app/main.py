@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 from pickle import TRUE
+import traceback
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import api_router
@@ -83,7 +85,32 @@ subapp = FastAPI(
 )
 
 
-# 3) Gestionnaire d'erreur personnalisé pour les erreurs de validation
+# 3a) Gestionnaire d'erreur pour les erreurs HTTP 400 (Bad Request)
+@subapp.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """
+    Gestionnaire pour les erreurs HTTP (400, 404, etc.)
+    """
+    # Log spécial pour les erreurs 400 sur les requêtes multipart
+    if exc.status_code == 400:
+        content_type = request.headers.get("content-type", "")
+        if "multipart/form-data" in content_type:
+            logger.error(f"❌ ===== ERREUR 400 - PARSING MULTIPART ÉCHOUÉ =====")
+            logger.error(f"❌ URL: {request.url.path}")
+            logger.error(f"❌ Method: {request.method}")
+            logger.error(f"❌ Content-Type: {content_type}")
+            logger.error(f"❌ Content-Length: {request.headers.get('content-length', 'N/A')}")
+            logger.error(f"❌ Detail: {exc.detail}")
+            logger.error(f"❌ Headers: {dict(request.headers)}")
+            logger.error(f"❌ ===== FIN ERREUR 400 =====")
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail if isinstance(exc.detail, str) else str(exc.detail)}
+    )
+
+
+# 3b) Gestionnaire d'erreur personnalisé pour les erreurs de validation
 @subapp.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
@@ -91,6 +118,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     Transforme les erreurs techniques en messages clairs pour l'utilisateur
     """
     logger.warning(f"⚠️ Erreur validation sur {request.url.path}: {exc.errors()}")
+    
+    # Log spécial pour les erreurs multipart
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        logger.error(f"❌ Erreur de parsing multipart sur {request.url.path}")
+        logger.error(f"❌ Content-Type: {content_type}")
+        logger.error(f"❌ Content-Length: {request.headers.get('content-length', 'N/A')}")
+        logger.error(f"❌ Détails erreurs: {exc.errors()}")
+        # Logger tous les headers pour diagnostic
+        logger.error(f"❌ Tous les headers: {dict(request.headers)}")
 
     # Construire un message d'erreur détaillé
     error_details = []
@@ -125,6 +162,33 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "errors": error_details,
             "field_errors": {error["loc"][-1]: error["msg"] for error in exc.errors()},
         },
+    )
+
+
+# 3c) Gestionnaire d'erreur global pour toutes les exceptions non gérées
+@subapp.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """
+    Gestionnaire global pour toutes les exceptions non gérées
+    """
+    # Log spécial pour les erreurs sur les requêtes multipart
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" in content_type:
+        logger.error(f"❌ ===== EXCEPTION NON GÉRÉE - PARSING MULTIPART =====")
+        logger.error(f"❌ URL: {request.url.path}")
+        logger.error(f"❌ Method: {request.method}")
+        logger.error(f"❌ Content-Type: {content_type}")
+        logger.error(f"❌ Content-Length: {request.headers.get('content-length', 'N/A')}")
+        logger.error(f"❌ Type d'exception: {type(exc).__name__}")
+        logger.error(f"❌ Message: {str(exc)}")
+        logger.error(f"❌ Traceback:", exc_info=True)
+        logger.error(f"❌ ===== FIN EXCEPTION =====")
+    else:
+        logger.error(f"❌ Exception non gérée: {type(exc).__name__}: {str(exc)}", exc_info=True)
+    
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Erreur interne du serveur: {str(exc)}"}
     )
 
 
@@ -181,35 +245,165 @@ def access_denied(request: Request, module: str = "module", current_user: User =
 
 @subapp.get("/accueil", response_class=HTMLResponse, name="accueil")
 def accueil(request: Request, current_user: User = Depends(get_current_user)):
+    from datetime import datetime
     from sqlmodel import func, select
 
     from app.db.session import get_session
+    from app.core.enums import WorkflowState
+    from app.models.personnel import AgentComplet
+    from app.models.performance import ObjectifPerformance, StatutObjectif
+    from app.models.rh import HRRequest
     from app.models.user import User
     from app.services.activity_service import ActivityService
 
-    # Statistiques
-    stats = {"users_count": 0, "items_count": 0, "completed_count": 0, "growth": 0}
+    # Statistiques par défaut
+    stats = {
+        "users_count": 0,
+        "items_count": 0,
+        "completed_count": 0,
+        "growth": 0,
+        "performance_rate": 0,
+        "objectifs_atteints": 0,
+        "budget_progress": 0,
+        "budget_alerts": 0,
+        "rh_requests": 0,
+        "rh_overdue": 0,
+    }
     recent_activity = []
 
     try:
         db = next(get_session())
 
-        # Calculer les statistiques
-        users_count = db.exec(select(func.count(User.id))).first()
-        active_users_count = db.exec(select(func.count(User.id)).where(User.is_active)).first()
-        admin_count = db.exec(select(func.count(User.id)).where(User.type_user == "admin")).first()
+        # 1. Statistiques agents (Collaborateurs connectés)
+        agents_count = db.exec(select(func.count(AgentComplet.id)).where(AgentComplet.actif == True)).first() or 0
+        stats["users_count"] = agents_count
 
-        stats = {
-            "users_count": users_count or 0,
-            "items_count": active_users_count or 0,
-            "completed_count": admin_count or 0,
-            "growth": 0,  # À calculer selon vos besoins
-        }
+        # 2. Demandes RH en cours (Dossiers actifs en suivi)
+        demandes_rh_en_cours = db.exec(
+            select(func.count(HRRequest.id)).where(
+                HRRequest.current_state.in_([
+                    WorkflowState.SUBMITTED,
+                    WorkflowState.VALIDATION_N1,
+                    WorkflowState.VALIDATION_N2,
+                    WorkflowState.VALIDATION_N3,
+                    WorkflowState.VALIDATION_N4,
+                    WorkflowState.VALIDATION_N5,
+                    WorkflowState.VALIDATION_N6,
+                ])
+            )
+        ).first() or 0
+        stats["items_count"] = demandes_rh_en_cours
+
+        # 3. Demandes RH archivées (Actions validées ce mois)
+        from datetime import date
+        current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if current_month_start.month == 12:
+            next_month_start = current_month_start.replace(year=current_month_start.year + 1, month=1)
+        else:
+            next_month_start = current_month_start.replace(month=current_month_start.month + 1)
+        
+        demandes_archivees_mois = db.exec(
+            select(func.count(HRRequest.id)).where(
+                HRRequest.current_state == WorkflowState.ARCHIVED,
+                HRRequest.updated_at >= current_month_start,
+                HRRequest.updated_at < next_month_start,
+            )
+        ).first() or 0
+        stats["completed_count"] = demandes_archivees_mois
+
+        # 4. Performance - Objectifs
+        total_objectifs = db.exec(select(func.count(ObjectifPerformance.id))).first() or 0
+        objectifs_atteints = (
+            db.exec(
+                select(func.count(ObjectifPerformance.id)).where(ObjectifPerformance.statut == StatutObjectif.ATTEINT)
+            ).first()
+            or 0
+        )
+        performance_rate = round((objectifs_atteints / total_objectifs * 100), 1) if total_objectifs > 0 else 0
+        stats["performance_rate"] = performance_rate
+        stats["objectifs_atteints"] = objectifs_atteints
+
+        # 5. Budget - Progression (taux d'exécution moyen depuis SigobeKpi)
+        try:
+            from app.models.budget import SigobeKpi
+            
+            # Récupérer le dernier KPI global disponible
+            kpi_global = db.exec(
+                select(SigobeKpi)
+                .where(SigobeKpi.dimension == "global")
+                .order_by(SigobeKpi.created_at.desc())
+            ).first()
+            
+            if kpi_global and kpi_global.budget_actuel_total and kpi_global.budget_actuel_total > 0:
+                # Calculer le taux d'exécution : (Mandats PEC / Budget Actuel) * 100
+                if kpi_global.mandats_total:
+                    budget_progress = round((float(kpi_global.mandats_total) / float(kpi_global.budget_actuel_total)) * 100, 1)
+                else:
+                    # Sinon, utiliser le taux d'engagement
+                    if kpi_global.engagements_total:
+                        budget_progress = round((float(kpi_global.engagements_total) / float(kpi_global.budget_actuel_total)) * 100, 1)
+                    else:
+                        budget_progress = 0
+                stats["budget_progress"] = budget_progress
+            else:
+                stats["budget_progress"] = 0
+            
+            # Alertes budgétaires : programmes avec taux d'engagement > 90% ou taux d'exécution < 20%
+            # Pour simplifier, on compte les programmes en alerte
+            kpis_programmes = db.exec(
+                select(SigobeKpi)
+                .where(SigobeKpi.dimension == "programme")
+                .order_by(SigobeKpi.created_at.desc())
+            ).all()
+            
+            alertes_count = 0
+            for kpi in kpis_programmes:
+                if kpi.budget_actuel_total and kpi.budget_actuel_total > 0:
+                    if kpi.engagements_total:
+                        taux_engagement = (float(kpi.engagements_total) / float(kpi.budget_actuel_total)) * 100
+                        if taux_engagement > 90:  # Taux d'engagement trop élevé
+                            alertes_count += 1
+                    if kpi.mandats_total:
+                        taux_execution = (float(kpi.mandats_total) / float(kpi.budget_actuel_total)) * 100
+                        if taux_execution < 20:  # Taux d'exécution trop faible
+                            alertes_count += 1
+            
+            stats["budget_alerts"] = alertes_count
+        except Exception:
+            # Si les données budgétaires ne sont pas disponibles, utiliser 0
+            stats["budget_progress"] = 0
+            stats["budget_alerts"] = 0
+
+        # 6. RH - Demandes
+        total_demandes_rh = db.exec(select(func.count(HRRequest.id))).first() or 0
+        stats["rh_requests"] = total_demandes_rh
+
+        # Demandes en retard (demandes en cours depuis plus de 30 jours)
+        from datetime import timedelta
+        date_limite = datetime.now() - timedelta(days=30)
+        demandes_en_retard = db.exec(
+            select(func.count(HRRequest.id)).where(
+                HRRequest.current_state.in_([
+                    WorkflowState.SUBMITTED,
+                    WorkflowState.VALIDATION_N1,
+                    WorkflowState.VALIDATION_N2,
+                    WorkflowState.VALIDATION_N3,
+                    WorkflowState.VALIDATION_N4,
+                    WorkflowState.VALIDATION_N5,
+                    WorkflowState.VALIDATION_N6,
+                ]),
+                HRRequest.created_at < date_limite,
+            )
+        ).first() or 0
+        stats["rh_overdue"] = demandes_en_retard
 
         # Charger les activités récentes
         recent_activity = ActivityService.get_recent_activities(db, limit=10, days=7)
 
-    except Exception:
+    except Exception as e:
+        # Logger l'erreur pour debug
+        import logging
+        logging.error(f"Erreur calcul stats accueil: {e}")
         pass  # Utiliser les valeurs par défaut
 
     return templates.TemplateResponse(
@@ -260,7 +454,7 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=9000,
-        reload=True,
+        reload=False,
         log_config=None,  # ⬅️ laisse ta config régner
         # log_level="info"  # facultatif : n’influe pas ta config Python
     )

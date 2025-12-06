@@ -682,13 +682,13 @@ class CadrePerformanceGenerator:
     ) -> dict[str, Any] | None:
         """Charge le cadre de performance pour un programme spécifique"""
         try:
-            # Charger les objectifs globaux (STRATEGIQUE) liés à ce programme
+            # Charger les objectifs globaux (GLOBAL) liés à ce programme
             # Pour l'instant, on charge tous les objectifs globaux
             # TODO: Filtrer par programme si une relation existe
             
             objectifs_globaux_query = select(ObjectifPerformance).where(
                 and_(
-                    ObjectifPerformance.type_objectif == TypeObjectif.STRATEGIQUE,
+                    ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL,
                     ObjectifPerformance.resultat_strategique_id.isnot(None)
                 )
             ).order_by(ObjectifPerformance.titre)
@@ -706,10 +706,10 @@ class CadrePerformanceGenerator:
             
             # Pour chaque objectif global, charger les objectifs spécifiques et leurs indicateurs
             for obj_global in objectifs_globaux:
-                # Charger les objectifs spécifiques (OPERATIONNEL) liés à cet objectif global
+                # Charger les objectifs spécifiques (SPECIFIQUE) liés à cet objectif global
                 objectifs_specifiques_query = select(ObjectifPerformance).where(
                     and_(
-                        ObjectifPerformance.type_objectif == TypeObjectif.OPERATIONNEL,
+                        ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
                         ObjectifPerformance.objectif_global_id == obj_global.id
                     )
                 ).order_by(ObjectifPerformance.titre)

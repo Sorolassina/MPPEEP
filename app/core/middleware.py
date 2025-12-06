@@ -89,6 +89,10 @@ class CSPMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next):
+        # Log pour les requêtes vers /chatbot/ pour diagnostic
+        if "/chatbot/" in str(request.url.path):
+            logger.info(f"🔍 [CSP] Requête chatbot détectée: {request.method} {request.url.path}")
+        
         response = await call_next(request)
 
         # Politique de sécurité du contenu
@@ -281,14 +285,29 @@ class RequestSizeMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next):
+        # Log pour les requêtes POST vers /chatbot/ pour diagnostic
+        if request.method in ["POST", "PUT", "PATCH"] and "/chatbot/" in str(request.url.path):
+            logger.info(f"🔍 [RequestSize] Requête POST chatbot: {request.url.path}, Content-Type: {request.headers.get('content-type', 'N/A')}, Content-Length: {request.headers.get('content-length', 'N/A')}")
+        
         if request.method in ["POST", "PUT", "PATCH"]:
             content_length = request.headers.get("content-length")
+            content_type = request.headers.get("content-type", "")
 
             if content_length:
                 try:
                     size = int(content_length)
-                    if size > MAX_REQUEST_SIZE:
-                        logger.warning(f"📏 Requête trop volumineuse : {size} bytes")
+                    # Pour les uploads multipart, le content-length inclut les boundaries
+                    # donc on peut avoir une taille légèrement supérieure au fichier réel
+                    # On ajoute une marge de 10% pour les multipart
+                    is_multipart = "multipart/form-data" in content_type
+                    max_allowed = MAX_REQUEST_SIZE * 1.1 if is_multipart else MAX_REQUEST_SIZE
+                    
+                    # Log pour diagnostic
+                    if is_multipart:
+                        logger.info(f"📤 Requête multipart détectée: {size} bytes (max: {max_allowed} bytes)")
+                    
+                    if size > max_allowed:
+                        logger.warning(f"📏 Requête trop volumineuse : {size} bytes (max: {max_allowed} bytes)")
                         return JSONResponse(
                             status_code=413,
                             content={
@@ -443,6 +462,15 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next):
+        # Log pour les requêtes multipart
+        if request.method in ["POST", "PUT", "PATCH"]:
+            content_type = request.headers.get("content-type", "")
+            if "multipart/form-data" in content_type:
+                logger.info(f"📤 Requête multipart reçue: {request.url.path}")
+                # Log supplémentaire pour les requêtes chatbot
+                if "/chatbot/" in str(request.url.path):
+                    logger.info(f"🔍 [ErrorHandling] Requête multipart chatbot: {request.method} {request.url.path}, Content-Type: {content_type}, Headers: {dict(request.headers)}")
+        
         try:
             return await call_next(request)
 

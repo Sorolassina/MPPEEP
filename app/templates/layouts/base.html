@@ -51,6 +51,1055 @@
     
     <!-- CSS spécifiques à la page -->
     {% block styles %}{% endblock %}
+    
+    <!-- Styles pour le compteur de session dans la navbar -->
+    <style>
+        /* Styles pour le compteur de session dans la navbar */
+        .session-timer {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            background: rgba(5, 154, 23, 0.2);
+            border: 1px solid rgba(5, 154, 23, 0.4);
+            color: #ffffff;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .session-timer.warning {
+            background: rgba(232, 106, 10, 0.2);
+            border-color: rgba(232, 106, 10, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .session-timer.critical {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: rgba(220, 38, 38, 0.4);
+            animation: pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+            }
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+            }
+        }
+        
+        .session-timer-content {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        
+        .session-timer-icon {
+            font-size: 16px;
+        }
+        
+        .session-timer-label {
+            opacity: 0.9;
+            font-size: 0.8rem;
+        }
+        
+        .session-timer-time {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            min-width: 65px;
+            text-align: right;
+            font-size: 0.85rem;
+        }
+        
+        @media (max-width: 768px) {
+            .session-timer {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.75rem;
+            }
+            
+            .session-timer-label {
+                display: none; /* Masquer le label sur mobile */
+            }
+            
+            .session-timer-time {
+                min-width: 55px;
+                font-size: 0.75rem;
+            }
+            
+            .session-timer-icon {
+                font-size: 14px;
+            }
+        }
+    </style>
+    
+    <!-- Styles pour la messagerie -->
+    <style>
+/* Bouton flottant de messagerie */
+.floating-messagerie-button {
+    position: fixed !important;
+    bottom: 30px !important;
+    right: 30px !important;
+    top: auto !important;
+    left: auto !important;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 10px 30px rgba(5, 154, 23, 0.4);
+    z-index: 9998 !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    animation: pulse-messagerie 2s infinite;
+    border: none;
+    outline: none;
+    gap: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.floating-messagerie-button:hover {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 15px 40px rgba(232, 106, 10, 0.5);
+    animation: none;
+}
+
+.floating-messagerie-button .messagerie-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.floating-messagerie-button:hover .messagerie-icon {
+    transform: scale(1.1);
+}
+
+.floating-messagerie-button .messagerie-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--danger-color);
+    color: var(--primary-color);
+    font-size: 0.875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
+    padding: 0;
+}
+
+.floating-messagerie-button .messagerie-badge.hidden {
+    display: none;
+}
+
+.floating-messagerie-button .messagerie-badge-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    padding: 0 7px;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+    line-height: 1;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes pulse-messagerie {
+    0%, 100% {
+        box-shadow: 0 10px 30px rgba(5, 154, 23, 0.4);
+    }
+    50% {
+        box-shadow: 0 10px 40px rgba(232, 106, 10, 0.6);
+        transform: scale(1.05);
+    }
+}
+
+/* Animations pour le panneau de messagerie - Même animation que le chatbot */
+@keyframes messagerieSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    60% {
+        transform: translateY(-5px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes messagerieSlideOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+}
+
+.messagerie-popup {
+    position: fixed !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    top: auto !important;
+    left: auto !important;
+    width: 450px;
+    max-height: calc(100vh - 40px);
+    min-height: 400px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 99999 !important;
+    border-radius: 15px;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    margin: 0 !important;
+    padding: 0 !important;
+    --messagerie-surface: var(--surface-color);
+    --messagerie-surface-alt: var(--background-color);
+    --messagerie-border: rgba(5, 154, 23, 0.2);
+    --messagerie-text: var(--text-color);
+    --messagerie-muted: var(--text-muted-color);
+    --messagerie-hover: rgba(5, 154, 23, 0.1);
+    --messagerie-highlight: var(--success-light);
+    --messagerie-scroll-track: var(--surface-color);
+    --messagerie-scroll-thumb-border: rgba(5, 154, 23, 0.2);
+    background: var(--messagerie-surface);
+    color: var(--messagerie-text);
+    border: 2px solid var(--secondary-color);
+    box-shadow: 0 20px 55px rgba(5, 154, 23, 0.25);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+}
+
+.messagerie-popup.active {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: translateY(0) scale(1);
+    position: fixed !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    animation: messagerieSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.messagerie-popup:not(.active) {
+    animation: messagerieSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.messagerie-header {
+    background: var(--messagerie-surface-alt);
+    color: var(--messagerie-text);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--messagerie-border);
+}
+
+.messagerie-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: inherit;
+}
+
+.messagerie-close {
+    background: none;
+    border: none;
+    color: var(--messagerie-text);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.messagerie-close:hover {
+    background: var(--messagerie-hover);
+    color: var(--secondary-color);
+}
+
+.messagerie-content {
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+    overflow: hidden;
+}
+
+.conversations-list {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.messagerie-search {
+    padding: 15px;
+    border-bottom: 1px solid var(--messagerie-border);
+    display: flex;
+    gap: 10px;
+    background: var(--messagerie-surface);
+}
+
+.messagerie-search input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--messagerie-border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: var(--messagerie-surface-alt);
+    color: var(--messagerie-text);
+}
+
+.messagerie-search input::placeholder {
+    color: var(--messagerie-muted);
+}
+
+.messagerie-search input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-color) 28%, transparent);
+}
+
+.btn-new-conv {
+    padding: 8px 15px;
+    background: var(--secondary-color);
+    color: var(--primary-color);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-new-conv:hover {
+    background: var(--accent-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px color-mix(in srgb, var(--accent-color) 35%, transparent);
+}
+
+.conversations-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.conversation-item {
+    padding: 12px;
+    border-bottom: 1px solid var(--messagerie-border);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--messagerie-surface);
+}
+
+.conversation-item:hover {
+    background: var(--messagerie-hover);
+}
+
+.conversation-item.active {
+    background: var(--messagerie-highlight);
+    border-left: 3px solid var(--secondary-color);
+}
+
+.conversation-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.conversation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.conversation-name {
+    font-weight: 600;
+    color: var(--messagerie-text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-preview {
+    font-size: 0.85rem;
+    color: var(--messagerie-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.conversation-time {
+    font-size: 0.75rem;
+    color: var(--messagerie-muted);
+    white-space: nowrap;
+}
+
+.conversation-badge {
+    background: var(--secondary-color);
+    color: var(--primary-color);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+}
+
+.user-search-result {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--messagerie-border);
+    background: var(--messagerie-surface);
+    transition: background 0.2s ease;
+}
+
+.user-search-result:hover {
+    background: var(--messagerie-hover);
+}
+
+.chat-area {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chat-area.is-visible {
+    display: flex;
+}
+
+.chat-header {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--messagerie-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--messagerie-surface-alt);
+}
+
+.btn-back {
+    background: var(--messagerie-surface);
+    border: 1px solid var(--messagerie-border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--messagerie-text);
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background: var(--messagerie-hover);
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+}
+
+.chat-recipient {
+    font-weight: 600;
+    color: var(--messagerie-text);
+}
+
+.messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--messagerie-surface);
+}
+
+.message-item {
+    display: flex;
+    flex-direction: column;
+    max-width: 75%;
+}
+
+.message-item.own {
+    align-self: flex-end;
+}
+
+.message-item.other {
+    align-self: flex-start;
+}
+
+.message-bubble {
+    padding: 10px 15px;
+    border-radius: 12px;
+    word-wrap: break-word;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.message-item.own .message-bubble {
+    background: var(--secondary-color);
+    color: var(--primary-color);
+    border-bottom-right-radius: 4px;
+    font-weight: 500;
+}
+
+.message-item.other .message-bubble {
+    background: var(--messagerie-surface-alt);
+    color: var(--messagerie-text);
+    border: 1px solid var(--messagerie-border);
+    border-bottom-left-radius: 4px;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    color: var(--messagerie-muted);
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.message-item.own .message-time {
+    text-align: right;
+}
+
+.chat-input-area {
+    padding: 15px;
+    border-top: 1px solid var(--messagerie-border);
+    display: flex;
+    gap: 10px;
+    background: var(--messagerie-surface-alt);
+}
+
+.chat-input-area textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--messagerie-border);
+    border-radius: 8px;
+    resize: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: var(--messagerie-surface);
+    color: var(--messagerie-text);
+}
+
+.chat-input-area textarea::placeholder {
+    color: var(--messagerie-muted);
+}
+
+.chat-input-area textarea:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-color) 28%, transparent);
+}
+
+.btn-send {
+    padding: 10px 20px;
+    background: var(--secondary-color);
+    color: var(--primary-color);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.btn-send:hover {
+    background: var(--accent-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px color-mix(in srgb, var(--accent-color) 35%, transparent);
+}
+
+.loading-messages {
+    text-align: center;
+    padding: 30px;
+    color: var(--messagerie-muted);
+}
+
+.conversations-container::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.conversations-container::-webkit-scrollbar-track,
+.messages-container::-webkit-scrollbar-track {
+    background: var(--messagerie-scroll-track);
+    border-radius: 10px;
+}
+
+.conversations-container::-webkit-scrollbar-thumb,
+.messages-container::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border-radius: 10px;
+    border: 1px solid var(--messagerie-scroll-thumb-border);
+}
+
+.conversations-container::-webkit-scrollbar-thumb:hover,
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
+.conversations-container,
+.messages-container {
+    scrollbar-width: thin;
+    scrollbar-color: var(--secondary-color) var(--messagerie-scroll-track);
+}
+
+/* Styles pour le chatbot */
+/* Animation du bouton chatbot */
+@keyframes chatbotButtonPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+.floating-chatbot-button {
+    position: fixed !important;
+    bottom: 100px !important;
+    right: 30px !important;
+    top: auto !important;
+    left: auto !important;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    color: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--secondary-color) 40%, transparent);
+    z-index: 9997 !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: none;
+    outline: none;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.floating-chatbot-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 15px 40px color-mix(in srgb, var(--secondary-color) 60%, transparent);
+}
+
+.floating-chatbot-button:active {
+    animation: chatbotButtonPulse 0.3s ease;
+}
+
+.floating-chatbot-button .chatbot-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.floating-chatbot-button:hover .chatbot-icon {
+    transform: scale(1.1);
+}
+
+/* Animation d'apparition du popup chatbot */
+@keyframes chatbotSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    60% {
+        transform: translateY(-5px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes chatbotSlideOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+}
+
+.chatbot-popup {
+    position: fixed !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    top: auto !important;
+    left: auto !important;
+    width: 500px;
+    max-height: calc(100vh - 40px);
+    min-height: 500px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 99998 !important;
+    border-radius: 15px;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+    transition: opacity 0.25s ease-out, visibility 0.25s ease-out, transform 0.25s ease-out;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--surface-color);
+    color: var(--text-color);
+    border: 1px solid var(--secondary-color);
+    box-shadow: 0 20px 55px rgba(0, 0, 0, 0.55);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+}
+
+.chatbot-popup.active {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: translateY(0) scale(1);
+    animation: chatbotSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chatbot-header {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    color: var(--primary-color);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 15px 15px 0 0;
+}
+
+.chatbot-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.chatbot-close {
+    background: color-mix(in srgb, white 20%, transparent);
+    border: none;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.5rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.chatbot-close:hover {
+    background: color-mix(in srgb, var(--primary-color) 30%, transparent);
+}
+
+.chatbot-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    background: var(--surface-color);
+}
+
+.chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--secondary-color) var(--background-color);
+}
+
+.chatbot-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chatbot-messages::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: 3px;
+}
+
+.chatbot-messages::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border-radius: 3px;
+}
+
+.chatbot-welcome {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted-color);
+    font-style: italic;
+}
+
+.chatbot-message {
+    display: flex;
+    gap: 10px;
+    animation: fadeInMessage 0.3s ease;
+}
+
+@keyframes fadeInMessage {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chatbot-message.user {
+    flex-direction: row-reverse;
+}
+
+.chatbot-message-content {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+.chatbot-message.user .chatbot-message-content {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    color: white;
+    border-bottom-right-radius: 4px;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.chatbot-message.assistant .chatbot-message-content {
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--secondary-color);
+    border-bottom-left-radius: 4px;
+}
+
+.chatbot-message-loading {
+    display: flex;
+    gap: 5px;
+    padding: 12px 16px;
+    background: var(--background-color);
+    border: 1px solid var(--secondary-color);
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    max-width: 75%;
+}
+
+.chatbot-message-loading span {
+    width: 8px;
+    height: 8px;
+    background: var(--secondary-color);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.chatbot-message-loading span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.chatbot-message-loading span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+
+.chatbot-input-area {
+    padding: 15px;
+    border-top: 1px solid var(--secondary-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface-color);
+}
+
+.chatbot-upload-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: color-mix(in srgb, var(--secondary-color) 10%, transparent);
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.chatbot-uploaded-files {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chatbot-uploaded-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--secondary-color);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.chatbot-remove-file {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.chatbot-remove-file:hover {
+    opacity: 1;
+}
+
+.chatbot-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.chatbot-file-label {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--secondary-color) 20%, transparent);
+    color: var(--secondary-color);
+    border: 1px solid var(--secondary-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.chatbot-file-label:hover {
+    background: color-mix(in srgb, var(--secondary-color) 30%, transparent);
+    transform: scale(1.05);
+}
+
+.chatbot-input-area textarea {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--secondary-color);
+    border-radius: 20px;
+    resize: none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: var(--background-color);
+    color: var(--text-color);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chatbot-input-area textarea:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-color) 28%, transparent);
+}
+
+.chatbot-input-area textarea::placeholder {
+    color: var(--text-muted-color);
+}
+
+.btn-chatbot-send {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+    color: var(--primary-color);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-chatbot-send:hover:not(:disabled) {
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px color-mix(in srgb, var(--secondary-color) 40%, transparent);
+}
+
+.btn-chatbot-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-chatbot-send svg {
+    width: 20px;
+    height: 20px;
+}
+    </style>
 </head>
 <body>
     <!-- Global Loading Overlay pour navigation -->
@@ -64,20 +1113,6 @@
 
     <!-- Toast Notifications -->
     {% include "components/toast_notifications.html" %}
-
-    <!-- Bouton de messagerie flottant -->
-    <button
-        type="button"
-        class="floating-help-button"
-        title="Messagerie"
-        aria-label="Ouvrir la messagerie"
-        onclick="toggleMessagerie()"
-    >
-        <span class="messagerie-icon">💬</span>
-        <span class="messagerie-badge hidden">
-            <span class="messagerie-badge-text">0</span>
-        </span>
-    </button>
 
     {% block body %}
         <!-- Header / Navigation -->
@@ -101,10 +1136,358 @@
         {% endblock %}
     {% endblock %}
 
-    {% include "components/messagerie.html" %}
+    <!-- Bouton de messagerie flottant -->
+    {% if current_user %}
+    <button
+        type="button"
+        class="floating-messagerie-button"
+        title="Messagerie"
+        aria-label="Ouvrir la messagerie"
+        onclick="toggleMessagerie()"
+    >
+        <img src="{{ static_url('images/courrier.png') }}" alt="Messagerie" class="messagerie-icon">
+        <span class="messagerie-badge hidden">
+            <span class="messagerie-badge-text">0</span>
+        </span>
+    </button>
+    
+    <!-- Bouton de chatbot flottant -->
+    <button
+        type="button"
+        class="floating-chatbot-button"
+        title="SYGEP AI"
+        aria-label="Ouvrir SYGEP AI"
+        onclick="toggleChatbot()"
+    >
+        <img src="{{ static_url('images/chatbot.png') }}" alt="SYGEP AI" class="chatbot-icon">
+    </button>
+    {% endif %}
+
+    <!-- Popup de messagerie -->
+    <div id="messageriePopup" class="messagerie-popup">
+        <div class="messagerie-header">
+            <h3>📩 Messagerie</h3>
+            <button class="messagerie-close" onclick="toggleMessagerie()">×</button>
+        </div>
+        
+        <div class="messagerie-content">
+            <!-- Liste des conversations -->
+            <div id="conversationsList" class="conversations-list">
+                <div class="messagerie-search">
+                    <input type="text" id="searchUserInput" placeholder="Rechercher un utilisateur..." onkeyup="searchUsers()">
+                    <button onclick="showNewConversation()" class="btn-new-conv">➕ Nouveau</button>
+                </div>
+                <div id="conversationsContainer" class="conversations-container">
+                    <div class="loading-messages">Chargement des conversations...</div>
+                </div>
+            </div>
+            
+            <!-- Zone de chat -->
+            <div id="chatArea" class="chat-area">
+                <div class="chat-header">
+                    <button onclick="backToConversations()" class="btn-back">← Retour</button>
+                    <div class="chat-recipient">
+                        <span id="chatRecipientName">...</span>
+                    </div>
+                </div>
+                <div id="messagesContainer" class="messages-container"></div>
+                <div class="chat-input-area">
+                    <textarea id="messageInput" placeholder="Tapez votre message..." rows="2" onkeydown="handleMessageKeydown(event)"></textarea>
+                    <button onclick="sendMessage()" class="btn-send">Envoyer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup de chatbot -->
+    <div id="chatbotPopup" class="chatbot-popup">
+        <div class="chatbot-header">
+            <h3>🤖 SYGEP AI</h3>
+            <button class="chatbot-close" onclick="toggleChatbot()">×</button>
+        </div>
+        
+        <div class="chatbot-content">
+            <div id="chatbotMessages" class="chatbot-messages">
+                <div class="chatbot-welcome">
+                    <p>👋 Bonjour ! Je suis <strong>SYGEP AI</strong>, votre assistant intelligent pour le système MPPEEP Dashboard.</p>
+                    <p>Je peux vous aider à :</p>
+                    <ul style="text-align: left; margin: 10px 0; padding-left: 20px;">
+                        <li>Comprendre et utiliser les différents modules du système</li>
+                        <li>Manipuler les fonctionnalités disponibles</li>
+                        <li>Répondre à vos questions sur les données de performance, personnel, budget, stock, etc.</li>
+                        <li>Vous guider dans vos tâches quotidiennes</li>
+                    </ul>
+                    <p>Comment puis-je vous aider aujourd'hui ?</p>
+                    <p id="chatbotModelInfo" class="chatbot-model-info" style="display: none; font-size: 0.85rem; margin-top: 10px; opacity: 0.7;"></p>
+                </div>
+            </div>
+            
+            <div class="chatbot-input-area">
+                <div class="chatbot-upload-area" id="chatbotUploadArea" style="display: none;">
+                    <div class="chatbot-uploaded-files" id="chatbotUploadedFiles"></div>
+                    <button type="button" class="chatbot-remove-file" onclick="clearChatbotDocuments()" title="Retirer les documents">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chatbot-input-row">
+                    <label for="chatbotFileInput" class="chatbot-file-label" title="Joindre un document">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </label>
+                    <input type="file" id="chatbotFileInput" accept=".pdf,.doc,.docx,.txt,.md" style="display: none;" onchange="handleChatbotFileUpload(event)">
+                    <textarea 
+                        id="chatbotInput" 
+                        placeholder="Tapez votre question..." 
+                        rows="2" 
+                        onkeydown="handleChatbotKeydown(event)"
+                    ></textarea>
+                    <button onclick="sendChatbotMessage()" class="btn-chatbot-send" id="chatbotSendBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 21L23 12L2 3V10L17 12L2 14V21Z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts JS de base -->
     <script src="{{ static_versioned_url(static_url('js/app.js')) }}"></script>
+    
+    <!-- Script pour la gestion de la session et du compteur -->
+    <script>
+        // ============================================
+        // GESTION DE LA SESSION ET COMPTEUR
+        // ============================================
+        (function() {
+            const SESSION_CHECK_INTERVAL = 30000; // Vérifier toutes les 30 secondes
+            const WARNING_THRESHOLD = 300; // Afficher un avertissement à 5 minutes
+            const CRITICAL_THRESHOLD = 60; // Mode critique à 1 minute
+            const REDIRECT_DELAY = 2000; // Délai avant redirection (2 secondes)
+            
+            let sessionTimer = null;
+            let sessionCheckInterval = null;
+            let remainingSeconds = 0;
+            
+            const timerElement = document.getElementById('session-timer');
+            const timerTimeElement = document.getElementById('session-timer-time');
+            
+            // Vérifier que les éléments existent
+            if (!timerElement) {
+                console.error('❌ Élément session-timer non trouvé dans le DOM');
+            }
+            if (!timerTimeElement) {
+                console.error('❌ Élément session-timer-time non trouvé dans le DOM');
+            }
+            
+            // Fonction pour formater le temps restant
+            function formatTime(seconds) {
+                if (seconds <= 0) return '0 s';
+                
+                const days = Math.floor(seconds / 86400);
+                const hours = Math.floor((seconds % 86400) / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                
+                // Format lisible avec jours, heures, minutes, secondes
+                const parts = [];
+                
+                if (days > 0) {
+                    parts.push(`${days} jour${days > 1 ? 's' : ''}`);
+                }
+                if (hours > 0) {
+                    parts.push(`${hours} h`);
+                }
+                if (minutes > 0 || parts.length === 0) {
+                    parts.push(`${minutes} min`);
+                }
+                // Toujours afficher les secondes
+                parts.push(`${secs} s`);
+                
+                return parts.join(' ');
+            }
+            
+            // Fonction pour mettre à jour l'affichage du compteur
+            function updateTimerDisplay(seconds) {
+                if (!timerTimeElement) return;
+                
+                timerTimeElement.textContent = formatTime(seconds);
+                
+                // Mettre à jour les classes CSS selon le temps restant
+                if (timerElement) {
+                    timerElement.classList.remove('warning', 'critical');
+                    
+                    if (seconds <= CRITICAL_THRESHOLD) {
+                        timerElement.classList.add('critical');
+                    } else if (seconds <= WARNING_THRESHOLD) {
+                        timerElement.classList.add('warning');
+                    }
+                }
+            }
+            
+            // Fonction pour vérifier le temps restant de la session
+            async function checkSessionTime() {
+                try {
+                    // Utiliser root_path pour construire l'URL
+                    const rootPath = window.root_path || '';
+                    const apiUrl = `${rootPath}/api/v1/session/remaining-time`;
+                    console.log('🔍 Vérification de la session:', apiUrl);
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'GET',
+                        credentials: 'include'
+                    });
+                    
+                    if (response.status === 401) {
+                        // Session expirée, rediriger vers login
+                        console.log('⚠️ Session expirée (401)');
+                        handleSessionExpired();
+                        return;
+                    }
+                    
+                    if (!response.ok) {
+                        console.error('❌ Erreur lors de la vérification de la session:', response.status, response.statusText);
+                        // Ne pas afficher le compteur si erreur
+                        if (timerElement) {
+                            timerElement.style.display = 'none';
+                        }
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.expired) {
+                        console.log('⚠️ Session expirée (data.expired = true)');
+                        handleSessionExpired();
+                        return;
+                    }
+                    
+                    remainingSeconds = data.remaining_seconds;
+                    console.log('✅ Session active, temps restant:', remainingSeconds, 'secondes');
+                    
+                    // Afficher le compteur si la session est active
+                    if (timerElement) {
+                        timerElement.style.display = 'block';
+                        console.log('📊 Compteur de session affiché');
+                    } else {
+                        console.error('❌ Élément timerElement non trouvé');
+                    }
+                    
+                    updateTimerDisplay(remainingSeconds);
+                    
+                    // Démarrer le compte à rebours
+                    startCountdown();
+                    
+                } catch (error) {
+                    console.error('❌ Erreur lors de la vérification de la session:', error);
+                    // En cas d'erreur, masquer le compteur
+                    if (timerElement) {
+                        timerElement.style.display = 'none';
+                    }
+                }
+            }
+            
+            // Fonction pour démarrer le compte à rebours
+            function startCountdown() {
+                // Arrêter le timer précédent s'il existe
+                if (sessionTimer) {
+                    clearInterval(sessionTimer);
+                }
+                
+                // Mettre à jour toutes les secondes
+                sessionTimer = setInterval(() => {
+                    remainingSeconds--;
+                    
+                    if (remainingSeconds <= 0) {
+                        clearInterval(sessionTimer);
+                        handleSessionExpired();
+                        return;
+                    }
+                    
+                    updateTimerDisplay(remainingSeconds);
+                }, 1000);
+            }
+            
+            // Fonction pour gérer l'expiration de la session
+            function handleSessionExpired() {
+                // Arrêter tous les timers
+                if (sessionTimer) {
+                    clearInterval(sessionTimer);
+                }
+                if (sessionCheckInterval) {
+                    clearInterval(sessionCheckInterval);
+                }
+                
+                // Afficher un message
+                if (timerElement && timerTimeElement) {
+                    timerTimeElement.textContent = '00:00:00';
+                    timerElement.classList.add('critical');
+                }
+                
+                // Afficher une notification
+                if (typeof showToast === 'function') {
+                    showToast('Votre session a expiré. Vous allez être redirigé vers la page de connexion.', 'error');
+                } else {
+                    alert('Votre session a expiré. Vous allez être redirigé vers la page de connexion.');
+                }
+                
+                // Rediriger vers la page de login après un court délai
+                const rootPath = window.root_path || '';
+                setTimeout(() => {
+                    window.location.href = `${rootPath}/api/v1/login?session_expired=true`;
+                }, REDIRECT_DELAY);
+            }
+            
+            // Démarrer la vérification de la session au chargement de la page
+            // Ne vérifier que si on n'est pas sur la page de login
+            function initSessionTimer() {
+                const rootPath = window.root_path || '';
+                const currentPath = window.location.pathname;
+                const loginPath1 = `${rootPath}/api/v1/login`;
+                const loginPath2 = '/api/v1/login';
+                const isLoginPage = currentPath === loginPath1 || 
+                                   currentPath === loginPath2 ||
+                                   currentPath.includes('/login');
+                
+                if (!isLoginPage) {
+                    console.log('🕐 Initialisation du compteur de session...');
+                    
+                    // Vérifier immédiatement
+                    checkSessionTime();
+                    
+                    // Vérifier périodiquement (toutes les 30 secondes)
+                    sessionCheckInterval = setInterval(checkSessionTime, SESSION_CHECK_INTERVAL);
+                    
+                    // Vérifier aussi lors des interactions utilisateur (clics, touches)
+                    let userActivityTimeout;
+                    const resetCheck = () => {
+                        clearTimeout(userActivityTimeout);
+                        userActivityTimeout = setTimeout(() => {
+                            checkSessionTime();
+                        }, 5000); // Attendre 5 secondes après la dernière activité
+                    };
+                    
+                    document.addEventListener('click', resetCheck);
+                    document.addEventListener('keydown', resetCheck);
+                    document.addEventListener('scroll', resetCheck);
+                } else {
+                    console.log('🔒 Page de login détectée, compteur de session désactivé');
+                }
+            }
+            
+            // Attendre que le DOM soit chargé
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initSessionTimer);
+            } else {
+                // DOM déjà chargé
+                initSessionTimer();
+            }
+        })();
+    </script>
     
     <!-- Script global pour l'overlay de navigation -->
     <script>
@@ -153,7 +1536,7 @@
                     <div class="error-notification-icon">❌</div>
                     <div class="error-notification-text">
                         <div class="error-notification-title">${title}</div>
-                        <div class="error-notification-message">${message}</div>
+                        <div class="error-notification-message" style="white-space: pre-line;">${message}</div>
                     </div>
                     <button class="error-notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
                 </div>
@@ -350,8 +1733,1545 @@
         });
     </script>
     
+    <!-- Scripts pour la messagerie -->
+    <script>
+let currentConversationId = null;
+let currentReceiverId = null;
+let conversations = [];
+let messagesInterval = null;
+let isSearchMode = false;
+let lastMessageCount = 0; // Pour détecter les nouveaux messages
+
+// Fonction pour jouer un son d'apparition
+function playAppearanceSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        // Connecter les nœuds
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Configuration du son : une note agréable et courte
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // Fréquence de départ
+        oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1); // Légère descente
+        
+        // Enveloppe du volume : attaque rapide, décroissance douce
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01); // Attaque rapide
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15); // Décroissance
+        
+        // Démarrer et arrêter le son
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.15); // Son court (150ms)
+    } catch (error) {
+        // Si l'API Web Audio n'est pas disponible, ignorer silencieusement
+        console.debug('Son d\'apparition non disponible:', error);
+    }
+}
+
+// Fonction pour jouer un son de notification de message
+function playMessageNotificationSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Créer deux oscillateurs pour un son plus riche (double note)
+        const osc1 = audioContext.createOscillator();
+        const osc2 = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        // Connecter les nœuds
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Configuration : deux notes harmonieuses
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(523.25, audioContext.currentTime); // Do (C5)
+        
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(659.25, audioContext.currentTime); // Mi (E5)
+        
+        // Enveloppe du volume : attaque rapide, décroissance douce
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.02); // Attaque rapide
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2); // Décroissance
+        
+        // Démarrer et arrêter les sons
+        osc1.start(audioContext.currentTime);
+        osc2.start(audioContext.currentTime);
+        osc1.stop(audioContext.currentTime + 0.2); // Son court (200ms)
+        osc2.stop(audioContext.currentTime + 0.2);
+    } catch (error) {
+        // Si l'API Web Audio n'est pas disponible, ignorer silencieusement
+        console.debug('Son de notification non disponible:', error);
+    }
+}
+
+// Toggle messagerie popup
+function toggleMessagerie() {
+    console.log('🔔 toggleMessagerie appelé');
+    const popup = document.getElementById('messageriePopup');
+    const button = document.querySelector('.floating-messagerie-button, .floating-help-button');
+    
+    if (!popup) {
+        console.error('❌ Popup de messagerie non trouvée dans le DOM');
+        return;
+    }
+    
+    console.log('✅ Popup trouvée:', popup);
+    
+    // Logs détaillés sur la position dans le DOM
+    console.log('📍 Position dans le DOM:');
+    console.log('  - Parent:', popup.parentElement);
+    console.log('  - Tag parent:', popup.parentElement?.tagName);
+    console.log('  - ID parent:', popup.parentElement?.id);
+    console.log('  - Classes parent:', popup.parentElement?.className);
+    
+    // Vérifier la chaîne des parents
+    let current = popup.parentElement;
+    let depth = 0;
+    const parentChain = [];
+    while (current && current !== document.body && depth < 10) {
+        const computed = window.getComputedStyle(current);
+        parentChain.push({
+            tag: current.tagName,
+            id: current.id,
+            classes: current.className,
+            position: computed.position,
+            transform: computed.transform,
+            perspective: computed.perspective,
+            filter: computed.filter,
+            willChange: computed.willChange,
+            display: computed.display
+        });
+        current = current.parentElement;
+        depth++;
+    }
+    console.log('  - Chaîne des parents:', parentChain);
+    
+    // Vérifier les styles du body
+    const bodyStyle = window.getComputedStyle(document.body);
+    console.log('📐 Styles du body:', {
+        position: bodyStyle.position,
+        display: bodyStyle.display,
+        transform: bodyStyle.transform,
+        perspective: bodyStyle.perspective,
+        filter: bodyStyle.filter,
+        willChange: bodyStyle.willChange
+    });
+    
+    // Vérifier les styles du html
+    const htmlStyle = window.getComputedStyle(document.documentElement);
+    console.log('📐 Styles du html:', {
+        position: htmlStyle.position,
+        transform: htmlStyle.transform,
+        perspective: htmlStyle.perspective
+    });
+    
+    const isActive = popup.classList.contains('active');
+    console.log('📊 État actuel:', isActive ? 'active' : 'inactive');
+    
+        if (isActive) {
+        // Animation de fermeture
+        popup.style.transition = 'opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out';
+        popup.style.opacity = '0';
+        popup.style.transform = 'translateY(30px) scale(0.9)';
+        
+        setTimeout(() => {
+            popup.classList.remove('active');
+            if (!popup.classList.contains('active')) {
+                popup.style.display = 'none';
+            }
+        }, 300); // Attendre la fin de l'animation
+        
+        if (typeof stopPolling === 'function') {
+            stopPolling();
+        }
+        // Réafficher le bouton flottant
+        if (button) {
+            button.style.display = 'flex';
+        }
+        console.log('🔒 Messagerie fermée');
+    } else {
+        
+        // S'assurer que le popup est visible avant d'ajouter la classe active
+        popup.style.display = 'flex';
+        
+        // Forcer un reflow pour que l'animation fonctionne
+        void popup.offsetWidth;
+        
+        // Vérifier les styles AVANT d'ajouter active
+        const beforeStyle = window.getComputedStyle(popup);
+        console.log('📐 Styles AVANT activation:', {
+            position: beforeStyle.position,
+            display: beforeStyle.display,
+            visibility: beforeStyle.visibility,
+            opacity: beforeStyle.opacity,
+            right: beforeStyle.right,
+            bottom: beforeStyle.bottom,
+            top: beforeStyle.top,
+            left: beforeStyle.left,
+            zIndex: beforeStyle.zIndex,
+            margin: beforeStyle.margin,
+            padding: beforeStyle.padding,
+            width: beforeStyle.width,
+            height: beforeStyle.height
+        });
+        
+        // S'assurer que la popup est dans le body
+        if (popup.parentElement !== document.body) {
+            console.warn('⚠️ Popup n\'est pas dans le body, déplacement...');
+            const classes = popup.className;
+            const isActiveState = popup.classList.contains('active');
+            document.body.appendChild(popup);
+            popup.className = classes;
+            if (isActiveState) {
+                popup.classList.add('active');
+            }
+            console.log('✅ Popup déplacée dans le body');
+        }
+        
+        // Retirer le transform du body s'il existe (pour permettre le positionnement fixed)
+        const bodyTransform = window.getComputedStyle(document.body).transform;
+        if (bodyTransform && bodyTransform !== 'none') {
+            console.warn('⚠️ Body a un transform, retrait temporaire pour permettre positionnement fixed');
+            document.body.style.transform = 'none';
+        }
+        
+        // Forcer le positionnement avec des styles inline
+        console.log('🔧 Application des styles inline...');
+        popup.style.position = 'fixed';
+        popup.style.right = '20px';
+        popup.style.bottom = '20px';
+        popup.style.top = 'auto';
+        popup.style.left = 'auto';
+        popup.style.zIndex = '99999';
+        popup.style.margin = '0';
+        popup.style.padding = '0';
+        
+        // Réinitialiser les styles pour l'animation
+        popup.style.transition = '';
+        popup.style.opacity = '0';
+        popup.style.transform = 'translateY(30px) scale(0.9)';
+        popup.style.display = 'flex';
+        
+        // Ajouter la classe active
+        popup.classList.add('active');
+        
+        // Forcer le reflow pour déclencher l'animation
+        void popup.offsetWidth;
+        
+        // Appliquer l'animation avec transition
+        popup.style.transition = 'opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), visibility 0.4s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        popup.style.opacity = '1';
+        popup.style.transform = 'translateY(0) scale(1)';
+        
+        // Jouer le son d'apparition
+        playAppearanceSound();
+        
+        console.log('🔓 Messagerie ouverte');
+        
+        // Vérifier les styles APRÈS activation
+        setTimeout(() => {
+            const afterStyle = window.getComputedStyle(popup);
+            console.log('📐 Styles APRÈS activation:', {
+                position: afterStyle.position,
+                display: afterStyle.display,
+                visibility: afterStyle.visibility,
+                opacity: afterStyle.opacity,
+                right: afterStyle.right,
+                bottom: afterStyle.bottom,
+                top: afterStyle.top,
+                left: afterStyle.left,
+                zIndex: afterStyle.zIndex,
+                margin: afterStyle.margin,
+                padding: afterStyle.padding,
+                width: afterStyle.width,
+                height: afterStyle.height,
+                parentElement: popup.parentElement?.tagName,
+                getBoundingClientRect: popup.getBoundingClientRect()
+            });
+            
+            // Vérifier la position réelle
+            const rect = popup.getBoundingClientRect();
+            const viewport = {
+                width: window.innerWidth,
+                height: window.innerHeight
+            };
+            console.log('📏 Position réelle (getBoundingClientRect):', {
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+                viewport: viewport,
+                isInViewport: rect.top >= 0 && rect.left >= 0 && rect.bottom <= viewport.height && rect.right <= viewport.width
+            });
+        }, 100);
+        
+        if (typeof loadConversations === 'function') {
+            loadConversations();
+        }
+        if (typeof startPolling === 'function') {
+            startPolling();
+        }
+        // Cacher le bouton flottant quand la popup est ouverte
+        if (button) {
+            button.style.display = 'none';
+        }
+    }
+}
+
+window.toggleMessagerie = toggleMessagerie;
+
+// Charger les conversations
+async function loadConversations() {
+    try {
+        const rootPath = window.root_path || '';
+        const url = `${rootPath}/api/v1/messages/conversations`;
+        console.log('📡 Chargement des conversations depuis:', url);
+        
+        const response = await window.fetch(url, {
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            console.error('❌ Erreur HTTP:', response.status, response.statusText);
+            throw new Error('Erreur lors du chargement');
+        }
+        
+        conversations = await response.json();
+        console.log('✅ Conversations chargées:', conversations.length);
+        displayConversations();
+        if (typeof updateUnreadBadge === 'function') {
+            updateUnreadBadge();
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement des conversations:', error);
+        const container = document.getElementById('conversationsContainer');
+        if (container) {
+            container.innerHTML = '<div class="loading-messages">Erreur de chargement</div>';
+        }
+    }
+}
+
+function displayConversations() {
+    const container = document.getElementById('conversationsContainer');
+    
+    if (conversations.length === 0) {
+        container.innerHTML = '<div class="loading-messages">Aucune conversation</div>';
+        return;
+    }
+    
+    isSearchMode = false;
+    container.innerHTML = conversations.map(conv => `
+        <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}" 
+             onclick="openConversation(${conv.id}, ${conv.other_user_id}, '${escapeHtml(conv.other_user_name)}')">
+            <div class="conversation-avatar">${getInitials(conv.other_user_name)}</div>
+            <div class="conversation-info">
+                <div class="conversation-name">${escapeHtml(conv.other_user_name)}</div>
+                <div class="conversation-preview">${escapeHtml(conv.last_message_preview || 'Aucun message')}</div>
+            </div>
+            <div class="conversation-meta">
+                ${conv.unread_count > 0 ? `<span class="conversation-badge">${conv.unread_count}</span>` : ''}
+                <div class="conversation-time">${formatTime(conv.last_message_at)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function openConversation(conversationId, receiverId, receiverName) {
+    currentConversationId = conversationId;
+    currentReceiverId = receiverId;
+    
+    // Réinitialiser le compteur de messages pour cette conversation
+    lastMessageCount = 0;
+    
+    document.getElementById('conversationsList').style.display = 'none';
+    const chatArea = document.getElementById('chatArea');
+    chatArea.classList.add('is-visible');
+    document.getElementById('chatRecipientName').textContent = receiverName;
+    
+    await loadMessages(conversationId);
+}
+
+function backToConversations() {
+    isSearchMode = false;
+    document.getElementById('conversationsList').style.display = 'flex';
+    document.getElementById('chatArea').classList.remove('is-visible');
+    document.getElementById('searchUserInput').value = '';
+    currentConversationId = null;
+    currentReceiverId = null;
+    loadConversations();
+    stopPolling();
+    startPolling();
+}
+
+async function loadMessages(conversationId) {
+    try {
+        const rootPath = window.root_path || '';
+        const response = await window.fetch(`${rootPath}/api/v1/messages/conversations/${conversationId}/messages`, {
+            credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('Erreur lors du chargement');
+        
+        const messages = await response.json();
+        
+        // Détecter les nouveaux messages (qui ne sont pas les nôtres)
+        const newMessages = messages.filter(msg => !msg.is_own);
+        const hasNewMessages = newMessages.length > lastMessageCount && lastMessageCount > 0;
+        
+        // Mettre à jour le compteur
+        const previousCount = lastMessageCount;
+        lastMessageCount = newMessages.length;
+        
+        displayMessages(messages);
+        
+        // Jouer un son si un nouveau message est arrivé
+        if (hasNewMessages) {
+            playMessageNotificationSound();
+        }
+        
+        const container = document.getElementById('messagesContainer');
+        container.scrollTop = container.scrollHeight;
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+function displayMessages(messages) {
+    const container = document.getElementById('messagesContainer');
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<div class="loading-messages">Aucun message</div>';
+        return;
+    }
+    
+    container.innerHTML = messages.map(msg => `
+        <div class="message-item ${msg.is_own ? 'own' : 'other'}">
+            <div class="message-bubble">${escapeHtml(msg.content)}</div>
+            <div class="message-time">${formatTime(msg.created_at)}</div>
+        </div>
+    `).join('');
+    
+    container.scrollTop = container.scrollHeight;
+}
+
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (!content || !currentReceiverId) {
+        if (!currentConversationId) {
+            alert('Veuillez d\'abord sélectionner ou créer une conversation');
+            return;
+        }
+    }
+    
+    try {
+        const rootPath = window.root_path || '';
+        const response = await window.fetch(`${rootPath}/api/v1/messages/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                receiver_id: currentReceiverId,
+                content: content
+            })
+        });
+        
+        if (!response.ok) throw new Error('Erreur lors de l\'envoi');
+        
+        const result = await response.json();
+        input.value = '';
+        
+        if (currentConversationId) {
+            await loadMessages(currentConversationId);
+        } else if (result.conversation_id) {
+            currentConversationId = result.conversation_id;
+            await openConversation(result.conversation_id, currentReceiverId, 
+                document.getElementById('chatRecipientName').textContent);
+        }
+        await loadConversations();
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'envoi du message');
+    }
+}
+
+let searchUsersTimeout = null;
+async function searchUsers() {
+    const input = document.getElementById('searchUserInput');
+    const query = input.value.trim();
+    
+    if (query.length === 0) {
+        isSearchMode = true;
+    } else {
+        isSearchMode = true;
+    }
+    
+    clearTimeout(searchUsersTimeout);
+    searchUsersTimeout = setTimeout(async () => {
+        if (query.length < 2 && query.length > 0) return;
+        
+        try {
+            const rootPath = window.root_path || '';
+            const url = query ? `${rootPath}/api/v1/messages/users/search?q=${encodeURIComponent(query)}` : `${rootPath}/api/v1/messages/users/search`;
+            const response = await window.fetch(url, {
+                credentials: 'same-origin'
+            });
+            if (!response.ok) throw new Error('Erreur de recherche');
+            
+            const users = await response.json();
+            displayUserSearchResults(users);
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }, 300);
+}
+
+function displayUserSearchResults(users) {
+    const container = document.getElementById('conversationsContainer');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div class="loading-messages">Aucun utilisateur trouvé</div>';
+        return;
+    }
+    
+    container.innerHTML = users.map(user => `
+        <div class="user-search-result" onclick="startConversation(${user.id}, '${escapeHtml(user.full_name)}')">
+            <div class="conversation-avatar">${getInitials(user.full_name)}</div>
+            <div class="conversation-info">
+                <div class="conversation-name">${escapeHtml(user.full_name)}</div>
+                <div class="conversation-preview">${escapeHtml(user.email)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function startConversation(userId, userName) {
+    currentReceiverId = userId;
+    currentConversationId = null;
+    
+    document.getElementById('conversationsList').style.display = 'none';
+    document.getElementById('chatArea').classList.add('is-visible');
+    document.getElementById('chatRecipientName').textContent = userName;
+    document.getElementById('messagesContainer').innerHTML = '<div class="loading-messages">Nouvelle conversation</div>';
+    document.getElementById('messageInput').focus();
+}
+
+function showNewConversation() {
+    isSearchMode = true;
+    document.getElementById('searchUserInput').value = '';
+    document.getElementById('searchUserInput').focus();
+    searchUsers();
+}
+
+function startPolling() {
+    if (messagesInterval) clearInterval(messagesInterval);
+    
+    messagesInterval = setInterval(async () => {
+        if (currentConversationId) {
+            await loadMessages(currentConversationId);
+        }
+        if (!isSearchMode) {
+            await loadConversations();
+        }
+        updateUnreadBadge();
+    }, 3000);
+}
+
+function stopPolling() {
+    if (messagesInterval) {
+        clearInterval(messagesInterval);
+        messagesInterval = null;
+    }
+}
+
+let previousUnreadCount = 0;
+
+async function updateUnreadBadge() {
+    try {
+        const rootPath = window.root_path || '';
+        const response = await window.fetch(`${rootPath}/api/v1/messages/unread-count`, {
+            credentials: 'same-origin'
+        });
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const badge = document.querySelector('.messagerie-badge');
+        const badgeText = document.querySelector('.messagerie-badge-text');
+        
+        // Détecter si un nouveau message non lu est arrivé
+        if (data.unread_count > previousUnreadCount && previousUnreadCount > 0) {
+            // Jouer un son seulement si on n'est pas dans la conversation active
+            if (!currentConversationId) {
+                playMessageNotificationSound();
+            }
+        }
+        
+        previousUnreadCount = data.unread_count;
+        
+        if (data.unread_count > 0) {
+            badge.classList.remove('hidden');
+            badgeText.textContent = data.unread_count;
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Erreur badge:', error);
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+}
+
+function formatTime(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now - date;
+    const hours = diff / (1000 * 60 * 60);
+    
+    if (hours < 24) {
+        return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    } else {
+        return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    }
+}
+
+function handleMessageKeydown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+}
+
+// Charger le badge au démarrage et vérifier la popup et le bouton
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM chargé, vérification de la popup et du bouton...');
+    
+    const popup = document.getElementById('messageriePopup');
+    if (popup) {
+        console.log('✅ Popup trouvée au chargement');
+        console.log('📍 Parent au chargement:', popup.parentElement?.tagName, popup.parentElement?.id, popup.parentElement?.className);
+        
+        // Vérifier si elle est dans le body
+        if (popup.parentElement !== document.body) {
+            console.warn('⚠️ Popup n\'est pas dans le body au chargement, déplacement...');
+            const classes = popup.className;
+            document.body.appendChild(popup);
+            popup.className = classes;
+            console.log('✅ Popup déplacée dans le body au chargement');
+        }
+        
+        // Vérifier les styles initiaux
+        const initialStyle = window.getComputedStyle(popup);
+        console.log('📐 Styles initiaux de la popup:', {
+            position: initialStyle.position,
+            display: initialStyle.display,
+            right: initialStyle.right,
+            bottom: initialStyle.bottom,
+            parentElement: popup.parentElement?.tagName
+        });
+    } else {
+        console.error('❌ Popup non trouvée au chargement du DOM');
+    }
+    
+    // Fonction pour fixer le bouton flottant
+    function fixFloatingButton() {
+        const button = document.querySelector('.floating-messagerie-button');
+        if (!button) return;
+        
+        // S'assurer qu'il est dans le body directement
+        if (button.parentElement !== document.body) {
+            console.warn('⚠️ Bouton n\'est pas dans le body, déplacement...');
+            const classes = button.className;
+            const onclick = button.getAttribute('onclick');
+            document.body.appendChild(button);
+            button.className = classes;
+            if (onclick) button.setAttribute('onclick', onclick);
+            console.log('✅ Bouton déplacé dans le body');
+        }
+        
+        // Retirer le transform du body et de tous les parents
+        const bodyTransform = window.getComputedStyle(document.body).transform;
+        if (bodyTransform && bodyTransform !== 'none') {
+            console.log('⚠️ Body a un transform, retrait pour permettre positionnement fixed');
+            document.body.style.transform = 'none';
+        }
+        
+        // Vérifier la chaîne des parents pour des transforms
+        let current = button.parentElement;
+        while (current && current !== document.documentElement) {
+            const computed = window.getComputedStyle(current);
+            if (computed.transform && computed.transform !== 'none') {
+                console.warn('⚠️ Parent a un transform:', current.tagName, current.id, current.className);
+                // Ne pas modifier les parents, mais noter le problème
+            }
+            current = current.parentElement;
+        }
+        
+        // Forcer le positionnement fixed avec des styles inline
+        button.style.position = 'fixed';
+        button.style.bottom = '30px';
+        button.style.right = '30px';
+        button.style.top = 'auto';
+        button.style.left = 'auto';
+        button.style.zIndex = '9998';
+        button.style.margin = '0';
+        button.style.padding = '0';
+        button.style.transform = 'none'; // S'assurer qu'il n'a pas de transform lui-même
+    }
+    
+    // Vérifier et fixer le bouton flottant au chargement
+    const button = document.querySelector('.floating-messagerie-button');
+    if (button) {
+        console.log('✅ Bouton flottant trouvé au chargement');
+        fixFloatingButton();
+        
+        // Vérifier que le positionnement est bien fixed après un délai
+        setTimeout(() => {
+            const buttonStyle = window.getComputedStyle(button);
+            const rect = button.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const expectedBottom = viewportHeight - 30; // 30px du bas
+            
+            console.log('📐 Styles du bouton:', {
+                position: buttonStyle.position,
+                bottom: buttonStyle.bottom,
+                right: buttonStyle.right,
+                parentElement: button.parentElement?.tagName,
+                getBoundingClientRect: {
+                    bottom: rect.bottom,
+                    right: rect.right,
+                    viewportHeight: viewportHeight,
+                    expectedBottom: expectedBottom,
+                    difference: Math.abs(rect.bottom - expectedBottom)
+                }
+            });
+            
+            // Si le positionnement n'est pas fixed ou si la position est incorrecte, forcer à nouveau
+            if (buttonStyle.position !== 'fixed' || Math.abs(rect.bottom - expectedBottom) > 5) {
+                console.warn('⚠️ Position du bouton incorrecte, forçage...');
+                fixFloatingButton();
+            }
+        }, 100);
+        
+        // Surveiller le scroll pour maintenir le positionnement
+        let scrollCheckTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollCheckTimeout);
+            scrollCheckTimeout = setTimeout(() => {
+                const buttonStyle = window.getComputedStyle(button);
+                if (buttonStyle.position !== 'fixed') {
+                    console.warn('⚠️ Position du bouton perdue lors du scroll, correction...');
+                    fixFloatingButton();
+                }
+            }, 50);
+        }, { passive: true });
+        
+        // Observer les changements de style du body
+        const bodyObserver = new MutationObserver(() => {
+            const bodyTransform = window.getComputedStyle(document.body).transform;
+            if (bodyTransform && bodyTransform !== 'none') {
+                console.warn('⚠️ Body transform détecté, retrait...');
+                document.body.style.transform = 'none';
+                fixFloatingButton();
+            }
+        });
+        
+        bodyObserver.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+    }
+    
+    updateUnreadBadge();
+    setInterval(updateUnreadBadge, 10000);
+    
+    // ============================================
+    // CHATBOT OLLAMA
+    // ============================================
+    
+    // Variable globale pour stocker le modèle disponible
+    let availableChatbotModel = null;
+    let chatbotDocuments = []; // Documents temporaires (non stockés, uniquement pour la session de conversation active)
+    
+    async function handleChatbotFileUpload(event) {
+        const input = event.target;
+        const file = input.files?.[0];
+        if (!file) return;
+        
+        // Vérifier la taille du fichier avant l'envoi (max 10 MB)
+        const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+        if (file.size > MAX_SIZE) {
+            addChatbotMessage('assistant', `❌ Le fichier "${file.name}" est trop volumineux (${(file.size / (1024*1024)).toFixed(2)} MB). Taille maximale: 10 MB.`);
+            input.value = '';
+            return;
+        }
+        
+        // Vérifier le type de fichier
+        const allowedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.md'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowedExtensions.includes(fileExtension)) {
+            addChatbotMessage('assistant', `❌ Type de fichier non supporté: ${fileExtension}. Types acceptés: ${allowedExtensions.join(', ')}`);
+            input.value = '';
+            return;
+        }
+        
+        const uploadArea = document.getElementById('chatbotUploadArea');
+        const uploadedFiles = document.getElementById('chatbotUploadedFiles');
+        const sendBtn = document.getElementById('chatbotSendBtn');
+        
+        // Désactiver le bouton d'envoi pendant l'upload
+        if (sendBtn) sendBtn.disabled = true;
+        
+        // Afficher l'aire d'upload
+        if (uploadArea) {
+            uploadArea.style.display = 'flex';
+        }
+        
+        // Afficher un indicateur de chargement
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'chatbot-uploaded-file';
+        loadingDiv.innerHTML = `📄 ${file.name} (${(file.size / 1024).toFixed(0)} KB - traitement...)`;
+        if (uploadedFiles) {
+            uploadedFiles.appendChild(loadingDiv);
+        }
+        
+        const uploadUrl = '/api/v1/chatbot/upload-document';
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const response = await window.submitFormAsJson(uploadUrl, formData, 'POST', true);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Erreur inconnue' }));
+                throw new Error(errorData.detail || `Erreur ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Vérifier que le texte est bien présent dans la réponse
+            if (!data.text || data.text.trim().length === 0) {
+                console.error('❌ Le document a été uploadé mais aucun texte n\'a été extrait');
+                throw new Error('Aucun texte n\'a pu être extrait du document. Vérifiez que le fichier n\'est pas corrompu ou protégé.');
+            }
+            
+            // Mettre à jour l'indicateur de chargement avec le succès
+            loadingDiv.innerHTML = `✅ ${file.name} (${(file.size / 1024).toFixed(0)} KB - traité)`;
+            loadingDiv.style.background = '#28a745';
+            loadingDiv.style.color = 'white';
+            
+            // Ajouter le document à la liste des documents disponibles pour le chatbot
+            chatbotDocuments.push({
+                filename: data.filename,
+                url: data.url,
+                text: data.text,
+                text_length: data.text_length || 0
+            });
+            
+            console.log(`✅ Document ajouté: ${data.filename}, texte: ${data.text.length} caractères`);
+            
+               // Afficher un message de confirmation dans le chat
+               addChatbotMessage('assistant', `✅ Document "${data.filename}" chargé avec succès !\n\n📄 Fichier: ${data.filename}\n📊 Taille: ${(data.file_size / 1024).toFixed(0)} KB\n📝 Texte extrait: ${data.text_length || 0} caractères\n\n💡 Pour poser une question sur ce document, commencez votre phrase par "dans ce document" (ex: "dans ce document, résume-moi le contenu"). Sinon, je répondrai en utilisant mes connaissances générales.`);
+            
+            // Envoyer immédiatement le texte à Ollama avec une instruction
+            await sendDocumentToOllama(data.filename, data.text);
+            
+        } catch (error) {
+            loadingDiv.innerHTML = `❌ ${file.name} (erreur)`;
+            loadingDiv.style.background = '#dc3545';
+            loadingDiv.style.color = 'white';
+            
+            // Afficher un message bienveillant dans le chat
+            const friendlyMessage = getFriendlyErrorMessage(error);
+            addChatbotMessage('assistant', friendlyMessage);
+        } finally {
+            // Réactiver le bouton d'envoi
+            if (sendBtn) sendBtn.disabled = false;
+            
+            // Réinitialiser l'input file APRÈS avoir terminé toutes les opérations
+            // Ne pas le faire avant car cela peut causer NotReadableError
+            if (input) input.value = '';
+        }
+    }
+    window.handleChatbotFileUpload = handleChatbotFileUpload;
+    
+    // Retirer tous les documents
+    function clearChatbotDocuments() {
+        chatbotDocuments = [];
+        const uploadArea = document.getElementById('chatbotUploadArea');
+        const uploadedFiles = document.getElementById('chatbotUploadedFiles');
+        
+        if (uploadArea) {
+            uploadArea.style.display = 'none';
+        }
+        
+        if (uploadedFiles) {
+            uploadedFiles.innerHTML = '';
+        }
+    }
+    window.clearChatbotDocuments = clearChatbotDocuments;
+    
+    // Envoyer le document à Ollama avec une instruction
+    async function sendDocumentToOllama(filename, text) {
+        try {
+            // Vérifier qu'un modèle est disponible
+            if (!availableChatbotModel) {
+                await loadChatbotModels();
+                if (!availableChatbotModel) {
+                    console.warn('⚠️ Aucun modèle disponible pour envoyer le document');
+                    return;
+                }
+            }
+            
+            const rootPath = window.root_path || '';
+            
+            // Préparer le message d'instruction pour Ollama
+            const instructionMessage = `J'ai chargé un document intitulé "${filename}". Voici son contenu complet :
+
+=== CONTENU DU DOCUMENT "${filename}" ===
+${text}
+=== FIN DU CONTENU ===
+
+INSTRUCTION IMPORTANTE : 
+Toutes les questions que je vais te poser par la suite concerneront ce document. Tu dois répondre en te basant UNIQUEMENT sur le contenu de ce document. Si une information n'est pas dans le document, dis-le clairement. Ne réponds pas aux questions en utilisant tes connaissances générales, mais uniquement en te basant sur le contenu du document fourni ci-dessus.
+
+Confirme que tu as bien reçu et compris le contenu du document.`;
+
+            // Envoyer le message à Ollama (sans afficher dans le chat)
+            // Note: Cette fonction est optionnelle, si elle timeout, ce n'est pas grave
+            // Le document sera quand même disponible via document_context dans les messages suivants
+            const response = await fetch(`${rootPath}/api/v1/chatbot/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    message: instructionMessage,
+                    model: availableChatbotModel,
+                    stream: false,  // Pas de streaming pour cette instruction silencieuse
+                    document_context: null  // Pas besoin de document_context car on envoie directement le texte
+                }),
+                signal: AbortSignal.timeout(30000)  // Timeout de 30 secondes
+            }).catch(error => {
+                if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+                    console.warn('⚠️ Timeout lors de l\'envoi du document à Ollama (ce n\'est pas grave, le document sera disponible via document_context)');
+                    return null;
+                }
+                throw error;
+            });
+            
+            if (response && response.ok) {
+                const result = await response.json();
+                console.log('✅ Document envoyé à Ollama avec succès');
+                // Afficher la confirmation dans le chat pour informer l'utilisateur
+                addChatbotMessage('assistant', `📚 Document "${filename}" chargé et prêt. Vous pouvez maintenant poser vos questions sur ce document.`);
+            } else if (response) {
+                console.warn('⚠️ Erreur lors de l\'envoi du document à Ollama');
+            }
+        } catch (error) {
+            if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+                console.warn('⚠️ Timeout lors de l\'envoi du document à Ollama (ce n\'est pas grave, le document sera disponible via document_context)');
+            } else {
+                console.error('❌ Erreur lors de l\'envoi du document à Ollama:', error);
+            }
+            // Ne pas afficher d'erreur à l'utilisateur, le document sera quand même disponible via document_context
+        }
+    }
+    
+    // Charger les modèles disponibles au démarrage
+    async function loadChatbotModels() {
+        try {
+            const rootPath = window.root_path || '';
+            const response = await fetch(`${rootPath}/api/v1/chatbot/models`, {
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                console.warn('⚠️ Impossible de charger les modèles Ollama');
+                return;
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.models && data.models.length > 0) {
+                // Utiliser le premier modèle disponible
+                availableChatbotModel = data.models[0];
+                console.log('✅ Modèle Ollama chargé:', availableChatbotModel);
+                
+                // Afficher le modèle dans l'interface
+                const modelInfo = document.getElementById('chatbotModelInfo');
+                if (modelInfo) {
+                    modelInfo.textContent = `Modèle: ${availableChatbotModel}`;
+                    modelInfo.style.display = 'block';
+                }
+            } else {
+                console.warn('⚠️ Aucun modèle Ollama disponible');
+                const modelInfo = document.getElementById('chatbotModelInfo');
+                if (modelInfo) {
+                    modelInfo.textContent = '⚠️ Aucun modèle disponible. Installez un modèle avec: ollama pull llama3.2';
+                    modelInfo.style.display = 'block';
+                    modelInfo.style.color = 'var(--accent-color)';
+                }
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors du chargement des modèles:', error);
+        }
+    }
+    
+    // Charger les modèles au démarrage
+    loadChatbotModels();
+    
+    // Toggle chatbot popup
+    function toggleChatbot() {
+        console.log('🤖 toggleChatbot appelé');
+        const popup = document.getElementById('chatbotPopup');
+        const button = document.querySelector('.floating-chatbot-button');
+        
+        if (!popup) {
+            console.error('❌ Popup de chatbot non trouvée dans le DOM');
+            return;
+        }
+        
+        const isActive = popup.classList.contains('active');
+        
+        if (isActive) {
+            // Animation de fermeture
+            popup.style.transition = 'opacity 0.25s ease-out, visibility 0.25s ease-out, transform 0.25s ease-out';
+            popup.style.opacity = '0';
+            popup.style.transform = 'translateY(30px) scale(0.9)';
+            
+            setTimeout(() => {
+                popup.classList.remove('active');
+                if (button) {
+                    button.style.display = 'flex';
+                    // Réapparition animée du bouton
+                    button.style.transition = 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                    button.style.opacity = '0';
+                    button.style.transform = 'scale(0.8)';
+                    setTimeout(() => {
+                        button.style.opacity = '1';
+                        button.style.transform = 'scale(1)';
+                    }, 50);
+                }
+                // Supprimer les documents temporaires à la fermeture
+                clearChatbotDocuments();
+            }, 250); // Attendre la fin de l'animation
+            
+            console.log('🔒 Chatbot fermé');
+        } else {
+            // Forcer le positionnement fixed
+            popup.style.position = 'fixed';
+            popup.style.right = '20px';
+            popup.style.bottom = '20px';
+            popup.style.top = 'auto';
+            popup.style.left = 'auto';
+            popup.style.zIndex = '99998';
+            popup.style.margin = '0';
+            popup.style.padding = '0';
+            
+            // S'assurer qu'il est dans le body
+            if (popup.parentElement !== document.body) {
+                const classes = popup.className;
+                document.body.appendChild(popup);
+                popup.className = classes;
+            }
+            
+            // Retirer le transform du body
+            const bodyTransform = window.getComputedStyle(document.body).transform;
+            if (bodyTransform && bodyTransform !== 'none') {
+                document.body.style.transform = 'none';
+            }
+            
+            // Réinitialiser les styles pour l'animation
+            popup.style.transition = '';
+            popup.style.opacity = '0';
+            popup.style.transform = 'translateY(30px) scale(0.9)';
+            
+            popup.classList.add('active');
+            
+            // Forcer le reflow pour déclencher l'animation
+            void popup.offsetWidth;
+            
+            // Appliquer l'animation
+            popup.style.transition = 'opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), visibility 0.4s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            popup.style.opacity = '1';
+            popup.style.transform = 'translateY(0) scale(1)';
+            
+            // Jouer le son d'apparition
+            playAppearanceSound();
+            
+            console.log('🔓 Chatbot ouvert');
+            
+            // Cacher le bouton flottant avec animation
+            if (button) {
+                button.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                button.style.opacity = '0';
+                button.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    button.style.display = 'none';
+                }, 200);
+            }
+            
+            // Focus sur l'input
+            const input = document.getElementById('chatbotInput');
+            if (input) {
+                setTimeout(() => input.focus(), 100);
+            }
+            
+            // Vérifier les modèles disponibles si pas encore chargés
+            if (!availableChatbotModel) {
+                loadChatbotModels();
+            }
+        }
+    }
+    window.toggleChatbot = toggleChatbot;
+    
+    // Envoyer un message au chatbot
+    async function sendChatbotMessage() {
+        const input = document.getElementById('chatbotInput');
+        const sendBtn = document.getElementById('chatbotSendBtn');
+        const messagesContainer = document.getElementById('chatbotMessages');
+        
+        if (!input || !messagesContainer) return;
+        
+        const message = input.value.trim();
+        if (!message) return;
+        
+        // Désactiver l'input et le bouton
+        input.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+        
+        // Afficher le message de l'utilisateur
+        addChatbotMessage('user', message);
+        input.value = '';
+        
+        // Afficher l'indicateur de chargement
+        const loadingId = addChatbotLoading();
+        
+        try {
+            // Vérifier qu'un modèle est disponible
+            if (!availableChatbotModel) {
+                // Essayer de recharger les modèles
+                await loadChatbotModels();
+                
+                if (!availableChatbotModel) {
+                    throw new Error('Aucun modèle Ollama disponible. Veuillez installer un modèle (ex: ollama pull llama3.2)');
+                }
+            }
+            
+            const rootPath = window.root_path || '';
+            
+            // Préparer le contexte des documents avec une instruction claire
+            let documentContext = null;
+            if (chatbotDocuments && chatbotDocuments.length > 0) {
+                console.log(`📚 Préparation du contexte avec ${chatbotDocuments.length} document(s)`);
+                
+                // Combiner tous les documents avec une instruction claire
+                const documentsText = chatbotDocuments.map((doc, index) => {
+                    const docText = doc.text || '';
+                    console.log(`📄 Document ${index + 1}: ${doc.filename} - ${docText.length} caractères`);
+                    return `=== DOCUMENT ${index + 1}: ${doc.filename} ===\n${docText}\n`;
+                }).join('\n\n');
+                
+                // Limiter la taille totale (max 15000 caractères pour éviter les prompts trop longs et les timeouts)
+                // Ollama peut être lent avec de très longs prompts, surtout pour la première réponse
+                let finalDocumentsText = documentsText;
+                if (documentsText.length > 15000) {
+                    finalDocumentsText = documentsText.substring(0, 15000) + '\n\n[... contenu tronqué pour optimiser les performances ...]';
+                    console.warn(`⚠️ Document tronqué à 15000 caractères (original: ${documentsText.length}) pour éviter les timeouts`);
+                }
+                
+                // Ajouter une instruction claire au début du contexte
+                documentContext = `INSTRUCTION IMPORTANTE : 
+Les questions suivantes concernent les documents ci-dessous. Tu dois répondre UNIQUEMENT en te basant sur le contenu de ces documents. Si une information n'est pas dans les documents, dis-le clairement. Ne réponds pas en utilisant tes connaissances générales, mais uniquement en te basant sur le contenu des documents fournis.
+
+=== CONTENU DES DOCUMENTS ===
+${finalDocumentsText}
+=== FIN DU CONTENU DES DOCUMENTS ===
+
+Maintenant, réponds à la question suivante en te basant UNIQUEMENT sur le contenu des documents ci-dessus.`;
+                
+                console.log(`📚 Contexte document préparé: ${documentContext.length} caractères`);
+                console.log(`📄 Aperçu du contexte (premiers 500 caractères): ${documentContext.substring(0, 500)}...`);
+            } else {
+                console.log('⚠️ Aucun document disponible pour le contexte');
+            }
+            
+            // Activer le streaming pour les réponses longues
+            const requestBody = {
+                message: message,
+                model: availableChatbotModel,
+                stream: true,  // Activer le streaming
+                document_context: documentContext
+            };
+            
+            console.log(`📤 Envoi de la requête avec document_context: ${documentContext ? documentContext.length + ' caractères' : 'null'}`);
+            
+            let response;
+            try {
+                response = await fetch(`${rootPath}/api/v1/chatbot/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(requestBody)
+                });
+                console.log(`📥 Réponse reçue: ${response.status} ${response.statusText}`);
+            } catch (fetchError) {
+                console.error('❌ Erreur lors de la requête fetch:', fetchError);
+                removeChatbotLoading(loadingId);
+                throw fetchError;
+            }
+            
+            // Ne pas retirer l'indicateur de chargement ici, on le fera après la réponse
+            
+            if (!response.ok) {
+                // Retirer l'indicateur de chargement en cas d'erreur
+                removeChatbotLoading(loadingId);
+                let errorMessage = 'Erreur inconnue';
+                
+                // Gérer les différents types d'erreurs
+                if (response.status === 504 || response.status === 408) {
+                    errorMessage = 'La requête a pris trop de temps. Ollama met peut-être du temps à répondre. Veuillez réessayer avec une question plus courte ou vérifier que Ollama fonctionne correctement.';
+                } else if (response.status === 503) {
+                    errorMessage = 'Ollama n\'est pas accessible. Vérifiez que Ollama est démarré sur le serveur.';
+                } else {
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || errorData.error || `Erreur ${response.status}`;
+                        
+                        // Message plus clair pour les erreurs de modèle
+                        if (errorMessage.includes('not found') || errorMessage.includes('model')) {
+                            errorMessage = 'Modèle non trouvé. Veuillez installer un modèle Ollama (ex: ollama pull llama3.2)';
+                            // Essayer de recharger les modèles
+                            await loadChatbotModels();
+                        }
+                    } catch (e) {
+                        // Si on ne peut pas parser le JSON, utiliser le statut
+                        errorMessage = `Erreur ${response.status}: ${response.statusText || 'Erreur inconnue'}`;
+                    }
+                }
+                
+                throw new Error(errorMessage);
+            }
+            
+            // Vérifier si c'est un stream
+            const contentType = response.headers.get('content-type');
+            console.log(`📥 Content-Type de la réponse: ${contentType}`);
+            
+            if (contentType && contentType.includes('text/event-stream')) {
+                // Traitement du streaming
+                console.log('📡 Démarrage du traitement du stream...');
+                await handleStreamingResponse(response, messagesContainer, loadingId);
+            } else {
+                // Traitement normal (fallback)
+                console.log('📦 Traitement de la réponse non-streaming...');
+                const data = await response.json();
+                console.log('📦 Données reçues:', data);
+                
+                // Retirer l'indicateur de chargement
+                removeChatbotLoading(loadingId);
+                
+                if (data.success && data.response) {
+                    addChatbotMessage('assistant', data.response);
+                } else {
+                    throw new Error(data.error || 'Erreur lors de la génération de la réponse');
+                }
+            }
+            
+        } catch (error) {
+            console.error('Erreur chatbot:', error);
+            // Afficher un message bienveillant à l'utilisateur
+            const friendlyMessage = getFriendlyErrorMessage(error);
+            addChatbotMessage('assistant', friendlyMessage);
+        } finally {
+            // Réactiver l'input et le bouton
+            input.disabled = false;
+            if (sendBtn) sendBtn.disabled = false;
+            input.focus();
+        }
+    }
+    window.sendChatbotMessage = sendChatbotMessage;
+    
+    // Gérer la touche Entrée dans l'input
+    function handleChatbotKeydown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendChatbotMessage();
+        }
+    }
+    window.handleChatbotKeydown = handleChatbotKeydown;
+    
+    // Ajouter un message dans le chat
+    function addChatbotMessage(role, content, messageId = null) {
+        const messagesContainer = document.getElementById('chatbotMessages');
+        if (!messagesContainer) return null;
+        
+        // Retirer le message de bienvenue s'il existe
+        const welcome = messagesContainer.querySelector('.chatbot-welcome');
+        if (welcome) {
+            welcome.remove();
+        }
+        
+        // Si un messageId est fourni, chercher le message existant
+        let messageDiv = null;
+        if (messageId) {
+            messageDiv = document.getElementById(messageId);
+        }
+        
+        // Si le message n'existe pas, le créer
+        if (!messageDiv) {
+            messageDiv = document.createElement('div');
+            messageDiv.className = `chatbot-message ${role}`;
+            if (role === 'assistant') {
+                messageDiv.id = `chatbot-msg-${Date.now()}`;
+            }
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'chatbot-message-content';
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+        }
+        
+        // Mettre à jour le contenu
+        const contentDiv = messageDiv.querySelector('.chatbot-message-content');
+        if (contentDiv) {
+            contentDiv.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+        }
+        
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        return messageDiv.id || null;
+    }
+    
+    // Convertir une erreur technique en message bienveillant pour l'utilisateur
+    function getFriendlyErrorMessage(error) {
+        const errorMessage = error.message || String(error) || 'Erreur inconnue';
+        const errorLower = errorMessage.toLowerCase();
+        
+        // Messages bienveillants selon le type d'erreur
+        if (errorLower.includes('timeout') || errorLower.includes('trop de temps')) {
+            return '⏱️ La réponse prend un peu plus de temps que prévu. Veuillez patienter quelques instants ou réessayer avec une question plus courte.';
+        } else if (errorLower.includes('not found') || errorLower.includes('modèle non trouvé') || errorLower.includes('model')) {
+            return '🔧 Le modèle de conversation n\'est pas disponible pour le moment. Veuillez contacter l\'administrateur pour résoudre ce problème.';
+        } else if (errorLower.includes('connexion') || errorLower.includes('connect') || errorLower.includes('network') || errorLower.includes('fetch')) {
+            return '🌐 Problème de connexion détecté. Vérifiez votre connexion internet et réessayez dans quelques instants.';
+        } else if (errorLower.includes('aucune réponse') || errorLower.includes('no response')) {
+            return '💭 Je n\'ai pas reçu de réponse du serveur. Veuillez réessayer dans quelques instants.';
+        } else if (errorLower.includes('upload') || errorLower.includes('fichier') || errorLower.includes('document')) {
+            return '📄 Désolé, je n\'ai pas pu traiter ce fichier. Vérifiez que le fichier n\'est pas corrompu et réessayez.';
+        } else if (errorLower.includes('500') || errorLower.includes('internal server')) {
+            return '⚠️ Un problème technique est survenu. Notre équipe en a été informée. Veuillez réessayer dans quelques instants.';
+        } else if (errorLower.includes('401') || errorLower.includes('unauthorized')) {
+            return '🔒 Votre session a expiré. Veuillez rafraîchir la page et vous reconnecter.';
+        } else if (errorLower.includes('403') || errorLower.includes('forbidden')) {
+            return '🚫 Vous n\'avez pas les permissions nécessaires pour effectuer cette action.';
+        } else {
+            // Message générique bienveillant
+            return '😔 Désolé, une petite difficulté technique s\'est produite. Veuillez réessayer dans quelques instants. Si le problème persiste, n\'hésitez pas à contacter le support.';
+        }
+    }
+    
+    // Gérer la réponse en streaming
+    async function handleStreamingResponse(response, messagesContainer, loadingId) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let messageId = null;
+        let fullResponse = '';
+        
+        try {
+            console.log('📡 Lecture du stream commencée...');
+            let chunkCount = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                    console.log(`📡 Stream terminé (done=true) après ${chunkCount} chunks`);
+                    break;
+                }
+                
+                chunkCount++;
+                if (chunkCount === 1) {
+                    console.log('📡 Premier chunk reçu, taille:', value ? value.length : 0);
+                }
+                
+                let lines = [];
+                if (value) {
+                    buffer += decoder.decode(value, { stream: true });
+                    lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Garder la ligne incomplète dans le buffer
+                    
+                    if (chunkCount === 1 && lines.length > 0) {
+                        console.log(`📡 Premières lignes reçues (${lines.length} lignes):`, lines.slice(0, 3));
+                    }
+                }
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6); // Enlever "data: "
+                        
+                        if (data.trim() === '') continue;
+                        
+                        try {
+                            const json = JSON.parse(data);
+                            console.log('📡 Données reçues du stream:', json);
+                            
+                            // Gérer les erreurs dans le stream
+                            if (json.error) {
+                                console.error('❌ Erreur dans le stream:', json.error);
+                                throw new Error(json.error);
+                            }
+                            
+                            // Ajouter le texte reçu
+                            if (json.response) {
+                                fullResponse += json.response;
+                                console.log(`📝 Réponse accumulée: ${fullResponse.length} caractères`);
+                                
+                                // Retirer l'indicateur de chargement dès qu'on reçoit la première partie
+                                if (!messageId) {
+                                    removeChatbotLoading(loadingId);
+                                }
+                                
+                                // Créer ou mettre à jour le message
+                                if (!messageId) {
+                                    messageId = addChatbotMessage('assistant', fullResponse);
+                                    console.log(`✅ Message créé avec ID: ${messageId}`);
+                                } else {
+                                    addChatbotMessage('assistant', fullResponse, messageId);
+                                }
+                            }
+                            
+                            // Si la réponse est terminée
+                            if (json.done) {
+                                console.log('✅ Stream terminé avec succès');
+                                return;
+                            }
+                        } catch (e) {
+                            // Si ce n'est pas du JSON valide, ignorer
+                            if (e instanceof SyntaxError) {
+                                console.warn('⚠️ Ligne non-JSON ignorée:', line);
+                                continue;
+                            }
+                            throw e;
+                        }
+                    }
+                }
+            }
+            
+            // Si on arrive ici sans avoir reçu de réponse, c'est qu'il y a un problème
+            if (!messageId && fullResponse.length === 0) {
+                console.warn('⚠️ Aucune réponse reçue du stream');
+                removeChatbotLoading(loadingId);
+                throw new Error('Aucune réponse reçue du serveur');
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors du streaming:', error);
+            removeChatbotLoading(loadingId);
+            // Afficher un message bienveillant à l'utilisateur
+            const friendlyMessage = getFriendlyErrorMessage(error);
+            if (messageId) {
+                addChatbotMessage('assistant', fullResponse + (fullResponse ? '\n\n' : '') + friendlyMessage, messageId);
+            } else {
+                addChatbotMessage('assistant', friendlyMessage);
+            }
+            throw error;
+        }
+    }
+    
+    // Ajouter un indicateur de chargement
+    let loadingCounter = 0;
+    function addChatbotLoading() {
+        const messagesContainer = document.getElementById('chatbotMessages');
+        if (!messagesContainer) return null;
+        
+        const loadingId = `loading-${++loadingCounter}`;
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = loadingId;
+        loadingDiv.className = 'chatbot-message-loading';
+        loadingDiv.innerHTML = `
+            <span></span>
+            <span></span>
+            <span></span>
+        `;
+        
+        messagesContainer.appendChild(loadingDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        return loadingId;
+    }
+    
+    // Retirer l'indicateur de chargement
+    function removeChatbotLoading(loadingId) {
+        if (!loadingId) return;
+        const loadingElement = document.getElementById(loadingId);
+        if (loadingElement) {
+            loadingElement.remove();
+        }
+    }
+    
+    // Fixer le bouton chatbot au chargement
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatbotButton = document.querySelector('.floating-chatbot-button');
+        if (chatbotButton) {
+            // S'assurer qu'il est dans le body
+            if (chatbotButton.parentElement !== document.body) {
+                const classes = chatbotButton.className;
+                const onclick = chatbotButton.getAttribute('onclick');
+                document.body.appendChild(chatbotButton);
+                chatbotButton.className = classes;
+                if (onclick) chatbotButton.setAttribute('onclick', onclick);
+            }
+            
+            // Forcer le positionnement fixed
+            chatbotButton.style.position = 'fixed';
+            chatbotButton.style.bottom = '100px';
+            chatbotButton.style.right = '30px';
+            chatbotButton.style.top = 'auto';
+            chatbotButton.style.left = 'auto';
+            chatbotButton.style.zIndex = '9997';
+            chatbotButton.style.margin = '0';
+            chatbotButton.style.padding = '0';
+        }
+        
+        // Fixer le popup chatbot au chargement
+        const chatbotPopup = document.getElementById('chatbotPopup');
+        if (chatbotPopup) {
+            // S'assurer qu'il est dans le body
+            if (chatbotPopup.parentElement !== document.body) {
+                const classes = chatbotPopup.className;
+                document.body.appendChild(chatbotPopup);
+                chatbotPopup.className = classes;
+            }
+        }
+    });
+});
+    </script>
+    
     <!-- Scripts spécifiques à la page -->
     {% block scripts %}{% endblock %}
+    
 </body>
 </html>
 

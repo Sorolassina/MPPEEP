@@ -1,0 +1,490 @@
+{% extends "layouts/base.html" %}
+{% from 'components/page_header.html' import page_header %}
+
+{% block title %}{% if investissement %}Modifier{% else %}Nouveau{% endif %} Suivi d'Investissement - {{ app_name }}{% endblock %}
+
+{% block styles %}
+<style>
+.investissement-form-page {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.form-container {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+
+.form-section {
+    margin-bottom: 2.5rem;
+}
+
+.form-section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.95);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.85);
+    font-size: 0.95rem;
+}
+
+.form-label .required {
+    color: #ef4444;
+    margin-left: 0.25rem;
+}
+
+.form-control,
+.form-select,
+.form-textarea {
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(15, 23, 42, 0.1);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: rgba(15, 23, 42, 0.6);
+    margin-top: 0.25rem;
+}
+
+.sigobe-investissement-selector {
+    background: rgba(102, 126, 234, 0.05);
+    border: 2px dashed rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.sigobe-investissement-selector select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 8px;
+    background: white;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.sigobe-investissement-selector select:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 768px) {
+    .investissement-form-page {
+        padding: 1rem;
+    }
+    
+    .form-container {
+        padding: 1.5rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ page_header(
+    title=('✏️ Modifier' if investissement else '➕ Nouveau') + ' Suivi d\'Investissement',
+    breadcrumbs=[
+        {'name': 'Accueil', 'url': url_for('accueil')},
+        {'name': 'Budget', 'url': url_for('budget_home')},
+        {'name': 'Investissements', 'url': url_for('budget_investissements')},
+        {'name': 'Modifier' if investissement else 'Nouveau'}
+    ],
+    actions=[
+        {'label': '← Retour', 'url': url_for('budget_investissements'), 'primary': False}
+    ]
+) }}
+
+<div class="investissement-form-page">
+    <div class="form-container">
+        <form id="investissementForm" method="{% if investissement %}put{% else %}post{% endif %}" action="{% if investissement %}{{ url_for('api_update_suivi_investissement', investissement_id=investissement.id) }}{% else %}{{ url_for('api_create_suivi_investissement') }}{% endif %}">
+            
+            <!-- Section: Informations du projet -->
+            <div class="form-section">
+                <h2 class="form-section-title">📋 Informations du Projet</h2>
+                
+                {% if investissements_sigobe and investissements_sigobe|length > 0 %}
+                <div class="sigobe-investissement-selector">
+                    <label class="form-label" for="sigobe_investissement_select">🔗 Charger depuis SIGOBE (optionnel)</label>
+                    <select id="sigobe_investissement_select" onchange="loadSigobeInvestissement(this.value)">
+                        <option value="">— Sélectionner un investissement SIGOBE —</option>
+                        {% for inv in investissements_sigobe %}
+                        <option value="{{ inv.id }}" 
+                            data-code="{{ inv.activites or '' }}"
+                            data-libelle="{{ inv.activites or '' }}"
+                            data-programme="{{ inv.programmes or '' }}"
+                            data-action="{{ inv.actions or '' }}"
+                            data-budget-actuel="{{ inv.budget_actuel or 0 }}"
+                            data-chargement-id="{{ inv.chargement_id }}">
+                            {{ inv.activites or 'Sans libellé' }} {% if inv.programmes %}({{ inv.programmes }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="form-help">Sélectionnez un investissement SIGOBE pour pré-remplir automatiquement les champs</p>
+                </div>
+                {% endif %}
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="libelle_projet" class="form-label">
+                            Libellé du Projet <span class="required">*</span>
+                        </label>
+                        <input type="text" id="libelle_projet" name="libelle_projet" class="form-control" 
+                               value="{{ investissement.libelle_projet if investissement else '' }}" required>
+                        <p class="form-help">Nom du projet d'investissement</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="code_projet" class="form-label">Code Projet</label>
+                        <input type="text" id="code_projet" name="code_projet" class="form-control" 
+                               value="{{ investissement.code_projet if investissement else '' }}">
+                        <p class="form-help">Code du projet (ex: 22087)</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="programme" class="form-label">Programme</label>
+                        <input type="text" id="programme" name="programme" class="form-control" 
+                               value="{{ investissement.programme if investissement else '' }}">
+                        <p class="form-help">Programme SIGOBE associé</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="action" class="form-label">Action</label>
+                        <input type="text" id="action" name="action" class="form-control" 
+                               value="{{ investissement.action if investissement else '' }}">
+                        <p class="form-help">Action SIGOBE associée</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="annee" class="form-label">
+                            Année <span class="required">*</span>
+                        </label>
+                        <input type="number" id="annee" name="annee" class="form-control" 
+                               value="{{ investissement.annee if investissement else annee }}" 
+                               min="2000" max="2100" required>
+                        <p class="form-help">Année de référence pour le suivi</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="annee_debut" class="form-label">Année de Démarrage</label>
+                        <input type="number" id="annee_debut" name="annee_debut" class="form-control" 
+                               value="{{ investissement.annee_debut if investissement else '' }}"
+                               min="2000" max="2100">
+                        <p class="form-help">Année de démarrage du projet</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="annee_fin" class="form-label">Année de Fin</label>
+                        <input type="number" id="annee_fin" name="annee_fin" class="form-control" 
+                               value="{{ investissement.annee_fin if investissement else '' }}"
+                               min="2000" max="2100">
+                        <p class="form-help">Année de fin prévue du projet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Montants financiers -->
+            <div class="form-section">
+                <h2 class="form-section-title">💰 Montants Financiers (en FCFA)</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cout_total_projet" class="form-label">Coût Total du Projet</label>
+                        <input type="text" id="cout_total_projet" name="cout_total_projet" class="form-control" 
+                               value="{% if investissement and investissement.cout_total_projet %}{{ "{:,.0f}".format(investissement.cout_total_projet) }}{% else %}0{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Coût total du projet</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="budget_mobilise_anterieur" class="form-label">Budget Mobilisé (Exercices Antérieurs)</label>
+                        <input type="text" id="budget_mobilise_anterieur" name="budget_mobilise_anterieur" class="form-control" 
+                               value="{% if investissement and investissement.budget_mobilise_anterieur %}{{ "{:,.0f}".format(investissement.budget_mobilise_anterieur) }}{% else %}0{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Budget déjà mobilisé au cours des exercices antérieurs</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="credits_budgetaires_inscrits" class="form-label">Crédits Budgétaires Inscrits (LFI {{ annee }})</label>
+                        <input type="text" id="credits_budgetaires_inscrits" name="credits_budgetaires_inscrits" class="form-control" 
+                               value="{% if investissement and investissement.credits_budgetaires_inscrits %}{{ "{:,.0f}".format(investissement.credits_budgetaires_inscrits) }}{% else %}0{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Crédits budgétaires inscrits dans la LFI de l'année</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="variation" class="form-label">Variation (- ou +)</label>
+                        <input type="text" id="variation" name="variation" class="form-control" 
+                               value="{% if investissement and investissement.variation is not none %}{{ "{:,.0f}".format(investissement.variation) }}{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Variation budgétaire (positif ou négatif)</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="budget_actuel" class="form-label">Budget Actuel</label>
+                        <input type="text" id="budget_actuel" name="budget_actuel" class="form-control" 
+                               value="{% if investissement and investissement.budget_actuel %}{{ "{:,.0f}".format(investissement.budget_actuel) }}{% else %}0{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Budget actuel disponible</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="prise_en_charge" class="form-label">Prise en Charge</label>
+                        <input type="text" id="prise_en_charge" name="prise_en_charge" class="form-control" 
+                               value="{% if investissement and investissement.prise_en_charge %}{{ "{:,.0f}".format(investissement.prise_en_charge) }}{% else %}0{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Montant pris en charge à la fin de la période concernée</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Financement -->
+            <div class="form-section">
+                <h2 class="form-section-title">💳 Financement</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="financement_interieur" class="form-label">Financement Intérieur</label>
+                        <input type="text" id="financement_interieur" name="financement_interieur" class="form-control" 
+                               value="{% if investissement and investissement.financement_interieur %}{{ "{:,.0f}".format(investissement.financement_interieur) }}{% else %}0{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Montant du financement intérieur (en FCFA)</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="financement_exterieur" class="form-label">Financement Extérieur</label>
+                        <input type="text" id="financement_exterieur" name="financement_exterieur" class="form-control" 
+                               value="{% if investissement and investissement.financement_exterieur %}{{ "{:,.0f}".format(investissement.financement_exterieur) }}{% else %}0{% endif %}"
+                               placeholder="0">
+                        <p class="form-help">Montant du financement extérieur (en FCFA)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Taux de réalisation -->
+            <div class="form-section">
+                <h2 class="form-section-title">📊 Taux de Réalisation (%)</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taux_realisation_budgetaire" class="form-label">% Réalisation Budgétaire</label>
+                        <input type="number" id="taux_realisation_budgetaire" name="taux_realisation_budgetaire" class="form-control" 
+                               value="{% if investissement and investissement.taux_realisation_budgetaire is not none %}{{ "{:.2f}".format(investissement.taux_realisation_budgetaire) }}{% endif %}"
+                               step="0.01" min="0" max="100" placeholder="0.00">
+                        <p class="form-help">Pourcentage de réalisation budgétaire</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="taux_realisation_physique" class="form-label">% Réalisation Physique</label>
+                        <input type="number" id="taux_realisation_physique" name="taux_realisation_physique" class="form-control" 
+                               value="{% if investissement and investissement.taux_realisation_physique is not none %}{{ "{:.2f}".format(investissement.taux_realisation_physique) }}{% endif %}"
+                               step="0.01" min="0" max="100" placeholder="0.00">
+                        <p class="form-help">Pourcentage de réalisation physique</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Champs cachés pour SIGOBE -->
+            <input type="hidden" id="sigobe_execution_id" name="sigobe_execution_id" value="{{ investissement.sigobe_execution_id if investissement else '' }}">
+            <input type="hidden" id="chargement_id" name="chargement_id" value="{{ investissement.chargement_id if investissement else '' }}">
+
+            <!-- Boutons -->
+            <div class="btn-group">
+                <a href="{{ url_for('budget_investissements') }}" class="btn btn-premium btn-secondary">Annuler</a>
+                <button type="submit" class="btn btn-premium btn-primary">
+                    {% if investissement %}💾 Enregistrer les modifications{% else %}➕ Créer le suivi{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// URLs pour les endpoints
+const API_CREATE_URL = "{{ url_for('api_create_suivi_investissement') }}";
+{% if investissement %}
+const API_UPDATE_URL = "{{ url_for('api_update_suivi_investissement', investissement_id=investissement.id) }}";
+const IS_EDIT_MODE = true;
+{% else %}
+const IS_EDIT_MODE = false;
+{% endif %}
+
+// Charger les données SIGOBE dans le formulaire
+function loadSigobeInvestissement(executionId) {
+    if (!executionId) return;
+    
+    const option = document.getElementById('sigobe_investissement_select').options[document.getElementById('sigobe_investissement_select').selectedIndex];
+    if (!option) return;
+    
+    // Pré-remplir les champs
+    if (option.dataset.code) {
+        document.getElementById('code_projet').value = option.dataset.code;
+    }
+    if (option.dataset.libelle) {
+        document.getElementById('libelle_projet').value = option.dataset.libelle;
+    }
+    if (option.dataset.programme) {
+        document.getElementById('programme').value = option.dataset.programme;
+    }
+    if (option.dataset.action) {
+        document.getElementById('action').value = option.dataset.action;
+    }
+    if (option.dataset.budgetActuel) {
+        const budgetActuel = parseFloat(option.dataset.budgetActuel) || 0;
+        document.getElementById('budget_actuel').value = budgetActuel.toLocaleString('fr-FR', {maximumFractionDigits: 0});
+        document.getElementById('credits_budgetaires_inscrits').value = budgetActuel.toLocaleString('fr-FR', {maximumFractionDigits: 0});
+    }
+    if (option.dataset.chargementId) {
+        document.getElementById('chargement_id').value = option.dataset.chargementId;
+    }
+    document.getElementById('sigobe_execution_id').value = executionId;
+}
+
+// Intercepter la soumission du formulaire
+document.getElementById('investissementForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    // S'assurer que les champs cachés sont bien remplis
+    const sigobeExecutionId = document.getElementById('sigobe_execution_id').value || '';
+    const chargementId = document.getElementById('chargement_id').value || '';
+    
+    formData.set('sigobe_execution_id', sigobeExecutionId);
+    formData.set('chargement_id', chargementId);
+    
+    showGlobalLoading('Enregistrement en cours...', 'Veuillez patienter');
+    
+    try {
+        // Utiliser getAttribute pour éviter les conflits avec les éléments ayant l'id "action"
+        let url = form.getAttribute('action');
+        if (!url || typeof url !== 'string') {
+            url = IS_EDIT_MODE ? API_UPDATE_URL : API_CREATE_URL;
+        }
+        const method = IS_EDIT_MODE ? 'PUT' : 'POST';
+        
+        // Utiliser submitFormAsJson avec forceFormData pour s'assurer que tous les champs sont envoyés
+        const response = await submitFormAsJson(url, formData, method, true);
+        
+        // L'endpoint retourne une RedirectResponse (303), donc on suit la redirection
+        if (response.redirected || response.status === 303 || response.status === 302) {
+            window.location.href = response.url || "{{ url_for('budget_investissements') }}";
+            return;
+        }
+        
+        // Si ce n'est pas une redirection, vérifier le statut
+        if (response.ok) {
+            hideGlobalLoading();
+            showSuccess('Enregistrement réussi');
+            setTimeout(() => {
+                window.location.href = "{{ url_for('budget_investissements') }}";
+            }, 1000);
+        } else {
+            await handleFetchError(response, 'Erreur lors de l\'enregistrement');
+        }
+    } catch (error) {
+        hideGlobalLoading();
+        console.error('Erreur lors de la soumission:', error);
+        showError('Erreur lors de l\'enregistrement: ' + error.message);
+    }
+});
+
+// Initialiser au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    // Si on modifie et qu'il y a un sigobe_execution_id, sélectionner automatiquement le projet SIGOBE
+    setTimeout(function() {
+        {% if investissement and investissement.sigobe_execution_id %}
+        const sigobeExecutionId = {{ investissement.sigobe_execution_id }};
+        const sigobeSelect = document.getElementById('sigobe_investissement_select');
+        if (sigobeSelect && sigobeSelect.options.length > 0) {
+            // Chercher l'option correspondant au sigobe_execution_id
+            for (let i = 0; i < sigobeSelect.options.length; i++) {
+                const optionValue = sigobeSelect.options[i].value;
+                if (optionValue && parseInt(optionValue) === sigobeExecutionId) {
+                    sigobeSelect.selectedIndex = i;
+                    // Déclencher l'événement change pour s'assurer que tous les champs sont remplis
+                    sigobeSelect.dispatchEvent(new Event('change'));
+                    break;
+                }
+            }
+        }
+        {% endif %}
+    }, 200);
+});
+</script>
+{% endblock %}
+

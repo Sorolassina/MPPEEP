@@ -3,6 +3,381 @@
 
 {% block title %}Aide - Module Performance{% endblock %}
 
+{% block styles %}
+<style>
+.help-page-full-width {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, #f9fafb 0%, #f4f7fb 50%, #f8fafc 100%);
+    min-height: calc(100vh - 140px);
+}
+
+.help-hero {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%);
+    border-radius: 24px;
+    padding: 3rem;
+    margin-bottom: 3rem;
+    border: 2px solid rgba(102, 126, 234, 0.15);
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.1);
+}
+
+.help-hero h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: rgba(15, 23, 42, 0.95);
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.help-hero p {
+    font-size: 1.2rem;
+    color: rgba(15, 23, 42, 0.75);
+    line-height: 1.8;
+    margin: 0;
+}
+
+.help-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 2.5rem;
+    margin-bottom: 2.5rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.help-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+}
+
+.help-section h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.95);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+}
+
+.help-section h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.9);
+    margin: 2rem 0 1rem 0;
+}
+
+.help-section h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.85);
+    margin: 1.5rem 0 0.75rem 0;
+}
+
+.help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.help-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border-left: 4px solid;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s;
+}
+
+.help-card:hover {
+    transform: translateX(4px);
+}
+
+.help-card.global {
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(254, 243, 199, 0.3) 0%, rgba(255, 255, 255, 0.9) 100%);
+}
+
+.help-card.specific {
+    border-left-color: #3b82f6;
+    background: linear-gradient(135deg, rgba(219, 234, 254, 0.3) 0%, rgba(255, 255, 255, 0.9) 100%);
+}
+
+.help-card h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.help-card p {
+    color: rgba(15, 23, 42, 0.75);
+    line-height: 1.7;
+    margin: 0;
+}
+
+.hierarchy-diagram {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    margin: 2rem 0;
+    border: 2px dashed rgba(102, 126, 234, 0.2);
+    position: relative;
+}
+
+.hierarchy-level {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0;
+    position: relative;
+}
+
+.hierarchy-box {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 2px solid;
+    font-weight: 600;
+    font-size: 1rem;
+    min-width: 200px;
+    text-align: center;
+}
+
+.hierarchy-box.programme {
+    background: linear-gradient(135deg, #667eea 0%, #8b5cf6 100%);
+    color: white;
+    border-color: #667eea;
+    font-size: 1.1rem;
+    padding: 1.5rem 2rem;
+}
+
+.hierarchy-box.og {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    color: white;
+    border-color: #f59e0b;
+}
+
+.hierarchy-box.os {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-color: #3b82f6;
+}
+
+.hierarchy-box.indicateur {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-color: #10b981;
+    font-size: 0.95rem;
+}
+
+.hierarchy-arrow {
+    width: 2px;
+    height: 40px;
+    background: linear-gradient(180deg, rgba(102, 126, 234, 0.4) 0%, rgba(102, 126, 234, 0.2) 100%);
+    margin: 0.5rem 0;
+    position: relative;
+}
+
+.hierarchy-arrow::after {
+    content: '↓';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(102, 126, 234, 0.6);
+    font-size: 1.2rem;
+}
+
+.step-list {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0;
+}
+
+.step-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: rgba(102, 126, 234, 0.03);
+    border-radius: 12px;
+    border-left: 3px solid rgba(102, 126, 234, 0.3);
+    transition: all 0.2s;
+}
+
+.step-list li:hover {
+    background: rgba(102, 126, 234, 0.08);
+    border-left-color: rgba(102, 126, 234, 0.6);
+    transform: translateX(4px);
+}
+
+.step-number {
+    background: linear-gradient(135deg, #667eea 0%, #8b5cf6 100%);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.step-content {
+    flex: 1;
+    color: rgba(15, 23, 42, 0.85);
+    line-height: 1.7;
+}
+
+.step-content strong {
+    color: rgba(15, 23, 42, 0.95);
+}
+
+.info-box {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border-left: 4px solid #10b981;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.info-box.warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+    border-left-color: #f59e0b;
+}
+
+.info-box.info {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+    border-left-color: #3b82f6;
+}
+
+.info-box p {
+    margin: 0;
+    color: rgba(15, 23, 42, 0.85);
+    line-height: 1.7;
+}
+
+.info-box strong {
+    color: rgba(15, 23, 42, 0.95);
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.feature-item {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.feature-item:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.feature-item h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.95);
+    margin: 0 0 0.75rem 0;
+}
+
+.feature-item p {
+    color: rgba(15, 23, 42, 0.75);
+    line-height: 1.6;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.best-practices {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    border: 2px solid rgba(16, 185, 129, 0.2);
+}
+
+.best-practices ul {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0 0;
+}
+
+.best-practices li {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: white;
+    border-radius: 12px;
+    border-left: 4px solid #10b981;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.best-practices li strong {
+    color: rgba(15, 23, 42, 0.95);
+}
+
+@media (max-width: 768px) {
+    .help-page-full-width {
+        padding: 1.5rem 1rem;
+    }
+    
+    .help-hero {
+        padding: 2rem 1.5rem;
+    }
+    
+    .help-hero h1 {
+        font-size: 2rem;
+    }
+    
+    .help-section {
+        padding: 1.5rem;
+    }
+    
+    .help-grid,
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .hierarchy-box {
+        min-width: auto;
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 {{ page_header(
     title='❓ Aide - Module Performance',
@@ -16,162 +391,480 @@
     ]
 ) }}
 
-<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+<div class="help-page-full-width">
     
-    <!-- Introduction -->
-    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">
-        <h2 style="color: #92400e; margin-bottom: 1rem;">📈 Système de Gestion de la Performance</h2>
-        <p style="color: #78350f; line-height: 1.8; font-size: 1.05rem;">
-            Le module Performance permet de définir des objectifs organisationnels, 
-            de suivre des indicateurs clés (KPIs) et de mesurer la réalisation des résultats.
+    <!-- Hero Section -->
+    <div class="help-hero">
+        <h1>📊 Guide du Module Performance</h1>
+        <p>
+            Le module Performance vous permet de définir, suivre et mesurer les objectifs organisationnels 
+            à travers une hiérarchie structurée : Programmes → Objectifs Globaux (OG) → Objectifs Spécifiques (OS) → Indicateurs. 
+            Ce guide vous accompagne dans l'utilisation complète du système.
         </p>
     </div>
 
-    <!-- Objectifs de performance -->
-    <div class="card" style="margin-bottom: 2rem;">
-        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">🎯 Objectifs de Performance</h3>
+    <!-- Architecture et Hiérarchie -->
+    <div class="help-section">
+        <h2>🏗️ Architecture du Système de Performance</h2>
         
-        <h4 style="color: #4b5563; margin-bottom: 1rem;">Types d'objectifs</h4>
-        <div style="display: grid; gap: 1rem; margin-bottom: 1.5rem;">
-            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-                <strong style="color: #92400e;">🏆 STRATÉGIQUE</strong>
-                <p style="color: #78350f; margin: 0.5rem 0 0 0;">
-                    Objectifs à long terme, alignés sur la vision de l'organisation
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 2rem;">
+            Le système de performance suit une hiérarchie claire permettant de structurer les objectifs 
+            de manière logique et mesurable. Chaque niveau est lié au niveau supérieur, créant une chaîne 
+            de responsabilité et de mesure.
+        </p>
+
+        <div class="hierarchy-diagram">
+            <div class="hierarchy-level">
+                <div class="hierarchy-box programme">📋 Programme</div>
+            </div>
+            <div class="hierarchy-arrow"></div>
+            <div class="hierarchy-level">
+                <div class="hierarchy-box og">🎯 Objectif Global (OG)</div>
+            </div>
+            <div class="hierarchy-arrow"></div>
+            <div class="hierarchy-level">
+                <div class="hierarchy-box os">📌 Objectif Spécifique (OS)</div>
+            </div>
+            <div class="hierarchy-arrow"></div>
+            <div class="hierarchy-level">
+                <div class="hierarchy-box indicateur">📊 Indicateur de Performance</div>
+            </div>
+        </div>
+
+        <div class="help-grid">
+            <div class="help-card global">
+                <h4>🎯 Objectif Global (OG)</h4>
+                <p>
+                    Objectif stratégique à long terme, rattaché à un <strong>Programme</strong> et à un 
+                    <strong>Résultat Stratégique</strong>. Il définit la direction générale à suivre.
                 </p>
             </div>
             
-            <div style="padding: 1rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 8px;">
-                <strong style="color: #1e40af;">🎯 OPÉRATIONNEL</strong>
-                <p style="color: #1e3a8a; margin: 0.5rem 0 0 0;">
-                    Objectifs à court/moyen terme, liés aux activités quotidiennes
-                </p>
-            </div>
-            
-            <div style="padding: 1rem; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 8px;">
-                <strong style="color: #065f46;">📊 PROJET</strong>
-                <p style="color: #064e3b; margin: 0.5rem 0 0 0;">
-                    Objectifs liés à un projet spécifique avec échéances définies
+            <div class="help-card specific">
+                <h4>📌 Objectif Spécifique (OS)</h4>
+                <p>
+                    Objectif opérationnel à court/moyen terme, rattaché à un <strong>Objectif Global (OG)</strong>. 
+                    Il décompose l'OG en actions concrètes et mesurables.
                 </p>
             </div>
         </div>
-        
-        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Créer un objectif</h4>
-        <ol style="line-height: 1.8; color: #374151;">
-            <li>Aller dans <strong>"Performance → Objectifs"</strong></li>
-            <li>Cliquer sur <strong>"➕ Nouvel Objectif"</strong></li>
-            <li>Remplir :
-                <ul>
-                    <li>Titre et description claire</li>
-                    <li>Type (Stratégique/Opérationnel/Projet)</li>
-                    <li>Priorité (Haute/Moyenne/Basse)</li>
-                    <li>Dates de début et fin</li>
-                    <li>Programme/Direction concerné</li>
-                    <li>Responsable de suivi</li>
-                </ul>
-            </li>
-            <li>Définir les critères de succès</li>
-            <li>Enregistrer</li>
-        </ol>
-    </div>
 
-    <!-- Indicateurs de performance -->
-    <div class="card" style="margin-bottom: 2rem;">
-        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📊 Indicateurs de Performance (KPIs)</h3>
-        
-        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
-            Les indicateurs permettent de mesurer objectivement la performance et l'atteinte des objectifs.
-        </p>
-        
-        <h4 style="color: #4b5563; margin-bottom: 1rem;">➕ Créer un indicateur</h4>
-        <ol style="line-height: 1.8; color: #374151;">
-            <li>Aller dans <strong>"Performance → Indicateurs"</strong></li>
-            <li>Cliquer sur <strong>"➕ Nouvel Indicateur"</strong></li>
-            <li>Définir :
-                <ul>
-                    <li><strong>Nom :</strong> Nom explicite de l'indicateur</li>
-                    <li><strong>Catégorie :</strong> Qualité, Efficacité, RH, Commercial, etc.</li>
-                    <li><strong>Type :</strong> Pourcentage, Nombre, Montant, Temps</li>
-                    <li><strong>Valeur cible :</strong> Objectif à atteindre</li>
-                    <li><strong>Valeur actuelle :</strong> Niveau actuel</li>
-                    <li><strong>Unité de mesure :</strong> %, €, jours, etc.</li>
-                    <li><strong>Seuils d'alerte :</strong> Niveaux minimum et maximum acceptables</li>
-                    <li><strong>Fréquence de mise à jour :</strong> Quotidien, Hebdomadaire, Mensuel</li>
-                </ul>
-            </li>
-            <li>Enregistrer</li>
-        </ol>
-        
-        <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 1rem;">
-            <p style="margin: 0; color: #065f46;">
-                <strong>✅ Exemple :</strong> "Taux de satisfaction client" - Cible: 85% - 
-                Actuel: 82% - Alerte si < 75%
+        <div class="info-box info">
+            <p>
+                <strong>💡 Note importante :</strong> Un Objectif Spécifique (OS) peut être rattaché à un Objectif Global (OG) 
+                pour créer une hiérarchie claire. Les indicateurs sont toujours rattachés à un OS, permettant de mesurer 
+                la réalisation des objectifs opérationnels.
             </p>
         </div>
     </div>
 
-    <!-- Tableau de bord -->
-    <div class="card" style="margin-bottom: 2rem;">
-        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📊 Tableau de Bord Performance</h3>
+    <!-- Objectifs de Performance -->
+    <div class="help-section">
+        <h2>🎯 Gestion des Objectifs de Performance</h2>
         
-        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
-            Le tableau de bord affiche en temps réel :
-        </p>
-        
-        <ul style="line-height: 1.8; color: #374151;">
-            <li><strong>🎯 Taux de Réalisation :</strong> % d'objectifs atteints</li>
-            <li><strong>✅ Objectifs Atteints :</strong> Nombre d'objectifs réalisés</li>
-            <li><strong>⚠️ Indicateurs en Alerte :</strong> KPIs sous les seuils</li>
-            <li><strong>⭐ Score Global :</strong> Note générale de performance (0-10)</li>
-            <li><strong>🏃 Objectifs en Cours :</strong> En progression</li>
-            <li><strong>📊 Rapports Générés :</strong> Disponibles pour consultation</li>
-        </ul>
-        
-        <div style="background: #dbeafe; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-top: 1rem;">
-            <p style="margin: 0; color: #1e40af;">
-                <strong>💡 Astuce :</strong> Consultez le tableau de bord quotidiennement pour 
-                identifier rapidement les indicateurs nécessitant attention.
+        <h3>Types d'Objectifs</h3>
+        <div class="help-grid">
+            <div class="help-card global">
+                <h4>🌍 Objectif Global (OG)</h4>
+                <p>
+                    <strong>Caractéristiques :</strong><br>
+                    • Rattaché à un Programme<br>
+                    • Lié à un Résultat Stratégique<br>
+                    • Vision à long terme<br>
+                    • Peut avoir un code (ex: OG01)
+                </p>
+            </div>
+            
+            <div class="help-card specific">
+                <h4>📋 Objectif Spécifique (OS)</h4>
+                <p>
+                    <strong>Caractéristiques :</strong><br>
+                    • Rattaché à un Objectif Global (OG)<br>
+                    • Actions concrètes et mesurables<br>
+                    • Vision à court/moyen terme<br>
+                    • Peut avoir un code (ex: OS01)
+                </p>
+            </div>
+        </div>
+
+        <h3>Créer un Objectif</h3>
+        <ol class="step-list">
+            <li>
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    Accédez à <strong>"Performance → Objectifs"</strong> et cliquez sur <strong>"➕ Nouvel Objectif"</strong>
+                </div>
+            </li>
+            <li>
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Sélectionnez le type :</strong> Global (OG) ou Spécifique (OS)
+                </div>
+            </li>
+            <li>
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Remplissez les informations :</strong><br>
+                    • <strong>Code :</strong> Identifiant unique (ex: OG01, OS01) - optionnel<br>
+                    • <strong>Titre :</strong> Nom clair et explicite de l'objectif<br>
+                    • <strong>Description :</strong> Détails et contexte<br>
+                    • <strong>Période :</strong> Année ou période de réalisation<br>
+                    • <strong>Statut :</strong> En cours, Atteint, En retard, etc.
+                </div>
+            </li>
+            <li>
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Pour un Objectif Global (OG) :</strong><br>
+                    • Sélectionnez le <strong>Programme</strong> concerné<br>
+                    • Sélectionnez le <strong>Résultat Stratégique</strong> associé
+                </div>
+            </li>
+            <li>
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <strong>Pour un Objectif Spécifique (OS) :</strong><br>
+                    • Sélectionnez l'<strong>Objectif Global (OG)</strong> auquel il est rattaché
+                </div>
+            </li>
+            <li>
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <strong>Définissez les valeurs :</strong><br>
+                    • <strong>Valeur cible :</strong> Objectif à atteindre<br>
+                    • <strong>Valeur actuelle :</strong> État actuel (calculée automatiquement à partir des indicateurs)
+                </div>
+            </li>
+            <li>
+                <div class="step-number">7</div>
+                <div class="step-content">
+                    <strong>Optionnel :</strong> Assignez un responsable et enregistrez
+                </div>
+            </li>
+        </ol>
+
+        <div class="info-box">
+            <p>
+                <strong>✅ Astuce :</strong> Les objectifs sont automatiquement triés par code (s'ils existent) 
+                puis par date de création. Utilisez des codes cohérents pour faciliter l'organisation.
             </p>
         </div>
     </div>
 
-    <!-- Rapports de performance -->
-    <div class="card" style="margin-bottom: 2rem;">
-        <h3 style="color: #1f2937; margin-bottom: 1.5rem;">📄 Rapports de Performance</h3>
+    <!-- Indicateurs de Performance -->
+    <div class="help-section">
+        <h2>📊 Gestion des Indicateurs de Performance (KPIs)</h2>
         
-        <p style="color: #4b5563; line-height: 1.8; margin-bottom: 1rem;">
-            Générez des rapports détaillés pour :
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 1.5rem;">
+            Les indicateurs permettent de mesurer objectivement la performance et l'atteinte des objectifs. 
+            Chaque indicateur est rattaché à un <strong>Objectif Spécifique (OS)</strong> et permet de calculer 
+            automatiquement la valeur actuelle de l'objectif.
         </p>
+
+        <h3>Créer un Indicateur</h3>
+        <ol class="step-list">
+            <li>
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    Accédez à <strong>"Performance → Indicateurs"</strong> et cliquez sur <strong>"➕ Nouvel Indicateur"</strong>
+                </div>
+            </li>
+            <li>
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Sélectionnez l'Objectif Spécifique (OS) :</strong> L'indicateur doit être rattaché à un OS
+                </div>
+            </li>
+            <li>
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Informations de base :</strong><br>
+                    • <strong>Nom :</strong> Nom explicite de l'indicateur<br>
+                    • <strong>Description :</strong> Contexte et méthode de calcul<br>
+                    • <strong>Année :</strong> Année de suivi<br>
+                    • <strong>Catégorie :</strong> Qualitatif, Quantitatif, Efficacité, etc.
+                </div>
+            </li>
+            <li>
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Valeurs et objectifs :</strong><br>
+                    • <strong>Valeur cible :</strong> Objectif à atteindre<br>
+                    • <strong>Valeur actuelle :</strong> État actuel (si ≠ 0, un document justificatif est requis)<br>
+                    • <strong>Unité de mesure :</strong> %, €, jours, unités, etc.
+                </div>
+            </li>
+            <li>
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <strong>Sens d'appréciation :</strong><br>
+                    • <strong>↑ Haut :</strong> Plus la valeur est élevée, mieux c'est (ex: taux de satisfaction)<br>
+                    • <strong>↓ Bas :</strong> Plus la valeur est basse, mieux c'est (ex: taux d'erreur)
+                </div>
+            </li>
+            <li>
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <strong>Seuils d'alerte :</strong> Définissez les niveaux minimum et maximum acceptables
+                </div>
+            </li>
+            <li>
+                <div class="step-number">7</div>
+                <div class="step-content">
+                    <strong>Informations complémentaires :</strong><br>
+                    • <strong>Méthode :</strong> Méthode de calcul ou d'évaluation<br>
+                    • <strong>Mode de collecte :</strong> Routine, Enquête, Autres<br>
+                    • <strong>Fréquence :</strong> Journalier, Hebdomadaire, Mensuel, Trimestriel, Annuel<br>
+                    • <strong>Source des données :</strong> Système, Enquêtes, Comptabilité, etc.
+                </div>
+            </li>
+            <li>
+                <div class="step-number">8</div>
+                <div class="step-content">
+                    <strong>Projections :</strong> Définissez les cibles pour N+1 et N+2 si nécessaire
+                </div>
+            </li>
+            <li>
+                <div class="step-number">9</div>
+                <div class="step-content">
+                    <strong>Document justificatif :</strong> Si la valeur actuelle est différente de 0, 
+                    vous devez joindre un document justifiant cette valeur (PDF, Word, Excel, images)
+                </div>
+            </li>
+        </ol>
+
+        <div class="info-box warning">
+            <p>
+                <strong>⚠️ Important :</strong> Lorsque vous renseignez une valeur actuelle différente de 0, 
+                le système exige un document justificatif. Cela permet de justifier la valeur renseignée et 
+                de détecter d'éventuels biais ou erreurs dans la saisie des données.
+            </p>
+        </div>
+
+        <div class="info-box">
+            <p>
+                <strong>💡 Calcul automatique :</strong> La valeur actuelle d'un Objectif Spécifique (OS) est 
+                automatiquement calculée comme la moyenne des valeurs actuelles de ses indicateurs. De même, 
+                la valeur actuelle d'un Objectif Global (OG) est la moyenne des valeurs actuelles de ses OS, 
+                et ainsi de suite jusqu'au Programme.
+            </p>
+        </div>
+    </div>
+
+    <!-- Tableau de Bord -->
+    <div class="help-section">
+        <h2>📊 Tableau de Bord Performance</h2>
         
-        <ul style="line-height: 1.8; color: #374151;">
-            <li>Présenter les résultats aux parties prenantes</li>
-            <li>Analyser les tendances sur des périodes</li>
-            <li>Identifier les points d'amélioration</li>
-            <li>Documenter les réussites</li>
-        </ul>
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 1.5rem;">
+            Le tableau de bord affiche en temps réel les indicateurs clés de performance (KPIs) et permet 
+            de suivre l'évolution de la performance organisationnelle.
+        </p>
+
+        <div class="feature-grid">
+            <div class="feature-item">
+                <span class="feature-icon">📈</span>
+                <h4>Taux de Réalisation</h4>
+                <p>Pourcentage d'objectifs atteints par rapport au total des objectifs</p>
+            </div>
+            
+            <div class="feature-item">
+                <span class="feature-icon">✅</span>
+                <h4>Objectifs Atteints</h4>
+                <p>Nombre total d'objectifs marqués comme "Atteint"</p>
+            </div>
+            
+            <div class="feature-item">
+                <span class="feature-icon">🏃</span>
+                <h4>Objectifs en Cours</h4>
+                <p>Nombre d'objectifs actuellement en progression</p>
+            </div>
+            
+            <div class="feature-item">
+                <span class="feature-icon">⚠️</span>
+                <h4>Indicateurs en Alerte</h4>
+                <p>Nombre d'indicateurs dépassant les seuils d'alerte définis</p>
+            </div>
+            
+            <div class="feature-item">
+                <span class="feature-icon">⭐</span>
+                <h4>Score Global</h4>
+                <p>Note générale de performance calculée sur une échelle de 0 à 10</p>
+            </div>
+            
+            <div class="feature-item">
+                <span class="feature-icon">📊</span>
+                <h4>Graphiques et Tendances</h4>
+                <p>Visualisations graphiques pour analyser les tendances de performance</p>
+            </div>
+        </div>
+
+        <div class="info-box info">
+            <p>
+                <strong>💡 Astuce :</strong> Consultez le tableau de bord quotidiennement pour identifier rapidement 
+                les indicateurs nécessitant attention. Les graphiques radar et en barres permettent une analyse 
+                visuelle rapide de la performance.
+            </p>
+        </div>
+    </div>
+
+    <!-- Rapports -->
+    <div class="help-section">
+        <h2>📄 Rapports de Performance</h2>
         
-        <h4 style="color: #4b5563; margin: 1.5rem 0 1rem 0;">Formats d'export :</h4>
-        <ul style="line-height: 1.8; color: #374151;">
-            <li><strong>PDF :</strong> Rapport formaté prêt à imprimer</li>
-            <li><strong>Excel :</strong> Données brutes pour analyse approfondie</li>
-            <li><strong>PowerPoint :</strong> Présentation avec graphiques</li>
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 1.5rem;">
+            Le module Performance permet de générer différents types de rapports pour présenter les résultats, 
+            analyser les tendances et documenter les performances.
+        </p>
+
+        <h3>Types de Rapports Disponibles</h3>
+        <div class="help-grid">
+            <div class="help-card">
+                <h4>📋 Cadre de Performance</h4>
+                <p>Document structuré présentant l'ensemble du cadre de performance avec les objectifs et indicateurs</p>
+            </div>
+            
+            <div class="help-card">
+                <h4>📊 Rapport Annuel</h4>
+                <p>Rapport complet sur l'année écoulée avec analyse des résultats et tendances</p>
+            </div>
+            
+            <div class="help-card">
+                <h4>📝 Lettres d'Engagement</h4>
+                <p>Documents d'engagement pour les responsables de programmes et de BOP</p>
+            </div>
+        </div>
+
+        <h3>Générer un Rapport</h3>
+        <ol class="step-list">
+            <li>
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    Accédez à <strong>"Performance → Rapports"</strong>
+                </div>
+            </li>
+            <li>
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    Sélectionnez le type de rapport souhaité
+                </div>
+            </li>
+            <li>
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    Configurez les paramètres (période, programmes, etc.)
+                </div>
+            </li>
+            <li>
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    Cliquez sur <strong>"Générer"</strong> pour créer le rapport au format PDF
+                </div>
+            </li>
+        </ol>
+    </div>
+
+    <!-- Bonnes Pratiques -->
+    <div class="help-section best-practices">
+        <h2>✨ Bonnes Pratiques</h2>
+        
+        <ul>
+            <li>
+                <strong>🎯 Définir des objectifs SMART :</strong> Spécifiques, Mesurables, Atteignables, Réalistes, Temporels
+            </li>
+            <li>
+                <strong>📊 Limiter le nombre d'indicateurs :</strong> Privilégier 5-10 KPIs clés par domaine pour éviter la surcharge d'information
+            </li>
+            <li>
+                <strong>🔄 Mettre à jour régulièrement :</strong> Maintenir les valeurs actuelles à jour pour un suivi efficace
+            </li>
+            <li>
+                <strong>📎 Justifier les valeurs :</strong> Toujours joindre un document justificatif lorsque la valeur actuelle est différente de 0
+            </li>
+            <li>
+                <strong>⚠️ Fixer des seuils pertinents :</strong> Définir des seuils d'alerte réalistes pour chaque indicateur
+            </li>
+            <li>
+                <strong>📅 Réviser périodiquement :</strong> Examiner et ajuster les objectifs trimestriellement ou annuellement
+            </li>
+            <li>
+                <strong>📈 Analyser les écarts :</strong> Identifier les causes des écarts et prendre des actions correctives
+            </li>
+            <li>
+                <strong>👥 Partager les résultats :</strong> Communiquer les résultats avec les équipes concernées pour favoriser l'amélioration continue
+            </li>
+            <li>
+                <strong>🔗 Maintenir la hiérarchie :</strong> S'assurer que les OS sont bien rattachés aux OG et les indicateurs aux OS
+            </li>
+            <li>
+                <strong>🏷️ Utiliser des codes cohérents :</strong> Adopter une nomenclature claire pour faciliter l'organisation (ex: OG01, OS01)
+            </li>
         </ul>
     </div>
 
-    <!-- Bonnes pratiques -->
-    <div class="card" style="background: #f0fdf4; border-left: 4px solid #10b981;">
-        <h3 style="color: #065f46; margin-bottom: 1.5rem;">✨ Bonnes Pratiques</h3>
+    <!-- FAQ -->
+    <div class="help-section">
+        <h2>❓ Questions Fréquentes</h2>
         
-        <ul style="color: #064e3b; line-height: 2;">
-            <li>✅ <strong>Définir des objectifs SMART</strong> (Spécifiques, Mesurables, Atteignables, Réalistes, Temporels)</li>
-            <li>✅ <strong>Limiter le nombre d'indicateurs</strong> (5-10 KPIs clés par domaine)</li>
-            <li>✅ <strong>Mettre à jour régulièrement</strong> les valeurs actuelles</li>
-            <li>✅ <strong>Fixer des seuils d'alerte pertinents</strong> pour chaque indicateur</li>
-            <li>✅ <strong>Réviser les objectifs</strong> trimestriellement ou annuellement</li>
-            <li>✅ <strong>Analyser les écarts</strong> et prendre des actions correctives</li>
-            <li>✅ <strong>Partager les résultats</strong> avec les équipes concernées</li>
+        <h3>Comment calculer la valeur actuelle d'un objectif ?</h3>
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 1.5rem;">
+            La valeur actuelle est calculée automatiquement par le système :
+        </p>
+        <ul class="step-list">
+            <li>
+                <div class="step-content">
+                    <strong>Pour un OS :</strong> Moyenne des valeurs actuelles de ses indicateurs (en tenant compte du sens d'appréciation)
+                </div>
+            </li>
+            <li>
+                <div class="step-content">
+                    <strong>Pour un OG :</strong> Moyenne des valeurs actuelles de ses OS
+                </div>
+            </li>
+            <li>
+                <div class="step-content">
+                    <strong>Pour un Résultat Stratégique :</strong> Moyenne des valeurs actuelles de ses OG
+                </div>
+            </li>
+            <li>
+                <div class="step-content">
+                    <strong>Pour un Programme :</strong> Moyenne des valeurs actuelles de ses Orientations Stratégiques
+                </div>
+            </li>
         </ul>
+
+        <h3>Pourquoi dois-je joindre un document justificatif ?</h3>
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 1.5rem;">
+            Le document justificatif est requis pour garantir la traçabilité et la fiabilité des données. 
+            Il permet de justifier la valeur renseignée et de détecter d'éventuels biais ou erreurs dans la saisie.
+        </p>
+
+        <h3>Quelle est la différence entre un OG et un OS ?</h3>
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 1.5rem;">
+            Un <strong>Objectif Global (OG)</strong> est un objectif stratégique à long terme, rattaché à un Programme 
+            et à un Résultat Stratégique. Un <strong>Objectif Spécifique (OS)</strong> est un objectif opérationnel 
+            à court/moyen terme, rattaché à un OG, qui décompose l'OG en actions concrètes et mesurables.
+        </p>
+
+        <h3>Comment le sens d'appréciation affecte-t-il le calcul ?</h3>
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-bottom: 1.5rem;">
+            Le sens d'appréciation permet de normaliser les valeurs avant le calcul de la moyenne :
+        </p>
+        <ul class="step-list">
+            <li>
+                <div class="step-content">
+                    <strong>Haut (↑) :</strong> Plus la valeur est élevée, mieux c'est. Le taux de réalisation est calculé comme (valeur_actuelle / valeur_cible) × 100
+                </div>
+            </li>
+            <li>
+                <div class="step-content">
+                    <strong>Bas (↓) :</strong> Plus la valeur est basse, mieux c'est. Le taux de réalisation est calculé comme (valeur_cible / valeur_actuelle) × 100
+                </div>
+            </li>
+        </ul>
+        <p style="color: rgba(15, 23, 42, 0.75); line-height: 1.8; margin-top: 1rem;">
+            Les taux normalisés sont ensuite moyennés pour calculer la valeur actuelle de l'OS.
+        </p>
     </div>
 
 </div>
 {% endblock %}
-

@@ -10,11 +10,29 @@ from datetime import date, datetime
 from sqlmodel import Field, SQLModel
 from sqlalchemy import String, Column, Text
 
-from app.core.enums import GradeCategory, PositionAdministrative, SituationFamiliale, TypeDocument
+from app.core.enums import GradeCategory, PositionAdministrative, RoleBudgetaire, SituationFamiliale, TypeDocument
 
 # ==========================================
 # STRUCTURE ORGANISATIONNELLE
 # ==========================================
+
+
+class Cabinet(SQLModel, table=True):
+    """Cabinet du Ministre (peut avoir des directions, sous-directions ou services)"""
+
+    __tablename__ = "cabinet"
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True, unique=True, max_length=20)
+    libelle: str = Field(max_length=200)
+    description: str | None = None
+    actif: bool = True
+
+    # Responsable du cabinet (optionnel)
+    responsable_id: int | None = Field(default=None, foreign_key="agent_complet.id")
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Programme(SQLModel, table=True):
@@ -39,7 +57,7 @@ class Programme(SQLModel, table=True):
 
 
 class Direction(SQLModel, table=True):
-    """Direction (rattachée à un programme)"""
+    """Direction (rattachée à un programme ou à un cabinet)"""
 
     __tablename__ = "direction"
 
@@ -50,8 +68,9 @@ class Direction(SQLModel, table=True):
     actif: bool = True
     type: str | None = Field(default=None, index=True)  # Type de direction: "CENTRALE", "GENERALE", etc.
 
-    # Hiérarchie
+    # Hiérarchie - peut être rattachée à un Programme OU à un Cabinet (exclusion mutuelle)
     programme_id: int | None = Field(default=None, foreign_key="programme.id")
+    cabinet_id: int | None = Field(default=None, foreign_key="cabinet.id")
 
     # Chef de direction (optionnel)
     directeur_id: int | None = Field(default=None, foreign_key="agent_complet.id")
@@ -60,8 +79,31 @@ class Direction(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class SousDirection(SQLModel, table=True):
+    """Sous-direction (peut être rattachée à une direction, un programme ou un cabinet)"""
+
+    __tablename__ = "sous_direction"
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True, unique=True, max_length=20)
+    libelle: str = Field(max_length=200)
+    description: str | None = None
+    actif: bool = True
+
+    # Hiérarchie - peut être rattachée à une Direction, un Programme ou un Cabinet (exclusion mutuelle)
+    direction_id: int | None = Field(default=None, foreign_key="direction.id")
+    programme_id: int | None = Field(default=None, foreign_key="programme.id")
+    cabinet_id: int | None = Field(default=None, foreign_key="cabinet.id")
+
+    # Chef de sous-direction (optionnel)
+    chef_sous_direction_id: int | None = Field(default=None, foreign_key="agent_complet.id")
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class Service(SQLModel, table=True):
-    """Service (rattaché à une direction)"""
+    """Service (peut être rattaché à une sous-direction, une direction, un programme ou un cabinet)"""
 
     __tablename__ = "service"
 
@@ -71,8 +113,11 @@ class Service(SQLModel, table=True):
     description: str | None = None
     actif: bool = True
 
-    # Hiérarchie
+    # Hiérarchie - peut être rattaché à une Sous-direction, une Direction, un Programme ou un Cabinet (exclusion mutuelle)
+    sous_direction_id: int | None = Field(default=None, foreign_key="sous_direction.id")
     direction_id: int | None = Field(default=None, foreign_key="direction.id")
+    programme_id: int | None = Field(default=None, foreign_key="programme.id")
+    cabinet_id: int | None = Field(default=None, foreign_key="cabinet.id")
 
     # Chef de service (optionnel)
     chef_service_id: int | None = Field(default=None, foreign_key="agent_complet.id")
@@ -135,7 +180,7 @@ class AgentComplet(SQLModel, table=True):
     nom_jeune_fille: str | None = Field(default=None, max_length=100)
     date_naissance: date | None = None
     lieu_naissance: str | None = Field(default=None, max_length=200)
-    nationalite: str = Field(default="Sénégalaise", max_length=100)
+    nationalite: str = Field(default="Ivoirienne", max_length=100)
     sexe: str | None = Field(default=None, max_length=1)  # M/F
     situation_familiale: SituationFamiliale | None = Field(default=None, sa_type=String)  # Stocké comme string
     nombre_enfants: int = Field(default=0, ge=0)
@@ -160,11 +205,20 @@ class AgentComplet(SQLModel, table=True):
     echelon: int = Field(default=1, ge=1)
     indice: int | None = None
 
+    # Rattachement hiérarchique (tous optionnels)
+    # Un agent peut être rattaché à un service, une sous-direction, ou une direction
+    # Aucun rattachement n'est obligatoire - un agent peut exister sans rattachement hiérarchique
+    # Exclusion mutuelle : si service_id est renseigné, sous_direction_id et direction_id doivent être None
+    # Si sous_direction_id est renseigné, direction_id doit être None
     service_id: int | None = Field(default=None, foreign_key="service.id")
+    sous_direction_id: int | None = Field(default=None, foreign_key="sous_direction.id")
     direction_id: int | None = Field(default=None, foreign_key="direction.id")
-    programme_id: int | None = Field(default=None, foreign_key="programme.id")
+    programme_id: int | None = Field(default=None, foreign_key="programme.id")  # Déprécié, conservé pour compatibilité
 
     fonction: str | None = Field(default=None, max_length=200)  # Ex: "Chef de division"
+
+    # Rôle budgétaire
+    role_budgetaire: RoleBudgetaire | None = Field(default=None, sa_type=String)  # Stocké comme string
 
     # Lien avec compte utilisateur (optionnel)
     user_id: int | None = Field(default=None, foreign_key="user.id")
