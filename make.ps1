@@ -1,5 +1,5 @@
 # ============================================
-# SCRIPT POWERSHELL - vioda DASHBOARD
+# SCRIPT POWERSHELL - MPPEEP DASHBOARD
 # ============================================
 # Remplacement du Makefile pour Windows
 # Usage : .\make.ps1 <commande> [parametres]
@@ -18,7 +18,7 @@ param(
 # Fonction d'aide
 function Show-Help {
     Write-Host "==========================================" -ForegroundColor Cyan
-    Write-Host "vioda Dashboard - Commandes" -ForegroundColor Yellow
+    Write-Host "MPPEEP Dashboard - Commandes" -ForegroundColor Yellow
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "DEMARRAGE RAPIDE:" -ForegroundColor White
