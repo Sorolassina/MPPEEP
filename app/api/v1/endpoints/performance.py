@@ -1180,7 +1180,7 @@ def generate_rapport_activite_rprog_pdf(
         return StreamingResponse(
             pdf_buffer,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            headers={"Content-Disposition": f"inline; filename={filename}"},
         )
         
     except Exception as e:
@@ -1188,6 +1188,355 @@ def generate_rapport_activite_rprog_pdf(
         raise HTTPException(
             status_code=500,
             detail=f"Erreur lors de la génération du rapport: {str(e)}"
+        )
+
+
+@router.get(
+    "/rapport-activite-rprog/docx",
+    response_class=StreamingResponse,
+    name="performance_rapport_activite_rprog_docx",
+)
+def generate_rapport_activite_rprog_docx(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Génère le rapport d'activité RPROG et le convertit en document Word (.docx).
+    
+    Cette fonctionnalité permet aux utilisateurs de modifier le rapport dans Word
+    au cas où ils souhaiteraient y apporter des modifications.
+    
+    Le processus :
+    1. Génère le PDF du rapport (même processus que /rapport-activite-rprog/pdf)
+    2. Convertit le PDF en Word via Adobe PDF Services
+    3. Retourne le document Word pour téléchargement
+    """
+    try:
+        from app.services.rapport_activite_rprog_generator import (
+            RPROGPDFGenerator
+        )
+        from app.services.pdf_to_word_service import PDFToWordService
+        from app.services.system_settings_service import SystemSettingsService
+        from datetime import datetime
+        
+        # Récupérer les paramètres de conversion
+        use_ocr = request.query_params.get("ocr", "false").lower() == "true"
+        
+        data: dict[str, Any] = {}
+        
+        # Récupérer les paramètres généraux du formulaire
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            final_value = transform(value) if transform else value
+            data[target_key] = final_value
+        
+        optional_param("annee", "annee", lambda v: int(v) if v.isdigit() else v)
+        optional_param("section", "section")
+        optional_param("ministere", "ministere")
+        optional_param("programme", "programme")
+        optional_param("periode", "periode")
+        optional_param("titre_rapport", "titre_rapport")
+        optional_param("titre_annee", "titre_annee")
+        optional_param("date_publication", "date_publication")
+        optional_param("logo_path", "logo_path")
+        optional_param("responsable_programme", "responsable_programme")
+        
+        # Récupérer le mode depuis les paramètres de requête (brouillon ou final)
+        mode_param = request.query_params.get("mode", "brouillon")
+        data["mode"] = mode_param if mode_param in ["brouillon", "final"] else "brouillon"
+        
+        # Récupérer les paramètres système pour les valeurs par défaut
+        system_settings = SystemSettingsService.get_settings_as_dict(db)
+        logo_path_from_settings = system_settings.get("logo_path", "")
+        current_year = datetime.now().year
+        
+        # Appliquer les valeurs par défaut si non fournies
+        if "annee" not in data:
+            data["annee"] = RPROGPDFGenerator.DEFAULT_DATA.get("annee", current_year - 1)
+        if "section" not in data:
+            data["section"] = RPROGPDFGenerator.DEFAULT_DATA.get("section", "SECTION 376")
+        if "ministere" not in data:
+            data["ministere"] = system_settings.get("ministere", RPROGPDFGenerator.DEFAULT_DATA.get("ministere", ""))
+        if "programme" not in data:
+            data["programme"] = RPROGPDFGenerator.DEFAULT_DATA.get("programme", "PROGRAMME PORTEFEUILLE DE L'ETAT")
+        if "periode" not in data:
+            data["periode"] = RPROGPDFGenerator.DEFAULT_DATA.get("periode", "PREMIER SEMESTRE")
+        if "titre_rapport" not in data:
+            data["titre_rapport"] = RPROGPDFGenerator.DEFAULT_DATA.get("titre_rapport", "RAPPORT D'ACTIVITÉ")
+        if "titre_annee" not in data:
+            data["titre_annee"] = RPROGPDFGenerator.DEFAULT_DATA.get("titre_annee", "AU TITRE DE L'ANNÉE")
+        if "date_publication" not in data:
+            data["date_publication"] = datetime.now().strftime("%Y-%m")
+        if "logo_path" not in data:
+            data["logo_path"] = logo_path_from_settings if logo_path_from_settings else RPROGPDFGenerator.DEFAULT_DATA.get("logo_path", "")
+        if "responsable_programme" not in data:
+            data["responsable_programme"] = RPROGPDFGenerator.DEFAULT_DATA.get("responsable_programme", "")
+        
+        # Étape 1: Générer le PDF
+        logger.info("📄 Génération du PDF du rapport RPROG...")
+        pdf_buffer = RPROGPDFGenerator.generate_pdf(data, session=db)
+        
+        # Étape 2: Convertir le PDF en Word
+        logger.info("🔄 Conversion PDF → Word en cours...")
+        word_buffer = PDFToWordService.convert_pdf_to_word(pdf_buffer, use_ocr=use_ocr)
+        
+        year = data.get("annee", 2024)
+        mode_label = "brouillon" if data.get("mode") == "brouillon" else "final"
+        
+        headers = {
+            "Content-Disposition": f"attachment; filename=rapport_activite_rprog_{year}_{mode_label}.docx",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }
+        
+        logger.info("✅ Document Word RPROG généré avec succès")
+        
+        return StreamingResponse(
+            iter([word_buffer.getvalue()]),
+            headers=headers,
+        )
+    except Exception as e:
+        logger.error(f"❌ Erreur génération Word RPROG: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la génération du document Word: {str(e)}")
+
+
+@router.get(
+    "/rprog-data",
+    response_class=JSONResponse,
+    name="get_rprog_data_api",
+)
+def get_rprog_data_api(
+    programme_id: int = Query(..., description="ID du programme"),
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Récupère les données RPROG pour un programme donné (une seule ligne par programme)"""
+    try:
+        from app.services.rprog_data_service import RprogDataService
+        
+        rprog_data = RprogDataService.get_rprog_data(
+            db_session=db,
+            programme_id=programme_id
+        )
+        
+        if not rprog_data:
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "data": None,
+                    "message": "Aucune donnée trouvée pour ces paramètres"
+                }
+            )
+        
+        # Convertir en dictionnaire
+        data_dict = {
+            "id": rprog_data.id,
+            "programme_id": rprog_data.programme_id,
+            "annee": rprog_data.annee,
+            "periode": rprog_data.periode,
+            "titre_rapport": rprog_data.titre_rapport,
+            "section": rprog_data.section,
+            "ministere": rprog_data.ministere,
+            "date_publication": rprog_data.date_publication,
+            "responsable_programme": rprog_data.responsable_programme,
+            "logo_path": rprog_data.logo_path,
+            "activites_commentaires": rprog_data.activites_commentaires,
+            "credits_commentaires": rprog_data.credits_commentaires,
+            "investissements_commentaires": rprog_data.investissements_commentaires,
+            "effectifs_commentaires": rprog_data.effectifs_commentaires,
+            "performance_commentaires": rprog_data.performance_commentaires,
+            "difficultes_intro": rprog_data.difficultes_intro,
+            "difficultes_rencontrees": rprog_data.difficultes_rencontrees,
+            "solutions_intro": rprog_data.solutions_intro,
+            "actions_solutions": rprog_data.actions_solutions,
+            "conclusion_texte": rprog_data.conclusion_texte,
+        }
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "data": data_dict
+            }
+        )
+    except Exception as e:
+        logger.error(f"❌ Erreur récupération données RPROG: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+
+@router.post(
+    "/rprog-data",
+    response_class=JSONResponse,
+    name="save_rprog_data_api",
+)
+async def save_rprog_data_api(
+    request: Request,
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Sauvegarde les données RPROG dans la base de données"""
+    try:
+        from app.services.rprog_data_service import RprogDataService
+        from app.services.activity_service import ActivityService
+        import json
+        
+        # Récupérer les données depuis le body JSON
+        body = await request.json()
+        logger.info(f"📥 Données reçues pour sauvegarde RPROG: programme_id={body.get('programme_id')}")
+        
+        programme_id = body.get("programme_id")
+        
+        if not programme_id:
+            logger.warning(f"⚠️ Données manquantes: programme_id={programme_id}")
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "programme_id est requis"}
+            )
+        
+        # Récupérer annee et periode si fournis (stockés mais ne font pas partie de la clé unique)
+        annee = body.get("annee")
+        periode = body.get("periode")
+        
+        user_id = current_user.id if hasattr(current_user, "id") else 1
+        
+        # Préparer les paramètres de mise à jour
+        # Suivre EXACTEMENT la même logique que RAP
+        update_params = {}
+        
+        # Informations générales (même logique que RAP: vérifier is not None and .strip())
+        if "section" in body:
+            section_value = body["section"]
+            if section_value is not None and section_value.strip():
+                update_params["section"] = section_value.strip()
+        if "ministere" in body:
+            ministere_value = body["ministere"]
+            if ministere_value is not None and ministere_value.strip():
+                update_params["ministere"] = ministere_value.strip()
+        if "date_publication" in body:
+            date_value = body["date_publication"]
+            if date_value is not None and date_value.strip():
+                update_params["date_publication"] = date_value.strip()
+        if "titre_rapport" in body:
+            titre_value = body["titre_rapport"]
+            if titre_value is not None and titre_value.strip():
+                update_params["titre_rapport"] = titre_value.strip()
+        if "responsable_programme" in body:
+            responsable_value = body["responsable_programme"]
+            if responsable_value is not None and responsable_value.strip():
+                update_params["responsable_programme"] = responsable_value.strip()
+        if "logo_path" in body:
+            logo_value = body["logo_path"]
+            if logo_value is not None and logo_value.strip():
+                update_params["logo_path"] = logo_value.strip()
+        
+        # Commentaires par section (même logique que RAP)
+        if "activites_commentaires" in body:
+            activites_value = body["activites_commentaires"]
+            if activites_value is not None and activites_value.strip():
+                update_params["activites_commentaires"] = activites_value.strip()
+        if "credits_commentaires" in body:
+            credits_value = body["credits_commentaires"]
+            if credits_value is not None and credits_value.strip():
+                update_params["credits_commentaires"] = credits_value.strip()
+        if "investissements_commentaires" in body:
+            investissements_value = body["investissements_commentaires"]
+            if investissements_value is not None and investissements_value.strip():
+                update_params["investissements_commentaires"] = investissements_value.strip()
+        if "effectifs_commentaires" in body:
+            effectifs_value = body["effectifs_commentaires"]
+            if effectifs_value is not None and effectifs_value.strip():
+                update_params["effectifs_commentaires"] = effectifs_value.strip()
+        if "performance_commentaires" in body:
+            performance_value = body["performance_commentaires"]
+            if performance_value is not None and performance_value.strip():
+                update_params["performance_commentaires"] = performance_value.strip()
+        
+        # Difficultés et solutions (même logique que RAP)
+        if "difficultes_intro" in body:
+            difficultes_intro_value = body["difficultes_intro"]
+            if difficultes_intro_value is not None and difficultes_intro_value.strip():
+                update_params["difficultes_intro"] = difficultes_intro_value.strip()
+        if "difficultes_rencontrees" in body:
+            difficultes_value = body["difficultes_rencontrees"]
+            if difficultes_value is not None and difficultes_value.strip():
+                update_params["difficultes_rencontrees"] = difficultes_value.strip()
+        if "solutions_intro" in body:
+            solutions_intro_value = body["solutions_intro"]
+            if solutions_intro_value is not None and solutions_intro_value.strip():
+                update_params["solutions_intro"] = solutions_intro_value.strip()
+        if "actions_solutions" in body:
+            actions_value = body["actions_solutions"]
+            if actions_value is not None and actions_value.strip():
+                update_params["actions_solutions"] = actions_value.strip()
+        
+        # Conclusion (même logique que RAP)
+        if "conclusion_texte" in body:
+            conclusion_value = body["conclusion_texte"]
+            if conclusion_value is not None and conclusion_value.strip():
+                update_params["conclusion_texte"] = conclusion_value.strip()
+        
+        # Mettre à jour ou créer les données (même logique que RAP: vérifier si update_params n'est pas vide)
+        if update_params:
+            RprogDataService.update_rprog_data(
+                db_session=db,
+                programme_id=programme_id,
+                user_id=user_id,
+                **update_params
+            )
+            logger.info(f"✅ Données RPROG sauvegardées par {current_user.email}")
+        
+        # Logger l'activité (même logique que RAP: toujours logger)
+        ActivityService.log_activity(
+            db_session=db,
+            user_id=user_id,
+            user_email=current_user.email,
+            user_full_name=current_user.full_name,
+            action_type="update",
+            target_type="rprog_data",
+            description=f"Sauvegarde des données RPROG pour programme_id={programme_id}",
+            icon="💾",
+        )
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Données sauvegardées avec succès. Le rapport sera généré avec ces données."
+            }
+        )
+    except Exception as e:
+        logger.error(f"❌ Erreur sauvegarde données RPROG: {e}", exc_info=True)
+        # Vérifier si c'est une erreur de table manquante
+        error_message = str(e)
+        if "does not exist" in error_message or "no such table" in error_message.lower() or "relation" in error_message.lower():
+            error_message = f"La table rprog_data n'existe pas encore. Veuillez exécuter la migration de la base de données. Erreur: {error_message}"
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": error_message}
+        )
+        
+    except ValueError as e:
+        # Erreur de configuration (credentials manquants)
+        logger.error(f"❌ Erreur de configuration: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration manquante pour la conversion PDF → Word: {e}"
+        )
+    except ImportError as e:
+        # SDK non installé
+        logger.error(f"❌ SDK non installé: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"SDK de conversion PDF → Word non installé: {e}"
+        )
+    except Exception as e:
+        logger.error(f"Erreur lors de la génération du rapport RPROG en Word: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la génération du rapport Word: {str(e)}"
         )
 
 

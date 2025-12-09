@@ -246,7 +246,13 @@ class RPROGLayoutDrawer(RAPLayoutDrawer):
         
         # ---------- SECTION ----------
         pdf.setFont("Helvetica-Bold", 12)
-        section_color = RAPStylingManager._get_color_for_source(section_source)
+        # Vérifier le mode pour déterminer la couleur
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        if mode == "final":
+            from reportlab.lib import colors
+            section_color = colors.HexColor("#000000")  # Noir en mode final
+        else:
+            section_color = RAPStylingManager._get_color_for_source(section_source)  # Rouge en brouillon
         pdf.saveState()
         pdf.setFillColor(section_color)
         pdf.drawCentredString(center_x, content_current_y, section + " :")
@@ -257,8 +263,12 @@ class RPROGLayoutDrawer(RAPLayoutDrawer):
         if ministere:
             # Taille de police augmentée pour le RPROG (13 au lieu de 11)
             pdf.setFont("Helvetica-BoldOblique", 13)
-            # Utiliser la source déterminée pour la couleur (peut être user > db > default)
-            ministere_color = RAPStylingManager._get_color_for_source(ministere_source)
+            # Vérifier le mode pour déterminer la couleur
+            if mode == "final":
+                from reportlab.lib import colors
+                ministere_color = colors.HexColor("#000000")  # Noir en mode final
+            else:
+                ministere_color = RAPStylingManager._get_color_for_source(ministere_source)  # Rouge en brouillon
             lines = wrap(ministere, width=80)
             line_height = 18  # Augmenté de 16 à 18 pour correspondre à la nouvelle taille de police
             pdf.saveState()
@@ -488,8 +498,13 @@ class RPROGLayoutDrawer(RAPLayoutDrawer):
         # Calculer la largeur maximale pour le texte
         max_text_width = text_area_width
         
-        # Déterminer la couleur du titre (toutes les données sont DB, rouge)
-        titre_color = RAPStylingManager._get_color_for_source("db")
+        # Déterminer la couleur du titre (rouge en brouillon, noir en final)
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else (RPROGBaseGenerator.data.get("mode", "brouillon") if hasattr(RPROGBaseGenerator, 'data') and RPROGBaseGenerator.data else "brouillon")
+        if mode == "final":
+            from reportlab.lib import colors
+            titre_color = colors.HexColor("#000000")  # Noir en mode final
+        else:
+            titre_color = RAPStylingManager._get_color_for_source("db")  # Rouge en brouillon
         
         # Découper le titre en lignes (en préservant les retours à la ligne)
         if titre_rapport and titre_rapport.strip():
@@ -540,8 +555,13 @@ class RPROGLayoutDrawer(RAPLayoutDrawer):
             responsable_y = box_y - 1.2 * cm  # Espacement de 1.2 cm sous la boîte
             
             responsable_text = f"RESPONSABLE DE PROGRAMME : {responsable_programme.upper()}"
-            # Utiliser la même couleur et police que le titre
-            responsable_color = RAPStylingManager._get_color_for_source("db")
+            # Utiliser la même couleur et police que le titre (noir en final, rouge en brouillon)
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else (RPROGBaseGenerator.data.get("mode", "brouillon") if hasattr(RPROGBaseGenerator, 'data') and RPROGBaseGenerator.data else "brouillon")
+            if mode == "final":
+                from reportlab.lib import colors
+                responsable_color = colors.HexColor("#000000")  # Noir en mode final
+            else:
+                responsable_color = RAPStylingManager._get_color_for_source("db")  # Rouge en brouillon
             
             # Choisir la police (italique comme le titre)
             if should_use_italic:
@@ -1403,13 +1423,30 @@ class RPROGContentDrawer(RAPContentDrawer):
                 # Si ce n'est pas un nombre, retourner tel quel
                 return str(value)
         
-        # Fonction helper pour formater les valeurs dynamiques en rouge
+        # Fonction helper pour déterminer si on est en mode final (document final ou impression Word)
+        def is_final_mode():
+            """Retourne True si on est en mode final (pas de rouge, pas de placeholders)"""
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+            return mode == "final"
+        
+        # Fonction helper pour formater les valeurs dynamiques
         def format_dynamic_value(value, default_placeholder=".................."):
-            """Formate une valeur dynamique en rouge, ou retourne le placeholder si None/vide"""
+            """Formate une valeur dynamique (rouge en brouillon, noir en final, sans placeholder en final)"""
+            final_mode = is_final_mode()
             if value is None or value == "":
-                return f'<font color="#FF0000">{default_placeholder}</font>'
+                if final_mode:
+                    # En mode final, retourner une chaîne vide au lieu du placeholder
+                    return ""
+                else:
+                    # En mode brouillon, retourner le placeholder en rouge
+                    return f'<font color="#FF0000">{default_placeholder}</font>'
             value_str = str(value)
-            return f'<font color="#FF0000">{value_str}</font>'
+            if final_mode:
+                # En mode final, texte en noir
+                return value_str
+            else:
+                # En mode brouillon, texte en rouge
+                return f'<font color="#FF0000">{value_str}</font>'
         
         # Récupérer les valeurs dynamiques depuis les données (valeurs par défaut)
         plan_strategique = data.get("plan_strategique", "")
@@ -1458,27 +1495,25 @@ class RPROGContentDrawer(RAPContentDrawer):
         
         if session:
             try:
-                from app.models.personnel import Programme, Direction, SousDirection, Service
-                from app.models.performance import ObjectifPerformance, OrientationStrategique, TypeObjectif
-                from app.models.budget import SigobeExecution
-                from sqlmodel import select, and_, or_, func, distinct
-                from decimal import Decimal
+                from app.models.personnel import Direction, SousDirection, Service
+                from sqlmodel import select, and_
                 
-                # Récupérer le programme
+                # Charger le programme via ReportDataLoader
                 if programme:
                     logger.info("=" * 80)
-                    logger.info("🔍 === DÉBUT RECHERCHE PROGRAMME ===")
+                    logger.info("🔍 === DÉBUT CHARGEMENT PROGRAMME (ReportDataLoader) ===")
                     logger.info("=" * 80)
-                    logger.info(f"🔍 Recherche du programme: '{programme}'")
+                    logger.info(f"🔍 Chargement du programme: '{programme}'")
                     
-                    # Chercher le programme par libellé ou code (comme dans draw_performance_programme)
-                    programme_query = select(Programme).where(
-                        or_(
-                            Programme.libelle.ilike(f"%{programme}%"),
-                            Programme.code.ilike(f"%{programme}%")
-                        )
+                    from app.services.report_data_loader import ReportDataLoader
+                    
+                    programmes_data = ReportDataLoader.load_data_programmes(
+                        session, 
+                        programme_nom=programme,
+                        annee=annee,
+                        include_sigobe_stats=False
                     )
-                    programme_obj = session.exec(programme_query).first()
+                    programme_obj = programmes_data.get("programme")
                     
                     if programme_obj:
                         logger.info(f"✅ Programme '{programme}' trouvé avec ID: {programme_obj.id} | Code: {programme_obj.code} | Libellé: {programme_obj.libelle}")
@@ -1486,23 +1521,16 @@ class RPROGContentDrawer(RAPContentDrawer):
                         # Récupérer les missions du programme
                         if programme_obj.missions:
                             missions = programme_obj.missions
-                            # Re-formater missions_formatted avec la valeur récupérée
                             missions_formatted = format_dynamic_value(missions, "assurer la gestion efficace du portefeuille de l'Etat à travers la coordination des activités de la DGPE")
                             logger.info(f"🔄 missions_formatted mis à jour: '{missions_formatted[:80]}...'")
                         
                         logger.info("=" * 80)
-                        logger.info("✅ === FIN RECHERCHE PROGRAMME (SUCCÈS) ===")
+                        logger.info("✅ === FIN CHARGEMENT PROGRAMME (SUCCÈS) ===")
                         logger.info("=" * 80)
                     else:
                         logger.warning(f"⚠️ Programme '{programme}' non trouvé dans la base de données")
-                        
-                        # DIAGNOSTIC: Lister tous les programmes disponibles
-                        all_programmes = session.exec(select(Programme)).all()
-                        logger.info(f"🔍 Programmes disponibles dans la base ({len(all_programmes)}):")
-                        for prog in all_programmes:
-                            logger.info(f"   - ID: {prog.id} | Code: {prog.code or 'N/A'} | Libellé: {prog.libelle}")
                         logger.info("=" * 80)
-                        logger.info("❌ === FIN RECHERCHE PROGRAMME (NON TROUVÉ) ===")
+                        logger.info("❌ === FIN CHARGEMENT PROGRAMME (NON TROUVÉ) ===")
                         logger.info("=" * 80)
                 
                 if programme_obj:
@@ -1584,216 +1612,127 @@ class RPROGContentDrawer(RAPContentDrawer):
                     
                     logger.info(f"📊 {len(directions)} directions, {len(sous_directions)} sous-directions et {len(services)} services trouvés pour le programme {programme_obj.libelle}")
                 
-                # Récupérer nb_objectifs depuis objectif_performance
-                # On utilise les OG pour rattacher les OS au programme
+                # Charger nb_objectifs via ReportDataLoader.load_data_performance
                 if programme_obj:
-                    # Toujours récupérer dynamiquement, même si nb_objectifs est déjà défini dans data
                     try:
                         logger.info("=" * 80)
-                        logger.info("🎯 === DÉBUT RECHERCHE nb_objectifs ===")
+                        logger.info("🎯 === DÉBUT CHARGEMENT nb_objectifs (ReportDataLoader) ===")
                         logger.info("=" * 80)
-                        logger.info(f"🔍 Recherche des objectifs pour le programme: '{programme_obj.libelle}' (ID: {programme_obj.id})")
+                        logger.info(f"🔍 Chargement des objectifs pour le programme: '{programme_obj.libelle}' (ID: {programme_obj.id})")
                         
-                        # D'abord, récupérer les Objectifs Globaux (OG) liés au programme
-                        og_query = select(ObjectifPerformance.id).where(
-                            and_(
-                                ObjectifPerformance.programme_id == programme_obj.id,
-                                ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL.value  # Objectifs globaux
-                            )
+                        from app.services.report_data_loader import ReportDataLoader
+                        
+                        performance_data = ReportDataLoader.load_data_performance(
+                            session, 
+                            annee, 
+                            programme_id=programme_obj.id
                         )
-                        og_ids = list(session.exec(og_query).all())
-                        logger.info(f"📊 {len(og_ids)} objectifs globaux (OG) trouvés pour le programme '{programme_obj.libelle}' (ID: {programme_obj.id})")
+                        objectifs_specifiques = performance_data.get("objectifs_specifiques", [])
+                        nb_objectifs_count = len(objectifs_specifiques)
+                        logger.info(f"📊 {nb_objectifs_count} objectifs spécifiques (OS) trouvés pour le programme")
                         
-                        if og_ids:
-                            logger.info(f"📋 IDs des objectifs globaux: {og_ids}")
-                        
-                        # Ensuite, compter les Objectifs Spécifiques (OS) liés à ces OG
-                        if og_ids:
-                            os_query = select(func.count(ObjectifPerformance.id)).where(
-                                and_(
-                                    ObjectifPerformance.objectif_global_id.in_(og_ids),
-                                    ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE.value  # Filtrer uniquement les OS
-                                )
-                            )
-                            nb_objectifs = session.exec(os_query).first() or 0
-                            logger.info(f"📊 {nb_objectifs} objectifs spécifiques (OS) trouvés liés à {len(og_ids)} OG (IDs: {og_ids})")
-                        else:
-                            nb_objectifs = 0
-                            logger.warning(f"⚠️ Aucun objectif global trouvé pour le programme '{programme_obj.libelle}'. nb_objectifs sera 0.")
-                        
-                        nb_objectifs = str(nb_objectifs) if nb_objectifs else ""
-                        # Formater à 2 chiffres (04 au lieu de 4)
+                        nb_objectifs = str(nb_objectifs_count) if nb_objectifs_count else ""
                         nb_objectifs = format_two_digits(nb_objectifs)
-                        # Re-formater nb_objectifs_formatted avec la valeur récupérée
                         nb_objectifs_formatted = format_dynamic_value(nb_objectifs, "..............")
                         logger.info(f"🔄 nb_objectifs_formatted mis à jour: '{nb_objectifs_formatted}'")
                         logger.info("=" * 80)
-                        logger.info(f"✅ === FIN RECHERCHE nb_objectifs === (Résultat: {nb_objectifs})")
+                        logger.info(f"✅ === FIN CHARGEMENT nb_objectifs === (Résultat: {nb_objectifs})")
                         logger.info("=" * 80)
                     except Exception as e:
-                        logger.error(f"❌ Erreur lors de la récupération du nombre d'objectifs: {e}", exc_info=True)
-                        # En cas d'erreur, garder la valeur par défaut si elle existe
+                        logger.error(f"❌ Erreur lors du chargement du nombre d'objectifs: {e}", exc_info=True)
                         if not nb_objectifs:
                             nb_objectifs = ""
                         else:
-                            # Formater à 2 chiffres (04 au lieu de 4) même en cas d'erreur
                             nb_objectifs = format_two_digits(nb_objectifs)
-                        # Re-formater nb_objectifs_formatted même en cas d'erreur
                         nb_objectifs_formatted = format_dynamic_value(nb_objectifs, "..............")
                         logger.info(f"🔄 nb_objectifs_formatted mis à jour après erreur: '{nb_objectifs_formatted}'")
                         logger.info("=" * 80)
-                        logger.info(f"❌ === FIN RECHERCHE nb_objectifs (ERREUR) === (Résultat: {nb_objectifs})")
+                        logger.info(f"❌ === FIN CHARGEMENT nb_objectifs (ERREUR) === (Résultat: {nb_objectifs})")
                         logger.info("=" * 80)
                 
-                # Récupérer nb_actions depuis SigobeExecution
+                # Charger nb_actions via ReportDataLoader.load_data_sigobe
                 if programme_obj and not nb_actions:
                     try:
                         logger.info("=" * 80)
-                        logger.info("🎯 === DÉBUT RECHERCHE nb_actions ===")
+                        logger.info("🎯 === DÉBUT CHARGEMENT nb_actions (ReportDataLoader) ===")
                         logger.info("=" * 80)
-                        logger.info(f"🔍 Recherche des actions pour le programme: '{programme_obj.libelle}' (ID: {programme_obj.id})")
+                        logger.info(f"🔍 Chargement des actions pour le programme: '{programme_obj.libelle}' (ID: {programme_obj.id})")
                         
-                        # Stratégie de recherche : essayer d'abord par nom exact, puis par variantes
-                        # Mapping connu entre noms de programmes et noms SIGOBE
-                        programme_sigobe_mapping = {
-                            "ADMINISTRATION GENERALE": "AFFAIRES ADMINISTRATIVES ET FINANCIERES",
-                            "ADMINISTRATION GÉNÉRALE": "AFFAIRES ADMINISTRATIVES ET FINANCIERES",
-                        }
+                        from app.services.report_data_loader import ReportDataLoader
                         
-                        # Déterminer le nom du programme à rechercher dans SIGOBE
-                        programme_sigobe_name = programme_sigobe_mapping.get(
-                            programme_obj.libelle.upper(),
-                            programme_obj.libelle
+                        sigobe_data = ReportDataLoader.load_data_sigobe(
+                            session,
+                            annee,
+                            programme_nom=programme_obj.libelle or programme
                         )
+                        executions = sigobe_data.get("executions", [])
                         
-                        logger.info(f"🔍 Recherche SIGOBE avec: '{programme_sigobe_name}' (mappé depuis '{programme_obj.libelle}')")
+                        # Compter les actions distinctes
+                        actions_set = set()
+                        for exec in executions:
+                            if exec.actions and str(exec.actions).strip():
+                                actions_set.add(exec.actions.strip())
                         
-                        # Construire les conditions de recherche
-                        search_conditions = [
-                            SigobeExecution.programmes.ilike(f"%{programme_obj.libelle}%"),
-                            SigobeExecution.programmes.ilike(f"%{programme_sigobe_name}%"),
-                        ]
-                        # Ajouter le code si disponible
-                        if programme_obj.code:
-                            search_conditions.append(SigobeExecution.programmes.ilike(f"%{programme_obj.code}%"))
+                        nb_actions_count = len(actions_set)
+                        logger.info(f"📊 {nb_actions_count} actions distinctes trouvées")
                         
-                        # DIAGNOSTIC: Vérifier toutes les exécutions pour ce programme
-                        all_executions_query = select(SigobeExecution).where(
-                            or_(*search_conditions)
-                        )
-                        all_executions = session.exec(all_executions_query).all()
-                        logger.info(f"🔍 DIAGNOSTIC: Total de {len(all_executions)} exécutions SIGOBE trouvées pour le programme '{programme_obj.libelle}'")
-                        
-                        # Si aucune exécution trouvée, lister les programmes SIGOBE disponibles
-                        if len(all_executions) == 0:
-                            all_programmes_sigobe_query = select(SigobeExecution.programmes).where(
-                                SigobeExecution.programmes.isnot(None)
-                            ).distinct()
-                            all_programmes_sigobe = session.exec(all_programmes_sigobe_query).all()
-                            all_programmes_sigobe_filtered = [p for p in all_programmes_sigobe if p and str(p).strip()]
-                            logger.warning(f"⚠️ Aucune exécution trouvée. Programmes disponibles dans SIGOBE ({len(all_programmes_sigobe_filtered)}):")
-                            for prog_sigobe in all_programmes_sigobe_filtered[:10]:
-                                logger.info(f"   - '{prog_sigobe}'")
-                        
-                        # Vérifier combien ont des actions
-                        executions_with_actions = [e for e in all_executions if e.actions and str(e.actions).strip()]
-                        logger.info(f"🔍 DIAGNOSTIC: {len(executions_with_actions)} exécutions avec actions non vides")
-                        
-                        # Afficher quelques exemples
-                        if executions_with_actions:
-                            logger.info("🔍 DIAGNOSTIC: Exemples d'actions trouvées:")
-                            for exec in executions_with_actions[:5]:
-                                logger.info(f"   - Action: '{exec.actions}' | Année: {exec.annee} | Programme: '{exec.programmes}'")
-                        
-                        # Récupérer les actions distinctes pour le programme (même stratégie de recherche)
-                        actions_query = select(SigobeExecution.actions).where(
-                            and_(
-                                or_(*search_conditions),
-                                SigobeExecution.actions.isnot(None),
-                                SigobeExecution.actions != ""
-                            )
-                        ).distinct()
-                        actions_list = session.exec(actions_query).all()
-                        
-                        logger.info(f"📊 {len(actions_list)} actions distinctes trouvées (avant filtrage None/vides)")
-                        
-                        # Filtrer les valeurs None/vides et les chaînes vides
-                        actions_list_filtered = [a for a in actions_list if a and str(a).strip()]
-                        nb_actions = len(actions_list_filtered)
-                        
-                        logger.info(f"📊 {nb_actions} actions distinctes trouvées (après filtrage)")
-                        
-                        if actions_list_filtered:
+                        if actions_set:
                             logger.info(f"🔍 DIAGNOSTIC: Liste des actions trouvées:")
-                            for idx, action in enumerate(actions_list_filtered[:10], 1):
+                            for idx, action in enumerate(list(actions_set)[:10], 1):
                                 logger.info(f"   {idx}. '{action}'")
                         
-                        nb_actions = str(nb_actions) if nb_actions else ""
-                        # Formater à 2 chiffres (04 au lieu de 4)
+                        nb_actions = str(nb_actions_count) if nb_actions_count else ""
                         nb_actions = format_two_digits(nb_actions)
-                        # Re-formater nb_actions_formatted avec la valeur récupérée
                         nb_actions_formatted = format_dynamic_value(nb_actions, "..............")
                         logger.info(f"🔄 nb_actions_formatted mis à jour: '{nb_actions_formatted}'")
                         logger.info("=" * 80)
-                        logger.info(f"✅ === FIN RECHERCHE nb_actions === (Résultat: {nb_actions})")
+                        logger.info(f"✅ === FIN CHARGEMENT nb_actions === (Résultat: {nb_actions})")
                         logger.info("=" * 80)
                     except Exception as e:
-                        logger.error(f"❌ Erreur lors de la récupération du nombre d'actions: {e}", exc_info=True)
-                        # Formater à 2 chiffres (04 au lieu de 4) même en cas d'erreur
+                        logger.error(f"❌ Erreur lors du chargement du nombre d'actions: {e}", exc_info=True)
                         if nb_actions:
                             nb_actions = format_two_digits(nb_actions)
-                        # Re-formater nb_actions_formatted même en cas d'erreur
                         nb_actions_formatted = format_dynamic_value(nb_actions, "..............")
                         logger.info("=" * 80)
-                        logger.info(f"❌ === FIN RECHERCHE nb_actions (ERREUR) === (Résultat: {nb_actions})")
+                        logger.info(f"❌ === FIN CHARGEMENT nb_actions (ERREUR) === (Résultat: {nb_actions})")
                         logger.info("=" * 80)
                 
-                # Récupérer plan_strategique depuis OrientationStrategique
+                # Charger plan_strategique via ReportDataLoader.load_data_ministere
                 if not plan_strategique:
                     try:
-                        orientations_query = select(OrientationStrategique).where(
-                            OrientationStrategique.actif == True
-                        ).order_by(OrientationStrategique.ordre, OrientationStrategique.libelle)
-                        orientations = session.exec(orientations_query).all()
+                        logger.info("🎯 Chargement du plan stratégique via ReportDataLoader...")
+                        from app.services.report_data_loader import ReportDataLoader
+                        
+                        ministere_data = ReportDataLoader.load_data_ministere(session)
+                        orientations = ministere_data.get("orientations", [])
                         if orientations:
-                            # Joindre toutes les orientations stratégiques avec des points-virgules
                             plan_strategique = " ; ".join([o.libelle for o in orientations if o.libelle])
-                            # Re-formater plan_strategique_formatted avec la valeur récupérée
                             plan_strategique_formatted = format_dynamic_value(plan_strategique, "..............")
                             logger.info(f"🔄 plan_strategique_formatted mis à jour: '{plan_strategique_formatted[:50]}...'")
                             logger.info(f"📊 Plan stratégique récupéré: {len(orientations)} orientations")
                     except Exception as e:
-                        logger.warning(f"⚠️ Erreur lors de la récupération du plan stratégique: {e}")
-                        # Re-formater plan_strategique_formatted même en cas d'erreur
+                        logger.warning(f"⚠️ Erreur lors du chargement du plan stratégique: {e}")
                         plan_strategique_formatted = format_dynamic_value(plan_strategique, "..............")
                 
-                # Récupérer budget_actuel, depenses_personnel, depenses_biens_services, investissements depuis SigobeExecution
+                # Charger budget_actuel, depenses_personnel, depenses_biens_services, investissements via ReportDataLoader.load_data_sigobe
                 if programme_obj and (not budget_actuel or not depenses_personnel or not depenses_biens_services or not investissements):
                     try:
                         logger.info("=" * 80)
-                        logger.info("🎯 === DÉBUT RECHERCHE DÉPENSES ET BUDGET ===")
+                        logger.info("🎯 === DÉBUT CHARGEMENT DÉPENSES ET BUDGET (ReportDataLoader) ===")
                         logger.info("=" * 80)
-                        logger.info(f"🔍 Recherche des dépenses pour le programme: '{programme_obj.libelle}' (ID: {programme_obj.id})")
+                        logger.info(f"🔍 Chargement des dépenses pour le programme: '{programme_obj.libelle}' (ID: {programme_obj.id})")
                         
-                        # Utiliser le même mapping que pour les actions
-                        programme_sigobe_mapping_depenses = {
-                            "ADMINISTRATION GENERALE": "AFFAIRES ADMINISTRATIVES ET FINANCIERES",
-                            "ADMINISTRATION GÉNÉRALE": "AFFAIRES ADMINISTRATIVES ET FINANCIERES",
-                        }
-                        programme_sigobe_name_depenses = programme_sigobe_mapping_depenses.get(
-                            programme_obj.libelle.upper(),
-                            programme_obj.libelle
+                        from app.services.report_data_loader import ReportDataLoader
+                        from decimal import Decimal
+                        
+                        # Charger les données SIGOBE
+                        sigobe_data = ReportDataLoader.load_data_sigobe(
+                            session,
+                            annee,
+                            programme_nom=programme_obj.libelle or programme
                         )
-                        
-                        logger.info(f"🔍 Recherche SIGOBE avec: '{programme_sigobe_name_depenses}' (mappé depuis '{programme_obj.libelle}')")
-                        
-                        # Construire les conditions de recherche (même que pour les actions)
-                        search_conditions_depenses = [
-                            SigobeExecution.programmes.ilike(f"%{programme_obj.libelle}%"),
-                            SigobeExecution.programmes.ilike(f"%{programme_sigobe_name_depenses}%"),
-                        ]
-                        if programme_obj.code:
-                            search_conditions_depenses.append(SigobeExecution.programmes.ilike(f"%{programme_obj.code}%"))
+                        executions = sigobe_data.get("executions", [])
+                        logger.info(f"📊 {len(executions)} exécutions SIGOBE trouvées pour le calcul des dépenses")
                         
                         # Fonction helper pour détecter le type de dépense
                         def is_personnel(type_depense: str | None) -> bool:
@@ -1814,14 +1753,6 @@ class RPROGContentDrawer(RAPContentDrawer):
                             type_dep_upper = type_depense.upper().strip()
                             return any(keyword in type_dep_upper for keyword in ["INVESTISSEMENT", "I -", "I "]) or type_dep_upper == "I"
                         
-                        # Récupérer toutes les exécutions pour le programme (avec mapping)
-                        executions_query = select(SigobeExecution).where(
-                            or_(*search_conditions_depenses)
-                        )
-                        executions = session.exec(executions_query).all()
-                        
-                        logger.info(f"📊 {len(executions)} exécutions SIGOBE trouvées pour le calcul des dépenses")
-                        
                         total_budget_actuel = Decimal(0)
                         total_personnel = Decimal(0)
                         total_biens_services = Decimal(0)
@@ -1829,7 +1760,6 @@ class RPROGContentDrawer(RAPContentDrawer):
                         
                         for exec in executions:
                             budget_actuel_val = exec.budget_actuel or Decimal(0)
-                            # Calculer le budget actuel total (somme de tous les budget_actuel)
                             total_budget_actuel += budget_actuel_val
                             
                             # Catégoriser par type de dépense
@@ -1851,39 +1781,34 @@ class RPROGContentDrawer(RAPContentDrawer):
                         # Mettre à jour budget_actuel si non fourni
                         if not budget_actuel and total_budget_actuel > 0:
                             budget_actuel = format_montant(total_budget_actuel)
-                            # Re-formater budget_actuel_formatted avec la valeur récupérée
                             budget_actuel_formatted = format_dynamic_value(budget_actuel, "..............")
                             logger.info(f"🔄 budget_actuel_formatted mis à jour: '{budget_actuel_formatted}'")
                         
                         if not depenses_personnel and total_personnel > 0:
                             depenses_personnel = format_montant(total_personnel)
-                            # Re-formater depenses_personnel_formatted avec la valeur récupérée
                             depenses_personnel_formatted = format_dynamic_value(depenses_personnel, "..............")
                             logger.info(f"🔄 depenses_personnel_formatted mis à jour: '{depenses_personnel_formatted}'")
                         if not depenses_biens_services and total_biens_services > 0:
                             depenses_biens_services = format_montant(total_biens_services)
-                            # Re-formater depenses_biens_services_formatted avec la valeur récupérée
                             depenses_biens_services_formatted = format_dynamic_value(depenses_biens_services, "..............")
                             logger.info(f"🔄 depenses_biens_services_formatted mis à jour: '{depenses_biens_services_formatted}'")
                         if not investissements and total_investissement > 0:
                             investissements = format_montant(total_investissement)
-                            # Re-formater investissements_formatted avec la valeur récupérée
                             investissements_formatted = format_dynamic_value(investissements, "..............")
                             logger.info(f"🔄 investissements_formatted mis à jour: '{investissements_formatted}'")
                         
                         logger.info(f"📊 Dépenses récupérées - Budget actuel: {budget_actuel}, Personnel: {depenses_personnel}, Biens/Services: {depenses_biens_services}, Investissements: {investissements}")
                         logger.info("=" * 80)
-                        logger.info(f"✅ === FIN RECHERCHE DÉPENSES ET BUDGET ===")
+                        logger.info(f"✅ === FIN CHARGEMENT DÉPENSES ET BUDGET ===")
                         logger.info("=" * 80)
                     except Exception as e:
-                        logger.error(f"❌ Erreur lors de la récupération des dépenses: {e}", exc_info=True)
-                        # Re-formater les versions formatées même en cas d'erreur
+                        logger.error(f"❌ Erreur lors du chargement des dépenses: {e}", exc_info=True)
                         budget_actuel_formatted = format_dynamic_value(budget_actuel, "..............")
                         depenses_personnel_formatted = format_dynamic_value(depenses_personnel, "..............")
                         depenses_biens_services_formatted = format_dynamic_value(depenses_biens_services, "..............")
                         investissements_formatted = format_dynamic_value(investissements, "..............")
                         logger.info("=" * 80)
-                        logger.info(f"❌ === FIN RECHERCHE DÉPENSES ET BUDGET (ERREUR) ===")
+                        logger.info(f"❌ === FIN CHARGEMENT DÉPENSES ET BUDGET (ERREUR) ===")
                         logger.info("=" * 80)
                 
                 if not programme_obj:
@@ -2064,8 +1989,8 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         from textwrap import wrap
         from io import BytesIO
         from app.services.rapport_annuel_performance_generator_modular import RAPLayoutDrawer, RAPBaseGenerator, RAPPageManager
-        from app.models.budget import SuiviActivite, SigobeExecution
-        from sqlmodel import select, and_, or_, distinct, func
+        from app.models.budget import SuiviActivite
+        from sqlmodel import select, and_, or_
         
         # Utiliser A4 landscape par défaut si width/height non fournis
         if width is None or height is None:
@@ -2144,55 +2069,49 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         periode = data.get("periode", "")
         
         # ============================================================
-        # ÉTAPE 1: Récupérer les actions et activités depuis SigobeExecution
+        # ÉTAPE 1: Récupérer les actions et activités via ReportDataLoader
         # ============================================================
         logger.info("=" * 80)
-        logger.info("🔍 === DÉBUT RECHERCHE ACTIONS/ACTIVITÉS DEPUIS SIGOBE ===")
+        logger.info("🔍 === DÉBUT CHARGEMENT ACTIONS/ACTIVITÉS (ReportDataLoader) ===")
         logger.info("=" * 80)
         
-        # Stratégie de recherche pour SIGOBE (même que pour nb_actions)
-        programme_sigobe_mapping = {
-            "ADMINISTRATION GENERALE": "AFFAIRES ADMINISTRATIVES ET FINANCIERES",
-            "ADMINISTRATION GÉNÉRALE": "AFFAIRES ADMINISTRATIVES ET FINANCIERES",
-        }
-        programme_sigobe_name = programme_sigobe_mapping.get(
-            programme.upper() if programme else "",
-            programme
+        # Charger les données SIGOBE via ReportDataLoader
+        from app.services.report_data_loader import ReportDataLoader
+        sigobe_data_result = ReportDataLoader.load_data_sigobe(
+            session,
+            annee,
+            programme_nom=programme
         )
+        sigobe_data_raw = sigobe_data_result.get("executions", [])
         
-        # Construire les conditions de recherche pour SIGOBE
-        search_conditions_sigobe = []
-        if programme:
-            search_conditions_sigobe.extend([
-                SigobeExecution.programmes.ilike(f"%{programme}%"),
-                SigobeExecution.programmes.ilike(f"%{programme_sigobe_name}%"),
-            ])
+        # Filtrer par période si nécessaire (semestre)
+        sigobe_data = []
+        if periode and "SEMESTRE" in periode.upper():
+            if "PREMIER" in periode.upper() or "1" in periode:
+                sigobe_data = [e for e in sigobe_data_raw if e.trimestre in [1, 2]]
+            elif "DEUXIEME" in periode.upper() or "2" in periode:
+                sigobe_data = [e for e in sigobe_data_raw if e.trimestre in [3, 4]]
+            else:
+                sigobe_data = sigobe_data_raw
+        else:
+            sigobe_data = sigobe_data_raw
         
-        # Requête de base pour SigobeExecution (récupérer tous les champs nécessaires)
-        sigobe_query = select(SigobeExecution).where(
-            SigobeExecution.annee == annee
-        )
+        logger.info(f"📊 {len(sigobe_data)} lignes SIGOBE trouvées après filtrage (programme: {programme}, année: {annee}, période: {periode})")
         
-        # Ajouter les filtres de programme
-        if search_conditions_sigobe:
-            sigobe_query = sigobe_query.where(or_(*search_conditions_sigobe))
+        # Construire la requête pour compatibilité avec le reste du code (mais utiliser les données déjà chargées)
+        # Note: On garde la structure pour le traitement suivant, mais les données viennent de ReportDataLoader
+        sigobe_query = None  # Plus besoin de requête, données déjà chargées
         
         # Filtrer pour avoir uniquement les lignes avec actions et activités non vides
-        sigobe_query = sigobe_query.where(
-            and_(
-                SigobeExecution.actions.isnot(None),
-                SigobeExecution.actions != "",
-                SigobeExecution.activites.isnot(None),
-                SigobeExecution.activites != ""
-            )
-        )
-        
-        # Récupérer les résultats SIGOBE
-        sigobe_results = session.exec(sigobe_query).all()
+        sigobe_data_filtered = [
+            e for e in sigobe_data 
+            if e.actions and str(e.actions).strip() 
+            and e.activites and str(e.activites).strip()
+        ]
         
         # Créer un dictionnaire pour grouper par action/activité (en gardant les IDs SIGOBE)
         sigobe_actions_activites = {}
-        for sigobe_row in sigobe_results:
+        for sigobe_row in sigobe_data_filtered:
             action = (sigobe_row.actions or "").strip()
             activite = (sigobe_row.activites or "").strip()
             if action and activite:
@@ -2209,8 +2128,11 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         sigobe_actions_activites = dict(sorted(sigobe_actions_activites.items()))
         
         logger.info(f"📊 {len(sigobe_actions_activites)} combinaisons action/activité distinctes trouvées dans SIGOBE")
+        if len(sigobe_actions_activites) == 0:
+            logger.warning(f"⚠️ Aucune combinaison action/activité trouvée dans SIGOBE pour le programme '{programme}', année {annee}, période '{periode}'")
+            logger.warning(f"⚠️ Données SIGOBE brutes chargées: {len(sigobe_data_raw)} lignes, après filtrage: {len(sigobe_data)} lignes, avec actions/activités: {len(sigobe_data_filtered)} lignes")
         logger.info("=" * 80)
-        logger.info("✅ === FIN RECHERCHE SIGOBE ===")
+        logger.info("✅ === FIN CHARGEMENT SIGOBE (ReportDataLoader) ===")
         logger.info("=" * 80)
         
         # ============================================================
@@ -2223,78 +2145,83 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         # Créer une structure combinée pour le tableau
         activites_combinees = []
         
-        for key, sigobe_data in sigobe_actions_activites.items():
-            action = sigobe_data["action"]
-            activite = sigobe_data["activite"]
-            sigobe_ids = sigobe_data["sigobe_ids"]
-            
-            # Chercher un SuiviActivite correspondant
-            # Essayer d'abord par sigobe_execution_id
-            suivi_activite = None
-            for sigobe_id in sigobe_ids:
-                suivi_query = select(SuiviActivite).where(
-                    and_(
-                        SuiviActivite.sigobe_execution_id == sigobe_id,
-                        SuiviActivite.annee == annee
-                    )
-                )
-                suivi_activite = session.exec(suivi_query).first()
-                if suivi_activite:
-                    break
-            
-            # Si pas trouvé par sigobe_execution_id, essayer par matching sur action/activité
-            if not suivi_activite:
-                suivi_query = select(SuiviActivite).where(
-                    and_(
-                        or_(
-                            SuiviActivite.action.ilike(f"%{action}%"),
-                            SuiviActivite.libelle_activite.ilike(f"%{action}%")
-                        ),
-                        or_(
-                            SuiviActivite.libelle_activite.ilike(f"%{activite}%"),
-                            SuiviActivite.code_activite.ilike(f"%{activite}%")
-                        ),
-                        SuiviActivite.annee == annee
-                    )
-                )
-                # Filtrer par période si fournie
-                if periode and "SEMESTRE" in periode.upper():
-                    if "PREMIER" in periode.upper() or "1" in periode:
-                        suivi_query = suivi_query.where(SuiviActivite.periode_type == "semestre")
-                        suivi_query = suivi_query.where(SuiviActivite.periode_valeur == 1)
-                    elif "DEUXIEME" in periode.upper() or "2" in periode:
-                        suivi_query = suivi_query.where(SuiviActivite.periode_type == "semestre")
-                        suivi_query = suivi_query.where(SuiviActivite.periode_valeur == 2)
+        # Si pas de données SIGOBE, créer un tableau vide avec message
+        if len(sigobe_actions_activites) == 0:
+            logger.warning(f"⚠️ Aucune donnée SIGOBE trouvée, le tableau sera créé avec un message d'absence de données")
+        else:
+            for key, sigobe_data in sigobe_actions_activites.items():
+                action = sigobe_data["action"]
+                activite = sigobe_data["activite"]
+                sigobe_ids = sigobe_data["sigobe_ids"]
                 
-                # Filtrer par programme si fourni
-                if programme:
-                    suivi_query = suivi_query.where(SuiviActivite.programme.ilike(f"%{programme}%"))
+                # Chercher un SuiviActivite correspondant
+                # Essayer d'abord par sigobe_execution_id
+                suivi_activite = None
+                for sigobe_id in sigobe_ids:
+                    suivi_query = select(SuiviActivite).where(
+                        and_(
+                            SuiviActivite.sigobe_execution_id == sigobe_id,
+                            SuiviActivite.annee == annee
+                        )
+                    )
+                    suivi_activite = session.exec(suivi_query).first()
+                    if suivi_activite:
+                        break
                 
-                suivi_activite = session.exec(suivi_query).first()
-            
-            # Créer une entrée combinée
-            # Gérer les valeurs None en les convertissant en chaînes vides
-            def safe_get(attr, default=""):
-                """Récupère un attribut en gérant None"""
+                # Si pas trouvé par sigobe_execution_id, essayer par matching sur action/activité
                 if not suivi_activite:
-                    return default
-                value = getattr(suivi_activite, attr, None)
-                return str(value) if value is not None else default
-            
-            activite_combinee = {
-                "action": action,
-                "activite": activite,
-                "structures_responsables": safe_get("structures_responsables", ""),
-                "resultat_attendu": safe_get("resultat_attendu", ""),
-                "resultat_operationnel": safe_get("resultat_operationnel", ""),
-                "preuve_realisation": safe_get("preuve_filename", "") or safe_get("preuve_realisation", ""),
-                "observations": safe_get("observations", "RAS"),
-                "code_activite": safe_get("code_activite", "")
-            }
-            activites_combinees.append(activite_combinee)
+                    suivi_query = select(SuiviActivite).where(
+                        and_(
+                            or_(
+                                SuiviActivite.action.ilike(f"%{action}%"),
+                                SuiviActivite.libelle_activite.ilike(f"%{action}%")
+                            ),
+                            or_(
+                                SuiviActivite.libelle_activite.ilike(f"%{activite}%"),
+                                SuiviActivite.code_activite.ilike(f"%{activite}%")
+                            ),
+                            SuiviActivite.annee == annee
+                        )
+                    )
+                    # Filtrer par période si fournie
+                    if periode and "SEMESTRE" in periode.upper():
+                        if "PREMIER" in periode.upper() or "1" in periode:
+                            suivi_query = suivi_query.where(SuiviActivite.periode_type == "semestre")
+                            suivi_query = suivi_query.where(SuiviActivite.periode_valeur == 1)
+                        elif "DEUXIEME" in periode.upper() or "2" in periode:
+                            suivi_query = suivi_query.where(SuiviActivite.periode_type == "semestre")
+                            suivi_query = suivi_query.where(SuiviActivite.periode_valeur == 2)
+                    
+                    # Filtrer par programme si fourni
+                    if programme:
+                        suivi_query = suivi_query.where(SuiviActivite.programme.ilike(f"%{programme}%"))
+                    
+                    suivi_activite = session.exec(suivi_query).first()
+                
+                # Créer une entrée combinée
+                # Gérer les valeurs None en les convertissant en chaînes vides
+                def safe_get(attr, default=""):
+                    """Récupère un attribut en gérant None"""
+                    if not suivi_activite:
+                        return default
+                    value = getattr(suivi_activite, attr, None)
+                    return str(value) if value is not None else default
+                
+                activite_combinee = {
+                    "action": action,
+                    "activite": activite,
+                    "structures_responsables": safe_get("structures_responsables", ""),
+                    "resultat_attendu": safe_get("resultat_attendu", ""),
+                    "resultat_operationnel": safe_get("resultat_operationnel", ""),
+                    "preuve_realisation": safe_get("preuve_filename", "") or safe_get("preuve_realisation", ""),
+                    "observations": safe_get("observations", "RAS"),
+                    "code_activite": safe_get("code_activite", "")
+                }
+                activites_combinees.append(activite_combinee)
         
-        # Trier les activités combinées par action puis par activité
-        activites_combinees.sort(key=lambda x: (x.get("action", ""), x.get("activite", "")))
+        # Trier les activités combinées par action puis par activité (seulement si on a des données)
+        if activites_combinees:
+            activites_combinees.sort(key=lambda x: (x.get("action", ""), x.get("activite", "")))
         
         logger.info(f"📊 {len(activites_combinees)} activités combinées créées (SIGOBE + SuiviActivite)")
         if activites_combinees:
@@ -2445,8 +2372,9 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
                 # Lignes d'activités
                 for activite in activites:
                     # Formater les données depuis la structure combinée
-                    # Remplacer les valeurs vides ou None par "..................."
-                    empty_placeholder = "..................."
+                    # Remplacer les valeurs vides ou None par "..................." (seulement en mode brouillon)
+                    mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+                    empty_placeholder = "" if mode == "final" else "..................."
                     
                     def get_value(key, default=""):
                         """Récupère une valeur et gère None/chaînes vides"""
@@ -2469,13 +2397,28 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
                         observations = "RAS"  # Garder "RAS"
                     
                     # Ligne d'activité avec Paragraph pour le wrapping
+                    # Mettre en rouge tous les éléments dynamiques (y compris les placeholders) en mode brouillon seulement
+                    def create_para_red(text, max_width=None):
+                        """Crée un Paragraph avec texte en rouge (brouillon) ou noir (final) pour les éléments dynamiques"""
+                        if not text:
+                            return create_para("", max_width)
+                        # Échapper les caractères spéciaux pour XML/HTML
+                        text_escaped = str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        # En mode final, texte en noir ; en mode brouillon, texte en rouge
+                        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+                        if mode == "final":
+                            return Paragraph(text_escaped, para_style)
+                        else:
+                            text_red = f'<font color="#FF0000">{text_escaped}</font>'
+                            return Paragraph(text_red, para_style)
+                    
                     table_data.append([
-                        create_para(libelle, col_widths[0]) if libelle else create_para(empty_placeholder, col_widths[0]),
-                        create_para(structures, col_widths[1]),
-                        create_para(resultat_attendu, col_widths[2]),
-                        create_para(resultat_operationnel, col_widths[3]),
-                        create_para(preuve, col_widths[4]),  # Preuve de réalisation avec wrapping
-                        create_para(observations, col_widths[5]),
+                        create_para_red(libelle, col_widths[0]) if libelle else create_para_red(empty_placeholder, col_widths[0]),
+                        create_para_red(structures, col_widths[1]),
+                        create_para_red(resultat_attendu, col_widths[2]),
+                        create_para_red(resultat_operationnel, col_widths[3]),
+                        create_para_red(preuve, col_widths[4]),  # Preuve de réalisation avec wrapping
+                        create_para_red(observations, col_widths[5]),
                     ])
         
         # Si aucune activité trouvée
@@ -2689,6 +2632,18 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
             textColor=RAPBaseGenerator.DARK_TEXT
         )
         
+        # Style pour le corps de texte
+        body_style = ParagraphStyle(
+            "BodyStyle",
+            parent=story_styles['Normal'],
+            fontName="Helvetica",
+            fontSize=12,
+            leading=15,
+            alignment=4,  # JUSTIFY
+            spaceAfter=12,
+            textColor=RAPBaseGenerator.DARK_TEXT
+        )
+        
         story = []
         
         # Ajouter les titres de section
@@ -2711,6 +2666,27 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         
         # Ajouter la source
         story.append(Paragraph("Source: SIGOBE (actions et activités) - Suivi des activités (autres colonnes)", source_style))
+        story.append(Spacer(1, 0.3 * cm))
+        
+        # Ajouter les commentaires personnalisés si disponibles (ou des points si vide)
+        activites_commentaires = data.get("activites_commentaires")
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        if activites_commentaires and activites_commentaires.strip():
+            # Échapper les caractères spéciaux HTML
+            commentaires_escaped = activites_commentaires.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Convertir les retours à la ligne en <br/>
+            commentaires_html = commentaires_escaped.replace("\n", "<br/>")
+            # En mode final, texte en noir ; en mode brouillon, texte en rouge
+            if mode == "final":
+                story.append(Paragraph(commentaires_html, body_style))
+            else:
+                commentaires_html_red = f"<font color=\"#FF0000\">{commentaires_html}</font>"
+                story.append(Paragraph(commentaires_html_red, body_style))
+        else:
+            # En mode final, ne pas afficher le placeholder
+            if mode != "final":
+                story.append(Paragraph("<font color=\"#FF0000\">Commentaire :..........................</font>", body_style))
+        
         story.append(Spacer(1, 0.3 * cm))
         
         # Créer le SimpleDocTemplate (comme dans test_longtable.py)
@@ -2872,33 +2848,32 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         annee = data.get("annee", 2024)
         periode = data.get("periode", "")
         
-        # Construire la requête pour récupérer les données SIGOBE
-        query = select(SigobeExecution).where(SigobeExecution.annee == annee)
+        # Charger les données SIGOBE via ReportDataLoader
+        from app.services.report_data_loader import ReportDataLoader
+        sigobe_data_result = ReportDataLoader.load_data_sigobe(
+            session,
+            annee,
+            programme_nom=programme
+        )
+        sigobe_data_raw = sigobe_data_result.get("executions", [])
         
-        # Filtrer par programme si fourni
-        if programme:
-            query = query.where(SigobeExecution.programmes.ilike(f"%{programme}%"))
-        
-        # Filtrer par période si fournie (semestre)
+        # Filtrer par période si nécessaire (semestre)
         if periode and "SEMESTRE" in periode.upper():
-            # Extraire le numéro du semestre (1 ou 2)
             if "PREMIER" in periode.upper() or "1" in periode:
-                # Semestre 1 = trimestres 1 et 2
-                query = query.where(
-                    (SigobeExecution.trimestre == 1) | (SigobeExecution.trimestre == 2)
-                )
+                sigobe_data = [e for e in sigobe_data_raw if e.trimestre in [1, 2]]
             elif "DEUXIEME" in periode.upper() or "2" in periode:
-                # Semestre 2 = trimestres 3 et 4
-                query = query.where(
-                    (SigobeExecution.trimestre == 3) | (SigobeExecution.trimestre == 4)
-                )
+                sigobe_data = [e for e in sigobe_data_raw if e.trimestre in [3, 4]]
+            else:
+                sigobe_data = sigobe_data_raw
+        else:
+            sigobe_data = sigobe_data_raw
         
-        # Exécuter la requête
-        sigobe_data = session.exec(query.order_by(
-            SigobeExecution.actions,
-            SigobeExecution.activites,
-            SigobeExecution.type_depense
-        )).all()
+        # Trier les données
+        sigobe_data.sort(key=lambda x: (
+            x.actions or "",
+            x.activites or "",
+            x.type_depense or ""
+        ))
         
         logger.info(f"📊 {len(sigobe_data)} lignes SIGOBE trouvées pour le programme {programme}, année {annee}, période {periode}")
         
@@ -2975,6 +2950,16 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         para_style_table2.leading = 12   # Augmenté proportionnellement
         para_style_table2.alignment = 0  # LEFT
         
+        # Style pour les colonnes numériques (centré)
+        para_style_table2_center = ParagraphStyle(
+            "ParaTable2Center",
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=10,
+            leading=12,
+            alignment=1,  # CENTER
+        )
+        
         # Style pour les en-têtes (centré, gras, avec wrapping)
         header_style_table2 = ParagraphStyle(
             "HeaderTable2",
@@ -2987,9 +2972,15 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
             spaceAfter=2,
         )
         
+        # Fonction helper pour vérifier le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        
         # Fonction helper pour créer un Paragraph avec wrapping
-        def create_para_table2(text, max_width=None):
-            """Crée un Paragraph avec wrapping automatique pour le Tableau 2"""
+        def create_para_table2(text, max_width=None, is_red=False, is_center=False):
+            """Crée un Paragraph avec wrapping automatique pour le Tableau 2
+            Si is_red=True, met le texte en rouge (brouillon) ou noir (final) pour indiquer qu'il est dynamique
+            Si is_center=True, centre le texte (pour les colonnes numériques)"""
             if not text:
                 return ""
             # Convertir en string et nettoyer
@@ -2998,8 +2989,13 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
                 return ""
             # Échapper les caractères spéciaux pour XML/HTML
             text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Mettre en rouge si demandé (seulement en mode brouillon)
+            if is_red and not is_final:
+                text = f'<font color="#FF0000">{text}</font>'
+            # Choisir le style selon l'alignement
+            style = para_style_table2_center if is_center else para_style_table2
             # Paragraph gère automatiquement le wrapping selon la largeur de la colonne
-            return Paragraph(text, para_style_table2)
+            return Paragraph(text, style)
         
         # Fonction helper pour créer un Paragraph d'en-tête avec wrapping
         def create_header_para_table2(text, max_width=None):
@@ -3018,28 +3014,32 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         # Construire les données du tableau avec Table et TableStyle (comme dans le RAP)
         table_data = []
         
+        # Fonction helper pour créer un Paragraph vide (pour les cellules vides des en-têtes)
+        def create_empty_para():
+            return Paragraph("", para_style_table2)
+        
         # Ligne 0 : Première ligne d'en-tête (utiliser Paragraphs pour le wrapping correct)
         table_data.append([
             create_header_para_table2("Actions/Activités", col_widths[0]),
             create_header_para_table2("Personnel", col_widths[1]),
-            "",
+            create_empty_para(),
             create_header_para_table2("Biens et services", col_widths[3]),
-            "",
+            create_empty_para(),
             create_header_para_table2("Investissements", col_widths[5]),
-            "",
+            create_empty_para(),
             create_header_para_table2("Observations", col_widths[7]),
         ])
         
         # Ligne 1 : Deuxième ligne d'en-tête (Programmé/Réalisé) - utiliser Paragraphs
         table_data.append([
-            "",
+            create_empty_para(),
             create_header_para_table2("Programmé", col_widths[1]),
             create_header_para_table2("Réalisé", col_widths[2]),
             create_header_para_table2("Programmé", col_widths[3]),
             create_header_para_table2("Réalisé", col_widths[4]),
             create_header_para_table2("Programmé", col_widths[5]),
             create_header_para_table2("Réalisé", col_widths[6]),
-            "",
+            create_empty_para(),
         ])
         
         # Parcourir les actions pour construire les lignes de données
@@ -3055,11 +3055,12 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
             total_inv_prog = Decimal(0)
             total_inv_real = Decimal(0)
             
-            # Ligne d'en-tête de groupe (action)
+            # Ligne d'en-tête de groupe (action) - en rouge car dynamique
             table_data.append([
-                action_libelle,
-                "", "", "", "", "", "",
-                "",
+                create_para_table2(action_libelle, is_red=True),
+                create_empty_para(), create_empty_para(), create_empty_para(), 
+                create_empty_para(), create_empty_para(), create_empty_para(),
+                create_empty_para(),
             ])
             
             # Fonction helper pour formater les valeurs du tableau (définie une fois par action)
@@ -3090,28 +3091,30 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
                 total_inv_prog += inv_prog
                 total_inv_real += inv_real
                 
-                # Ligne d'activité
+                # Ligne d'activité - tous les éléments en rouge car dynamiques
+                # Les colonnes numériques (1-6) sont centrées
                 table_data.append([
-                    activite_libelle,
-                    format_table_value(personnel_prog),
-                    format_table_value(personnel_real),
-                    format_table_value(biens_prog),
-                    format_table_value(biens_real),
-                    format_table_value(inv_prog),
-                    format_table_value(inv_real),
-                    "",
+                    create_para_table2(activite_libelle, is_red=True),  # Activité avec wrapping et en rouge (gauche)
+                    create_para_table2(format_table_value(personnel_prog), is_red=True, is_center=True),  # Centré
+                    create_para_table2(format_table_value(personnel_real), is_red=True, is_center=True),  # Centré
+                    create_para_table2(format_table_value(biens_prog), is_red=True, is_center=True),  # Centré
+                    create_para_table2(format_table_value(biens_real), is_red=True, is_center=True),  # Centré
+                    create_para_table2(format_table_value(inv_prog), is_red=True, is_center=True),  # Centré
+                    create_para_table2(format_table_value(inv_real), is_red=True, is_center=True),  # Centré
+                    create_para_table2("", is_red=False),  # Observations vide (gauche)
                 ])
             
-            # Ligne de total pour cette action
+            # Ligne de total pour cette action - tous les éléments en rouge car dynamiques
+            # Les colonnes numériques (1-6) sont centrées
             table_data.append([
-                f"Total {action_libelle}",
-                format_table_value(total_personnel_prog),
-                format_table_value(total_personnel_real),
-                format_table_value(total_biens_prog),
-                format_table_value(total_biens_real),
-                format_table_value(total_inv_prog),
-                format_table_value(total_inv_real),
-                "",
+                create_para_table2(f"Total {action_libelle}", is_red=True),  # Gauche
+                create_para_table2(format_table_value(total_personnel_prog), is_red=True, is_center=True),  # Centré
+                create_para_table2(format_table_value(total_personnel_real), is_red=True, is_center=True),  # Centré
+                create_para_table2(format_table_value(total_biens_prog), is_red=True, is_center=True),  # Centré
+                create_para_table2(format_table_value(total_biens_real), is_red=True, is_center=True),  # Centré
+                create_para_table2(format_table_value(total_inv_prog), is_red=True, is_center=True),  # Centré
+                create_para_table2(format_table_value(total_inv_real), is_red=True, is_center=True),  # Centré
+                create_para_table2("", is_red=False),  # Observations vide (gauche)
             ])
         
         # Si aucune donnée trouvée
@@ -3120,7 +3123,8 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
             total_width = sum(col_widths)
             table_data.append([
                 create_para_table2("Aucune donnée d'exécution financière trouvée pour cette période.", total_width),
-                "", "", "", "", "", "", "",
+                create_empty_para(), create_empty_para(), create_empty_para(), 
+                create_empty_para(), create_empty_para(), create_empty_para(), create_empty_para(),
             ])
         
         # Créer le tableau avec LongTable pour permettre la division automatique sur plusieurs pages
@@ -3149,9 +3153,9 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
             ("SPAN", (7, 0), (7, 1)),  # Observations
             
             # Alignement des données
-            ("ALIGN", (0, 2), (0, -1), "LEFT"),
-            ("ALIGN", (1, 2), (6, -1), "RIGHT"),
-            ("ALIGN", (7, 2), (7, -1), "LEFT"),
+            ("ALIGN", (0, 2), (0, -1), "LEFT"),  # Actions/Activités à gauche
+            ("ALIGN", (1, 2), (6, -1), "CENTER"),  # Chiffres centrés
+            ("ALIGN", (7, 2), (7, -1), "LEFT"),  # Observations à gauche
             ("VALIGN", (0, 2), (-1, -1), "MIDDLE"),
             
             # Fonts pour les données
@@ -3171,22 +3175,23 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
             activites = action_data["activites"]
             num_activites = len(activites)
             
-            # Ligne d'en-tête de groupe (action) - fusionner colonnes 0-6
-            table_style.append(("SPAN", (0, current_row), (6, current_row)))
-            table_style.append(("BACKGROUND", (0, current_row), (6, current_row), colors.HexColor("#D3D3D3")))  # Gris plus foncé
-            table_style.append(("FONTNAME", (0, current_row), (6, current_row), "Helvetica-Bold"))
-            table_style.append(("FONTSIZE", (0, current_row), (6, current_row), 11))  # Uniformisé avec le tableau des activités
-            table_style.append(("ALIGN", (0, current_row), (6, current_row), "LEFT"))
+            # Ligne d'en-tête de groupe (action) - fusionner toutes les colonnes (0 à 7, y compris Observations)
+            table_style.append(("SPAN", (0, current_row), (-1, current_row)))  # Fusionner toutes les colonnes
+            table_style.append(("BACKGROUND", (0, current_row), (-1, current_row), colors.HexColor("#D3D3D3")))  # Gris plus foncé
+            table_style.append(("FONTNAME", (0, current_row), (-1, current_row), "Helvetica-Bold"))
+            table_style.append(("FONTSIZE", (0, current_row), (-1, current_row), 11))  # Uniformisé avec le tableau des activités
+            table_style.append(("ALIGN", (0, current_row), (-1, current_row), "LEFT"))
             current_row += 1
             
             # Lignes d'activités (styling déjà appliqué globalement)
             current_row += num_activites
             
-            # Ligne de total - fusionner colonnes 0-6
-            table_style.append(("SPAN", (0, current_row), (6, current_row)))
-            table_style.append(("FONTNAME", (0, current_row), (6, current_row), "Helvetica-Bold"))
-            table_style.append(("FONTSIZE", (0, current_row), (6, current_row), 10))  # Uniformisé avec le tableau des activités
-            table_style.append(("ALIGN", (0, current_row), (6, current_row), "LEFT"))
+            # Ligne de total - ne pas fusionner, elle a des valeurs dans toutes les colonnes
+            # Mais appliquer le style en gras pour toutes les colonnes
+            table_style.append(("FONTNAME", (0, current_row), (-1, current_row), "Helvetica-Bold"))
+            table_style.append(("FONTSIZE", (0, current_row), (-1, current_row), 10))  # Uniformisé avec le tableau des activités
+            table_style.append(("ALIGN", (0, current_row), (0, current_row), "LEFT"))  # Première colonne à gauche
+            table_style.append(("ALIGN", (1, current_row), (6, current_row), "CENTER"))  # Chiffres centrés
             current_row += 1
         
         # Si aucune donnée trouvée, fusionner toutes les colonnes du message
@@ -3273,20 +3278,49 @@ Pour la mise en œuvre de ses missions, le programme « {programme_formatted} »
         inv_real_text = format_value_or_placeholder(total_inv_realise if total_inv_realise > 0 else None, format_montant)
         inv_real_pct_text = format_value_or_placeholder(pct_inv_realise if total_inv_programme > 0 and total_inv_realise > 0 else None, format_pourcentage)
         
+        # Fonction helper pour formater le texte selon le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        def format_text_for_mode(text):
+            """Formate le texte en rouge (brouillon) ou noir (final)"""
+            if mode == "final":
+                return str(text)
+            else:
+                return f'<font color="#FF0000">{text}</font>'
+        
+        # Mettre tous les éléments dynamiques en rouge (ou noir en mode final)
+        programme_nom_red = format_text_for_mode(programme_nom)
+        budget_total_text_red = format_text_for_mode(budget_total_text)
+        annee_red = format_text_for_mode(annee)
+        date_periode_red = format_text_for_mode(date_periode)
+        personnel_prog_text_red = format_text_for_mode(personnel_prog_text)
+        personnel_prog_pct_text_red = format_text_for_mode(personnel_prog_pct_text)
+        biens_prog_text_red = format_text_for_mode(biens_prog_text)
+        biens_prog_pct_text_red = format_text_for_mode(biens_prog_pct_text)
+        inv_prog_text_red = format_text_for_mode(inv_prog_text)
+        inv_prog_pct_text_red = format_text_for_mode(inv_prog_pct_text)
+        total_realise_text_red = format_text_for_mode(total_realise_text)
+        taux_exec_text_red = format_text_for_mode(taux_exec_text)
+        personnel_real_text_red = format_text_for_mode(personnel_real_text)
+        personnel_real_pct_text_red = format_text_for_mode(personnel_real_pct_text)
+        biens_real_text_red = format_text_for_mode(biens_real_text)
+        biens_real_pct_text_red = format_text_for_mode(biens_real_pct_text)
+        inv_real_text_red = format_text_for_mode(inv_real_text)
+        inv_real_pct_text_red = format_text_for_mode(inv_real_pct_text)
+        
         # Convertir le texte d'analyse en HTML pour les Paragraphs
-        analyse_html = f"""Le programme « {programme_nom} » dispose d'un budget total de <b>{budget_total_text}</b> FCFA pour l'année {annee}. Ce budget est exclusivement financé par des ressources intérieures.<br/><br/>
+        analyse_html = f"""Le programme « {programme_nom_red} » dispose d'un budget total de <b>{budget_total_text_red}</b> FCFA pour l'année {annee_red}. Ce budget est exclusivement financé par des ressources intérieures.<br/><br/>
 
 Répartition du budget initial par nature de dépenses :<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;• Personnel : <b>{personnel_prog_text}</b> FCFA (<b>{personnel_prog_pct_text}%</b>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;• Biens et services : <b>{biens_prog_text}</b> FCFA (<b>{biens_prog_pct_text}%</b>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;• Investissements : <b>{inv_prog_text}</b> FCFA (<b>{inv_prog_pct_text}%</b>)<br/><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• Personnel : <b>{personnel_prog_text_red}</b> FCFA (<b>{personnel_prog_pct_text_red}%</b>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• Biens et services : <b>{biens_prog_text_red}</b> FCFA (<b>{biens_prog_pct_text_red}%</b>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• Investissements : <b>{inv_prog_text_red}</b> FCFA (<b>{inv_prog_pct_text_red}%</b>)<br/><br/>
 
-Au {date_periode}, le montant total exécuté s'élève à <b>{total_realise_text}</b> FCFA, soit un taux d'exécution global de <b>{taux_exec_text}%</b> du budget total.<br/><br/>
+Au {date_periode_red}, le montant total exécuté s'élève à <b>{total_realise_text_red}</b> FCFA, soit un taux d'exécution global de <b>{taux_exec_text_red}%</b> du budget total.<br/><br/>
 
 Répartition de l'exécution par nature de dépenses :<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;• Personnel : <b>{personnel_real_text}</b> FCFA (<b>{personnel_real_pct_text}%</b>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;• Biens et services : <b>{biens_real_text}</b> FCFA (<b>{biens_real_pct_text}%</b>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;• Investissements : <b>{inv_real_text}</b> FCFA (<b>{inv_real_pct_text}%</b>)"""
+&nbsp;&nbsp;&nbsp;&nbsp;• Personnel : <b>{personnel_real_text_red}</b> FCFA (<b>{personnel_real_pct_text_red}%</b>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• Biens et services : <b>{biens_real_text_red}</b> FCFA (<b>{biens_real_pct_text_red}%</b>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• Investissements : <b>{inv_real_text_red}</b> FCFA (<b>{inv_real_pct_text_red}%</b>)"""
         
         # Construire la story avec les titres, le tableau et l'analyse (comme dans le RAP)
         from reportlab.lib.styles import ParagraphStyle
@@ -3370,6 +3404,29 @@ Répartition de l'exécution par nature de dépenses :<br/>
         
         # Ajouter l'analyse
         story.append(Paragraph(analyse_html, body_style))
+        story.append(Spacer(1, 0.3 * cm))
+        
+        # Ajouter les commentaires personnalisés si disponibles (ou des points si vide)
+        credits_commentaires = data.get("credits_commentaires")
+        if credits_commentaires and credits_commentaires.strip():
+            # Échapper les caractères spéciaux HTML
+            commentaires_escaped = credits_commentaires.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Convertir les retours à la ligne en <br/>
+            commentaires_html = commentaires_escaped.replace("\n", "<br/>")
+            # Mettre en rouge (données dynamiques)
+            # En mode final, texte en noir ; en mode brouillon, texte en rouge
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+            if mode == "final":
+                story.append(Paragraph(commentaires_html, body_style))
+            else:
+                commentaires_html_red = f"<font color=\"#FF0000\">{commentaires_html}</font>"
+                story.append(Paragraph(commentaires_html_red, body_style))
+        else:
+            # En mode final, ne pas afficher le placeholder
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+            if mode != "final":
+                story.append(Paragraph("<font color=\"#FF0000\">Commentaire :..........................</font>", body_style))
+        
         story.append(Spacer(1, 0.3 * cm))
         
         # Créer le SimpleDocTemplate (comme pour draw_realisations_activites)
@@ -3456,8 +3513,8 @@ Répartition de l'exécution par nature de dépenses :<br/>
         from decimal import Decimal
         from io import BytesIO
         from app.services.rapport_annuel_performance_generator_modular import RAPBaseGenerator, RAPPageManager
-        from app.models.budget import SuiviInvestissement
-        from sqlmodel import select
+        from app.models.budget import SigobeExecution, SuiviInvestissement
+        from sqlmodel import select, or_
         from datetime import datetime
         
         # Utiliser A4 landscape par défaut si width/height non fournis
@@ -3531,20 +3588,156 @@ Répartition de l'exécution par nature de dépenses :<br/>
         # Récupérer les paramètres de filtrage
         programme = data.get("programme", "")
         annee = data.get("annee", 2024)
+        periode = data.get("periode", "")
         
-        # Construire la requête pour récupérer les investissements
-        query = select(SuiviInvestissement).where(SuiviInvestissement.annee == annee)
+        # Charger les données SIGOBE via ReportDataLoader
+        from app.services.report_data_loader import ReportDataLoader
+        sigobe_data_result = ReportDataLoader.load_data_sigobe(
+            session,
+            annee,
+            programme_nom=programme
+        )
+        sigobe_data_raw = sigobe_data_result.get("executions", [])
         
-        # Filtrer par programme si fourni
-        if programme:
-            query = query.where(SuiviInvestissement.programme.ilike(f"%{programme}%"))
+        # Filtrer uniquement les investissements
+        sigobe_data_filtered = [
+            e for e in sigobe_data_raw 
+            if e.type_depense and "INVESTISSEMENT" in e.type_depense.upper()
+        ]
         
-        # Exécuter la requête
-        investissements = session.exec(query.order_by(
-            SuiviInvestissement.libelle_projet
-        )).all()
+        # Filtrer par période si nécessaire (semestre)
+        if periode and "SEMESTRE" in periode.upper():
+            if "PREMIER" in periode.upper() or "1" in periode:
+                sigobe_data = [e for e in sigobe_data_filtered if e.trimestre in [1, 2]]
+            elif "DEUXIEME" in periode.upper() or "2" in periode:
+                sigobe_data = [e for e in sigobe_data_filtered if e.trimestre in [3, 4]]
+            else:
+                sigobe_data = sigobe_data_filtered
+        else:
+            sigobe_data = sigobe_data_filtered
         
-        logger.info(f"📊 {len(investissements)} investissements trouvés pour le programme {programme}, année {annee}")
+        # Trier les données
+        sigobe_data.sort(key=lambda x: (x.actions or "", x.activites or ""))
+        
+        logger.info(f"📊 {len(sigobe_data)} lignes SIGOBE (investissements) trouvées pour le programme {programme}, année {annee}, période {periode}")
+        
+        # Récupérer les données de SuiviInvestissement via ReportDataLoader
+        suivi_investissements_raw = sigobe_data_result.get("investissements", [])
+        suivi_investissements = [
+            si for si in suivi_investissements_raw
+            if not programme or (si.programme and programme.upper() in si.programme.upper())
+        ]
+        
+        logger.info(f"📊 {len(suivi_investissements)} suivis d'investissements trouvés pour le programme {programme}, année {annee}")
+        
+        # Créer un dictionnaire pour mapper les SuiviInvestissement par sigobe_execution_id
+        suivi_by_sigobe_id = {}
+        suivi_by_activite = {}  # Mapping par activité pour les cas sans sigobe_execution_id
+        
+        for suivi in suivi_investissements:
+            if suivi.sigobe_execution_id:
+                suivi_by_sigobe_id[suivi.sigobe_execution_id] = suivi
+            # Aussi mapper par activité si disponible
+            if suivi.action:
+                key = f"{suivi.programme or ''}_{suivi.action}"
+                if key not in suivi_by_activite:
+                    suivi_by_activite[key] = []
+                suivi_by_activite[key].append(suivi)
+        
+        # Organiser les données SIGOBE par activité et mapper avec SuiviInvestissement
+        investissements_data = {}
+        
+        for sigobe in sigobe_data:
+            activite_code = sigobe.activites or "Sans activité"
+            activite_libelle = activite_code
+            
+            # Chercher un SuiviInvestissement correspondant
+            suivi_inv = None
+            if sigobe.id and sigobe.id in suivi_by_sigobe_id:
+                suivi_inv = suivi_by_sigobe_id[sigobe.id]
+            else:
+                # Essayer de mapper par activité/programme
+                key = f"{sigobe.programmes or ''}_{sigobe.actions or ''}"
+                if key in suivi_by_activite and suivi_by_activite[key]:
+                    # Prendre le premier match
+                    suivi_inv = suivi_by_activite[key][0]
+            
+            # Utiliser l'activité comme clé (chaque activité = un projet d'investissement)
+            if activite_code not in investissements_data:
+                # Initialiser avec les données de SuiviInvestissement si disponibles, sinon avec SIGOBE
+                if suivi_inv:
+                    investissements_data[activite_code] = {
+                        "libelle_projet": suivi_inv.libelle_projet or activite_libelle,
+                        "cout_total_projet": suivi_inv.cout_total_projet or Decimal(0),
+                        "budget_mobilise_anterieur": suivi_inv.budget_mobilise_anterieur or Decimal(0),
+                        "credits_budgetaires_inscrits": suivi_inv.credits_budgetaires_inscrits or Decimal(0),
+                        "variation": suivi_inv.variation,
+                        "budget_actuel": Decimal(0),  # Sera rempli par SIGOBE
+                        "prise_en_charge": Decimal(0),  # Sera rempli par SIGOBE
+                        "taux_realisation_budgetaire": suivi_inv.taux_realisation_budgetaire,
+                        "taux_realisation_physique": suivi_inv.taux_realisation_physique,
+                        "annee_debut": suivi_inv.annee_debut,
+                        "commentaire": suivi_inv.commentaire,
+                        "financement_interieur": suivi_inv.financement_interieur or Decimal(0),
+                        "financement_exterieur": suivi_inv.financement_exterieur or Decimal(0),
+                    }
+                else:
+                    investissements_data[activite_code] = {
+                        "libelle_projet": activite_libelle,
+                        "cout_total_projet": Decimal(0),
+                        "budget_mobilise_anterieur": Decimal(0),
+                        "credits_budgetaires_inscrits": Decimal(0),
+                        "variation": None,
+                        "budget_actuel": Decimal(0),
+                        "prise_en_charge": Decimal(0),
+                        "taux_realisation_budgetaire": None,
+                        "taux_realisation_physique": None,
+                        "annee_debut": None,
+                        "commentaire": None,
+                        "financement_interieur": Decimal(0),
+                        "financement_exterieur": Decimal(0),
+                    }
+            
+            # Agréger les montants SIGOBE (budget_actuel et prise_en_charge)
+            budget_actuel = sigobe.budget_actuel or Decimal(0)
+            mandats_pec = sigobe.mandats_pec or Decimal(0)
+            
+            investissements_data[activite_code]["budget_actuel"] += budget_actuel
+            investissements_data[activite_code]["prise_en_charge"] += mandats_pec
+            
+            # Si pas de crédits budgétaires inscrits depuis SuiviInvestissement, utiliser budget_actuel
+            if investissements_data[activite_code]["credits_budgetaires_inscrits"] == 0:
+                investissements_data[activite_code]["credits_budgetaires_inscrits"] += budget_actuel
+        
+        # Convertir en liste pour compatibilité avec le code existant
+        investissements = []
+        for activite_code, inv_data in investissements_data.items():
+            # Créer un objet simple avec les attributs nécessaires
+            class InvestissementData:
+                def __init__(self, data):
+                    self.libelle_projet = data["libelle_projet"]
+                    self.cout_total_projet = data["cout_total_projet"]
+                    self.budget_mobilise_anterieur = data["budget_mobilise_anterieur"]
+                    self.credits_budgetaires_inscrits = data["credits_budgetaires_inscrits"]
+                    self.variation = data["variation"]
+                    self.budget_actuel = data["budget_actuel"]
+                    self.prise_en_charge = data["prise_en_charge"]
+                    # Calculer le taux de réalisation budgétaire si non fourni
+                    if data["taux_realisation_budgetaire"] is not None:
+                        self.taux_realisation_budgetaire = data["taux_realisation_budgetaire"]
+                    elif data["budget_actuel"] > 0:
+                        self.taux_realisation_budgetaire = (data["prise_en_charge"] / data["budget_actuel"] * Decimal(100))
+                    else:
+                        self.taux_realisation_budgetaire = None
+                    self.taux_realisation_physique = data["taux_realisation_physique"]
+                    self.annee_debut = data.get("annee_debut")
+                    self.commentaire = data.get("commentaire")
+                    self.financement_interieur = data.get("financement_interieur", Decimal(0))
+                    self.financement_exterieur = data.get("financement_exterieur", Decimal(0))
+            
+            investissements.append(InvestissementData(inv_data))
+        
+        logger.info(f"📊 {len(investissements)} investissements organisés pour le tableau (combinés SIGOBE + SuiviInvestissement)")
         
         
         # Fonction pour formater un montant
@@ -3577,6 +3770,26 @@ Répartition de l'exécution par nature de dépenses :<br/>
         para_style_table3.leading = 12   # Augmenté proportionnellement       
         para_style_table3.alignment = 0  # LEFT
         
+        # Style spécifique pour la colonne 0 (Projets) - lignes de projets en GRAS avec alignement à gauche
+        para_style_col0_bold = ParagraphStyle(
+            "ParaTable3Col0Bold",
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',  # GRAS pour les lignes de projets
+            fontSize=10,
+            leading=12,
+            alignment=0,  # LEFT - alignement à gauche explicite
+        )
+        
+        # Style spécifique pour la colonne 0 (Projets) - lignes de pourcentages en normal avec alignement à gauche
+        para_style_col0_normal = ParagraphStyle(
+            "ParaTable3Col0Normal",
+            parent=styles['Normal'],
+            fontName='Helvetica',  # Normal pour les lignes de pourcentages
+            fontSize=10,
+            leading=12,
+            alignment=0,  # LEFT - alignement à gauche explicite
+        )
+        
         # Style pour les en-têtes (réduit spécialement pour ce tableau)
         para_style_header = styles['Normal']
         para_style_header.fontName = 'Helvetica-Bold'
@@ -3584,9 +3797,16 @@ Répartition de l'exécution par nature de dépenses :<br/>
         para_style_header.leading = 10   # Réduit proportionnellement
         para_style_header.alignment = 1  # CENTER
         
+        # Fonction helper pour vérifier le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        
         # Fonction helper pour créer un Paragraph avec wrapping
-        def create_para_table3(text, max_width=None, is_header=False):
-            """Crée un Paragraph avec wrapping automatique pour le Tableau 3"""
+        def create_para_table3(text, max_width=None, is_header=False, is_col0=False, is_col0_bold=False, is_red=False):
+            """Crée un Paragraph avec wrapping automatique pour le Tableau 3
+            Si is_col0=True, utilise le style spécifique pour la colonne 0 avec alignement à gauche
+            Si is_col0_bold=True, utilise le style en gras pour les lignes de projets
+            Si is_red=True, met le texte en rouge pour indiquer qu'il est dynamique"""
             if not text:
                 return ""
             # Convertir en string et nettoyer
@@ -3595,22 +3815,30 @@ Répartition de l'exécution par nature de dépenses :<br/>
                 return ""
             # Échapper les caractères spéciaux pour XML/HTML
             text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Mettre en rouge si demandé (seulement en mode brouillon)
+            if is_red and not is_final:
+                text = f'<font color="#FF0000">{text}</font>'
             # Utiliser le style approprié
-            style = para_style_header if is_header else para_style_table3
+            if is_header:
+                style = para_style_header
+            elif is_col0_bold:
+                style = para_style_col0_bold  # Gras pour les lignes de projets
+            elif is_col0:
+                style = para_style_col0_normal  # Normal pour les lignes de pourcentages
+            else:
+                style = para_style_table3
             # ReportLab gère automatiquement le wrapping
             return Paragraph(text, style)
         
-        # Calculer les largeurs des colonnes
+        # Calculer les largeurs des colonnes (7 colonnes)
         col_widths = [
-            available_width * 0.20,  # Projets
-            available_width * 0.12,  # Coût total du projet
-            available_width * 0.12,  # Budget déjà mobilisé
-            available_width * 0.12,  # Crédits budgétaires inscrits
-            available_width * 0.08,  # Variation
-            available_width * 0.10,  # Budget Actuel
-            available_width * 0.12,  # Prise en charge
-            available_width * 0.07,  # % réal budgétaire
-            available_width * 0.07,  # % réal physique
+            available_width * 0.22,  # Projets
+            available_width * 0.14,  # Coût total du projet
+            available_width * 0.14,  # Budget déjà mobilisé
+            available_width * 0.14,  # Crédits budgétaires inscrits
+            available_width * 0.09,  # Variation
+            available_width * 0.13,  # Budget Actuel
+            available_width * 0.14,  # Prise en charge
         ]
         
         # Construire les données du tableau avec Table et TableStyle (comme dans le RAP)
@@ -3625,8 +3853,6 @@ Répartition de l'exécution par nature de dépenses :<br/>
             create_para_table3("Variation (- ou +)", is_header=True),
             create_para_table3("Budget Actuel", is_header=True),
             create_para_table3("Prise en charge (à la fin de la période concernée)", is_header=True),
-            create_para_table3("% réal budgétaire", is_header=True),
-            create_para_table3("% réal physique", is_header=True),
         ])
         
         # Calculer les totaux
@@ -3635,6 +3861,8 @@ Répartition de l'exécution par nature de dépenses :<br/>
         total_credits_inscrits = Decimal(0)
         total_budget_actuel = Decimal(0)
         total_prise_en_charge = Decimal(0)
+        total_financement_interieur = Decimal(0)
+        total_financement_exterieur = Decimal(0)
         
         # Fonction helper pour formater les valeurs du tableau d'investissements (définie une fois)
         def format_table_value_inv(value, formatter_func):
@@ -3663,18 +3891,46 @@ Répartition de l'exécution par nature de dépenses :<br/>
             total_credits_inscrits += credits_inscrits
             total_budget_actuel += budget_actuel
             total_prise_en_charge += prise_en_charge
+            total_financement_interieur += investissement.financement_interieur or Decimal(0)
+            total_financement_exterieur += investissement.financement_exterieur or Decimal(0)
             
-            # Ligne d'investissement
+            # Ligne 1 : Détails du projet - tous les éléments en rouge car dynamiques
             table_data.append([
-                create_para_table3(libelle),
-                format_table_value_inv(cout_total, format_montant),
-                format_table_value_inv(budget_mobilise, format_montant),
-                format_table_value_inv(credits_inscrits, format_montant),
-                format_variation(variation) if variation is not None else "............",
-                format_table_value_inv(budget_actuel, format_montant),
-                format_table_value_inv(prise_en_charge, format_montant),
-                format_table_value_inv(taux_budgetaire, format_pourcentage),
-                format_table_value_inv(taux_physique, format_pourcentage),
+                create_para_table3(libelle, is_col0_bold=True, is_red=True),  # Colonne 0 avec style gras et rouge
+                create_para_table3(format_table_value_inv(cout_total, format_montant), is_red=True),
+                create_para_table3(format_table_value_inv(budget_mobilise, format_montant), is_red=True),
+                create_para_table3(format_table_value_inv(credits_inscrits, format_montant), is_red=True),
+                create_para_table3(format_variation(variation) if variation is not None else ("" if is_final else "............"), is_red=True),
+                create_para_table3(format_table_value_inv(budget_actuel, format_montant), is_red=True),
+                create_para_table3(format_table_value_inv(prise_en_charge, format_montant), is_red=True),
+            ])
+            
+            # Ligne 2 : % réal budgétaire (colonne 0 = label, colonnes 1-6 fusionnées = pourcentage)
+            taux_budgetaire_text = format_table_value_inv(taux_budgetaire, format_pourcentage)
+            if taux_budgetaire_text != "............":
+                taux_budgetaire_text = f"{taux_budgetaire_text}%"
+            table_data.append([
+                create_para_table3("% réal budgétaire", is_col0=True),  # Colonne 0 avec style normal (pas gras, pas rouge)
+                create_para_table3(taux_budgetaire_text, is_red=True),  # Colonnes 1-6 fusionnées - pourcentage en rouge
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+            ])
+            
+            # Ligne 3 : % réal physique (colonne 0 = label, colonnes 1-6 fusionnées = pourcentage)
+            taux_physique_text = format_table_value_inv(taux_physique, format_pourcentage)
+            if taux_physique_text != "............":
+                taux_physique_text = f"{taux_physique_text}%"
+            table_data.append([
+                create_para_table3("% réal physique", is_col0=True),  # Colonne 0 avec style normal (pas gras, pas rouge)
+                create_para_table3(taux_physique_text, is_red=True),  # Colonnes 1-6 fusionnées - pourcentage en rouge
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
             ])
         
         # Calculer les pourcentages totaux
@@ -3692,16 +3948,43 @@ Répartition de l'exécution par nature de dépenses :<br/>
             programme_num = programme_parts[0] if programme_parts and programme_parts[0].isdigit() else ""
             total_libelle = f"Total {programme_num} {programme_nom}" if programme_num else f"Total {programme_nom}"
             
+            # Ligne 1 : Détails du total - tous les éléments en rouge car dynamiques
             table_data.append([
-                total_libelle,
-                format_table_value_inv(total_cout, format_montant),
-                format_table_value_inv(total_budget_mobilise, format_montant),
-                format_table_value_inv(total_credits_inscrits, format_montant),
-                "-",  # Variation totale (généralement non calculée)
-                format_table_value_inv(total_budget_actuel, format_montant),
-                format_table_value_inv(total_prise_en_charge, format_montant),
-                format_table_value_inv(taux_budgetaire_total, format_pourcentage),
-                format_table_value_inv(taux_physique_total, format_pourcentage),
+                create_para_table3(total_libelle, is_col0_bold=True, is_red=True),  # Colonne 0 avec style gras et rouge
+                create_para_table3(format_table_value_inv(total_cout, format_montant), is_red=True),
+                create_para_table3(format_table_value_inv(total_budget_mobilise, format_montant), is_red=True),
+                create_para_table3(format_table_value_inv(total_credits_inscrits, format_montant), is_red=True),
+                create_para_table3("-", is_red=True),  # Variation totale (généralement non calculée)
+                create_para_table3(format_table_value_inv(total_budget_actuel, format_montant), is_red=True),
+                create_para_table3(format_table_value_inv(total_prise_en_charge, format_montant), is_red=True),
+            ])
+            
+            # Ligne 2 : % réal budgétaire total (colonne 0 = label, colonnes 1-6 fusionnées = pourcentage)
+            taux_budgetaire_total_text = format_table_value_inv(taux_budgetaire_total, format_pourcentage)
+            if taux_budgetaire_total_text != "............":
+                taux_budgetaire_total_text = f"{taux_budgetaire_total_text}%"
+            table_data.append([
+                create_para_table3("% réal budgétaire", is_col0=True),  # Colonne 0 avec style normal (pas gras, pas rouge)
+                create_para_table3(taux_budgetaire_total_text, is_red=True),  # Colonnes 1-6 fusionnées - pourcentage en rouge
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+            ])
+            
+            # Ligne 3 : % réal physique total (colonne 0 = label, colonnes 1-6 fusionnées = pourcentage)
+            taux_physique_total_text = format_table_value_inv(taux_physique_total, format_pourcentage)
+            if taux_physique_total_text != "............":
+                taux_physique_total_text = f"{taux_physique_total_text}%"
+            table_data.append([
+                create_para_table3("% réal physique", is_col0=True),  # Colonne 0 avec style normal (pas gras, pas rouge)
+                create_para_table3(taux_physique_total_text, is_red=True),  # Colonnes 1-6 fusionnées - pourcentage en rouge
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
+                "",  # Sera fusionné
             ])
         
         # Si aucune donnée trouvée
@@ -3710,7 +3993,7 @@ Répartition de l'exécution par nature de dépenses :<br/>
             total_width = sum(col_widths)
             table_data.append([
                 create_para_table3("Aucun investissement enregistré pour cette période.", total_width),
-                "", "", "", "", "", "", "", "",
+                "", "", "", "", "", "",
             ])
         
         # Créer le tableau avec LongTable pour permettre la division automatique sur plusieurs pages
@@ -3729,10 +4012,9 @@ Répartition de l'exécution par nature de dépenses :<br/>
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, 0), 9),  # Réduit de 11 à 9 pour les en-têtes
             
-            # Alignement des données
-            ("ALIGN", (0, 1), (0, -1), "LEFT"),  # Projets à gauche
-            ("ALIGN", (1, 1), (6, -1), "RIGHT"),  # Montants à droite
-            ("ALIGN", (7, 1), (8, -1), "CENTER"),  # Pourcentages au centre
+            # Alignement des données - IMPORTANT: l'ordre compte, les styles plus spécifiques doivent être ajoutés après
+            ("ALIGN", (1, 1), (6, -1), "CENTER"),  # Chiffres (colonnes 1-6) centrés
+            ("ALIGN", (0, 1), (0, -1), "LEFT"),  # Projets (colonne 0) à gauche - après les autres pour avoir priorité
             ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
             
             # Fonts pour les données
@@ -3746,12 +4028,60 @@ Répartition de l'exécution par nature de dépenses :<br/>
             ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]
         
-        # Ajouter les styles pour la ligne de total
+        # Ajouter les styles pour les lignes de projets (fond gris) et fusionner les cellules des pourcentages
         if len(investissements) > 0:
-            total_row = len(investissements) + 1  # Après les investissements
-            table_style.append(("FONTNAME", (0, total_row), (-1, total_row), "Helvetica-Bold"))
-            table_style.append(("FONTSIZE", (0, total_row), (-1, total_row), 10))  # Uniformisé avec le tableau des activités
-            table_style.append(("BACKGROUND", (0, total_row), (-1, total_row), colors.HexColor("#D3D3D3")))  # Gris plus foncé
+            # Pour chaque projet (3 lignes chacune)
+            for proj_idx in range(len(investissements)):
+                # Ligne de base pour ce projet (après l'en-tête)
+                base_row = 1 + (proj_idx * 3)
+                
+                # Fond gris et gras uniquement pour la ligne de détails du projet (ligne avec le libellé)
+                row_details = base_row
+                table_style.append(("BACKGROUND", (0, row_details), (-1, row_details), colors.HexColor("#D3D3D3")))  # Gris
+                table_style.append(("FONTNAME", (0, row_details), (-1, row_details), "Helvetica-Bold"))  # Gras
+                
+                # S'assurer que les lignes de pourcentages ne sont PAS en gras (police normale)
+                row_pct_budget = base_row + 1
+                row_pct_physique = base_row + 2
+                table_style.append(("FONTNAME", (0, row_pct_budget), (-1, row_pct_budget), "Helvetica"))  # Normal, pas gras
+                table_style.append(("FONTNAME", (0, row_pct_physique), (-1, row_pct_physique), "Helvetica"))  # Normal, pas gras
+                
+                # Fusionner les cellules des lignes de pourcentages : colonnes 1-6 fusionnées
+                # Ligne 2 : % réal budgétaire - fusionner colonnes 1-6
+                table_style.append(("SPAN", (1, row_pct_budget), (6, row_pct_budget)))  # Fusionner colonnes 1-6
+                table_style.append(("ALIGN", (0, row_pct_budget), (0, row_pct_budget), "LEFT"))  # Colonne 0 à gauche
+                table_style.append(("ALIGN", (1, row_pct_budget), (6, row_pct_budget), "CENTER"))  # Centrer le pourcentage
+                
+                # Ligne 3 : % réal physique - fusionner colonnes 1-6
+                table_style.append(("SPAN", (1, row_pct_physique), (6, row_pct_physique)))  # Fusionner colonnes 1-6
+                table_style.append(("ALIGN", (0, row_pct_physique), (0, row_pct_physique), "LEFT"))  # Colonne 0 à gauche
+                table_style.append(("ALIGN", (1, row_pct_physique), (6, row_pct_physique), "CENTER"))  # Centrer le pourcentage
+        
+        # Ajouter les styles pour les lignes de total (3 lignes : détails + % budgétaire + % physique)
+        if len(investissements) > 0:
+            # Calculer la première ligne du total (après tous les projets et leurs lignes de pourcentages)
+            # Chaque projet a 3 lignes (détails + % budgétaire + % physique)
+            total_start_row = 1 + (len(investissements) * 3)  # 1 pour l'en-tête + 3 lignes par projet
+            
+            # Appliquer le style aux 3 lignes du total
+            for i in range(3):
+                row = total_start_row + i
+                table_style.append(("FONTNAME", (0, row), (-1, row), "Helvetica-Bold"))
+                table_style.append(("FONTSIZE", (0, row), (-1, row), 10))  # Uniformisé avec le tableau des activités
+                table_style.append(("BACKGROUND", (0, row), (-1, row), colors.HexColor("#f4b083")))  # Orange
+            
+            # Fusionner les cellules des lignes de pourcentages du total : colonnes 1-6 fusionnées
+            # Ligne 2 du total : % réal budgétaire - fusionner colonnes 1-6
+            row_pct_budget_total = total_start_row + 1
+            table_style.append(("SPAN", (1, row_pct_budget_total), (6, row_pct_budget_total)))  # Fusionner colonnes 1-6
+            table_style.append(("ALIGN", (0, row_pct_budget_total), (0, row_pct_budget_total), "LEFT"))  # Colonne 0 à gauche
+            table_style.append(("ALIGN", (1, row_pct_budget_total), (6, row_pct_budget_total), "CENTER"))  # Centrer le pourcentage
+            
+            # Ligne 3 du total : % réal physique - fusionner colonnes 1-6
+            row_pct_physique_total = total_start_row + 2
+            table_style.append(("SPAN", (1, row_pct_physique_total), (6, row_pct_physique_total)))  # Fusionner colonnes 1-6
+            table_style.append(("ALIGN", (0, row_pct_physique_total), (0, row_pct_physique_total), "LEFT"))  # Colonne 0 à gauche
+            table_style.append(("ALIGN", (1, row_pct_physique_total), (6, row_pct_physique_total), "CENTER"))  # Centrer le pourcentage
         
         # Si aucune donnée trouvée, fusionner toutes les colonnes du message
         if len(investissements) == 0:
@@ -3782,20 +4112,82 @@ Répartition de l'exécution par nature de dépenses :<br/>
         # Vérifier si les données sont disponibles
         has_investissement_data = len(investissements) > 0 and (total_credits_inscrits > 0 or total_cout > 0)
         
+        # Fonction helper pour vérifier le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        
         # Fonction helper pour formater les valeurs ou retourner des points
         def format_value_inv(value, formatter_func):
-            """Retourne la valeur formatée ou '............' si non disponible"""
+            """Retourne la valeur formatée ou '............' (brouillon) ou '' (final) si non disponible"""
             if not has_investissement_data or value is None or (isinstance(value, Decimal) and value == 0):
-                return "............"
+                return "" if is_final else "............"
             return formatter_func(value)
+        
+        # Fonction helper pour formater le texte selon le mode
+        def format_text_for_mode(text):
+            """Formate le texte en rouge (brouillon) ou noir (final)"""
+            if is_final:
+                return str(text)
+            else:
+                return f'<font color="#FF0000">{text}</font>'
         
         # Premier paragraphe (convertir en HTML pour Paragraph)
         credits_inscrits_text = format_value_inv(total_credits_inscrits, format_montant)
+        # Mettre tous les éléments dynamiques en rouge (ou noir en mode final)
+        credits_inscrits_text_red = format_text_for_mode(credits_inscrits_text)
+        annee_red = format_text_for_mode(annee)
+        programme_nom_red = format_text_for_mode(programme_nom)
+        
+        # Déterminer le type de financement de manière dynamique
+        financement_interieur_val = total_financement_interieur or Decimal(0)
+        financement_exterieur_val = total_financement_exterieur or Decimal(0)
+        
+        # Générer le texte de financement dynamique
+        if financement_interieur_val > 0 and financement_exterieur_val > 0:
+            # Financement mixte
+            financement_interieur_text = format_montant(financement_interieur_val)
+            financement_exterieur_text = format_montant(financement_exterieur_val)
+            texte_financement = (
+                f"Ce financement est financé par des ressources intérieures ({financement_interieur_text} FCFA) "
+                f"et extérieures ({financement_exterieur_text} FCFA)."
+            )
+        elif financement_exterieur_val > 0:
+            # Financement extérieur uniquement
+            financement_exterieur_text = format_montant(financement_exterieur_val)
+            texte_financement = (
+                f"Ce financement est exclusivement financé par des ressources extérieures ({financement_exterieur_text} FCFA)."
+            )
+        else:
+            # Financement intérieur uniquement (par défaut)
+            texte_financement = 'Ce financement est exclusivement financé par des ressources intérieures.'
+        
+        # Appliquer le formatage selon le mode
+        if not is_final:
+            texte_financement = f'<font color="#FF0000">{texte_financement}</font>'
+        
+        # Vérifier s'il y a eu une variation
+        # Si tous les investissements ont une variation à None ou 0, alors "aucune variation"
+        has_variation = False
+        if has_investissement_data:
+            for inv in investissements:
+                if inv.variation is not None and inv.variation != 0:
+                    has_variation = True
+                    break
+        
+        if has_variation:
+            texte_variation = 'L\'allocation (dotation) a connu des variations au cours de la gestion.'
+        else:
+            texte_variation = 'L\'allocation (dotation) n\'a connu aucune variation au cours de la gestion.'
+        
+        # Appliquer le formatage selon le mode
+        if not is_final:
+            texte_variation = f'<font color="#FF0000">{texte_variation}</font>'
+        
         texte_paragraphe_1_html = (
-            f"Le programme « {programme_nom} » a bénéficié d'un budget d'investissement de "
-            f"<b>{credits_inscrits_text}</b> FCFA au titre de la loi de finances de {annee}. "
-            f"Ce financement est exclusivement financé par des ressources intérieures. "
-            f"L'allocation (dotation) n'a connu aucune variation au cours de la gestion."
+            f"Le programme « {programme_nom_red} » a bénéficié d'un budget d'investissement de "
+            f"<b>{credits_inscrits_text_red}</b> FCFA au titre de la loi de finances de {annee_red}. "
+            f"{texte_financement} "
+            f"{texte_variation}"
         )
         
         # Deuxième paragraphe
@@ -3804,13 +4196,13 @@ Répartition de l'exécution par nature de dépenses :<br/>
         cout_total_text = format_value_inv(total_cout, format_montant)
         
         # Déterminer le nom du projet principal
-        projet_principal = "............"
+        projet_principal = "" if is_final else "............"
         if has_investissement_data and investissements:
             premier_investissement = investissements[0]
-            projet_principal = premier_investissement.libelle_projet or "............"
+            projet_principal = premier_investissement.libelle_projet or ("" if is_final else "............")
         
         # Déterminer l'année de début des travaux
-        annee_debut_travaux_text = "............"
+        annee_debut_travaux_text = "" if is_final else "............"
         if has_investissement_data:
             for inv in investissements:
                 if inv.annee_debut:
@@ -3829,14 +4221,23 @@ Répartition de l'exécution par nature de dépenses :<br/>
         else:
             date_periode_text = f"30 juin {annee}"
         
+        # Mettre tous les éléments dynamiques en rouge (ou noir en mode final)
+        # Ajouter le signe % aux taux s'ils ne sont pas des placeholders
+        placeholder = "" if is_final else "............"
+        taux_exec_text_with_pct = f"{taux_exec_text}%" if taux_exec_text != placeholder and taux_exec_text else taux_exec_text
+        taux_physique_text_with_pct = f"{taux_physique_text}%" if taux_physique_text != placeholder and taux_physique_text else taux_physique_text
+        taux_exec_text_red = format_text_for_mode(taux_exec_text_with_pct)
+        taux_physique_text_red = format_text_for_mode(taux_physique_text_with_pct)
+        cout_total_text_red = format_text_for_mode(cout_total_text)
+        projet_principal_red = format_text_for_mode(projet_principal)
+        annee_debut_travaux_text_red = format_text_for_mode(annee_debut_travaux_text)
+        date_periode_text_red = format_text_for_mode(date_periode_text)
+        
+        # Utiliser le commentaire comme interprétation si disponible, sinon utiliser le texte par défaut
+        # Texte par défaut pour l'analyse globale
         texte_paragraphe_2_html = (
-            f"Le budget d'investissement du programme a été exécuté à <b>{taux_exec_text}</b> au {date_periode_text}. "
-            f"Cette performance est imputable au projet « {projet_principal} ». "
-            f"Le coût total du projet « {projet_principal} » est de <b>{cout_total_text}</b> FCFA. "
-            f"Le montant exécuté a permis le paiement des 4 premiers décomptes. "
-            f"Les travaux ont démarré en {annee_debut_travaux_text}. "
-            f"Les travaux en cours sont estimés à <b>{taux_physique_text}</b> d'avancement physique au {date_periode_text}."
-        )
+            f"Le budget d'investissement du programme a été exécuté à <b>{taux_exec_text_red}</b> au {date_periode_text_red}. "    
+            )
         
         # Construire la story avec les titres, le tableau et l'analyse (comme dans le RAP)
         from reportlab.lib.styles import ParagraphStyle
@@ -3916,12 +4317,105 @@ Répartition de l'exécution par nature de dépenses :<br/>
         
         # Ajouter la source
         story.append(Paragraph(source_text, source_style))
-        story.append(Spacer(1, 0.3 * cm))
+        story.append(Spacer(1, 0.1 * cm))
         
-        # Ajouter les paragraphes explicatifs
+        # Ajouter les paragraphes explicatifs (analyse globale)
         story.append(Paragraph(texte_paragraphe_1_html, body_style))
-        story.append(Spacer(1, 0.2 * cm))
+        story.append(Spacer(1, 0.05 * cm))
         story.append(Paragraph(texte_paragraphe_2_html, body_style))
+        story.append(Spacer(1, 0.05 * cm))
+        
+        # Ajouter l'analyse par projet (pour TOUS les projets du tableau)
+        if len(investissements) > 0:
+            # Titre pour la section d'analyse par projet
+            story.append(Paragraph("Cette situation a été possible grâce aux projets suivants :", subsection_title_style))
+            story.append(Spacer(1, 0.08 * cm))
+            
+            # Fonction helper pour formater le texte selon le mode (définie une seule fois avant la boucle)
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+            is_final = mode == "final"
+            def format_text_for_mode(text):
+                """Formate le texte en rouge (brouillon) ou noir (final)"""
+                if is_final:
+                    return str(text)
+                else:
+                    return f'<font color="#FF0000">{text}</font>'
+            
+            # Pour chaque projet, créer une analyse basée sur ses données
+            for inv in investissements:
+                # Titre du projet
+                projet_libelle = inv.libelle_projet or "Projet"
+                projet_libelle_red = format_text_for_mode(projet_libelle)
+                #story.append(Paragraph(f"<b>Projet : {projet_libelle_red}</b>", body_style))
+                #story.append(Spacer(1, 0.1 * cm))
+                
+                # Générer l'analyse du projet basée sur ses données
+                cout_projet = format_value_inv(inv.cout_total_projet, format_montant)
+                cout_projet_red = format_text_for_mode(cout_projet)
+                
+                taux_budgetaire_projet = format_value_inv(inv.taux_realisation_budgetaire, format_pourcentage)
+                taux_physique_projet = format_value_inv(inv.taux_realisation_physique, format_pourcentage)
+                
+                # Ajouter le signe % aux taux s'ils ne sont pas des placeholders
+                placeholder = "" if is_final else "............"
+                if taux_budgetaire_projet != placeholder and taux_budgetaire_projet:
+                    taux_budgetaire_projet = f"{taux_budgetaire_projet}%"
+                if taux_physique_projet != placeholder and taux_physique_projet:
+                    taux_physique_projet = f"{taux_physique_projet}%"
+                
+                taux_budgetaire_projet_red = format_text_for_mode(taux_budgetaire_projet)
+                taux_physique_projet_red = format_text_for_mode(taux_physique_projet)
+                
+                annee_debut_projet = str(inv.annee_debut) if inv.annee_debut else placeholder
+                annee_debut_projet_red = format_text_for_mode(annee_debut_projet)
+                
+                # Texte d'analyse du projet
+                analyse_projet_html = (
+                    f"- Le coût total du projet « {projet_libelle_red} » est de <b>{cout_projet_red}</b> FCFA. "
+                    f"Le taux de réalisation budgétaire est de <b>{taux_budgetaire_projet_red}</b> au {date_periode_text_red}. "
+                    f"Les travaux ont démarré en {annee_debut_projet_red}. "
+                    f"Les travaux en cours sont estimés à <b>{taux_physique_projet_red}</b> d'avancement physique au {date_periode_text_red}."
+                )
+                story.append(Paragraph(analyse_projet_html, body_style))
+                
+                # Ajouter le commentaire comme justification si disponible
+                if inv.commentaire and inv.commentaire.strip():
+                    story.append(Spacer(1, 0.1 * cm))
+                    commentaire_projet = inv.commentaire.strip()
+                    commentaire_projet_escaped = (
+                        commentaire_projet
+                        .replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                    )
+                    if is_final:
+                        story.append(Paragraph(commentaire_projet_escaped, body_style))
+                    else:
+                        commentaire_projet_red = f'<font color="#FF0000">{commentaire_projet_escaped}</font>'
+                        story.append(Paragraph(commentaire_projet_red, body_style))
+                
+                story.append(Spacer(1, 0.2 * cm))
+        
+        # Ajouter les commentaires personnalisés si disponibles (ou des points si vide)
+        investissements_commentaires = data.get("investissements_commentaires")
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        if investissements_commentaires and investissements_commentaires.strip():
+            story.append(Spacer(1, 0.3 * cm))
+            # Échapper les caractères spéciaux HTML
+            commentaires_escaped = investissements_commentaires.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Convertir les retours à la ligne en <br/>
+            commentaires_html = commentaires_escaped.replace("\n", "<br/>")
+            # En mode final, texte en noir ; en mode brouillon, texte en rouge
+            if mode == "final":
+                story.append(Paragraph(commentaires_html, body_style))
+            else:
+                commentaires_html_red = f"<font color=\"#FF0000\">{commentaires_html}</font>"
+                story.append(Paragraph(commentaires_html_red, body_style))
+        else:
+            story.append(Spacer(1, 0.3 * cm))
+            # Afficher des points si aucun commentaire
+            story.append(Paragraph("<font color=\"#FF0000\">Commentaire :..........................</font>", body_style))
+        
         story.append(Spacer(1, 0.3 * cm))
         
         # Créer le SimpleDocTemplate
@@ -4019,7 +4513,7 @@ Répartition de l'exécution par nature de dépenses :<br/>
         # Créer le buffer pour le PDF
         buffer = BytesIO()
         
-        # Marges
+        # Marges (identiques au tableau des investissements)
         left_margin = 1.5 * cm
         right_margin = 1.5 * cm
         top_margin = 2 * cm
@@ -4079,19 +4573,6 @@ Répartition de l'exécution par nature de dépenses :<br/>
             num_pages = len(reader.pages)
             RAPPageManager.register_page_position("rprog_realisations_effectifs", start_page)
             return buffer, start_page + num_pages
-            current_y -= 30
-            
-            RPROGLayoutDrawer.draw_page_footer(
-                pdf=pdf,
-                page_number=start_page,
-                width=width,
-                footer_margin=footer_margin,
-                footer_height=footer_height,
-                right_margin=right_margin,
-                total_pages=getattr(cls, '_total_pages', None)
-            )
-            RAPPageManager.register_page_position("rprog_realisations_effectifs", start_page)
-            return start_page + 1
         
         # Récupérer les paramètres de filtrage
         programme = data.get("programme", "")
@@ -4102,6 +4583,29 @@ Répartition de l'exécution par nature de dépenses :<br/>
         date_fin = date(2024, 6, 30)  # 30/06/2024
         
         # Récupérer tous les agents actifs
+        # D'abord, vérifier combien d'agents existent au total
+        total_agents = session.exec(select(AgentComplet)).all()
+        logger.info(f"📊 Total d'agents dans la base: {len(total_agents)}")
+        
+        # Vérifier les agents actifs
+        agents_actifs = session.exec(
+            select(AgentComplet).where(AgentComplet.actif == True)
+        ).all()
+        logger.info(f"📊 Agents actifs: {len(agents_actifs)}")
+        
+        # Vérifier les agents en activité
+        agents_en_activite = session.exec(
+            select(AgentComplet).where(
+                AgentComplet.position_administrative == PositionAdministrative.EN_ACTIVITE.value
+            )
+        ).all()
+        logger.info(f"📊 Agents en activité: {len(agents_en_activite)}")
+        
+        # Log détaillé pour les premiers agents
+        for agent in total_agents[:5]:  # Afficher les 5 premiers
+            logger.info(f"  - Agent: {agent.nom} {agent.prenom} (ID: {agent.id})")
+            logger.info(f"    Actif: {agent.actif}, Position: {agent.position_administrative}, Programme ID: {agent.programme_id}")
+        
         query = select(AgentComplet).where(
             AgentComplet.actif == True,
             AgentComplet.position_administrative == PositionAdministrative.EN_ACTIVITE.value
@@ -4109,14 +4613,104 @@ Répartition de l'exécution par nature de dépenses :<br/>
         
         # Filtrer par programme si fourni
         if programme:
-            # Chercher les agents par programme_id
-            query = query.where(AgentComplet.programme_id.isnot(None))
+            # Chercher le programme par son libellé pour obtenir son ID
+            from app.models.personnel import Programme, Direction, SousDirection, Service
+            programme_obj = session.exec(
+                select(Programme).where(Programme.libelle.ilike(f"%{programme}%"))
+            ).first()
+            
+            if programme_obj:
+                logger.info(f"🔍 Programme trouvé: {programme_obj.libelle} (ID: {programme_obj.id})")
+                
+                # Vérifier combien d'agents ont ce programme_id directement
+                agents_avec_programme = session.exec(
+                    select(AgentComplet).where(AgentComplet.programme_id == programme_obj.id)
+                ).all()
+                logger.info(f"📊 Agents avec programme_id={programme_obj.id}: {len(agents_avec_programme)}")
+                
+                # Chercher les directions, sous-directions et services liés au programme
+                directions = session.exec(
+                    select(Direction).where(Direction.programme_id == programme_obj.id)
+                ).all()
+                direction_ids = [d.id for d in directions]
+                logger.info(f"📊 Directions liées au programme: {len(directions)} (IDs: {direction_ids})")
+                
+                # Chercher les sous-directions liées au programme directement
+                sous_directions_directes = session.exec(
+                    select(SousDirection).where(SousDirection.programme_id == programme_obj.id)
+                ).all()
+                sous_direction_ids = [sd.id for sd in sous_directions_directes]
+                
+                # Chercher aussi les sous-directions liées aux directions du programme
+                if direction_ids:
+                    sous_directions_via_directions = session.exec(
+                        select(SousDirection).where(SousDirection.direction_id.in_(direction_ids))
+                    ).all()
+                    sous_direction_ids.extend([sd.id for sd in sous_directions_via_directions])
+                    sous_direction_ids = list(set(sous_direction_ids))  # Dédupliquer
+                
+                logger.info(f"📊 Sous-directions liées au programme: {len(sous_direction_ids)} (IDs: {sous_direction_ids})")
+                
+                # Chercher les services liés au programme directement
+                services_directs = session.exec(
+                    select(Service).where(Service.programme_id == programme_obj.id)
+                ).all()
+                service_ids = [s.id for s in services_directs]
+                
+                # Chercher les services liés aux directions du programme
+                if direction_ids:
+                    services_via_directions = session.exec(
+                        select(Service).where(Service.direction_id.in_(direction_ids))
+                    ).all()
+                    service_ids.extend([s.id for s in services_via_directions])
+                
+                # Chercher les services liés aux sous-directions du programme
+                if sous_direction_ids:
+                    services_via_sous_directions = session.exec(
+                        select(Service).where(Service.sous_direction_id.in_(sous_direction_ids))
+                    ).all()
+                    service_ids.extend([s.id for s in services_via_sous_directions])
+                
+                service_ids = list(set(service_ids))  # Dédupliquer
+                logger.info(f"📊 Services liés au programme: {len(service_ids)} (IDs: {service_ids})")
+                
+                # Construire les conditions de recherche : programme_id OU direction_id OU sous_direction_id OU service_id
+                from sqlmodel import or_
+                search_conditions = [AgentComplet.programme_id == programme_obj.id]
+                
+                if direction_ids:
+                    search_conditions.append(AgentComplet.direction_id.in_(direction_ids))
+                if sous_direction_ids:
+                    search_conditions.append(AgentComplet.sous_direction_id.in_(sous_direction_ids))
+                if service_ids:
+                    search_conditions.append(AgentComplet.service_id.in_(service_ids))
+                
+                # Filtrer par programme_id OU direction_id OU sous_direction_id OU service_id
+                if len(search_conditions) > 1:
+                    query = query.where(or_(*search_conditions))
+                    logger.info(f"🔍 Recherche d'agents via programme_id OU direction_id OU sous_direction_id OU service_id")
+                else:
+                    query = query.where(AgentComplet.programme_id == programme_obj.id)
+                    logger.info(f"🔍 Recherche d'agents via programme_id uniquement")
+            else:
+                logger.warning(f"⚠️ Programme '{programme}' non trouvé dans la base de données")
+        else:
+            logger.info("ℹ️ Aucun programme spécifié, récupération de tous les agents actifs")
         
         agents = session.exec(query).all()
         
         logger.info(f"📊 {len(agents)} agents trouvés pour le programme {programme}, année {annee}")
         
-        # Calculer les effectifs par catégorie pour les deux dates
+        # Log détaillé pour chaque agent
+        for agent in agents:
+            logger.info(f"  - Agent: {agent.nom} {agent.prenom} (Matricule: {agent.matricule})")
+            logger.info(f"    Grade ID: {agent.grade_id}, Date recrutement: {agent.date_recrutement}, Date prise service: {agent.date_prise_service}")
+            if agent.grade_id:
+                grade = session.get(GradeComplet, agent.grade_id)
+                if grade:
+                    logger.info(f"    Grade: {grade.code} ({grade.libelle}), Catégorie: {grade.categorie}")
+        
+        # Calculer les effectifs par catégorie (A, B, C, D) en comptant par grade (avec échelon)
         effectifs_debut = {
             "A": 0,
             "B": 0,
@@ -4146,36 +4740,62 @@ Répartition de l'exécution par nature de dépenses :<br/>
             "Non fonctionnaires": 0
         }
         
-        # Pour chaque agent, déterminer sa catégorie et ses dates
+        # Pour chaque agent, déterminer sa catégorie depuis le grade (avec échelon)
         for agent in agents:
-            # Déterminer la catégorie depuis le grade
+            # Déterminer la catégorie depuis le code du grade (qui contient l'échelon, ex: A1, A2, B1, etc.)
             categorie = "Non fonctionnaires"
             if agent.grade_id:
                 grade = session.get(GradeComplet, agent.grade_id)
-                if grade and grade.categorie:
-                    # Extraire la lettre de la catégorie (A, B, C, ou D)
-                    categorie = grade.categorie.value.split(" - ")[0].split()[-1]
+                if grade and grade.code:
+                    # Extraire la lettre de la catégorie depuis le code (A1 -> A, B2 -> B, etc.)
+                    # Le code du grade est de la forme "A1", "A2", "B1", etc.
+                    grade_code = grade.code.strip()
+                    if grade_code and len(grade_code) > 0:
+                        # Prendre le premier caractère (la lettre de la catégorie)
+                        categorie = grade_code[0].upper()
+                        # Vérifier que c'est bien une catégorie valide (A, B, C, D)
+                        if categorie not in ["A", "B", "C", "D"]:
+                            categorie = "Non fonctionnaires"
+                    logger.info(f"  Agent {agent.nom} {agent.prenom}: Grade code={grade_code}, Catégorie={categorie}")
+                else:
+                    logger.warning(f"  Agent {agent.nom} {agent.prenom}: Grade sans code")
+            else:
+                logger.info(f"  Agent {agent.nom} {agent.prenom}: Pas de grade_id, catégorie=Non fonctionnaires")
             
             # Déterminer si l'agent était présent au 31/12/2023
             date_recrutement = agent.date_recrutement
             date_prise_service = agent.date_prise_service or date_recrutement
             
+            logger.info(f"  Agent {agent.nom} {agent.prenom}: Date recrutement={date_recrutement}, Date prise service={date_prise_service}")
+            logger.info(f"  Dates de référence: date_debut={date_debut}, date_fin={date_fin}")
+            
             # Si l'agent a été recruté avant ou le 31/12/2023, il compte dans effectifs_debut
-            if date_prise_service and date_prise_service <= date_debut:
+            # Si pas de date, on considère qu'il était présent au début
+            if not date_prise_service or date_prise_service <= date_debut:
                 effectifs_debut[categorie] = effectifs_debut.get(categorie, 0) + 1
+                logger.info(f"  → Compté dans effectifs_debut[{categorie}]")
+            else:
+                logger.info(f"  → NON compté dans effectifs_debut (date_prise_service={date_prise_service} > date_debut={date_debut})")
             
             # Si l'agent est présent au 30/06/2024, il compte dans effectifs_fin
-            # (pour simplifier, on considère que tous les agents actifs sont présents)
-            if agent.date_recrutement is None or (agent.date_recrutement and agent.date_recrutement <= date_fin):
+            # Pour simplifier, on considère que tous les agents actifs sont présents
+            # Si pas de date de recrutement ou si recruté avant/le 30/06/2024
+            if not agent.date_recrutement or agent.date_recrutement <= date_fin:
                 effectifs_fin[categorie] = effectifs_fin.get(categorie, 0) + 1
+                logger.info(f"  → Compté dans effectifs_fin[{categorie}]")
                 
                 # Si recruté entre les deux dates, c'est une entrée
                 if date_prise_service and date_debut < date_prise_service <= date_fin:
                     entrees[categorie] = entrees.get(categorie, 0) + 1
-            
-            # Pour les sorties, on devrait avoir une date de départ, mais pour simplifier
-            # on calcule les sorties comme: effectif_debut + entrees - effectif_fin
-            # Ce calcul sera fait après la boucle
+                    logger.info(f"  → Compté dans entrees[{categorie}]")
+            else:
+                logger.info(f"  → NON compté dans effectifs_fin (date_recrutement={agent.date_recrutement} > date_fin={date_fin})")
+        
+        logger.info(f"📊 Résultats du décompte:")
+        logger.info(f"  effectifs_debut: {effectifs_debut}")
+        logger.info(f"  effectifs_fin: {effectifs_fin}")
+        logger.info(f"  entrees: {entrees}")
+        logger.info(f"  sorties: {sorties}")
         
         # Calculer les sorties pour chaque catégorie
         for cat in ["A", "B", "C", "D", "Non fonctionnaires"]:
@@ -4189,11 +4809,13 @@ Répartition de l'exécution par nature de dépenses :<br/>
         
         # Vérifier si les données sont disponibles (si aucun agent trouvé ou données vides)
         has_data = len(agents) > 0 and (total_debut > 0 or total_fin > 0)
+        logger.info(f"📊 has_data = {has_data} (agents: {len(agents)}, total_debut: {total_debut}, total_fin: {total_fin})")
         
         # Fonction helper pour formater les valeurs ou retourner des points
         def format_value(value):
             """Retourne la valeur formatée ou '............' si non disponible"""
-            if not has_data or value is None or value == 0:
+            # Toujours afficher la valeur si elle est > 0, même si has_data est False
+            if value is None or value == 0:
                 return "............"
             return str(value)
         
@@ -4212,8 +4834,39 @@ Répartition de l'exécution par nature de dépenses :<br/>
         header_style.leading = 13   # Augmenté proportionnellement
         header_style.alignment = 1  # CENTER
         
+        # Style pour la première colonne dans les en-têtes (centré)
+        header_style_col0 = styles['Normal']
+        header_style_col0.fontName = 'Helvetica-Bold'
+        header_style_col0.fontSize = 11
+        header_style_col0.leading = 13
+        header_style_col0.alignment = 1  # CENTER
+        
+        # Style pour les nombres (centré, pas en gras, rouge via HTML)
+        number_style = ParagraphStyle(
+            'NumberStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica',  # Pas en gras
+            fontSize=10,
+            leading=12,
+            alignment=1,  # CENTER
+            leftIndent=0,
+            rightIndent=0,
+        )
+        
+        # Style pour la colonne Catégorie (aligné à gauche, en gras)
+        category_style = ParagraphStyle(
+            'CategoryStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',  # En gras
+            fontSize=10,
+            leading=12,
+            alignment=0,  # LEFT
+            leftIndent=0,
+            rightIndent=0,
+        )
+        
         # Fonction helper pour créer un Paragraph
-        def create_para_table4(text, is_header=False):
+        def create_para_table4(text, is_header=False, is_col0=False, is_number=False):
             """Crée un Paragraph avec wrapping automatique pour le Tableau 4"""
             if not text:
                 return ""
@@ -4222,32 +4875,74 @@ Répartition de l'exécution par nature de dépenses :<br/>
                 return ""
             # Échapper les caractères spéciaux pour XML/HTML
             text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            style = header_style if is_header else para_style_table4
+            
+            # Si c'est un nombre, mettre en rouge (brouillon) ou noir (final) avec des balises HTML
+            if is_number:
+                # Vérifier le mode
+                mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+                if mode == "final":
+                    # En mode final, pas de balise font (texte noir par défaut)
+                    pass
+                else:
+                    # En mode brouillon, texte en rouge
+                    text = f'<font color="#FF0000">{text}</font>'
+            
+            if is_header and is_col0:
+                style = header_style_col0
+            elif is_header:
+                style = header_style
+            elif is_number:
+                style = number_style
+            elif is_col0:
+                style = category_style
+            else:
+                style = para_style_table4
             # ReportLab gère automatiquement le wrapping
             return Paragraph(text, style)
         
-        # Calculer les largeurs des colonnes
+        # Calculer les largeurs des colonnes (5 colonnes au total)
+        # Les pourcentages doivent totaliser 1.0 (100%)
         col_widths = [
-            available_width * 0.25,  # Catégorie
-            available_width * 0.18,  # Situation au 31/12/2023
-            available_width * 0.18,  # Variation (Entrées)
-            available_width * 0.18,  # Variation (Sorties)
-            available_width * 0.21,  # Situation au 30/06/2024
+            available_width * 0.25,  # Catégorie (25%)
+            available_width * 0.20,  # Situation au 31/12/2023 (20%)
+            available_width * 0.11,  # Variation - Entrées (11%)
+            available_width * 0.11,  # Variation - Sorties (11%)
+            available_width * 0.33,  # Situation au 30/06/2024 (33%)
         ]
+        
+        # Vérifier et ajuster les largeurs pour qu'elles correspondent exactement à available_width
+        total_col_widths = sum(col_widths)
+        if abs(total_col_widths - available_width) > 0.01:  # Tolérance de 0.01 point
+            scale_factor = available_width / total_col_widths
+            col_widths = [w * scale_factor for w in col_widths]
+            logger.info(f"📊 Largeurs ajustées pour correspondre à available_width: {[f'{w:.2f}' for w in col_widths]}, Somme: {sum(col_widths):.2f}")
+        
+        logger.info(f"📊 Somme largeurs colonnes: {sum(col_widths):.2f}")
+        logger.info(f"📊 available_width: {available_width:.2f}")
+        logger.info(f"📊 Différence: {(available_width - sum(col_widths)):.2f}")
         
         # Construire les données du tableau
         table_data = []
         
-        # Ligne d'en-tête
+        # Ligne d'en-tête principale (ligne 1)
         table_data.append([
-            create_para_table4("Catégorie", is_header=True),
+            create_para_table4("Catégorie", is_header=True, is_col0=True),  # Première colonne alignée à gauche
             create_para_table4("Situation au 31/12/2023", is_header=True),
-            create_para_table4("Variation (Entrées)", is_header=True),
-            create_para_table4("Variation (Sorties)", is_header=True),
+            create_para_table4("Variation", is_header=True),  # En-tête principal pour Variation (sera fusionné avec la colonne suivante)
+            create_para_table4("", is_header=True),  # Cellule vide pour la fusion
             create_para_table4("Situation au 30/06/2024", is_header=True),
         ])
         
-        # Lignes de données
+        # Ligne d'en-tête secondaire (ligne 2) - sous-en-têtes pour Variation
+        table_data.append([
+            create_para_table4("", is_header=True, is_col0=True),  # Vide (fusionné avec ligne 1) - première colonne alignée à gauche
+            create_para_table4("", is_header=True),  # Vide (fusionné avec ligne 1)
+            create_para_table4("Entrées", is_header=True),  # Sous-en-tête Entrées
+            create_para_table4("Sorties", is_header=True),  # Sous-en-tête Sorties
+            create_para_table4("", is_header=True),  # Vide (fusionné avec ligne 1)
+        ])
+        
+        # Lignes de données - Afficher uniquement les catégories (A, B, C, D)
         categories_order = ["A", "B", "C", "D", "Non fonctionnaires"]
         category_labels = {
             "A": "Catégorie A",
@@ -4259,47 +4954,90 @@ Répartition de l'exécution par nature de dépenses :<br/>
         
         for cat in categories_order:
             table_data.append([
-                create_para_table4(category_labels[cat]),
-                create_para_table4(format_value(effectifs_debut[cat])),
-                create_para_table4(format_value(entrees[cat])),
-                create_para_table4(format_value(sorties[cat])),
-                create_para_table4(format_value(effectifs_fin[cat])),
+                create_para_table4(category_labels[cat], is_col0=True),  # Première colonne : texte normal, aligné à gauche
+                create_para_table4(format_value(effectifs_debut[cat]), is_number=True),  # Nombres en rouge, centrés
+                create_para_table4(format_value(entrees[cat]), is_number=True),
+                create_para_table4(format_value(sorties[cat]), is_number=True),
+                create_para_table4(format_value(effectifs_fin[cat]), is_number=True),
             ])
+        
+        # Ligne TOTAL - créer des styles spécifiques pour TOTAL (en gras)
+        total_style_col0 = ParagraphStyle(
+            'TotalStyleCol0',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',  # En gras
+            fontSize=10,
+            leading=12,
+            alignment=0,  # LEFT
+        )
+        total_style_number = ParagraphStyle(
+            'TotalStyleNumber',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',  # En gras
+            fontSize=10,
+            leading=12,
+            alignment=1,  # CENTER
+        )
+        
+        # Préparer les textes pour TOTAL avec couleur rouge
+        total_debut_text = format_value(total_debut)
+        total_entrees_text = format_value(total_entrees)
+        total_sorties_text = format_value(total_sorties)
+        total_fin_text = format_value(total_fin)
+        
+        # Fonction helper pour formater le texte selon le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        def format_text_for_mode(text):
+            """Formate le texte en rouge (brouillon) ou noir (final)"""
+            if is_final:
+                return str(text)
+            else:
+                return f'<font color="#FF0000">{text}</font>'
+        
+        # Mettre les nombres en rouge (ou noir en mode final)
+        total_debut_text = format_text_for_mode(total_debut_text)
+        total_entrees_text = format_text_for_mode(total_entrees_text)
+        total_sorties_text = format_text_for_mode(total_sorties_text)
+        total_fin_text = format_text_for_mode(total_fin_text)
         
         # Ligne TOTAL
         table_data.append([
-            create_para_table4("TOTAL", is_header=True),
-            create_para_table4(format_value(total_debut), is_header=True),
-            create_para_table4(format_value(total_entrees), is_header=True),
-            create_para_table4(format_value(total_sorties), is_header=True),
-            create_para_table4(format_value(total_fin), is_header=True),
+            Paragraph("TOTAL", total_style_col0),  # Première colonne alignée à gauche, en gras
+            Paragraph(total_debut_text, total_style_number),  # Nombres en rouge, centrés, en gras
+            Paragraph(total_entrees_text, total_style_number),
+            Paragraph(total_sorties_text, total_style_number),
+            Paragraph(total_fin_text, total_style_number),
         ])
         
-        # Créer le tableau avec LongTable
-        table = LongTable(table_data, colWidths=col_widths, repeatRows=1, splitByRow=1)
+        # Créer le tableau avec LongTable (2 lignes d'en-tête)
+        table = LongTable(table_data, colWidths=col_widths, repeatRows=2, splitByRow=1)
         
         # Créer le style du tableau
         table_style = [
             # Bordures
             ("GRID", (0, 0), (-1, -1), 1, colors.black),
             
-            # En-tête - utiliser la même couleur que le RAP (#bdd6ee)
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#bdd6ee")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-            ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+            # En-tête principal (ligne 0) - utiliser la même couleur que le RAP (#bdd6ee)
+            ("BACKGROUND", (0, 0), (-1, 1), colors.HexColor("#bdd6ee")),
+            ("TEXTCOLOR", (0, 0), (-1, 1), colors.black),
+            ("ALIGN", (0, 0), (-1, 1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, 1), "MIDDLE"),
             
-            # Ligne TOTAL
+            # Fusionner les cellules de la ligne 0 pour "Variation" (colonnes 2 et 3)
+            ("SPAN", (2, 0), (3, 0)),  # Fusionner "Variation" sur les colonnes 2-3
+            
+            # Fusionner les cellules vides de la ligne 1 avec la ligne 0
+            ("SPAN", (0, 1), (0, 0)),  # Fusionner colonne 0 (Catégorie) sur les 2 lignes
+            ("SPAN", (1, 1), (1, 0)),  # Fusionner colonne 1 (Situation au 31/12/2023) sur les 2 lignes
+            ("SPAN", (4, 1), (4, 0)),  # Fusionner colonne 4 (Situation au 30/06/2024) sur les 2 lignes
+            
+            # Alignement vertical uniquement (les styles de texte sont dans les Paragraphs)
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            
+            # Ligne TOTAL - background et couleur uniquement (les styles sont dans les Paragraphs)
             ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#d9e1f2")),
             ("TEXTCOLOR", (0, -1), (-1, -1), colors.black),
-            ("ALIGN", (0, -1), (-1, -1), "CENTER"),
-            ("VALIGN", (0, -1), (-1, -1), "MIDDLE"),
-            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-            
-            # Alignement des données
-            ("ALIGN", (0, 1), (0, -2), "LEFT"),  # Catégorie
-            ("ALIGN", (1, 1), (-1, -2), "CENTER"),  # Nombres
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             
             # Padding
             ("LEFTPADDING", (0, 0), (-1, -1), 4),
@@ -4312,7 +5050,7 @@ Répartition de l'exécution par nature de dépenses :<br/>
         
         # Générer le graphique en barres
         chart_buffer = cls._create_bar_chart_effectifs_rprog(
-            effectifs_debut, effectifs_fin, categories_order, category_labels
+            effectifs_debut, effectifs_fin, categories_order, category_labels, date_debut, date_fin
         )
         
         # Construire la story avec les titres, le tableau, le graphique et l'analyse
@@ -4403,36 +5141,33 @@ Répartition de l'exécution par nature de dépenses :<br/>
             story.append(chart_image)
             story.append(Spacer(1, 0.3 * cm))
             
-            # Titre du graphique
-            story.append(Paragraph(
-                "EVOLUTION DES EFFECTIFS ENTRE LE 31/12/2023 ET LE 30/06/2024",
-                table_title_style
-            ))
-            story.append(Spacer(1, 0.2 * cm))
-            
             # Source du graphique
             story.append(Paragraph("Source: SOGPE", source_style))
             story.append(Spacer(1, 0.4 * cm))
         
         # Texte d'analyse
         # Fonction helper pour formater les valeurs dans le texte
+        # Fonction helper pour vérifier le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        
         def format_value_text(value):
-            """Retourne la valeur formatée ou '............' si non disponible"""
+            """Retourne la valeur formatée ou '............' (brouillon) ou '' (final) si non disponible"""
             if not has_data or value is None or value == 0:
-                return "............"
+                return "" if is_final else "............"
             return str(value)
         
         def format_percentage(value, total):
-            """Retourne le pourcentage formaté ou '............' si non disponible"""
+            """Retourne le pourcentage formaté ou '............' (brouillon) ou '' (final) si non disponible"""
             if not has_data or total is None or total == 0 or value is None or value == 0:
-                return "............"
+                return "" if is_final else "............"
             pct = (value / total * 100)
             return f"{pct:.0f}%"
         
         def format_agent_text(value, singular="agent", plural="agents"):
-            """Retourne le texte formaté avec le nombre d'agents ou '............' si non disponible"""
+            """Retourne le texte formaté avec le nombre d'agents ou '............' (brouillon) ou '' (final) si non disponible"""
             if not has_data or value is None or value == 0:
-                return "............"
+                return "" if is_final else "............"
             agent_word = singular if value == 1 else plural
             return f"{value} {agent_word}"
         
@@ -4444,26 +5179,148 @@ Répartition de l'exécution par nature de dépenses :<br/>
             pct_d_text = format_percentage(effectifs_fin["D"], total_fin)
             pct_non_func_text = format_percentage(effectifs_fin["Non fonctionnaires"], total_fin)
         else:
-            pct_a_text = pct_b_text = pct_c_text = pct_d_text = pct_non_func_text = "............"
+            placeholder = "" if is_final else "............"
+            pct_a_text = pct_b_text = pct_c_text = pct_d_text = pct_non_func_text = placeholder
         
         total_fin_text = format_value_text(total_fin)
         total_debut_text = format_value_text(total_debut)
-        evolution_text = format_value_text(total_entrees - total_sorties) if has_data else "............"
+        evolution_text = format_value_text(total_entrees - total_sorties) if has_data else ("" if is_final else "............")
         
-        entrees_a_text = format_agent_text(entrees['A'])
-        entrees_b_text = format_agent_text(entrees['B'])
-        entrees_d_text = format_agent_text(entrees['D'])
-        sorties_a_text = format_agent_text(sorties['A'])
-        sorties_c_text = format_agent_text(sorties['C'])
-        sorties_non_func_text = format_agent_text(sorties['Non fonctionnaires'])
+        # Formater la date de début pour l'affichage
+        mois_fr = ["janvier", "février", "mars", "avril", "mai", "juin", 
+                   "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+        date_debut_formatted = f"{date_debut.day} {mois_fr[date_debut.month - 1]} {date_debut.year}"
         
-        texte_analyse_html = f"""Le programme compte à ce jour <b>{total_fin_text}</b> agents dont <b>{pct_a_text}</b> de catégorie A, <b>{pct_b_text}</b> de catégorie B, <b>{pct_c_text}</b> de catégorie C, <b>{pct_d_text}</b> de catégorie D et <b>{pct_non_func_text}</b> de non fonctionnaires.<br/><br/>
+        # Calculer l'évolution réelle (différence entre fin et début)
+        if has_data and total_debut is not None and total_fin is not None:
+            evolution_reelle = total_fin - total_debut
+            evolution_absolue = abs(evolution_reelle)
+            evolution_absolue_text = format_value_text(evolution_absolue)
+            
+            if evolution_reelle > 0:
+                if is_final:
+                    evolution_phrase = f"une augmentation de son effectif de <b>{evolution_absolue_text}</b> agents"
+                else:
+                    evolution_phrase = f"une augmentation de son effectif de <b><font color=\"#FF0000\">{evolution_absolue_text}</font></b> agents"
+            elif evolution_reelle < 0:
+                if is_final:
+                    evolution_phrase = f"une diminution de son effectif de <b>{evolution_absolue_text}</b> agents"
+                else:
+                    evolution_phrase = f"une diminution de son effectif de <b><font color=\"#FF0000\">{evolution_absolue_text}</font></b> agents"
+            else:
+                evolution_phrase = "aucune variation de son effectif"
+        else:
+            if is_final:
+                evolution_phrase = f"une augmentation de son effectif de <b>{evolution_text}</b> agents"
+            else:
+                evolution_phrase = f"une augmentation de son effectif de <b><font color=\"#FF0000\">{evolution_text}</font></b> agents"
+        
+        # Construire dynamiquement la liste des entrées et sorties
+        entrees_list = []
+        for cat in categories_order:
+            if has_data and entrees.get(cat, 0) > 0:
+                entrees_text = format_agent_text(entrees[cat])
+                entrees_text_red = entrees_text if is_final else f"<font color=\"#FF0000\">{entrees_text}</font>"
+                if cat == "Non fonctionnaires":
+                    entrees_list.append(f"{entrees_text_red} non fonctionnaires")
+                else:
+                    entrees_list.append(f"{entrees_text_red} de la catégorie {cat}")
+        
+        sorties_list = []
+        for cat in categories_order:
+            if has_data and sorties.get(cat, 0) > 0:
+                sorties_text = format_agent_text(sorties[cat])
+                sorties_text_red = sorties_text if is_final else f"<font color=\"#FF0000\">{sorties_text}</font>"
+                if cat == "Non fonctionnaires":
+                    sorties_list.append(f"{sorties_text_red} non fonctionnaires")
+                else:
+                    sorties_list.append(f"{sorties_text_red} de la catégorie {cat}")
+        
+        # Construire la phrase des entrées
+        if entrees_list:
+            if len(entrees_list) == 1:
+                entrees_phrase = entrees_list[0]
+            elif len(entrees_list) == 2:
+                entrees_phrase = f"{entrees_list[0]} et {entrees_list[1]}"
+            else:
+                entrees_phrase = ", ".join(entrees_list[:-1]) + f" et {entrees_list[-1]}"
+        else:
+            entrees_phrase = "" if is_final else "<font color=\"#FF0000\">............</font>"
+        
+        # Construire la phrase des sorties
+        if sorties_list:
+            if len(sorties_list) == 1:
+                sorties_phrase = sorties_list[0]
+            elif len(sorties_list) == 2:
+                sorties_phrase = f"{sorties_list[0]} et {sorties_list[1]}"
+            else:
+                sorties_phrase = ", ".join(sorties_list[:-1]) + f" et {sorties_list[-1]}"
+        else:
+            sorties_phrase = "" if is_final else "<font color=\"#FF0000\">............</font>"
+        
+        # Construire la phrase complète de l'évolution
+        if entrees_list or sorties_list:
+            if entrees_list and sorties_list:
+                evolution_detail_phrase = f"l'entrée de {entrees_phrase}, contre la sortie de {sorties_phrase}"
+            elif entrees_list:
+                evolution_detail_phrase = f"l'entrée de {entrees_phrase}"
+            else:
+                evolution_detail_phrase = f"la sortie de {sorties_phrase}"
+        else:
+            evolution_detail_phrase = "" if is_final else "<font color=\"#FF0000\">............</font>"
+        
+        # Fonction helper pour formater le texte selon le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        def format_text_for_mode(text):
+            """Formate le texte en rouge (brouillon) ou noir (final)"""
+            if is_final:
+                return str(text)
+            else:
+                return f'<font color="#FF0000">{text}</font>'
+        
+        # Mettre en rouge tous les éléments dynamiques (ou noir en mode final)
+        total_fin_text_red = format_text_for_mode(total_fin_text)
+        pct_a_text_red = format_text_for_mode(pct_a_text)
+        pct_b_text_red = format_text_for_mode(pct_b_text)
+        pct_c_text_red = format_text_for_mode(pct_c_text)
+        pct_d_text_red = format_text_for_mode(pct_d_text)
+        pct_non_func_text_red = format_text_for_mode(pct_non_func_text)
+        date_debut_formatted_red = format_text_for_mode(date_debut_formatted)
+        total_debut_text_red = format_text_for_mode(total_debut_text)
+        
+        texte_analyse_html = f"""Le programme compte à ce jour <b>{total_fin_text_red}</b> agents dont :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• <b>{pct_a_text_red}</b> de catégorie A<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• <b>{pct_b_text_red}</b> de catégorie B<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• <b>{pct_c_text_red}</b> de catégorie C<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• <b>{pct_d_text_red}</b> de catégorie D<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;• <b>{pct_non_func_text_red}</b> de non fonctionnaires<br/><br/>
 
-Comparativement à l'effectif au 31 décembre 2023 (<b>{total_debut_text}</b> agents), le programme a connu une augmentation de son effectif de <b>{evolution_text}</b> agents.<br/><br/>
+Comparativement à l'effectif au {date_debut_formatted_red} (<b>{total_debut_text_red}</b> agents), le programme a connu {evolution_phrase}.<br/><br/>
 
-Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {entrees_b_text} de la catégorie B, {entrees_d_text} de la catégorie D, contre la sortie de {sorties_a_text} de la catégorie A, {sorties_c_text} de la catégorie C et {sorties_non_func_text} non fonctionnaires."""
+Cette évolution est due à {evolution_detail_phrase}."""
         
         story.append(Paragraph(texte_analyse_html, body_style))
+        
+        # Ajouter les commentaires personnalisés si disponibles (ou des points si vide)
+        effectifs_commentaires = data.get("effectifs_commentaires")
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        if effectifs_commentaires and effectifs_commentaires.strip():
+            story.append(Spacer(1, 0.3 * cm))
+            # Échapper les caractères spéciaux HTML
+            commentaires_escaped = effectifs_commentaires.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Convertir les retours à la ligne en <br/>
+            commentaires_html = commentaires_escaped.replace("\n", "<br/>")
+            # En mode final, texte en noir ; en mode brouillon, texte en rouge
+            if mode == "final":
+                story.append(Paragraph(commentaires_html, body_style))
+            else:
+                commentaires_html_red = f"<font color=\"#FF0000\">{commentaires_html}</font>"
+                story.append(Paragraph(commentaires_html_red, body_style))
+        else:
+            story.append(Spacer(1, 0.3 * cm))
+            # Afficher des points si aucun commentaire
+            story.append(Paragraph("<font color=\"#FF0000\">Commentaire :..........................</font>", body_style))
         
         # Créer le SimpleDocTemplate
         logger.info(f"🔢 NUMÉROTATION - AVANT SimpleDocTemplate pour effectifs: start_page={start_page}")
@@ -4523,21 +5380,26 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
         effectifs_debut: dict,
         effectifs_fin: dict,
         categories_order: list,
-        category_labels: dict
+        category_labels: dict,
+        date_debut,
+        date_fin
     ) -> BytesIO | None:
         """
         Crée un graphique en barres groupées pour l'évolution des effectifs entre deux dates.
         
         Args:
-            effectifs_debut: Dictionnaire des effectifs au 31/12/2023 par catégorie
-            effectifs_fin: Dictionnaire des effectifs au 30/06/2024 par catégorie
+            effectifs_debut: Dictionnaire des effectifs à la date de début par catégorie
+            effectifs_fin: Dictionnaire des effectifs à la date de fin par catégorie
             categories_order: Ordre des catégories à afficher
             category_labels: Libellés des catégories
+            date_debut: Date de début pour le calcul des effectifs (objet date)
+            date_fin: Date de fin pour le calcul des effectifs (objet date)
         
         Returns:
             BytesIO contenant l'image PNG du graphique, ou None en cas d'erreur
         """
         try:
+            from datetime import date
             import matplotlib
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
@@ -4560,13 +5422,18 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             
             # Position des barres
             x = np.arange(len(categories))
-            width = 0.35  # Largeur des barres
+            width = 0.3  # Largeur des barres (réduite pour créer un espace)
+            gap = 0.05  # Espace entre les deux barres
             
-            # Créer les barres avec les couleurs de l'image (bleu et jaune)
-            bars1 = ax.bar(x - width/2, effectifs_2023, width, 
-                          label="Situation au 31/12/2023", color='#5b9bd5')  # Bleu
-            bars2 = ax.bar(x + width/2, effectifs_2024, width, 
-                          label="Situation au 30/06/2024", color='#ffc000')  # Jaune
+            # Formater les dates pour les labels
+            date_debut_str = date_debut.strftime("%d/%m/%Y")
+            date_fin_str = date_fin.strftime("%d/%m/%Y")
+            
+            # Créer les barres avec les couleurs de l'image (bleu et jaune) avec espace entre elles
+            bars1 = ax.bar(x - width/2 - gap/2, effectifs_2023, width, 
+                          label=f"Situation au {date_debut_str}", color='#5b9bd5')  # Bleu
+            bars2 = ax.bar(x + width/2 + gap/2, effectifs_2024, width, 
+                          label=f"Situation au {date_fin_str}", color='#ffc000')  # Jaune
             
             # Ajouter les valeurs sur les barres
             for bars in [bars1, bars2]:
@@ -4575,23 +5442,26 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
                     if height > 0:  # Ne pas afficher 0
                         ax.text(bar.get_x() + bar.get_width()/2., height,
                                f'{int(height)}',
-                               ha='center', va='bottom', fontsize=18, fontweight='bold')
+                               ha='center', va='bottom', fontsize=18)
             
             # Configuration de l'axe Y
             max_effectif = max(max(effectifs_2023, default=0), max(effectifs_2024, default=0))
             y_max = ((max_effectif // 10) + 1) * 10 + 10  # Arrondir à la dizaine supérieure + 10 points
-            ax.set_ylabel('Effectif', fontsize=20, fontweight='bold')
             ax.set_ylim(0, y_max)
             ax.set_yticks(range(0, y_max + 1, 10))
             ax.tick_params(axis='y', labelsize=16)
             
-            # Configuration de l'axe X
-            ax.set_xlabel('Catégories', fontsize=20, fontweight='bold')
+            # Configuration de l'axe X avec plus d'espace pour éviter que la légende cache les labels
             ax.set_xticks(x)
-            ax.set_xticklabels(categories, fontsize=14, fontweight='bold', rotation=0, ha='center')
+            ax.set_xticklabels(categories, fontsize=14, rotation=0, ha='center')
+            ax.tick_params(axis='x', pad=20)  # Augmenter l'espace entre les labels X et l'axe
             
-            # Légende
-            ax.legend(loc='upper right', fontsize=16, frameon=True)
+            # Titre du graphique (dates dynamiques)
+            titre = f'EVOLUTION DES EFFECTIFS ENTRE LE {date_debut_str} ET LE {date_fin_str}'
+            ax.set_title(titre, fontsize=22, pad=20)
+            
+            # Légende en bas sur une seule ligne (bien plus basse pour ne pas cacher les labels X)
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.6), ncol=2, fontsize=16, frameon=True)
             
             # Grille horizontale visible
             ax.grid(axis='y', linestyle='-', alpha=0.5, color='gray', linewidth=1)
@@ -4600,8 +5470,10 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             ax.set_facecolor('white')
             fig.patch.set_facecolor('white')
             
-            # Ajuster la mise en page
-            plt.tight_layout()
+            # Ajuster la mise en page pour inclure la légende en bas avec beaucoup d'espace
+            plt.tight_layout(rect=[0, 0.35, 1, 0.95])  # Réserver beaucoup d'espace en bas pour la légende
+            # Ajustement supplémentaire pour garantir l'espace
+            plt.subplots_adjust(bottom=0.50)
             
             # Sauvegarder avec fond blanc
             buffer = BytesIO()
@@ -4738,9 +5610,8 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
         else:
             date_periode_text = f"30 juin {annee}"
         
-        # Récupérer les objectifs spécifiques du programme
-        # Les objectifs spécifiques sont liés aux objectifs globaux via objectif_global_id
-        # Les objectifs globaux sont liés aux programmes via programme_id
+        # Récupérer les données de performance via ReportDataLoader
+        from app.services.report_data_loader import ReportDataLoader
         
         programme_id = None
         if programme:
@@ -4760,61 +5631,104 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             else:
                 logger.warning(f"⚠️ Programme '{programme}' non trouvé dans la base de données")
         
-        # Récupérer les objectifs globaux liés au programme (s'ils ont un programme_id)
-        objectifs_globaux_ids = []
+        # Charger les données de performance via ReportDataLoader
+        performance_data = {}
+        objectifs_avec_indicateurs = []
+        
         if programme_id:
+            try:
+                logger.info(f"📊 Chargement des données de performance via ReportDataLoader pour le programme ID: {programme_id}, année: {annee}")
+                performance_data = ReportDataLoader.load_data_performance(
+                    session,
+                    annee,
+                    programme_id=programme_id
+                )
+                
+                # Extraire les objectifs avec indicateurs depuis les données chargées
+                # ReportDataLoader filtre déjà par année et actif, donc utiliser directement les données
+                objectifs_avec_indicateurs_raw = performance_data.get("objectifs_avec_indicateurs", [])
+                
+                # S'assurer que la structure est correcte (liste de dict avec "objectif" et "indicateurs")
+                objectifs_avec_indicateurs = []
+                for obj_data in objectifs_avec_indicateurs_raw:
+                    # Vérifier la structure
+                    if isinstance(obj_data, dict):
+                        objectif = obj_data.get("objectif")
+                        indicateurs = obj_data.get("indicateurs", [])
+                        # S'assurer que indicateurs est une liste
+                        if not isinstance(indicateurs, list):
+                            indicateurs = list(indicateurs) if indicateurs else []
+                        
+                        if objectif and indicateurs:
+                            logger.info(f"📊 Objectif '{objectif.code if hasattr(objectif, 'code') else 'N/A'} {objectif.titre if hasattr(objectif, 'titre') else 'N/A'}': {len(indicateurs)} indicateurs")
+                            objectifs_avec_indicateurs.append({
+                                "objectif": objectif,
+                                "indicateurs": indicateurs
+                            })
+                        else:
+                            logger.warning(f"⚠️ Objectif ou indicateurs manquants dans obj_data: objectif={objectif is not None}, indicateurs={len(indicateurs) if isinstance(indicateurs, list) else 'N/A'}")
+                    else:
+                        logger.warning(f"⚠️ obj_data n'est pas un dictionnaire: {type(obj_data)}")
+                
+                logger.info(f"📊 {len(objectifs_avec_indicateurs)} objectifs avec indicateurs trouvés au total via ReportDataLoader (après validation)")
+            except Exception as e:
+                logger.error(f"❌ Erreur lors du chargement des données de performance via ReportDataLoader: {e}", exc_info=True)
+                # Fallback sur l'ancienne méthode si ReportDataLoader échoue
+                logger.warning("⚠️ Fallback sur l'ancienne méthode de chargement")
+                objectifs_avec_indicateurs = []
+        
+        # Si ReportDataLoader n'a pas fonctionné ou si programme_id est None, utiliser l'ancienne méthode
+        if not objectifs_avec_indicateurs and programme_id:
+            logger.warning("⚠️ Aucune donnée via ReportDataLoader, utilisation de l'ancienne méthode")
+            # Récupérer les objectifs globaux liés au programme (s'ils ont un programme_id)
+            objectifs_globaux_ids = []
             query_og = select(ObjectifPerformance.id).where(
                 and_(
                     ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL.value,
                     ObjectifPerformance.programme_id == programme_id
                 )
             )
-            # La requête select(ObjectifPerformance.id) retourne directement des entiers
             objectifs_globaux_ids = list(session.exec(query_og).all())
             logger.info(f"📊 {len(objectifs_globaux_ids)} objectifs globaux trouvés pour le programme {programme} (ID: {programme_id})")
-        
-        # Récupérer les objectifs spécifiques liés à ces objectifs globaux
-        query_objectifs = select(ObjectifPerformance).where(
-            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE.value
-        )
-        
-        if objectifs_globaux_ids:
-            # Filtrer par objectifs globaux du programme
-            query_objectifs = query_objectifs.where(
-                ObjectifPerformance.objectif_global_id.in_(objectifs_globaux_ids)
+            
+            # Récupérer les objectifs spécifiques liés à ces objectifs globaux
+            query_objectifs = select(ObjectifPerformance).where(
+                ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE.value
             )
-            logger.info(f"📊 Filtrage des objectifs spécifiques par {len(objectifs_globaux_ids)} objectifs globaux")
-        else:
-            # Si pas d'objectifs globaux trouvés, récupérer tous les objectifs spécifiques
-            # (en cas de données mal structurées ou pour compatibilité)
-            logger.warning(f"⚠️ Aucun objectif global trouvé pour le programme '{programme}'. Récupération de tous les objectifs spécifiques.")
-        
-        objectifs = session.exec(query_objectifs.order_by(ObjectifPerformance.code, ObjectifPerformance.id)).all()
-        logger.info(f"📊 {len(objectifs)} objectifs spécifiques trouvés pour le programme {programme}")
-        
-        # Récupérer les indicateurs pour chaque objectif (filtrés par année)
-        objectifs_avec_indicateurs = []
-        for objectif in objectifs:
-            query_indicateurs = select(IndicateurPerformance).where(
-                and_(
-                    IndicateurPerformance.objectif_id == objectif.id,
-                    IndicateurPerformance.actif == True,
-                    IndicateurPerformance.annee == annee  # Filtrer par année
+            
+            if objectifs_globaux_ids:
+                query_objectifs = query_objectifs.where(
+                    ObjectifPerformance.objectif_global_id.in_(objectifs_globaux_ids)
                 )
-            ).order_by(IndicateurPerformance.id)
-            
-            indicateurs = session.exec(query_indicateurs).all()
-            
-            if indicateurs:  # Ne garder que les objectifs avec des indicateurs
-                logger.info(f"📊 Objectif '{objectif.code} {objectif.titre}': {len(indicateurs)} indicateurs pour l'année {annee}")
-                objectifs_avec_indicateurs.append({
-                    "objectif": objectif,
-                    "indicateurs": indicateurs
-                })
+                logger.info(f"📊 Filtrage des objectifs spécifiques par {len(objectifs_globaux_ids)} objectifs globaux")
             else:
-                logger.debug(f"📊 Objectif '{objectif.code} {objectif.titre}': aucun indicateur actif pour l'année {annee}")
-        
-        logger.info(f"📊 {len(objectifs_avec_indicateurs)} objectifs avec indicateurs trouvés au total")
+                logger.warning(f"⚠️ Aucun objectif global trouvé pour le programme '{programme}'. Récupération de tous les objectifs spécifiques.")
+            
+            objectifs = session.exec(query_objectifs.order_by(ObjectifPerformance.code, ObjectifPerformance.id)).all()
+            logger.info(f"📊 {len(objectifs)} objectifs spécifiques trouvés pour le programme {programme}")
+            
+            # Récupérer les indicateurs pour chaque objectif (filtrés par année)
+            for objectif in objectifs:
+                query_indicateurs = select(IndicateurPerformance).where(
+                    and_(
+                        IndicateurPerformance.objectif_id == objectif.id,
+                        IndicateurPerformance.actif == True,
+                        IndicateurPerformance.annee == annee
+                    )
+                ).order_by(IndicateurPerformance.id)
+                
+                indicateurs = session.exec(query_indicateurs).all()
+                
+                if indicateurs:
+                    logger.info(f"📊 Objectif '{objectif.code} {objectif.titre}': {len(indicateurs)} indicateurs pour l'année {annee}")
+                    objectifs_avec_indicateurs.append({
+                        "objectif": objectif,
+                        "indicateurs": indicateurs
+                    })
+                else:
+                    logger.debug(f"📊 Objectif '{objectif.code} {objectif.titre}': aucun indicateur actif pour l'année {annee}")
+            
+            logger.info(f"📊 {len(objectifs_avec_indicateurs)} objectifs avec indicateurs trouvés au total (méthode fallback)")
         
         # Vérifier si des données sont disponibles
         has_data = len(objectifs_avec_indicateurs) > 0
@@ -4914,8 +5828,37 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
                 text = " "  # Les cellules vides doivent avoir au moins un espace pour être un Paragraph valide
             if not text and is_header:
                 text = " "  # Les en-têtes ne doivent pas être vides
-            # Échapper les caractères spéciaux pour XML/HTML
-            text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            
+            # Échapper les caractères spéciaux pour XML/HTML, mais préserver les balises HTML valides
+            # D'abord échapper les & qui ne font pas partie d'une entité HTML
+            text = text.replace("&", "&amp;")
+            # Puis restaurer les entités HTML valides
+            text = text.replace("&amp;amp;", "&amp;")
+            text = text.replace("&amp;lt;", "&lt;")
+            text = text.replace("&amp;gt;", "&gt;")
+            text = text.replace("&amp;quot;", "&quot;")
+            text = text.replace("&amp;#", "&#")
+            # Échapper seulement les < et > qui ne font pas partie de balises HTML valides
+            # Pour préserver les balises <font>, on doit conserver les attributs
+            import re
+            # Stocker les balises <font> avec leurs attributs dans un dictionnaire
+            font_tags = {}
+            def replace_font_open(match):
+                tag_id = f"___FONT_OPEN_{len(font_tags)}___"
+                font_tags[tag_id] = match.group(0)  # Conserver la balise complète avec attributs
+                return tag_id
+            def replace_font_close(match):
+                return "___FONT_CLOSE___"
+            
+            # Protéger les balises <font> et </font> avec leurs attributs
+            text = re.sub(r'<font[^>]*>', replace_font_open, text)
+            text = re.sub(r'</font>', replace_font_close, text)
+            # Échapper les autres < et >
+            text = text.replace("<", "&lt;").replace(">", "&gt;")
+            # Restaurer les balises <font> complètes (avec attributs) et </font>
+            for tag_id, original_tag in font_tags.items():
+                text = text.replace(tag_id, original_tag)
+            text = text.replace("___FONT_CLOSE___", "</font>")
             # ReportLab gère automatiquement le wrapping
             
             if is_header:
@@ -4936,11 +5879,24 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             
             return Paragraph(text, style)
         
+        # Fonction helper pour vérifier le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        placeholder = "" if is_final else "............"
+        
+        # Fonction helper pour formater le texte selon le mode
+        def format_text_for_mode(text):
+            """Formate le texte en rouge (brouillon) ou noir (final)"""
+            if is_final:
+                return str(text)
+            else:
+                return f'<font color="#FF0000">{text}</font>'
+        
         # Fonction pour formater les valeurs
         def format_value(value):
-            """Retourne la valeur formatée ou '............' si non disponible"""
+            """Retourne la valeur formatée ou '............' (brouillon) ou '' (final) si non disponible"""
             if not has_data or value is None:
-                return "............"
+                return placeholder
             if isinstance(value, Decimal):
                 if value == 0:
                     return "0"
@@ -4951,9 +5907,9 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             return str(value)
         
         def format_percentage_value(value):
-            """Retourne le pourcentage formaté ou '............' si non disponible"""
+            """Retourne le pourcentage formaté ou '............' (brouillon) ou '' (final) si non disponible"""
             if not has_data or value is None:
-                return "............"
+                return placeholder
             if isinstance(value, Decimal):
                 if value == 0:
                     return "0"
@@ -4970,16 +5926,29 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             available_width * 0.18,  # Observations
         ]
         
+        # Fonction helper pour vérifier le mode
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        is_final = mode == "final"
+        
+        # Fonction helper pour formater le texte selon le mode
+        def format_text_for_mode(text):
+            """Formate le texte en rouge (brouillon) ou noir (final)"""
+            if is_final:
+                return str(text)
+            else:
+                return f'<font color="#FF0000">{text}</font>'
+        
         # Construire les données du tableau
         table_data = []
         
         # Ligne d'en-tête
+        date_periode_text_red = format_text_for_mode(date_periode_text)
         table_data.append([
             create_para_table5("Indicateurs de performance", is_header=True, column_index=0),
             create_para_table5("Unité", is_header=True, column_index=1),
             create_para_table5("Réalisation 2022", is_header=True, column_index=2),
             create_para_table5("Cible", is_header=True, column_index=3),
-            create_para_table5(f"Niveau de réalisation au {date_periode_text}", is_header=True, column_index=4),
+            create_para_table5(f"Niveau de réalisation au {date_periode_text_red}", is_header=True, column_index=4),
             create_para_table5("Observations", is_header=True, column_index=5),
         ])
         
@@ -4996,25 +5965,40 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
                 return None
         
         # Parcourir les objectifs et leurs indicateurs
+        logger.info(f"🔍 DÉBUT construction tableau: {len(objectifs_avec_indicateurs)} objectifs à traiter")
         for obj_idx, obj_data in enumerate(objectifs_avec_indicateurs, 1):
-            objectif = obj_data["objectif"]
-            indicateurs = obj_data["indicateurs"]
+            objectif = obj_data.get("objectif") if isinstance(obj_data, dict) else obj_data["objectif"]
+            indicateurs = obj_data.get("indicateurs", []) if isinstance(obj_data, dict) else obj_data["indicateurs"]
+            
+            # S'assurer que indicateurs est itérable
+            if not isinstance(indicateurs, list):
+                indicateurs = list(indicateurs) if indicateurs else []
+            
+            logger.info(f"🔍 Objectif {obj_idx}: code={objectif.code if hasattr(objectif, 'code') else 'N/A'}, titre={objectif.titre[:50] if hasattr(objectif, 'titre') and objectif.titre else 'N/A'}, {len(indicateurs)} indicateurs")
             
             # Ligne d'en-tête de groupe (objectif) - Format : "Objectif spécifique 1 : {titre}"
             objectif_numero = obj_idx
-            objectif_titre = objectif.titre if objectif.titre else ""
-            objectif_text = f"Objectif spécifique {objectif_numero} : {objectif_titre}"
+            objectif_titre = objectif.titre if hasattr(objectif, 'titre') and objectif.titre else ""
+            objectif_titre_red = format_text_for_mode(objectif_titre)
+            objectif_text = f"Objectif spécifique {objectif_numero} : {objectif_titre_red}"
+            
+            logger.info(f"🔍 Ajout ligne objectif {obj_idx}: '{objectif_text[:50]}'")
+            # Pour les lignes d'objectifs fusionnées, seule la première colonne doit avoir du contenu
+            # Les autres colonnes seront fusionnées avec SPAN, donc on utilise des chaînes vides
+            # (comme dans le tableau des activités) qui seront converties en Paragraphs plus tard
             table_data.append([
                 create_para_table5(objectif_text, column_index=0, is_objectif_row=True),
-                "",  # Utiliser chaînes vides pour les colonnes vides (comme dans investissements)
-                "",
-                "",
-                "",
-                "",
+                "",  # Chaîne vide pour fusion (sera convertie plus tard)
+                "",  # Chaîne vide pour fusion
+                "",  # Chaîne vide pour fusion
+                "",  # Chaîne vide pour fusion
+                "",  # Chaîne vide pour fusion
             ])
             
             # Lignes d'indicateurs
-            for indicateur in indicateurs:
+            logger.info(f"🔍 Ajout de {len(indicateurs)} lignes d'indicateurs pour objectif {obj_idx}")
+            for indicateur_idx, indicateur in enumerate(indicateurs, 1):
+                logger.info(f"🔍   Indicateur {indicateur_idx}/{len(indicateurs)}: {indicateur.nom[:50] if hasattr(indicateur, 'nom') and indicateur.nom else 'N/A'}")
                 # Récupérer la réalisation 2022 (année N-2)
                 annee_2022 = annee - 2
                 realisation_2022 = None
@@ -5036,7 +6020,7 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
                 # Déterminer les observations
                 cible_atteinte = is_cible_atteinte(valeur_actuelle, valeur_cible)
                 if cible_atteinte is None:
-                    observations_text = "............"
+                    observations_text = placeholder
                 elif cible_atteinte:
                     observations_text = "Cible atteinte"
                 else:
@@ -5053,15 +6037,26 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
                     cible_text = format_value(valeur_cible)
                     niveau_text = format_value(valeur_actuelle)
                 
+                # Mettre en rouge tous les éléments dynamiques (ou noir en mode final)
+                indicateur_nom_red = format_text_for_mode(indicateur.nom)
+                unite_red = format_text_for_mode(unite or placeholder)
+                realisation_2022_text_red = format_text_for_mode(realisation_2022_text)
+                cible_text_red = format_text_for_mode(cible_text)
+                niveau_text_red = format_text_for_mode(niveau_text)
+                observations_text_red = format_text_for_mode(observations_text)
+                
                 # Ligne d'indicateur
+                logger.info(f"🔍     Ajout ligne indicateur: nom='{indicateur.nom[:30] if hasattr(indicateur, 'nom') else 'N/A'}', unite='{unite}', realisation_2022='{realisation_2022_text[:20]}', cible='{cible_text[:20]}', niveau='{niveau_text[:20]}', observations='{observations_text[:20]}'")
                 table_data.append([
-                    create_para_table5(indicateur.nom, column_index=0),
-                    create_para_table5(unite or "............", column_index=1),
-                    create_para_table5(realisation_2022_text, column_index=2),
-                    create_para_table5(cible_text, column_index=3),
-                    create_para_table5(niveau_text, column_index=4),
-                    create_para_table5(observations_text, column_index=5),
+                    create_para_table5(indicateur_nom_red, column_index=0),
+                    create_para_table5(unite_red, column_index=1),
+                    create_para_table5(realisation_2022_text_red, column_index=2),
+                    create_para_table5(cible_text_red, column_index=3),
+                    create_para_table5(niveau_text_red, column_index=4),
+                    create_para_table5(observations_text_red, column_index=5),
                 ])
+        
+        logger.info(f"🔍 FIN construction tableau: {len(table_data)} lignes au total (en-tête + objectifs + indicateurs)")
         
         # Si aucune donnée trouvée
         if not has_data:
@@ -5106,14 +6101,35 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             col_widths = [w * scale_factor for w in col_widths]
             logger.info(f"📊 Largeurs ajustées: {[f'{w:.2f}' for w in col_widths]}, Somme: {sum(col_widths):.2f}")
         
-        # Convertir toutes les chaînes vides en Paragraphs vides pour LongTable
+        # Convertir toutes les chaînes vides en Paragraphs pour LongTable
         # LongTable préfère que toutes les cellules soient des Flowables
+        # Même pour les colonnes fusionnées, on doit convertir en Paragraph (comme dans le tableau des activités)
+        logger.info(f"🔄 Conversion des chaînes vides en Paragraphs (comme dans le tableau des activités)")
+        converted_count = 0
         for row_idx, row in enumerate(table_data):
             for col_idx, cell in enumerate(row):
                 if isinstance(cell, str) and not cell:
                     # Convertir les chaînes vides en Paragraphs avec un espace
                     # Utiliser le style approprié selon la colonne
                     table_data[row_idx][col_idx] = create_para_table5(" ", column_index=col_idx)
+                    converted_count += 1
+        logger.info(f"✅ Conversion terminée - {converted_count} cellules converties, {len(table_data)} lignes totales")
+        logger.info(f"📊 Structure: 1 en-tête + {len(objectifs_avec_indicateurs)} objectifs + leurs indicateurs")
+        
+        # Vérification finale de la structure du tableau avant création
+        logger.info(f"📊 VÉRIFICATION FINALE - Structure du tableau avant création:")
+        logger.info(f"   - Total lignes: {len(table_data)}")
+        logger.info(f"   - Ligne 0 (en-tête): {len(table_data[0]) if table_data else 0} colonnes")
+        if len(table_data) > 1:
+            logger.info(f"   - Ligne 1 (première ligne de données): {len(table_data[1]) if len(table_data) > 1 else 0} colonnes")
+            logger.info(f"   - Type ligne 1, colonne 0: {type(table_data[1][0]) if len(table_data) > 1 and len(table_data[1]) > 0 else 'N/A'}")
+        # Compter les lignes d'objectifs et d'indicateurs
+        expected_rows = 1  # En-tête
+        for obj_data in objectifs_avec_indicateurs:
+            expected_rows += 1  # Ligne d'objectif
+            expected_rows += len(obj_data.get("indicateurs", []))  # Lignes d'indicateurs
+        logger.info(f"   - Lignes attendues: {expected_rows} (1 en-tête + objectifs + indicateurs)")
+        logger.info(f"   - Lignes réelles: {len(table_data)}")
         
         # Créer le tableau avec LongTable
         try:
@@ -5164,26 +6180,32 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
         
         # Ajouter les styles pour les lignes d'en-tête de groupe (objectifs)
         current_row = 1  # Commence après l'en-tête
-        for obj_data in objectifs_avec_indicateurs:
+        logger.info(f"🎨 Application des styles: {len(objectifs_avec_indicateurs)} objectifs à styliser")
+        for obj_idx, obj_data in enumerate(objectifs_avec_indicateurs, 1):
             indicateurs = obj_data["indicateurs"]
+            num_indicateurs = len(indicateurs)
+            logger.info(f"🎨 Objectif {obj_idx}: ligne {current_row}, {num_indicateurs} indicateurs à partir de la ligne {current_row + 1}")
+            
             # Ligne d'en-tête de groupe (objectif) - Fusionner toutes les colonnes
             table_style.append(("SPAN", (0, current_row), (-1, current_row)))  # Fusionner toutes les colonnes
             table_style.append(("BACKGROUND", (0, current_row), (-1, current_row), colors.HexColor("#D3D3D3")))  # Fond gris foncé pour toute la ligne
-            table_style.append(("FONTNAME", (0, current_row), (0, current_row), "Helvetica-Bold"))  # Police en gras
-            table_style.append(("FONTSIZE", (0, current_row), (0, current_row), 11))  # Uniformisé avec le tableau des activités
+            table_style.append(("FONTNAME", (0, current_row), (-1, current_row), "Helvetica-Bold"))  # Police en gras pour toute la ligne fusionnée
+            table_style.append(("FONTSIZE", (0, current_row), (-1, current_row), 11))  # Taille uniformisée pour toute la ligne fusionnée
             table_style.append(("ALIGN", (0, current_row), (-1, current_row), "LEFT"))  # Aligner toute la ligne fusionnée à gauche
             current_row += 1
             
             # Lignes d'indicateurs - S'assurer qu'elles ne sont pas en gras et appliquer les alignements
-            if len(indicateurs) > 0:
+            if num_indicateurs > 0:
+                logger.info(f"🎨   Styles pour indicateurs: lignes {current_row} à {current_row + num_indicateurs - 1}")
                 # Appliquer explicitement la police normale pour les lignes d'indicateurs
-                table_style.append(("FONTNAME", (0, current_row), (-1, current_row + len(indicateurs) - 1), "Helvetica"))
-                table_style.append(("FONTSIZE", (0, current_row), (-1, current_row + len(indicateurs) - 1), 10))  # Uniformisé avec le tableau des activités
+                table_style.append(("FONTNAME", (0, current_row), (-1, current_row + num_indicateurs - 1), "Helvetica"))
+                table_style.append(("FONTSIZE", (0, current_row), (-1, current_row + num_indicateurs - 1), 10))  # Uniformisé avec le tableau des activités
                 # Réappliquer les alignements pour les lignes d'indicateurs (après les styles de police)
-                table_style.append(("ALIGN", (0, current_row), (0, current_row + len(indicateurs) - 1), "LEFT"))  # Première colonne à gauche
-                table_style.append(("ALIGN", (1, current_row), (4, current_row + len(indicateurs) - 1), "CENTER"))  # Colonnes 1-4 centrées
-                table_style.append(("ALIGN", (5, current_row), (5, current_row + len(indicateurs) - 1), "LEFT"))  # Dernière colonne à gauche
-            current_row += len(indicateurs)
+                table_style.append(("ALIGN", (0, current_row), (0, current_row + num_indicateurs - 1), "LEFT"))  # Première colonne à gauche
+                table_style.append(("ALIGN", (1, current_row), (4, current_row + num_indicateurs - 1), "CENTER"))  # Colonnes 1-4 centrées
+                table_style.append(("ALIGN", (5, current_row), (5, current_row + num_indicateurs - 1), "LEFT"))  # Dernière colonne à gauche
+            current_row += num_indicateurs
+        logger.info(f"🎨 Styles appliqués: {len(table_style)} règles, dernière ligne stylisée: {current_row - 1}")
         
         # Si aucune donnée, fusionner toutes les colonnes du message
         if not has_data:
@@ -5200,13 +6222,27 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
             analyse_paragraphs.append(Paragraph("<b>L'analyse des résultats se présente comme suit:</b>", body_style))
             analyse_paragraphs.append(Spacer(1, 0.3 * cm))
             
+            # Fonction helper pour vérifier le mode (définie une fois avant la boucle)
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+            is_final = mode == "final"
+            placeholder_analyse = "" if is_final else "............"
+            
+            # Fonction helper pour formater le texte selon le mode
+            def format_text_for_mode(text):
+                """Formate le texte en rouge (brouillon) ou noir (final)"""
+                if is_final:
+                    return str(text)
+                else:
+                    return f'<font color="#FF0000">{text}</font>'
+            
             for obj_idx, obj_data in enumerate(objectifs_avec_indicateurs, 1):
                 objectif = obj_data["objectif"]
                 indicateurs = obj_data["indicateurs"]
                 
                 objectif_numero = obj_idx
                 objectif_titre = objectif.titre if objectif.titre else ""
-                objectif_text = f"Objectif spécifique {objectif_numero} : {objectif_titre}"
+                objectif_titre_red = format_text_for_mode(objectif_titre)
+                objectif_text = f"Objectif spécifique {objectif_numero} : {objectif_titre_red}"
                 
                 # Paragraphe pour l'objectif (avec style spécial, pas besoin de <b> car déjà en gras dans le style)
                 analyse_paragraphs.append(Paragraph(objectif_text, objectif_style))
@@ -5221,32 +6257,51 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
                         IndicateurPerformance.annee == annee_2022
                     )
                     ind_2022 = session.exec(query_ind_2022).first()
-                    situation_ref = format_percentage_value(ind_2022.valeur_actuelle) if ind_2022 and ind_2022.valeur_actuelle else "............"
+                    situation_ref = format_percentage_value(ind_2022.valeur_actuelle) if ind_2022 and ind_2022.valeur_actuelle else placeholder_analyse
+                    situation_ref_red = format_text_for_mode(situation_ref)
                     
                     # Formater les valeurs cibles futures
-                    valeurs_cibles_text = "............"
                     if indicateur.valeurs_cibles_futures:
-                        valeurs_cibles_text = indicateur.valeurs_cibles_futures
+                        valeurs_cibles_text = format_text_for_mode(indicateur.valeurs_cibles_futures)
                     elif indicateur.cible_N_plus_1 or indicateur.cible_N_plus_2:
                         cibles = []
                         if indicateur.cible_N_plus_1:
-                            cibles.append(f"{format_percentage_value(indicateur.cible_N_plus_1)}% en {annee + 1}")
+                            cible_n1 = f"{format_percentage_value(indicateur.cible_N_plus_1)}% en {annee + 1}"
+                            cibles.append(format_text_for_mode(cible_n1))
                         if indicateur.cible_N_plus_2:
-                            cibles.append(f"{format_percentage_value(indicateur.cible_N_plus_2)}% en {annee + 2}")
-                        valeurs_cibles_text = "; ".join(cibles) if cibles else "............"
+                            cible_n2 = f"{format_percentage_value(indicateur.cible_N_plus_2)}% en {annee + 2}"
+                            cibles.append(format_text_for_mode(cible_n2))
+                        valeurs_cibles_text = "; ".join(cibles) if cibles else format_text_for_mode(placeholder_analyse)
+                    else:
+                        valeurs_cibles_text = format_text_for_mode(placeholder_analyse)
                     
                     # Formater la valeur actuelle pour l'analyse
-                    valeur_actuelle_text = format_percentage_value(indicateur.valeur_actuelle) if indicateur.valeur_actuelle else "............"
+                    valeur_actuelle_text = format_percentage_value(indicateur.valeur_actuelle) if indicateur.valeur_actuelle else placeholder_analyse
+                    
+                    # Mettre en rouge tous les éléments dynamiques (ou noir en mode final)
+                    indicateur_nom_red = format_text_for_mode(indicateur.nom)
+                    source_donnees_red = format_text_for_mode(indicateur.source_donnees or placeholder_analyse)
+                    unite_text = indicateur.unite or ''
+                    unite_red = format_text_for_mode(unite_text) if unite_text else ""
+                    annee_2022_red = format_text_for_mode(annee_2022)
+                    formule_calcul_red = format_text_for_mode(indicateur.formule_calcul or indicateur.methode or placeholder_analyse)
+                    commentaires_red = format_text_for_mode(indicateur.commentaires or placeholder_analyse)
+                    
+                    # Construire la ligne de situation de référence avec gestion de l'unité vide
+                    if unite_text:
+                        situation_ref_line = f"{situation_ref_red}{unite_red} en {annee_2022_red}"
+                    else:
+                        situation_ref_line = f"{situation_ref_red} en {annee_2022_red}"
                     
                     # Paragraphe pour chaque indicateur (avec retrait)
                     # Ajouter une légère indentation supplémentaire pour les lignes détaillées
                     indicateur_html = (
-                        f"<b>- Indicateur {idx}: {indicateur.nom}</b><br/>"
-                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Source de données</b>: {indicateur.source_donnees or '............'}<br/>"
-                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Situation de référence</b>: {situation_ref}{indicateur.unite or ''} en {annee_2022}<br/>"
-                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Mode de calcul</b>: {indicateur.formule_calcul or indicateur.methode or '............'}<br/>"
+                        f"<b>- Indicateur {idx}: {indicateur_nom_red}</b><br/>"
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Source de données</b>: {source_donnees_red}<br/>"
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Situation de référence</b>: {situation_ref_line}<br/>"
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Mode de calcul</b>: {formule_calcul_red}<br/>"
                         f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Valeurs cibles</b>: {valeurs_cibles_text}<br/>"
-                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Analyse de l'indicateur</b>: {indicateur.commentaires or '............'}"
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;<b>. Analyse de l'indicateur</b>: {commentaires_red}"
                     )
                     analyse_paragraphs.append(Paragraph(indicateur_html, indicateur_style))
                     analyse_paragraphs.append(Spacer(1, 0.15 * cm))
@@ -5334,6 +6389,26 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
                 logger.error(f"❌ Erreur lors de l'ajout de l'analyse à la story: {e}", exc_info=True)
         else:
             logger.warning(f"⚠️ Analyse non ajoutée: aucun paragraphe (has_data={has_data}, objectifs_avec_indicateurs={len(objectifs_avec_indicateurs)})")
+        
+        # Ajouter les commentaires personnalisés si disponibles (ou des points si vide)
+        performance_commentaires = data.get("performance_commentaires")
+        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+        if performance_commentaires and performance_commentaires.strip():
+            story.append(Spacer(1, 0.3 * cm))
+            # Échapper les caractères spéciaux HTML
+            commentaires_escaped = performance_commentaires.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Convertir les retours à la ligne en <br/>
+            commentaires_html = commentaires_escaped.replace("\n", "<br/>")
+            # En mode final, texte en noir ; en mode brouillon, texte en rouge
+            if mode == "final":
+                story.append(Paragraph(commentaires_html, body_style))
+            else:
+                commentaires_html_red = f"<font color=\"#FF0000\">{commentaires_html}</font>"
+                story.append(Paragraph(commentaires_html_red, body_style))
+        else:
+            story.append(Spacer(1, 0.3 * cm))
+            # Afficher des points si aucun commentaire
+            story.append(Paragraph("<font color=\"#FF0000\">Commentaire :..........................</font>", body_style))
         
         # Créer le SimpleDocTemplate
         logger.info(f"🔢 NUMÉROTATION - AVANT SimpleDocTemplate pour performance: start_page={start_page}")
@@ -5494,28 +6569,7 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
         elif not isinstance(actions_solutions, list):
             actions_solutions = []
         
-        # Si aucune donnée n'est fournie, utiliser des données par défaut
-        if not difficultes_rencontrees and not actions_solutions:
-            difficultes_rencontrees = [
-                "la faible connaissance du nouveau cadre juridique du Portefeuille de l'Etat par certains acteurs;",
-                "l'insuffisance du dispositif de coordination des tutelles techniques et financières;",
-                "l'insuffisance de clarification des procédures de suivi et de gestion des participations indirectes de l'Etat."
-            ]
-            actions_solutions = [
-                "la vulgarisation des nouveaux textes juridiques;",
-                "le renforcement du dispositif de coordination;",
-                "la mise en place d'un système d'évaluation et de gestion des dirigeants d'entreprises publiques;",
-                "la mise en place d'un programme de formation des dirigeants;",
-                "la clarification des procédures de suivi des participations indirectes;",
-                "le renforcement des contrôles thématiques et missions d'audit;",
-                "la poursuite des études pour la stratégie 2021-2025;",
-                "la poursuite du programme de certification des administrateurs;",
-                "le renforcement de la gestion des risques budgétaires;",
-                "la limitation de l'impact des dépenses de restructuration et d'investissement;",
-                "le renforcement du cadre d'échange entre le Ministère et les parties prenantes;",
-                "la promotion d'une culture de performance et de bonne gouvernance par l'institution d'un prix annuel;",
-                "la mise en place d'une plateforme de dématérialisation des échanges."
-            ]
+        # Ne plus utiliser de données par défaut - afficher des points si aucune donnée n'est fournie
         
         # Construire la story
         story = []
@@ -5527,36 +6581,60 @@ Cette évolution est due à l'entrée de {entrees_a_text} de la catégorie A, {e
         # ===== Sous-section 3.1. Difficultés rencontrées =====
         story.append(Paragraph("3.1. Difficultés rencontrées", subtitle_style))
         
-        # Texte d'introduction pour les difficultés
-        intro_difficultes = "Les difficultés rencontrées sont :"
+        # Texte d'introduction pour les difficultés (personnalisable)
+        intro_difficultes = data.get("difficultes_intro", "Les difficultés rencontrées sont :")
+        if not intro_difficultes or not intro_difficultes.strip():
+            intro_difficultes = "Les difficultés rencontrées sont :"
         story.append(Paragraph(intro_difficultes, body_style))
         story.append(Spacer(1, 0.2 * cm))
         
-        # Ajouter les difficultés comme liste à puces
-        for difficulte in difficultes_rencontrees:
-            # Échapper les caractères spéciaux pour HTML/XML
-            difficulte_escaped = difficulte.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            # Formater comme une liste à puce (comme dans l'introduction)
-            difficulte_html = f"&nbsp;&nbsp;&nbsp;&nbsp;• {difficulte_escaped}"
-            story.append(Paragraph(difficulte_html, list_item_style))
+        # Ajouter les difficultés comme liste à puces (puces et texte en rouge)
+        if difficultes_rencontrees:
+            for difficulte in difficultes_rencontrees:
+                # Échapper les caractères spéciaux pour HTML/XML
+                difficulte_escaped = difficulte.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                # Formater comme une liste à puce avec la puce et le texte en rouge (ou noir en mode final)
+                mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+                if mode == "final":
+                    difficulte_html = f"&nbsp;&nbsp;&nbsp;&nbsp;• {difficulte_escaped}"
+                else:
+                    difficulte_html = f"&nbsp;&nbsp;&nbsp;&nbsp;<font color=\"#FF0000\">•</font> <font color=\"#FF0000\">{difficulte_escaped}</font>"
+                story.append(Paragraph(difficulte_html, list_item_style))
+        else:
+            # En mode final, ne pas afficher le placeholder
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+            if mode != "final":
+                story.append(Paragraph("<font color=\"#FF0000\">Commentaire :..........................</font>", body_style))
         
         story.append(Spacer(1, 0.2 * cm))
         
         # ===== Sous-section 3.2. Actions mises en œuvre ou solutions envisagées =====
         story.append(Paragraph("3.2. Actions mises en œuvre ou solutions envisagées", subtitle_style))
         
-        # Texte d'introduction pour les actions/solutions
-        intro_actions = "En matière de gestion du Portefeuille de l'Etat, les actions suivantes ont été menées sous l'impulsion du Ministre en charge du Portefeuille de l'Etat :"
+        # Texte d'introduction pour les actions/solutions (personnalisable)
+        intro_actions = data.get("solutions_intro", "En matière de gestion du Portefeuille de l'Etat, les actions suivantes ont été menées sous l'impulsion du Ministre en charge du Portefeuille de l'Etat :")
+        if not intro_actions or not intro_actions.strip():
+            intro_actions = "En matière de gestion du Portefeuille de l'Etat, les actions suivantes ont été menées sous l'impulsion du Ministre en charge du Portefeuille de l'Etat :"
         story.append(Paragraph(intro_actions, body_style))
         story.append(Spacer(1, 0.2 * cm))
         
-        # Ajouter les actions/solutions comme liste à puces
-        for action in actions_solutions:
-            # Échapper les caractères spéciaux pour HTML/XML
-            action_escaped = action.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            # Formater comme une liste à puce (comme dans l'introduction)
-            action_html = f"&nbsp;&nbsp;&nbsp;&nbsp;• {action_escaped}"
-            story.append(Paragraph(action_html, list_item_style))
+        # Ajouter les actions/solutions comme liste à puces (puces et texte en rouge)
+        if actions_solutions:
+            for action in actions_solutions:
+                # Échapper les caractères spéciaux pour HTML/XML
+                action_escaped = action.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                # Formater comme une liste à puce avec la puce et le texte en rouge (ou noir en mode final)
+                mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+                if mode == "final":
+                    action_html = f"&nbsp;&nbsp;&nbsp;&nbsp;• {action_escaped}"
+                else:
+                    action_html = f"&nbsp;&nbsp;&nbsp;&nbsp;<font color=\"#FF0000\">•</font> <font color=\"#FF0000\">{action_escaped}</font>"
+                story.append(Paragraph(action_html, list_item_style))
+        else:
+            # En mode final, ne pas afficher le placeholder
+            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') and cls.data else "brouillon"
+            if mode != "final":
+                story.append(Paragraph("<font color=\"#FF0000\">Commentaire :..........................</font>", body_style))
         
         # Fonction pour dessiner le footer
         def draw_footer(page_num: int):
@@ -5798,6 +6876,59 @@ class RPROGPDFGenerator(RPROGBaseGenerator):
             BytesIO contenant le PDF généré
         """
         logger.info("📄 Début de la génération du Rapport d'Activité RPROG...")
+        
+        # Charger les données depuis RprogDataService si disponibles
+        if session:
+            try:
+                from app.services.rprog_data_service import RprogDataService
+                from app.models.personnel import Programme
+                from sqlmodel import select
+                
+                # Récupérer le programme_id depuis le nom du programme
+                programme_nom = data.get("programme")
+                annee = data.get("annee")
+                periode = data.get("periode")
+                
+                if programme_nom and annee and periode:
+                    # Chercher le programme par nom
+                    programme_query = select(Programme).where(
+                        (Programme.libelle == programme_nom) | (Programme.code == programme_nom)
+                    )
+                    programme = session.exec(programme_query).first()
+                    
+                    if programme:
+                        # Charger les données RPROG depuis la base (une seule ligne par programme)
+                        rprog_data = RprogDataService.get_rprog_data(
+                            db_session=session,
+                            programme_id=programme.id
+                        )
+                        
+                        if rprog_data:
+                            # Fusionner les données chargées avec les données fournies (les données fournies ont priorité)
+                            if rprog_data.difficultes_rencontrees:
+                                data["difficultes_rencontrees"] = rprog_data.difficultes_rencontrees
+                            if rprog_data.actions_solutions:
+                                data["actions_solutions"] = rprog_data.actions_solutions
+                            if rprog_data.difficultes_intro:
+                                data["difficultes_intro"] = rprog_data.difficultes_intro
+                            if rprog_data.solutions_intro:
+                                data["solutions_intro"] = rprog_data.solutions_intro
+                            if rprog_data.activites_commentaires:
+                                data["activites_commentaires"] = rprog_data.activites_commentaires
+                            if rprog_data.credits_commentaires:
+                                data["credits_commentaires"] = rprog_data.credits_commentaires
+                            if rprog_data.investissements_commentaires:
+                                data["investissements_commentaires"] = rprog_data.investissements_commentaires
+                            if rprog_data.effectifs_commentaires:
+                                data["effectifs_commentaires"] = rprog_data.effectifs_commentaires
+                            if rprog_data.performance_commentaires:
+                                data["performance_commentaires"] = rprog_data.performance_commentaires
+                            if rprog_data.conclusion_texte:
+                                data["conclusion_texte"] = rprog_data.conclusion_texte
+                            
+                            logger.info(f"✅ Données RPROG chargées depuis la base pour programme_id={programme.id}, annee={annee}, periode={periode}")
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors du chargement des données RPROG depuis la base: {e}")
         
         # Initialiser les données et la session
         # Les données doivent être définies dans la classe de base pour être accessibles

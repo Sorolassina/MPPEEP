@@ -155,6 +155,13 @@
                 Renseignez les informations ci-dessous pour générer le rapport annuel de performance (format paysage).
             </p>
             
+            <!-- Note importante sur le champ capital -->
+            <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px;">
+                <p style="margin: 0; color: #856404; font-weight: 600;">
+                    ⚠️ <strong>Information importante :</strong> Le champ <strong style="color: #dc3545;">Année</strong> est <strong>essentiel</strong> pour la récupération des données depuis la base de données. Sans cette information, les données ne pourront pas être correctement récupérées.
+                </p>
+            </div>
+            
             <!-- Système d'onglets -->
             <div class="rap-tabs">
                 <div class="rap-tabs-nav">
@@ -175,28 +182,29 @@
                 <!-- Onglet 1: Informations Générales -->
                 <div id="tab-infos-generales" class="rap-tab-content active">
                     <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
-                        <!-- Ligne 1: Année | Section | Date publication -->
+                        <!-- Ligne 1: Année (CHAMP CAPITAL avec label en rouge) | Section | Ministère -->
                         <div style="display: flex; gap: 1rem; width: 100%;">
                             <div class="form-group" style="flex: 1;">
-                                <label for="rap_annee" class="form-label">Année du rapport *</label>
-                                <input type="number" id="rap_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required>
+                                <label for="rap_annee" class="form-label" style="color: #dc3545; font-weight: 600;">Année du rapport *</label>
+                                <input type="number" id="rap_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required style="border-color: #dc3545;">
+                                <span class="performance-engagement-hint" style="color: #dc3545;">Champ capital pour la récupération des données depuis la base de données.</span>
                             </div>
                             <div class="form-group" style="flex: 1;">
                                 <label for="rap_section" class="form-label">Section *</label>
                                 <input type="text" id="rap_section" name="section" class="form-control" placeholder="SECTION 376" required>
                             </div>
                             <div class="form-group" style="flex: 1;">
-                                <label for="rap_date_publication" class="form-label">Date de publication</label>
-                                <input type="month" id="rap_date_publication" name="date_publication" class="form-control">
-                                <span class="performance-engagement-hint">Mois et année de publication (MM/AAAA).</span>
+                                <label for="rap_ministere" class="form-label">Ministère *</label>
+                                <input type="text" id="rap_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required style="width: 100%;">
                             </div>
                         </div>
                         
-                        <!-- Ligne 2: Ministère -->
+                        <!-- Ligne 2: Date publication | Autres champs -->
                         <div style="display: flex; gap: 1rem; width: 100%;">
-                            <div class="form-group" style="flex: 1; width: 100%;">
-                                <label for="rap_ministere" class="form-label">Ministère *</label>
-                                <input type="text" id="rap_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required style="width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rap_date_publication" class="form-label">Date de publication</label>
+                                <input type="month" id="rap_date_publication" name="date_publication" class="form-control">
+                                <span class="performance-engagement-hint">Mois et année de publication (MM/AAAA).</span>
                             </div>
                         </div>
                         
@@ -476,87 +484,265 @@
             <h2 class="modal-title">Générer le Rapport d'Activité RPROG</h2>
             <button type="button" class="modal-close" onclick="closeRapportRPROGModal()">&times;</button>
         </div>
-        <form id="rapportRPROGForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_rapport_activite_rprog_pdf') }}">
+        <form id="rapportRPROGForm" class="modal-body performance-engagement-body" data-endpoint="{{ url_for('performance_rapport_activite_rprog_pdf') }}" data-endpoint-word="{{ url_for('performance_rapport_activite_rprog_docx') }}">
             <p class="performance-engagement-intro">
                 Renseignez les informations ci-dessous pour générer le rapport d'activité RPROG (format paysage).
             </p>
             
-            <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
-                <!-- Ligne 1: Année | Section | Période | Date publication -->
-                <div style="display: flex; gap: 1rem; width: 100%;">
-                    <div class="form-group" style="flex: 1;">
-                        <label for="rprog_annee" class="form-label">Année du rapport *</label>
-                        <input type="number" id="rprog_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required onchange="updateRPROGTitreFromProgramme()">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="rprog_section" class="form-label">Section *</label>
-                        <input type="text" id="rprog_section" name="section" class="form-control" placeholder="SECTION 376" required>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="rprog_periode" class="form-label">Période *</label>
-                        <select id="rprog_periode" name="periode" class="form-control" required onchange="updateRPROGTitreFromProgramme()">
-                            <option value="PREMIER SEMESTRE">Premier Semestre</option>
-                            <option value="DEUXIÈME SEMESTRE">Deuxième Semestre</option>
-                            <option value="ANNÉE COMPLÈTE">Année Complète</option>
-                        </select>
-                        <span class="performance-engagement-hint">Période couverte par le rapport.</span>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="rprog_date_publication" class="form-label">Date de publication</label>
-                        <input type="month" id="rprog_date_publication" name="date_publication" class="form-control">
-                        <span class="performance-engagement-hint">Mois et année de publication (MM/AAAA).</span>
-                    </div>
+            <!-- Note importante sur les champs capitaux -->
+            <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px;">
+                <p style="margin: 0; color: #856404; font-weight: 600;">
+                    ⚠️ <strong>Information importante :</strong> Les trois champs <strong style="color: #dc3545;">Année</strong>, <strong style="color: #dc3545;">Période</strong> et <strong style="color: #dc3545;">Programme</strong> sont <strong>essentiels</strong> pour la récupération des données. Sans ces informations, les données peuvent ne pas être correctement récupérées depuis la base de données.
+                </p>
+            </div>
+            
+            <!-- Système d'onglets RPROG -->
+            <div class="rap-tabs">
+                <div class="rap-tabs-nav">
+                    <button type="button" class="rap-tab-btn active" onclick="switchRprogTab('infos-generales')" data-tab="infos-generales">
+                        <span>📄</span> Informations Générales
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRprogTab('activites')" data-tab="activites">
+                        <span>📋</span> Activités
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRprogTab('credits')" data-tab="credits">
+                        <span>💰</span> Crédits Budgétaires
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRprogTab('investissements')" data-tab="investissements">
+                        <span>🏗️</span> Investissements
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRprogTab('effectifs')" data-tab="effectifs">
+                        <span>👥</span> Effectifs
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRprogTab('performance')" data-tab="performance">
+                        <span>📊</span> Performance
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchRprogTab('difficultes')" data-tab="difficultes">
+                        <span>⚠️</span> Difficultés et Solutions
+                    </button>
                 </div>
                 
-                <!-- Ligne 2: Ministère | Programme -->
-                <div style="display: flex; gap: 1rem; width: 100%;">
-                    <div class="form-group" style="flex: 1; width: 100%;">
-                        <label for="rprog_ministere" class="form-label">Ministère *</label>
-                        <input type="text" id="rprog_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required style="width: 100%;">
-                    </div>
-                    <div class="form-group" style="flex: 1; width: 100%;">
-                        <label for="rprog_programme" class="form-label">Programme *</label>
-                        <select id="rprog_programme" name="programme" class="form-control" required onchange="handleProgrammeChange(this);">
-                            <option value="">-- Sélectionner un programme --</option>
-                            {% for programme in programmes %}
-                            <option value="{{ programme.libelle }}" data-programme-id="{{ programme.id }}">{{ programme.code }} - {{ programme.libelle }}</option>
-                            {% endfor %}
-                        </select>
-                        <span class="performance-engagement-hint">Sélectionnez le programme pour lequel vous générez le rapport.</span>
-                    </div>
-                </div>
-                
-                <!-- Ligne 3: Titre | Sous-titre -->
-                <div style="display: flex; gap: 1rem; width: 100%;">
-                    <div class="form-group" style="flex: 2;">
-                        <label for="rprog_titre_rapport" class="form-label">Titre du rapport *</label>
-                        <textarea id="rprog_titre_rapport" name="titre_rapport" class="form-control" rows="4" placeholder="RAPPORT D'ACTIVITES DU PREMIER SEMESTRE 2024&#10;&#10;« PROGRAMME PORTEFEUILLE DE L'ETAT »" style="min-height: 100px; width: 100%;" required></textarea>
-                        <span class="performance-engagement-hint">Titre complet du rapport tel qu'il apparaîtra sur la page de couverture. Utilisez deux retours à la ligne pour séparer le titre principal du sous-titre du programme.</span>
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label for="rprog_responsable_programme" class="form-label">Responsable de Programme *</label>
-                        <input type="text" id="rprog_responsable_programme" name="responsable_programme" class="form-control" placeholder="Monsieur Jean DUPONT" required>
-                        <span class="performance-engagement-hint">Nom complet du responsable du programme (ex: "Monsieur Jean DUPONT" ou "Madame Marie MARTIN").</span>
-                    </div>
-                </div>
-                
-                <!-- Section Références -->
-                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid rgba(232, 106, 10, 0.2);">
-                    <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 1rem;">
-                        📑 Références
-                    </h3>
-                    <div class="performance-upload-group">
-                        <label for="rprog_logo_path" class="form-label">Logo/Emblème</label>
-                        <div class="performance-upload-row">
-                            <input type="text" id="rprog_logo_path" name="logo_path" class="form-control" placeholder="images/logo.webp">
-                            <label class="performance-upload-button">
-                                <input type="file" id="rprog_logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('rprog_logo_path')">
-                                📁 Joindre
-                            </label>
+                <!-- Onglet 1: Informations Générales -->
+                <div id="rprog-tab-infos-generales" class="rap-tab-content active">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <!-- Ligne 1: Année | Période | Programme (CHAMPS CAPITAUX avec labels en rouge) -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rprog_annee" class="form-label" style="color: #dc3545; font-weight: 600;">Année du rapport *</label>
+                                <input type="number" id="rprog_annee" name="annee" class="form-control" min="2000" max="2100" step="1" placeholder="2024" required onchange="updateRPROGTitreFromProgramme(); loadRprogData();" style="border-color: #dc3545;">
+                                <span class="performance-engagement-hint" style="color: #dc3545;">Champ capital pour la récupération des données.</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rprog_periode" class="form-label" style="color: #dc3545; font-weight: 600;">Période *</label>
+                                <select id="rprog_periode" name="periode" class="form-control" required onchange="updateRPROGTitreFromProgramme(); loadRprogData();" style="border-color: #dc3545;">
+                                    <option value="PREMIER SEMESTRE">Premier Semestre</option>
+                                    <option value="DEUXIÈME SEMESTRE">Deuxième Semestre</option>
+                                    <option value="ANNÉE COMPLÈTE">Année Complète</option>
+                                </select>
+                                <span class="performance-engagement-hint" style="color: #dc3545;">Champ capital pour la récupération des données.</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rprog_programme" class="form-label" style="color: #dc3545; font-weight: 600;">Programme *</label>
+                                <select id="rprog_programme" name="programme" class="form-control" required onchange="handleProgrammeChange(this); loadRprogData();" style="border-color: #dc3545;">
+                                    <option value="">-- Sélectionner un programme --</option>
+                                    {% for programme in programmes %}
+                                    <option value="{{ programme.libelle }}" data-programme-id="{{ programme.id }}">{{ programme.code }} - {{ programme.libelle }}</option>
+                                    {% endfor %}
+                                </select>
+                                <span class="performance-engagement-hint" style="color: #dc3545;">Champ capital pour la récupération des données.</span>
+                            </div>
                         </div>
-                        <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5 MB)</span>
-                        <div class="performance-upload-preview" id="rprog_logo_path_preview_wrapper">
-                            <img id="rprog_logo_path_preview" alt="Prévisualisation du logo">
+                        
+                        <!-- Ligne 2: Section | Ministère | Date publication -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rprog_section" class="form-label">Section *</label>
+                                <input type="text" id="rprog_section" name="section" class="form-control" placeholder="SECTION 376" required onchange="saveRprogData();">
+                            </div>
+                            <div class="form-group" style="flex: 1; width: 100%;">
+                                <label for="rprog_ministere" class="form-label">Ministère *</label>
+                                <input type="text" id="rprog_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required style="width: 100%;" onchange="saveRprogData();">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rprog_date_publication" class="form-label">Date de publication</label>
+                                <input type="month" id="rprog_date_publication" name="date_publication" class="form-control" onchange="saveRprogData();">
+                                <span class="performance-engagement-hint">Mois et année de publication (MM/AAAA).</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 3: Titre | Responsable -->
+                        <div style="display: flex; gap: 1rem; width: 100%;">
+                            <div class="form-group" style="flex: 2;">
+                                <label for="rprog_titre_rapport" class="form-label">Titre du rapport *</label>
+                                <textarea id="rprog_titre_rapport" name="titre_rapport" class="form-control" rows="4" placeholder="RAPPORT D'ACTIVITES DU PREMIER SEMESTRE 2024&#10;&#10;« PROGRAMME PORTEFEUILLE DE L'ETAT »" style="min-height: 100px; width: 100%;" required onchange="saveRprogData();"></textarea>
+                                <span class="performance-engagement-hint">Titre complet du rapport tel qu'il apparaîtra sur la page de couverture. Utilisez deux retours à la ligne pour séparer le titre principal du sous-titre du programme.</span>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rprog_responsable_programme" class="form-label">Responsable de Programme *</label>
+                                <input type="text" id="rprog_responsable_programme" name="responsable_programme" class="form-control" placeholder="Monsieur Jean DUPONT" required onchange="saveRprogData();">
+                                <span class="performance-engagement-hint">Nom complet du responsable du programme (ex: "Monsieur Jean DUPONT" ou "Madame Marie MARTIN").</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Section Références -->
+                        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid rgba(232, 106, 10, 0.2);">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 1rem;">
+                                📑 Références
+                            </h3>
+                            <div class="performance-upload-group">
+                                <label for="rprog_logo_path" class="form-label">Logo/Emblème</label>
+                                <div class="performance-upload-row">
+                                    <input type="text" id="rprog_logo_path" name="logo_path" class="form-control" placeholder="images/logo.webp" onchange="saveRprogData();">
+                                    <label class="performance-upload-button">
+                                        <input type="file" id="rprog_logo_path_file" accept="image/*" onchange="uploadEngagementPhoto('rprog_logo_path')">
+                                        📁 Joindre
+                                    </label>
+                                </div>
+                                <span class="performance-engagement-hint">Chemin relatif ou téléversement (JPG, PNG, WEBP – max 5 MB)</span>
+                                <div class="performance-upload-preview" id="rprog_logo_path_preview_wrapper">
+                                    <img id="rprog_logo_path_preview" alt="Prévisualisation du logo">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet 2: Activités -->
+                <div id="rprog-tab-activites" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>📋 Section 1.1 : Les activités</strong><br>
+                                Ajoutez des commentaires personnalisés sur les activités du programme. Ces commentaires seront intégrés dans l'analyse des activités.
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rprog_activites_commentaires" class="form-label">Commentaires sur les activités</label>
+                            <textarea id="rprog_activites_commentaires" name="activites_commentaires" class="form-control" rows="8" placeholder="Ajoutez vos commentaires personnalisés sur les activités réalisées..." onchange="saveRprogData();"></textarea>
+                            <span class="performance-engagement-hint">Ces commentaires seront ajoutés à l'analyse automatique des activités.</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet 3: Crédits Budgétaires -->
+                <div id="rprog-tab-credits" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>💰 Section 1.2 : Les crédits budgétaires</strong><br>
+                                Ajoutez des commentaires personnalisés sur l'exécution budgétaire. Ces commentaires seront intégrés dans l'analyse des crédits.
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rprog_credits_commentaires" class="form-label">Commentaires sur les crédits budgétaires</label>
+                            <textarea id="rprog_credits_commentaires" name="credits_commentaires" class="form-control" rows="8" placeholder="Ajoutez vos commentaires personnalisés sur l'exécution budgétaire..." onchange="saveRprogData();"></textarea>
+                            <span class="performance-engagement-hint">Ces commentaires seront ajoutés à l'analyse automatique de l'exécution budgétaire.</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet 4: Investissements -->
+                <div id="rprog-tab-investissements" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>🏗️ Section 1.3 : Les investissements</strong><br>
+                                Ajoutez des commentaires personnalisés sur les investissements. Ces commentaires seront intégrés dans l'analyse des investissements.
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rprog_investissements_commentaires" class="form-label">Commentaires sur les investissements</label>
+                            <textarea id="rprog_investissements_commentaires" name="investissements_commentaires" class="form-control" rows="8" placeholder="Ajoutez vos commentaires personnalisés sur les investissements réalisés..." onchange="saveRprogData();"></textarea>
+                            <span class="performance-engagement-hint">Ces commentaires seront ajoutés à l'analyse automatique des investissements.</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet 5: Effectifs -->
+                <div id="rprog-tab-effectifs" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>👥 Section 1.4 : Les effectifs</strong><br>
+                                Ajoutez des commentaires personnalisés sur les effectifs. Ces commentaires seront intégrés dans l'analyse des effectifs.
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rprog_effectifs_commentaires" class="form-label">Commentaires sur les effectifs</label>
+                            <textarea id="rprog_effectifs_commentaires" name="effectifs_commentaires" class="form-control" rows="8" placeholder="Ajoutez vos commentaires personnalisés sur les effectifs..." onchange="saveRprogData();"></textarea>
+                            <span class="performance-engagement-hint">Ces commentaires seront ajoutés à l'analyse automatique des effectifs.</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet 6: Performance -->
+                <div id="rprog-tab-performance" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>📊 Section 2 : La performance du programme</strong><br>
+                                Ajoutez des commentaires personnalisés sur la performance. Ces commentaires seront intégrés dans l'analyse de la performance.
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="rprog_performance_commentaires" class="form-label">Commentaires sur la performance</label>
+                            <textarea id="rprog_performance_commentaires" name="performance_commentaires" class="form-control" rows="8" placeholder="Ajoutez vos commentaires personnalisés sur la performance du programme..." onchange="saveRprogData();"></textarea>
+                            <span class="performance-engagement-hint">Ces commentaires seront ajoutés à l'analyse automatique de la performance.</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglet 7: Difficultés et Solutions -->
+                <div id="rprog-tab-difficultes" class="rap-tab-content">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 100%;">
+                        <div style="background: rgba(232, 106, 10, 0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid var(--accent-color); margin-bottom: 1rem;">
+                            <p style="margin: 0; color: rgba(15, 23, 42, 0.8);">
+                                <strong>⚠️ Section 3 : Difficultés et Solutions</strong><br>
+                                Renseignez les difficultés rencontrées et les actions/solutions mises en œuvre ou envisagées.
+                            </p>
+                        </div>
+                        
+                        <!-- Sous-section 3.1: Difficultés rencontrées -->
+                        <div style="margin-top: 1rem;">
+                            <h4 style="font-size: 1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 1rem;">
+                                3.1. Difficultés rencontrées
+                            </h4>
+                            
+                            <div class="form-group">
+                                <label for="rprog_difficultes_intro" class="form-label">Texte d'introduction</label>
+                                <input type="text" id="rprog_difficultes_intro" name="difficultes_intro" class="form-control" placeholder="Les difficultés rencontrées sont :" value="Les difficultés rencontrées sont :" onchange="saveRprogData();">
+                                <span class="performance-engagement-hint">Texte d'introduction pour la section des difficultés (par défaut: "Les difficultés rencontrées sont :").</span>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="rprog_difficultes_rencontrees" class="form-label">Difficultés rencontrées (une par ligne)</label>
+                                <textarea id="rprog_difficultes_rencontrees" name="difficultes_rencontrees" class="form-control" rows="8" placeholder="Saisissez chaque difficulté sur une nouvelle ligne. Exemple:&#10;la limitation des ressources financières;&#10;le manque de personnel qualifié;&#10;les retards dans l'exécution des projets." onchange="saveRprogData();"></textarea>
+                                <span class="performance-engagement-hint">Saisissez chaque difficulté sur une nouvelle ligne. Elles seront affichées sous forme de liste à puces dans le rapport.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Sous-section 3.2: Actions/Solutions -->
+                        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid rgba(232, 106, 10, 0.2);">
+                            <h4 style="font-size: 1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 1rem;">
+                                3.2. Actions mises en œuvre ou solutions envisagées
+                            </h4>
+                            
+                            <div class="form-group">
+                                <label for="rprog_solutions_intro" class="form-label">Texte d'introduction</label>
+                                <input type="text" id="rprog_solutions_intro" name="solutions_intro" class="form-control" placeholder="En matière de gestion du Portefeuille de l'Etat, les actions suivantes ont été menées sous l'impulsion du Ministre en charge du Portefeuille de l'Etat :" value="En matière de gestion du Portefeuille de l'Etat, les actions suivantes ont été menées sous l'impulsion du Ministre en charge du Portefeuille de l'Etat :" onchange="saveRprogData();">
+                                <span class="performance-engagement-hint">Texte d'introduction pour la section des solutions.</span>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="rprog_actions_solutions" class="form-label">Actions/Solutions (une par ligne)</label>
+                                <textarea id="rprog_actions_solutions" name="actions_solutions" class="form-control" rows="8" placeholder="Saisissez chaque action/solution sur une nouvelle ligne. Exemple:&#10;renforcement des capacités du personnel;&#10;mise en place d'un système de suivi;&#10;allocation de ressources supplémentaires." onchange="saveRprogData();"></textarea>
+                                <span class="performance-engagement-hint">Saisissez chaque action ou solution sur une nouvelle ligne. Elles seront affichées sous forme de liste à puces dans le rapport.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -566,6 +752,7 @@
             <button type="button" class="btn btn-secondary" onclick="closeRapportRPROGModal()">Annuler</button>
             <button type="button" class="btn btn-info" onclick="generateRapportRPROG('brouillon')">📝 Générer brouillon</button>
             <button type="button" class="btn btn-primary" onclick="generateRapportRPROG('final')">📄 Générer le rapport final</button>
+            <button type="button" class="btn btn-success" onclick="generateRapportRPROGWord('final')" title="Convertir le PDF en document Word pour modifications">📝 Télécharger en Word</button>
         </div>
     </div>
 </div>
@@ -1058,7 +1245,58 @@ async function loadResponsableProgramme(programmeLibelle) {
     }
 }
 
+// Fonction de validation pour le formulaire RPROG
+function validateRapportRPROGForm() {
+    const form = document.getElementById('rapportRPROGForm');
+    if (!form) {
+        return { valid: false, message: "Formulaire introuvable." };
+    }
+
+    const formData = new FormData(form);
+    const missingFields = [];
+
+    // Champs requis
+    const requiredFields = {
+        'annee': 'Année du rapport',
+        'periode': 'Période',
+        'programme': 'Programme',
+        'section': 'Section',
+        'ministere': 'Ministère',
+        'titre_rapport': 'Titre du rapport',
+        'responsable_programme': 'Responsable de Programme'
+    };
+
+    for (const [fieldName, fieldLabel] of Object.entries(requiredFields)) {
+        const value = formData.get(fieldName);
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+            missingFields.push(fieldLabel);
+        }
+    }
+
+    if (missingFields.length > 0) {
+        return {
+            valid: false,
+            message: `Veuillez remplir les champs suivants avant de générer le rapport :\n• ${missingFields.join('\n• ')}`
+        };
+    }
+
+    return { valid: true };
+}
+
 async function generateRapportRPROG(mode = 'brouillon') {
+    // Valider le formulaire avant de continuer
+    const validation = validateRapportRPROGForm();
+    if (!validation.valid) {
+        if (typeof showError === "function") {
+            showError(validation.message);
+        } else if (typeof showWarning === "function") {
+            showWarning(validation.message);
+        } else {
+            alert(validation.message);
+        }
+        return;
+    }
+
     const form = document.getElementById('rapportRPROGForm');
     if (!form) {
         if (typeof showWarning === "function") {
@@ -1067,10 +1305,160 @@ async function generateRapportRPROG(mode = 'brouillon') {
         return;
     }
 
+    // 1. Sauvegarder les données avant de générer le rapport
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Sauvegarde des données...", "Enregistrement dans la base de données");
+    }
+
+    const saveResult = await saveRprogData();
+    
+    if (!saveResult || !saveResult.success) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showError === "function") {
+            showError(saveResult?.error || "Erreur lors de la sauvegarde des données. Le rapport ne sera pas généré.");
+        }
+        // Ne pas fermer le modal, rester dans le modal pour corriger les erreurs
+        return;
+    }
+
+    // Afficher un message de succès après la sauvegarde réussie
+    if (typeof showSuccess === "function") {
+        showSuccess("Données sauvegardées avec succès. Génération du rapport en cours...");
+    }
+    
+    // Attendre un court délai pour que l'utilisateur voie le message
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const endpoint = form.dataset.endpoint;
     if (!endpoint) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
         if (typeof showWarning === "function") {
             showWarning("Endpoint introuvable.");
+        }
+        return;
+    }
+
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+
+    // Récupérer les valeurs du formulaire
+    const annee = formData.get("annee");
+    const periode = formData.get("periode");
+    const section = formData.get("section");
+    const ministere = formData.get("ministere");
+    const programme = formData.get("programme");
+    const titre_rapport = formData.get("titre_rapport");
+    const titre_annee = formData.get("titre_annee");
+    const date_publication = formData.get("date_publication");
+    const logo_path = formData.get("logo_path");
+    const responsable_programme = formData.get("responsable_programme");
+
+    if (annee) {
+        params.append("annee", annee);
+    }
+    if (section) {
+        params.append("section", section);
+    }
+    if (ministere) {
+        params.append("ministere", ministere);
+    }
+    if (programme) {
+        params.append("programme", programme);
+    }
+    if (periode) {
+        params.append("periode", periode);
+    }
+    if (titre_rapport) {
+        params.append("titre_rapport", titre_rapport);
+    }
+    if (titre_annee) {
+        params.append("titre_annee", titre_annee);
+    }
+    if (date_publication) {
+        params.append("date_publication", date_publication);
+    }
+    if (logo_path) {
+        params.append("logo_path", logo_path);
+    }
+    if (responsable_programme) {
+        params.append("responsable_programme", responsable_programme);
+    }
+    
+    // Ajouter le paramètre mode (brouillon ou final)
+    params.append("mode", mode);
+
+    const query = params.toString();
+    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+    // 2. Générer le rapport seulement si la sauvegarde a réussi
+    if (typeof showGlobalLoading === "function") {
+        const modeLabel = mode === 'brouillon' ? 'brouillon' : 'final';
+        showGlobalLoading(`Génération du PDF (${modeLabel})...`, "Création du rapport avec les données sauvegardées");
+    }
+
+    closeRapportRPROGModal();
+
+    // Ouvrir directement l'URL dans la même fenêtre (comme pour le RAP)
+    // Le backend retourne Content-Disposition: inline pour afficher le PDF dans le navigateur
+    window.location.assign(targetUrl);
+}
+
+async function generateRapportRPROGWord(mode = 'final') {
+    // Valider le formulaire avant de continuer
+    const validation = validateRapportRPROGForm();
+    if (!validation.valid) {
+        if (typeof showError === "function") {
+            showError(validation.message);
+        } else if (typeof showWarning === "function") {
+            showWarning(validation.message);
+        } else {
+            alert(validation.message);
+        }
+        return;
+    }
+
+    const form = document.getElementById('rapportRPROGForm');
+    if (!form) {
+        if (typeof showWarning === "function") {
+            showWarning("Formulaire introuvable.");
+        }
+        return;
+    }
+
+    // 1. Sauvegarder les données avant de générer le rapport
+    if (typeof showGlobalLoading === "function") {
+        showGlobalLoading("Sauvegarde des données...", "Enregistrement dans la base de données");
+    }
+
+    const saveResult = await saveRprogData();
+    
+    if (!saveResult || !saveResult.success) {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+        if (typeof showError === "function") {
+            showError(saveResult?.error || "Erreur lors de la sauvegarde des données. Le document Word ne sera pas généré.");
+        }
+        // Ne pas fermer le modal, rester dans le modal pour corriger les erreurs
+        return;
+    }
+
+    // Afficher un message de succès après la sauvegarde réussie
+    if (typeof showSuccess === "function") {
+        showSuccess("Données sauvegardées avec succès. Conversion en Word en cours...");
+    }
+    
+    // Attendre un court délai pour que l'utilisateur voie le message
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const endpoint = form.dataset.endpointWord || "{{ url_for('performance_rapport_activite_rprog_docx') }}";
+    if (!endpoint) {
+        if (typeof showWarning === "function") {
+            showWarning("Endpoint Word introuvable.");
         }
         return;
     }
@@ -1124,32 +1512,28 @@ async function generateRapportRPROG(mode = 'brouillon') {
     // Ajouter le paramètre mode (brouillon ou final)
     params.append("mode", mode);
 
-    const query = params.toString();
-    const targetUrl = query ? `${endpoint}?${query}` : endpoint;
-
+    // Générer le rapport en Word
     if (typeof showGlobalLoading === "function") {
-        const modeLabel = mode === 'brouillon' ? 'brouillon' : 'final';
-        showGlobalLoading(`Génération du PDF (${modeLabel})...`, "Veuillez patienter");
+        showGlobalLoading("Conversion en Word...", "Génération du PDF puis conversion en document Word. Cela peut prendre quelques instants...");
     }
 
-    closeRapportRPROGModal();
-
     try {
-        // Utiliser fetch pour télécharger le PDF et pouvoir masquer l'overlay après
+        const query = params.toString();
+        const targetUrl = query ? `${endpoint}?${query}` : endpoint;
+
+        // Fermer la modal
+        closeRapportRPROGModal();
+
+        // Faire une requête fetch pour télécharger le fichier Word
         const response = await fetch(targetUrl);
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ detail: "Erreur lors de la génération du PDF" }));
+            const errorData = await response.json().catch(() => ({ detail: "Erreur lors de la conversion en Word" }));
             throw new Error(errorData.detail || `Erreur ${response.status}: ${response.statusText}`);
         }
 
         // Récupérer le blob
         const blob = await response.blob();
-        
-        // Masquer l'overlay avant de déclencher le téléchargement
-        if (typeof hideGlobalLoading === "function") {
-            hideGlobalLoading();
-        }
         
         // Créer un lien de téléchargement
         const url = window.URL.createObjectURL(blob);
@@ -1159,24 +1543,25 @@ async function generateRapportRPROG(mode = 'brouillon') {
         // Déterminer le nom du fichier
         const annee_val = annee || new Date().getFullYear();
         const modeLabel = mode === 'brouillon' ? 'brouillon' : 'final';
-        a.download = `rapport_activite_rprog_${annee_val}_${modeLabel}.pdf`;
+        a.download = `rapport_activite_rprog_${annee_val}_${modeLabel}.docx`;
         
         // Déclencher le téléchargement
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+        window.URL.revokeObjectURL(url);
+
         if (typeof showSuccess === "function") {
-            showSuccess("Rapport téléchargé avec succès !");
+            showSuccess("Document Word téléchargé avec succès !");
         }
     } catch (error) {
-        console.error("Erreur lors de la génération du rapport RPROG:", error);
+        console.error("Erreur lors de la conversion en Word:", error);
+        if (typeof showError === "function") {
+            showError(`Erreur lors de la conversion en Word: ${error.message || error}`);
+        }
+    } finally {
         if (typeof hideGlobalLoading === "function") {
             hideGlobalLoading();
-        }
-        if (typeof showError === "function") {
-            showError(`Erreur lors de la génération du rapport: ${error.message || error}`);
         }
     }
 }
@@ -1753,6 +2138,287 @@ function switchRapTab(tabName) {
     }
 }
 
+function switchRprogTab(tabName) {
+    // Masquer tous les contenus d'onglets RPROG
+    const allTabs = document.querySelectorAll('#rapportRPROGModal .rap-tab-content');
+    allTabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Désactiver tous les boutons d'onglets RPROG
+    const allButtons = document.querySelectorAll('#rapportRPROGModal .rap-tab-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // Afficher l'onglet sélectionné
+    const selectedTab = document.getElementById(`rprog-tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Activer le bouton correspondant
+    const selectedButton = document.querySelector(`#rapportRPROGModal .rap-tab-btn[data-tab="${tabName}"]`);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+}
+
+// Fonction pour charger les données RPROG depuis le serveur
+async function loadRprogData() {
+    console.log('🔄 loadRprogData() appelée');
+    
+    const programmeSelect = document.getElementById('rprog_programme');
+    
+    if (!programmeSelect) {
+        console.warn('⚠️ Élément du formulaire non trouvé: programmeSelect');
+        return;
+    }
+    
+    const programmeId = programmeSelect.options[programmeSelect.selectedIndex]?.dataset?.programmeId;
+    
+    console.log('📋 Paramètres récupérés:', {
+        programmeId,
+        programmeSelected: programmeSelect.selectedIndex >= 0
+    });
+    
+    if (!programmeId) {
+        console.warn('⚠️ Paramètre manquant pour charger les données: programmeId');
+        return;
+    }
+    
+    try {
+        const url = `/api/v1/performance/rprog-data?programme_id=${programmeId}`;
+        console.log('🌐 Appel API:', url);
+        
+        const response = await fetch(url);
+        console.log('📡 Réponse API:', response.status, response.statusText);
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('📦 Résultat API complet:', result);
+            
+            // La réponse de l'API est { success: true, data: {...} }
+            if (result.success && result.data) {
+                const data = result.data;
+                
+                console.log('📥 Données RPROG chargées depuis la base:', data);
+                console.log('📝 Détails des commentaires:', {
+                    activites_commentaires: data.activites_commentaires ? `Présent (${data.activites_commentaires.length} caractères)` : 'Aucun',
+                    credits_commentaires: data.credits_commentaires ? `Présent (${data.credits_commentaires.length} caractères)` : 'Aucun',
+                    investissements_commentaires: data.investissements_commentaires ? `Présent (${data.investissements_commentaires.length} caractères)` : 'Aucun',
+                    effectifs_commentaires: data.effectifs_commentaires ? `Présent (${data.effectifs_commentaires.length} caractères)` : 'Aucun',
+                    performance_commentaires: data.performance_commentaires ? `Présent (${data.performance_commentaires.length} caractères)` : 'Aucun',
+                    difficultes_rencontrees: data.difficultes_rencontrees ? `Présent (${data.difficultes_rencontrees.length} caractères)` : 'Aucun',
+                    actions_solutions: data.actions_solutions ? `Présent (${data.actions_solutions.length} caractères)` : 'Aucun'
+                });
+                
+                // Remplir les champs avec les données chargées
+                console.log('🔄 Mise à jour des champs du formulaire...');
+                
+                if (data.section) {
+                    setFieldValue('rprog_section', data.section);
+                    console.log('✅ rprog_section mis à jour');
+                }
+                if (data.ministere) {
+                    setFieldValue('rprog_ministere', data.ministere);
+                    console.log('✅ rprog_ministere mis à jour');
+                }
+                if (data.date_publication) {
+                    setFieldValue('rprog_date_publication', data.date_publication);
+                    console.log('✅ rprog_date_publication mis à jour');
+                }
+                if (data.titre_rapport) {
+                    setFieldValue('rprog_titre_rapport', data.titre_rapport);
+                    console.log('✅ rprog_titre_rapport mis à jour');
+                }
+                if (data.responsable_programme) {
+                    setFieldValue('rprog_responsable_programme', data.responsable_programme);
+                    console.log('✅ rprog_responsable_programme mis à jour');
+                }
+                if (data.logo_path) {
+                    setFieldValue('rprog_logo_path', data.logo_path);
+                    console.log('✅ rprog_logo_path mis à jour');
+                }
+                
+                // Commentaires par section
+                if (data.activites_commentaires !== undefined && data.activites_commentaires !== null) {
+                    setFieldValue('rprog_activites_commentaires', data.activites_commentaires);
+                    console.log('✅ rprog_activites_commentaires mis à jour:', data.activites_commentaires.substring(0, 50) + '...');
+                } else {
+                    console.log('ℹ️ rprog_activites_commentaires: aucune donnée');
+                }
+                
+                if (data.credits_commentaires !== undefined && data.credits_commentaires !== null) {
+                    setFieldValue('rprog_credits_commentaires', data.credits_commentaires);
+                    console.log('✅ rprog_credits_commentaires mis à jour:', data.credits_commentaires.substring(0, 50) + '...');
+                } else {
+                    console.log('ℹ️ rprog_credits_commentaires: aucune donnée');
+                }
+                
+                if (data.investissements_commentaires !== undefined && data.investissements_commentaires !== null) {
+                    setFieldValue('rprog_investissements_commentaires', data.investissements_commentaires);
+                    console.log('✅ rprog_investissements_commentaires mis à jour:', data.investissements_commentaires.substring(0, 50) + '...');
+                } else {
+                    console.log('ℹ️ rprog_investissements_commentaires: aucune donnée');
+                }
+                
+                if (data.effectifs_commentaires !== undefined && data.effectifs_commentaires !== null) {
+                    setFieldValue('rprog_effectifs_commentaires', data.effectifs_commentaires);
+                    console.log('✅ rprog_effectifs_commentaires mis à jour:', data.effectifs_commentaires.substring(0, 50) + '...');
+                } else {
+                    console.log('ℹ️ rprog_effectifs_commentaires: aucune donnée');
+                }
+                
+                if (data.performance_commentaires !== undefined && data.performance_commentaires !== null) {
+                    setFieldValue('rprog_performance_commentaires', data.performance_commentaires);
+                    console.log('✅ rprog_performance_commentaires mis à jour:', data.performance_commentaires.substring(0, 50) + '...');
+                } else {
+                    console.log('ℹ️ rprog_performance_commentaires: aucune donnée');
+                }
+                
+                // Difficultés et solutions
+                if (data.difficultes_intro !== undefined && data.difficultes_intro !== null) {
+                    setFieldValue('rprog_difficultes_intro', data.difficultes_intro);
+                    console.log('✅ rprog_difficultes_intro mis à jour');
+                }
+                if (data.difficultes_rencontrees !== undefined && data.difficultes_rencontrees !== null) {
+                    setFieldValue('rprog_difficultes_rencontrees', data.difficultes_rencontrees);
+                    console.log('✅ rprog_difficultes_rencontrees mis à jour:', data.difficultes_rencontrees.substring(0, 50) + '...');
+                } else {
+                    console.log('ℹ️ rprog_difficultes_rencontrees: aucune donnée');
+                }
+                if (data.solutions_intro !== undefined && data.solutions_intro !== null) {
+                    setFieldValue('rprog_solutions_intro', data.solutions_intro);
+                    console.log('✅ rprog_solutions_intro mis à jour');
+                }
+                if (data.actions_solutions !== undefined && data.actions_solutions !== null) {
+                    setFieldValue('rprog_actions_solutions', data.actions_solutions);
+                    console.log('✅ rprog_actions_solutions mis à jour:', data.actions_solutions.substring(0, 50) + '...');
+                } else {
+                    console.log('ℹ️ rprog_actions_solutions: aucune donnée');
+                }
+                
+                // Conclusion
+                if (data.conclusion_texte !== undefined && data.conclusion_texte !== null) {
+                    setFieldValue('rprog_conclusion_texte', data.conclusion_texte);
+                    console.log('✅ rprog_conclusion_texte mis à jour');
+                }
+                
+                console.log('✅ Toutes les données RPROG ont été chargées et affichées dans le modal');
+                
+                // Afficher un message de succès
+                if (typeof showSuccess === "function") {
+                    showSuccess("Données chargées depuis la base de données");
+                }
+            } else if (result.success && !result.data) {
+                // Aucune donnée trouvée, c'est normal pour un nouveau programme/période
+                console.log('ℹ️ Aucune donnée RPROG trouvée pour ce programme/année/période');
+                console.log('ℹ️ Résultat:', result);
+            } else {
+                console.warn('⚠️ Réponse API inattendue:', result);
+            }
+        } else {
+            const errorText = await response.text().catch(() => '');
+            console.error('❌ Erreur HTTP lors du chargement des données RPROG:', response.status, response.statusText, errorText);
+        }
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement des données RPROG:', error);
+    }
+}
+
+// Fonction pour sauvegarder les données RPROG sur le serveur
+async function saveRprogData() {
+    const programmeSelect = document.getElementById('rprog_programme');
+    const anneeInput = document.getElementById('rprog_annee');
+    const periodeSelect = document.getElementById('rprog_periode');
+    
+    if (!programmeSelect || !anneeInput || !periodeSelect) {
+        return;
+    }
+    
+    const programmeId = programmeSelect.options[programmeSelect.selectedIndex]?.dataset?.programmeId;
+    
+    if (!programmeId) {
+        console.warn('⚠️ Impossible de sauvegarder: programmeId manquant');
+        return;
+    }
+    
+    // Récupérer annee et periode pour les stocker avec les données (mais ne sont pas utilisés comme clé unique)
+    const annee = anneeInput?.value || null;
+    const periode = periodeSelect?.value || null;
+    
+    console.log('💾 Sauvegarde des données RPROG...', {
+        programmeId,
+        annee,
+        periode
+    });
+    
+    // Collecter toutes les données du formulaire
+    const formData = {
+        programme_id: parseInt(programmeId),
+        // annee et periode sont stockées mais ne font pas partie de la clé unique
+        annee: annee ? parseInt(annee) : null,
+        periode: periode || null,
+        section: document.getElementById('rprog_section')?.value || null,
+        ministere: document.getElementById('rprog_ministere')?.value || null,
+        date_publication: document.getElementById('rprog_date_publication')?.value || null,
+        titre_rapport: document.getElementById('rprog_titre_rapport')?.value || null,
+        responsable_programme: document.getElementById('rprog_responsable_programme')?.value || null,
+        logo_path: document.getElementById('rprog_logo_path')?.value || null,
+        activites_commentaires: document.getElementById('rprog_activites_commentaires')?.value || null,
+        credits_commentaires: document.getElementById('rprog_credits_commentaires')?.value || null,
+        investissements_commentaires: document.getElementById('rprog_investissements_commentaires')?.value || null,
+        effectifs_commentaires: document.getElementById('rprog_effectifs_commentaires')?.value || null,
+        performance_commentaires: document.getElementById('rprog_performance_commentaires')?.value || null,
+        difficultes_intro: document.getElementById('rprog_difficultes_intro')?.value || null,
+        difficultes_rencontrees: document.getElementById('rprog_difficultes_rencontrees')?.value || null,
+        solutions_intro: document.getElementById('rprog_solutions_intro')?.value || null,
+        actions_solutions: document.getElementById('rprog_actions_solutions')?.value || null,
+        conclusion_texte: document.getElementById('rprog_conclusion_texte')?.value || null,
+    };
+    
+    console.log('📤 Données à envoyer:', formData);
+    
+    try {
+        const response = await fetch('/api/v1/performance/rprog-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Données RPROG sauvegardées avec succès', result);
+            // Retourner le résultat pour permettre la vérification
+            return result;
+        } else {
+            const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+            console.error('❌ Erreur lors de la sauvegarde des données RPROG:', errorData);
+            // Retourner un résultat d'erreur
+            return {
+                success: false,
+                error: errorData.error || errorData.detail || 'Erreur lors de la sauvegarde des données'
+            };
+            if (typeof showError === "function") {
+                showError(`Erreur lors de la sauvegarde: ${errorData.error || 'Erreur inconnue'}`);
+            } else if (typeof showWarning === "function") {
+                showWarning(`Erreur lors de la sauvegarde: ${errorData.error || 'Erreur inconnue'}`);
+            } else {
+                alert(`Erreur lors de la sauvegarde: ${errorData.error || 'Erreur inconnue'}`);
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde des données RPROG:', error);
+        // Afficher un message d'erreur à l'utilisateur
+        if (typeof showError === "function") {
+            showError(`Erreur lors de la sauvegarde: ${error.message || 'Erreur réseau'}`);
+        } else if (typeof showWarning === "function") {
+            showWarning(`Erreur lors de la sauvegarde: ${error.message || 'Erreur réseau'}`);
+        } else {
+            alert(`Erreur lors de la sauvegarde: ${error.message || 'Erreur réseau'}`);
+        }
+    }
+}
+
 async function closeRapportAnnuelModal() {
     // Sauvegarder automatiquement les données du programme actuellement sélectionné avant de fermer
     if (currentLoadedProgrammeCode) {
@@ -2007,6 +2673,14 @@ async function handleRapportAnnuelSubmit(event) {
         return;
     }
 
+    // Afficher un message de succès après la sauvegarde réussie
+    if (typeof showSuccess === "function") {
+        showSuccess("Données sauvegardées avec succès. Génération du rapport en cours...");
+    }
+    
+    // Attendre un court délai pour que l'utilisateur voie le message
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // 2. Préparer les paramètres pour la génération (uniquement les paramètres généraux)
     const params = new URLSearchParams();
     const formData = new FormData(form);
@@ -2040,7 +2714,55 @@ async function handleRapportAnnuelSubmit(event) {
 }
 
 // Fonction pour générer le rapport (brouillon ou final)
+// Fonction de validation pour le formulaire RAP
+function validateRapportAnnuelForm() {
+    const form = document.getElementById('rapportAnnuelForm');
+    if (!form) {
+        return { valid: false, message: "Formulaire introuvable." };
+    }
+
+    const formData = new FormData(form);
+    const missingFields = [];
+
+    // Champs requis de l'onglet 1 (Informations Générales)
+    const requiredFields = {
+        'annee': 'Année du rapport',
+        'section': 'Section',
+        'ministere': 'Ministère',
+        'titre_rapport': 'Titre du rapport'
+    };
+
+    for (const [fieldName, fieldLabel] of Object.entries(requiredFields)) {
+        const value = formData.get(fieldName);
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+            missingFields.push(fieldLabel);
+        }
+    }
+
+    if (missingFields.length > 0) {
+        return {
+            valid: false,
+            message: `Veuillez remplir les champs suivants avant de générer le rapport :\n• ${missingFields.join('\n• ')}\n\nCes champs se trouvent dans l'onglet "Informations Générales".`
+        };
+    }
+
+    return { valid: true };
+}
+
 async function generateRapportAnnuelSimpleDoc(mode = 'brouillon') {
+    // Valider le formulaire avant de continuer
+    const validation = validateRapportAnnuelForm();
+    if (!validation.valid) {
+        if (typeof showError === "function") {
+            showError(validation.message);
+        } else if (typeof showWarning === "function") {
+            showWarning(validation.message);
+        } else {
+            alert(validation.message);
+        }
+        return;
+    }
+
     const form = document.getElementById('rapportAnnuelForm');
     if (!form) {
         if (typeof showWarning === "function") {
@@ -2066,10 +2788,19 @@ async function generateRapportAnnuelSimpleDoc(mode = 'brouillon') {
             hideGlobalLoading();
         }
         if (typeof showError === "function") {
-            showError(saveResult.error || "Erreur lors de la sauvegarde des données");
+            showError(saveResult.error || "Erreur lors de la sauvegarde des données. Le rapport ne sera pas généré.");
         }
+        // Ne pas fermer le modal, rester dans le modal pour corriger les erreurs
         return;
     }
+
+    // Afficher un message de succès après la sauvegarde réussie
+    if (typeof showSuccess === "function") {
+        showSuccess("Données sauvegardées avec succès. Génération du rapport en cours...");
+    }
+    
+    // Attendre un court délai pour que l'utilisateur voie le message
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Préparer les paramètres pour la génération (uniquement les paramètres généraux)
     const endpoint = form.dataset.endpointSimpledoc;
@@ -2119,6 +2850,19 @@ async function generateRapportAnnuelSimpleDoc(mode = 'brouillon') {
 
 // Fonction pour générer le rapport en format Word (.docx)
 async function generateRapportAnnuelWord(mode = 'final') {
+    // Valider le formulaire avant de continuer
+    const validation = validateRapportAnnuelForm();
+    if (!validation.valid) {
+        if (typeof showError === "function") {
+            showError(validation.message);
+        } else if (typeof showWarning === "function") {
+            showWarning(validation.message);
+        } else {
+            alert(validation.message);
+        }
+        return;
+    }
+
     const form = document.getElementById('rapportAnnuelForm');
     if (!form) {
         if (typeof showWarning === "function") {
@@ -2144,10 +2888,19 @@ async function generateRapportAnnuelWord(mode = 'final') {
             hideGlobalLoading();
         }
         if (typeof showError === "function") {
-            showError(saveResult.error || "Erreur lors de la sauvegarde des données");
+            showError(saveResult.error || "Erreur lors de la sauvegarde des données. Le document Word ne sera pas généré.");
         }
+        // Ne pas fermer le modal, rester dans le modal pour corriger les erreurs
         return;
     }
+
+    // Afficher un message de succès après la sauvegarde réussie
+    if (typeof showSuccess === "function") {
+        showSuccess("Données sauvegardées avec succès. Conversion en Word en cours...");
+    }
+    
+    // Attendre un court délai pour que l'utilisateur voie le message
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Préparer les paramètres pour la génération
     const endpoint = form.dataset.endpointWord || "{{ url_for('performance_rapport_annuel_docx_simpledoc') }}";

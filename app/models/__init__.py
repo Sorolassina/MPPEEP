@@ -64,6 +64,7 @@ from app.models.stock import (
     MouvementStock,
 )
 from app.models.rap_data import RapData
+from app.models.rprog_data import RprogData
 from app.models.system_settings import SystemSettings
 from app.models.user import User
 
@@ -113,6 +114,7 @@ __all__ = [
     "ResultatStrategique",
     "RapData",
     "RequestTypeCustom",
+    "RprogData",
     "Service",
     "ServiceBeneficiaire",
     "SigobeChargement",

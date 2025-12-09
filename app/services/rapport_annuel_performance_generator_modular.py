@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import re
 import math
+import unicodedata
 from collections import defaultdict
 from io import BytesIO
 from typing import Any
@@ -48,6 +49,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func, and_
 from sqlmodel import Session as SQLModelSession
 from decimal import Decimal
+from app.services.report_data_loader import ReportDataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -405,15 +407,13 @@ class RAPBaseGenerator:
         """
         Détermine si on doit utiliser des données factices.
         
-        Les données factices ne sont utilisées qu'en mode "brouillon"
-        pour permettre de générer un aperçu du rapport même si la base
-        de données est vide.
+        Plus de données factices - toujours retourner False.
+        Les données manquantes sont remplacées par "............".
         
         Returns:
-            True si on doit utiliser des données factices (mode brouillon), False sinon
+            False (plus de données factices)
         """
-        mode = cls.data.get("mode", "brouillon")
-        return mode == "brouillon"
+        return False
 
 
 # ============================================================================
@@ -916,7 +916,7 @@ class RAPPageManager(RAPBaseGenerator):
         
         for idx, programme in enumerate(programmes):
             numero = programme.get("numero", 1)
-            titre = programme.get("titre", "").strip().upper()
+            titre = RAPStylingManager.to_title_case(programme.get("titre", "").strip())
             partie_numero = numero + 1
             partie_romain = cls.number_to_roman(partie_numero)
             
@@ -1186,94 +1186,65 @@ class RAPStylingManager(RAPBaseGenerator):
     """
     
     @classmethod
-    def format_db_data(cls, text: str) -> str:
+    def format_db_data(cls, text: Any) -> str:
         """
         Formate le texte pour les données provenant de la base de données.
         
-        En mode "brouillon", le texte est formaté en rouge pour indiquer
-        qu'il provient de la base de données.
-        En mode "final", le texte est retourné sans formatage de couleur (tout en noir).
+        Toutes les données dynamiques sont formatées en rouge.
+        Les valeurs vides (None, "", "0", 0) sont remplacées par "............".
+        
+        Si le texte contient déjà des balises HTML <font>, il est retourné tel quel
+        (pour éviter la double encapsulation ou l'échappement).
         
         Args:
-            text: Le texte à formater
+            text: Le texte à formater (peut être str, int, float, None)
         
         Returns:
-            Le texte formaté avec la couleur rouge (mode brouillon) ou sans couleur (mode final)
-        
-        Example:
-            >>> RAPStylingManager.format_db_data("Ministère")
-            '<font color="#FF0000">Ministère</font>'  # En mode brouillon
+            Le texte formaté avec la couleur rouge, ou "............" si vide
         """
-        if not text:
-            return ""
+        # Vérifier les valeurs vides : None, "", "0", 0
+        if text is None:
+            return '<font color="#FF0000">............</font>'
         
-        # Vérifier le mode depuis cls.data
-        mode = cls.data.get("mode", "brouillon")
+        text_str = str(text).strip()
+        if text_str == "" or text_str == "0":
+            return '<font color="#FF0000">............</font>'
         
-        # En mode final, retourner le texte sans formatage de couleur
-        if mode == "final":
-            return text
+        # Vérifier si c'est un nombre égal à 0
+        try:
+            num_value = float(text_str)
+            if num_value == 0:
+                return '<font color="#FF0000">............</font>'
+        except (ValueError, TypeError):
+            pass  # Ce n'est pas un nombre, continuer
         
-        # En mode brouillon, formater en rouge
-        return f'<font color="#FF0000">{text}</font>'
-    
-    @classmethod
-    def format_fake_data(cls, text: str) -> str:
-        """
-        Formate le texte pour les données factices (générées quand la base est vide).
+        # Si le texte contient déjà des balises <font>, le retourner tel quel
+        # (pour éviter la double encapsulation ou l'échappement)
+        if "<font" in text_str or "</font>" in text_str:
+            return text_str
         
-        En mode "brouillon", le texte est formaté en violet et italique pour
-        indiquer qu'il s'agit de données factices.
-        En mode "final", retourne une chaîne vide (pas de données factices affichées).
-        
-        Args:
-            text: Le texte factice à formater
-        
-        Returns:
-            Le texte formaté en violet italique (mode brouillon) ou chaîne vide (mode final)
-        
-        Example:
-            >>> RAPStylingManager.format_fake_data("Programme factice")
-            '<font color="#800080"><i>Programme factice</i></font>'  # En mode brouillon
-        """
-        # Vérifier le mode depuis cls.data
-        mode = cls.data.get("mode", "brouillon")
-        
-        # En mode final, ne pas afficher de données factices
-        if mode == "final":
-            return ""
-        
-        # En mode brouillon, formater en violet et italique
-        if not text:
-            return ""
-        
-        return f'<font color="#800080"><i>{text}</i></font>'
+        # Échapper les caractères HTML (sauf les balises <font> qui sont déjà gérées)
+        text_escaped = text_str.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        # Toujours formater en rouge
+        return f'<font color="#FF0000">{text_escaped}</font>'
     
     @classmethod
     def format_programme_value(cls, value: Any, is_fake: bool = False) -> str:
         """
-        Formate une valeur du programme selon si elle est factice ou réelle.
-        
-        Cette fonction détermine automatiquement si la valeur doit être formatée
-        comme une donnée de base de données (rouge) ou comme une donnée factice (violet italique).
+        Formate une valeur du programme - toutes les données dynamiques en rouge.
         
         Args:
             value: La valeur à formater (peut être n'importe quel type, sera converti en string)
-            is_fake: True si la valeur est factice (générée), False si elle vient de la DB
+            is_fake: Ignoré (conservé pour compatibilité)
         
         Returns:
-            Le texte formaté avec les balises HTML appropriées
-        
-        Example:
-            >>> RAPStylingManager.format_programme_value("ADMINISTRATION GÉNÉRALE", False)
-            '<font color="#FF0000">ADMINISTRATION GÉNÉRALE</font>'
-            >>> RAPStylingManager.format_programme_value("Programme factice", True)
-            '<font color="#800080"><i>Programme factice</i></font>'
+            Le texte formaté en rouge, ou "............" si vide ou "0"
         """
-        # Si is_fake est True, les données sont factices et doivent être formatées en violet
-        if is_fake:
-            return cls.format_fake_data(str(value))
-        else:
+        if value is None or value == "":
+            return '<font color="#FF0000">............</font>'
+        # Si c'est "0" ou 0, retourner "............"
+        if str(value).strip() == "0" or (isinstance(value, (int, float)) and value == 0):
+            return '<font color="#FF0000">............</font>'
             return cls.format_db_data(str(value))
     
     @classmethod
@@ -1300,25 +1271,28 @@ class RAPStylingManager(RAPBaseGenerator):
         
         Les montants sont formatés avec des espaces pour séparer les milliers,
         facilitant la lecture des grandes sommes.
+        Si le montant est 0, retourne "............" formaté en rouge.
         
         Args:
             montant: Le montant à formater (en FCFA)
         
         Returns:
-            Le montant formaté avec espaces comme séparateurs
+            Le montant formaté avec espaces comme séparateurs (formaté en rouge),
+            ou "............" formaté en rouge si 0
         
         Example:
             >>> RAPStylingManager.format_fcfa(1000000)
-            '1 000 000'
+            '<font color="#FF0000">1 000 000</font>'
             >>> RAPStylingManager.format_fcfa(0)
-            '0'
+            '<font color="#FF0000">............</font>'
         """
-        if montant == 0:
-            return "0"
+        if montant == 0 or montant is None:
+            return '<font color="#FF0000">............</font>'
         
         # Formater avec virgules puis remplacer par des espaces
         montant_str = f"{int(montant):,}".replace(",", " ")
-        return montant_str
+        # Retourner formaté en rouge
+        return f'<font color="#FF0000">{montant_str}</font>'
     
     @classmethod
     def get_color_for_source(cls, source: str) -> colors.HexColor:
@@ -1342,7 +1316,7 @@ class RAPStylingManager(RAPBaseGenerator):
         Génère un sigle automatiquement depuis le nom du ministère.
         
         Le sigle est généré en prenant les initiales des mots significatifs,
-        en excluant les articles et prépositions courantes.
+        en excluant tous les déterminants et mots de liaison (L', DU, DE, DES, ET, etc.).
         
         Args:
             ministere: Le nom complet du ministère
@@ -1353,40 +1327,125 @@ class RAPStylingManager(RAPBaseGenerator):
         Example:
             >>> RAPStylingManager.generate_sigle_from_ministere("Ministère du Budget")
             'MB'
-            >>> RAPStylingManager.generate_sigle_from_ministere("Ministère du Patrimoine, du Portefeuille de l'État")
-            'MPPPE'
+            >>> RAPStylingManager.generate_sigle_from_ministere("MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES")
+            'MPPEEP'
         """
         if not ministere:
             return ""
         
-        # Mots à exclure (articles, prépositions)
+        # Liste complète des déterminants et mots de liaison à exclure
+        # Inclut les variantes avec et sans apostrophes
         mots_exclus = {
-            "le", "la", "les", "du", "de", "des", "et", "d'", "de la",
-            "au", "aux", "en", "pour", "dans", "sur", "avec", "par"
+            # Articles définis
+            "le", "la", "les", "l'", "l",
+            # Articles contractés
+            "du", "de", "des", "d'", "d",
+            # Prépositions et mots de liaison
+            "et", "au", "aux", "en", "pour", "dans", "sur", "avec", "par",
+            "sans", "sous", "vers", "chez", "entre", "parmi",
+            # Autres déterminants
+            "un", "une", "de la", "du",
+            # Mots courts qui ne sont pas significatifs
+            "à", "a", "ou", "où"
         }
         
-        # Supprimer les accents pour faciliter le traitement
-        import unicodedata
-        ministere_normalized = unicodedata.normalize('NFD', ministere)
-        ministere_normalized = ministere_normalized.encode('ascii', 'ignore').decode('ascii')
+        # Convertir en majuscules pour la comparaison
+        ministere_upper = ministere.upper()
         
-        # Diviser en mots et prendre les initiales
-        mots = ministere_normalized.upper().split()
+        # Gérer les apostrophes : remplacer "L'", "D'", etc. par un espace
+        # Exemple: "DE L'ÉTAT" devient "DE L ÉTAT"
+        # Cela permet de séparer le déterminant du mot suivant
+        # Remplacer les apostrophes suivies d'une lettre par un espace
+        ministere_processed = re.sub(r"([A-Z])'([A-Z])", r"\1 \2", ministere_upper)
+        # Remplacer aussi les apostrophes seules ou suivies d'un espace
+        ministere_processed = re.sub(r"([A-Z])'\s*", r"\1 ", ministere_processed)
+        
+        # Nettoyer la ponctuation (virgules, points, etc.) et remplacer par des espaces
+        ministere_processed = re.sub(r'[,;.:!?()\[\]{}"]', ' ', ministere_processed)
+        
+        # Diviser en mots
+        mots = ministere_processed.split()
         sigle = ""
         
         for mot in mots:
-            # Nettoyer le mot (enlever la ponctuation)
-            mot_clean = ''.join(c for c in mot if c.isalnum())
+            # Nettoyer le mot (enlever les caractères non alphanumériques restants)
+            # Mais garder les lettres accentuées (elles sont valides)
+            mot_clean = ''.join(c for c in mot if c.isalnum() or c in 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ')
             
-            # Ignorer les mots vides ou exclus
-            if not mot_clean or mot_clean.lower() in mots_exclus:
+            # Convertir en minuscules pour la comparaison avec mots_exclus
+            # Utiliser unicodedata pour normaliser les accents
+            if mot_clean:
+                mot_normalized = unicodedata.normalize('NFD', mot_clean)
+                mot_lower = ''.join(c for c in mot_normalized if unicodedata.category(c) != 'Mn').lower()
+            else:
+                mot_lower = ""
+            
+            # Ignorer les mots vides, trop courts, ou exclus
+            if not mot_clean or len(mot_clean) <= 1 or mot_lower in mots_exclus:
                 continue
             
-            # Prendre la première lettre
+            # Prendre la première lettre (en majuscule, sans accent)
             if mot_clean:
-                sigle += mot_clean[0]
+                # Normaliser les accents pour obtenir une lettre ASCII
+                premiere_lettre = mot_clean[0]
+                premiere_lettre_normalized = unicodedata.normalize('NFD', premiere_lettre)
+                premiere_lettre_ascii = ''.join(c for c in premiere_lettre_normalized if unicodedata.category(c) != 'Mn')
+                sigle += premiere_lettre_ascii.upper()
         
         return sigle
+    
+    @staticmethod
+    def to_title_case(text: str) -> str:
+        """
+        Convertit un texte en title case (première lettre de chaque mot en majuscule, autres en minuscule).
+        Gère correctement les apostrophes et les mots comme "L'", "D'", etc.
+        
+        Args:
+            text: Texte à convertir
+        
+        Returns:
+            Texte en title case
+        
+        Example:
+            >>> RAPStylingManager.to_title_case("MINISTERE DU PATRIMOINE")
+            "Ministère Du Patrimoine"
+            >>> RAPStylingManager.to_title_case("ADMINISTRATION GENERALE")
+            "Administration Générale"
+            >>> RAPStylingManager.to_title_case("L'ÉTAT")
+            "L'État"
+        """
+        if not text:
+            return ""
+        
+        # Convertir tout en minuscules d'abord
+        text_lower = text.lower().strip()
+        
+        # Utiliser la méthode title() de Python qui gère bien la plupart des cas
+        # mais la post-traiter pour les cas spéciaux
+        import re
+        
+        # Diviser en mots en préservant les espaces
+        words = text_lower.split()
+        result_words = []
+        
+        for word in words:
+            if not word:
+                continue
+            
+            # Gérer les apostrophes : "l'état" -> "L'État"
+            if "'" in word:
+                parts = word.split("'", 1)
+                if len(parts) == 2:
+                    # Première partie (ex: "l") + apostrophe + deuxième partie capitalisée
+                    first_part = parts[0].capitalize()
+                    second_part = parts[1].capitalize() if parts[1] else ""
+                    result_words.append(f"{first_part}'{second_part}")
+                else:
+                    result_words.append(word.capitalize())
+            else:
+                result_words.append(word.capitalize())
+        
+        return ' '.join(result_words)
     
     @classmethod
     def get_sigle_ministere(cls) -> str:
@@ -1795,16 +1854,18 @@ class RAPDataLoader(RAPBaseGenerator):
                 # Extraire le nom du ministère depuis minister_role
                 minister_role_upper = settings.minister_role.upper().strip()
                 if "MINISTRE" in minister_role_upper or "MINISTERE" in minister_role_upper:
-                    ministere_name = minister_role_upper.replace("MINISTRE", "MINISTERE")
-                    ministere_name = re.sub(r'\s+', ' ', ministere_name).strip()
-                    db_data["ministere"] = ministere_name
+                    # Stocker en majuscules (format original) pour les titres et couverture
+                    ministere_name_upper = minister_role_upper.replace("MINISTRE", "MINISTERE")
+                    ministere_name_upper = re.sub(r'\s+', ' ', ministere_name_upper).strip()
+                    db_data["ministere"] = ministere_name_upper
                     cls._db_data_keys.add("ministere")
-                    logger.debug(f"✅ Nom du ministère récupéré depuis minister_role: {ministere_name[:50]}...")
+                    logger.debug(f"✅ Nom du ministère récupéré depuis minister_role: {ministere_name_upper[:50]}...")
             
             # Si company_name contient le nom du ministère, l'utiliser aussi (si pas déjà récupéré)
             if not db_data.get("ministere") and settings.company_name:
                 company_name_upper = settings.company_name.upper().strip()
                 if "MINISTERE" in company_name_upper or "MPPEEP" in company_name_upper:
+                    # Stocker en majuscules (format original) pour les titres et couverture
                     db_data["ministere"] = company_name_upper
                     cls._db_data_keys.add("ministere")
                     logger.debug(f"✅ Nom du ministère récupéré depuis company_name: {company_name_upper[:50]}...")
@@ -2096,7 +2157,7 @@ class RAPDataLoader(RAPBaseGenerator):
         try:
             from app.models.budget import ExecutionBudgetaire, ActionBudgetaire, ActiviteBudgetaire, FicheTechnique
             from app.models.personnel import Programme
-            from app.models.budget import NatureDepense, SigobeExecution, SigobeChargement
+            from app.models.budget import SigobeExecution, SigobeChargement
             from app.models.performance import ObjectifPerformance, IndicateurPerformance, StatutObjectif, TypeObjectif
             from sqlalchemy.exc import ProgrammingError
             from decimal import Decimal
@@ -2110,20 +2171,34 @@ class RAPDataLoader(RAPBaseGenerator):
             total_activites = 0
             
             # Récupérer le dernier chargement SIGOBE pour l'année
-            dernier_chargement = session.exec(
-                select(SigobeChargement)
-                .where(SigobeChargement.annee == annee)
-                .order_by(SigobeChargement.date_chargement.desc())
-            ).first()
+            # APPROCHE ALTERNATIVE: Récupérer d'abord l'ID, puis l'objet complet
+            dernier_chargement_id_stmt = select(SigobeChargement.id).where(
+                SigobeChargement.annee == annee
+            ).order_by(SigobeChargement.date_chargement.desc())
+            dernier_chargement_id_result = session.exec(dernier_chargement_id_stmt)
+            dernier_chargement_id = dernier_chargement_id_result.first()
+            
+            dernier_chargement = None
+            if dernier_chargement_id:
+                # Récupérer l'objet SQLModel complet depuis l'ID
+                dernier_chargement = session.get(SigobeChargement, dernier_chargement_id)
             
             if dernier_chargement:
+                # Vérifier que dernier_chargement est bien un objet SQLModel
+                if not hasattr(dernier_chargement, 'id'):
+                    logger.error(f"❌ Erreur: dernier_chargement n'a pas d'attribut 'id'. Type: {type(dernier_chargement)}")
+                    dernier_chargement = None
+                
                 # Charger les données depuis sigobe_execution
-                sigobe_executions = session.exec(
-                    select(SigobeExecution)
-                    .where(SigobeExecution.chargement_id == dernier_chargement.id)
-                    .where(SigobeExecution.programmes.isnot(None))
-                    .where(SigobeExecution.programmes != "")
-                ).all()
+                sigobe_executions_stmt = select(SigobeExecution).where(
+                    SigobeExecution.chargement_id == dernier_chargement.id
+                ).where(
+                    SigobeExecution.programmes.isnot(None)
+                ).where(
+                    SigobeExecution.programmes != ""
+                )
+                sigobe_executions_result = session.exec(sigobe_executions_stmt)
+                sigobe_executions = list(sigobe_executions_result)  # Convertir en liste
                 
                 if sigobe_executions:
                     # Grouper par programme
@@ -2217,105 +2292,8 @@ class RAPDataLoader(RAPBaseGenerator):
                     "taux_execution": taux_execution_avg,
                 }
                 
-                # 2.1. Charger les données par nature de dépense pour le financement global
-                # UNIQUEMENT depuis SigobeExecution
-                if not dernier_chargement:
-                    dernier_chargement = session.exec(
-                        select(SigobeChargement)
-                        .where(SigobeChargement.annee == annee)
-                        .order_by(SigobeChargement.date_chargement.desc())
-                    ).first()
-                
-                financement_par_nature = {}
-                budget_initial_total_sigobe = 0
-                budget_reel_total_sigobe = 0
-                
-                # Charger les natures de dépense pour le mapping
-                natures_db = {n.code: n for n in session.exec(select(NatureDepense)).all()}
-                
-                # Fonction helper pour détecter le code de nature depuis type_depense
-                def detect_nature_code(type_depense: str | None, natures_map: dict) -> str | None:
-                    """Détecte le code de nature (P, BS, T, I) depuis le type_depense de SigobeExecution"""
-                    if not type_depense:
-                        return None
-                    
-                    type_dep_upper = type_depense.upper().strip()
-                    
-                    # Essayer d'abord de trouver une correspondance exacte dans les codes de NatureDepense
-                    for code, nature in natures_map.items():
-                        if code.upper() == type_dep_upper or nature.libelle.upper() == type_dep_upper:
-                            return code
-                        if code.upper() in type_dep_upper or nature.libelle.upper() in type_dep_upper:
-                            return code
-                    
-                    # Mapper les types SIGOBE vers les codes de nature
-                    if any(keyword in type_dep_upper for keyword in ["PERSONNEL", "P -", "P "]) or type_dep_upper == "P":
-                        return "P"
-                    if any(keyword in type_dep_upper for keyword in ["BIENS", "SERVICES", "BS -", "BS "]) or type_dep_upper == "BS":
-                        return "BS"
-                    if any(keyword in type_dep_upper for keyword in ["TRANSFERT", "T -", "T "]) or type_dep_upper == "T":
-                        return "T"
-                    if any(keyword in type_dep_upper for keyword in ["INVESTISSEMENT", "I -", "I "]) or type_dep_upper == "I":
-                        return "I"
-                    
-                    return None
-                
-                if dernier_chargement:
-                    sigobe_executions = session.exec(
-                        select(SigobeExecution)
-                        .where(SigobeExecution.chargement_id == dernier_chargement.id)
-                    ).all()
-                    
-                    # Grouper par code de nature de dépense
-                    depenses_par_code = {}
-                    
-                    for exec_sigobe in sigobe_executions:
-                        code_nature = detect_nature_code(exec_sigobe.type_depense, natures_db)
-                        
-                        if not code_nature:
-                            continue
-                        
-                        if code_nature not in depenses_par_code:
-                            depenses_par_code[code_nature] = {
-                                "budget_vote": Decimal(0),
-                                "budget_actuel": Decimal(0),
-                            }
-                        
-                        depenses_par_code[code_nature]["budget_vote"] += Decimal(exec_sigobe.budget_vote or 0)
-                        depenses_par_code[code_nature]["budget_actuel"] += Decimal(exec_sigobe.budget_actuel or 0)
-                    
-                    # Construire financement_par_nature
-                    for code_nature, montants in depenses_par_code.items():
-                        budget_initial = float(montants["budget_vote"])
-                        budget_reel = float(montants["budget_actuel"])
-                        
-                        budget_initial_total_sigobe += budget_initial
-                        budget_reel_total_sigobe += budget_reel
-                        
-                        nature_obj = natures_db.get(code_nature)
-                        libelle = nature_obj.libelle if nature_obj else code_nature
-                        
-                        financement_par_nature[code_nature] = {
-                            "libelle": libelle,
-                            "budget_initial": budget_initial,
-                            "budget_reel": budget_reel,
-                            "evolution": budget_reel - budget_initial,
-                            "taux_evolution": ((budget_reel - budget_initial) / budget_initial * 100) if budget_initial > 0 else 0,
-                        }
-                
-                if not financement_par_nature:
-                    logger.warning(f"⚠️ Aucune donnée SIGOBE trouvée pour l'année {annee}. Les montants budgétaires seront à 0.")
-                
-                evolution_total_sigobe = budget_reel_total_sigobe - budget_initial_total_sigobe
-                taux_evolution_total_sigobe = (evolution_total_sigobe / budget_initial_total_sigobe * 100) if budget_initial_total_sigobe > 0 else 0
-                
-                budget_data["financement_global"] = {
-                    "budget_initial_total": budget_initial_total_sigobe,
-                    "budget_reel_total": budget_reel_total_sigobe,
-                    "evolution_total": evolution_total_sigobe,
-                    "taux_evolution_total": taux_evolution_total_sigobe,
-                    "par_nature": financement_par_nature,
-                }
+                # NOTE: Le chargement des données de financement global a été déplacé vers
+                # ReportDataLoader.load_data_financement_global() pour centraliser la logique
             
             # 3. Charger les données de performance (objectifs et indicateurs)
             nb_objectifs_globaux = 0
@@ -2324,41 +2302,66 @@ class RAPDataLoader(RAPBaseGenerator):
             cibles_atteintes = 0
             
             try:
+                # APPROCHE ALTERNATIVE: Récupérer d'abord les IDs, puis les objets individuellement
                 # Objectifs globaux : type GLOBAL (liés à un résultat stratégique)
-                objectifs_globaux = session.exec(
-                    select(ObjectifPerformance).where(
+                objectifs_globaux_ids_query = select(ObjectifPerformance.id).where(
                         and_(
                             ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL,
                             ObjectifPerformance.resultat_strategique_id.isnot(None)
                         )
                     )
-                ).all()
+                objectifs_globaux_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(objectifs_globaux_ids_query).all()]
+                
+                # Récupérer les objets SQLModel complets depuis les IDs
+                objectifs_globaux = []
+                for obj_global_id in objectifs_globaux_ids:
+                    obj_global = session.get(ObjectifPerformance, obj_global_id)
+                    if obj_global:
+                        objectifs_globaux.append(obj_global)
                 
                 # Objectifs spécifiques : type SPECIFIQUE (liés à un objectif global)
-                objectifs_specifiques = session.exec(
-                    select(ObjectifPerformance).where(
+                objectifs_specifiques_ids_query = select(ObjectifPerformance.id).where(
                         and_(
                             ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
                             ObjectifPerformance.objectif_global_id.isnot(None)
                         )
                     )
-                ).all()
+                objectifs_specifiques_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(objectifs_specifiques_ids_query).all()]
+                
+                # Récupérer les objets SQLModel complets depuis les IDs
+                objectifs_specifiques = []
+                for obj_spec_id in objectifs_specifiques_ids:
+                    obj_spec = session.get(ObjectifPerformance, obj_spec_id)
+                    if obj_spec:
+                        objectifs_specifiques.append(obj_spec)
                 
                 nb_objectifs_globaux = len(objectifs_globaux)
                 nb_objectifs_specifiques = len(objectifs_specifiques)
                 
                 # Compter les indicateurs
                 try:
-                    indicateurs = session.exec(
-                        select(IndicateurPerformance).where(IndicateurPerformance.actif)
-                    ).all()
+                    # APPROCHE ALTERNATIVE: Récupérer d'abord les IDs, puis les objets individuellement
+                    indicateurs_ids_query = select(IndicateurPerformance.id).where(IndicateurPerformance.actif == True)
+                    indicateurs_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(indicateurs_ids_query).all()]
+                    
+                    # Récupérer les objets SQLModel complets depuis les IDs
+                    indicateurs = []
+                    for ind_id in indicateurs_ids:
+                        ind = session.get(IndicateurPerformance, ind_id)
+                        if ind:
+                            indicateurs.append(ind)
+                    
                     nb_indicateurs = len(indicateurs)
                     
                     # Compter les cibles atteintes
                     for ind in indicateurs:
                         if ind.valeur_actuelle and ind.valeur_cible:
-                            if float(ind.valeur_actuelle) >= float(ind.valeur_cible):
-                                cibles_atteintes += 1
+                            try:
+                                if float(ind.valeur_actuelle) >= float(ind.valeur_cible):
+                                    cibles_atteintes += 1
+                            except (ValueError, TypeError):
+                                # Ignorer les valeurs non numériques
+                                pass
                 except (ProgrammingError, AttributeError) as ind_error:
                     logger.warning(f"⚠️ Erreur lors du chargement des indicateurs (colonne manquante ?): {ind_error}")
                     try:
@@ -2370,6 +2373,8 @@ class RAPDataLoader(RAPBaseGenerator):
                     
             except Exception as perf_error:
                 logger.warning(f"⚠️ Erreur lors du chargement des données de performance: {perf_error}")
+                import traceback
+                logger.error(traceback.format_exc())
                 try:
                     session.rollback()
                 except Exception:
@@ -2428,7 +2433,7 @@ class RAPDataLoader(RAPBaseGenerator):
                         
                         if nb_cibles_os > 0:
                             realisations.append({
-                                "programme": f"P{prog_num}: {prog_titre}",
+                                "programme": f"{prog_num}: {prog_titre}",
                                 "objectif_specifique": f"OS {prog_num}: Améliorer...",
                                 "nb_cibles": nb_cibles_os,
                                 "nb_cibles_atteintes": nb_cibles_atteintes_os,
@@ -2554,10 +2559,10 @@ class RAPDataLoader(RAPBaseGenerator):
             except Exception as e:
                 logger.warning(f"⚠️ Erreur lors de la récupération des investissements: {e}")
         
-        # Si pas de données, générer des données factices en mode brouillon
-        if not investissement_projects and cls.should_use_fake_data():
-            logger.info(f"📊 Mode brouillon: génération de données factices variées pour les investissements")
-            return RAPFakeDataLoader.get_fake_investissements(annee)
+        # Si pas de données, retourner une liste vide (le tableau sera affiché vide avec "............")
+        if not investissement_projects:
+            logger.info(f"📊 Aucune donnée d'investissement trouvée, retour d'une liste vide")
+            return []
         
         return investissement_projects
     
@@ -2628,13 +2633,405 @@ class RAPDataLoader(RAPBaseGenerator):
             except Exception as e:
                 logger.warning(f"⚠️ Erreur lors de la récupération des activités: {e}")
         
-        # Si pas de données, générer des données factices en mode brouillon
-        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
-        if mode == "final":
-            return []
-        # Générer des données factices en mode brouillon avec le flag _is_fake
-        logger.info(f"📊 Mode brouillon: génération de données factices pour les activités majeures")
-        return RAPFakeDataLoader.get_fake_activites_majeures()
+        # Si pas de données, retourner une liste vide (le tableau sera affiché vide avec "............")
+        logger.info(f"📊 Aucune donnée d'activité majeure trouvée, retour d'une liste vide")
+        return []
+    
+    @classmethod
+    def load_performance_architecture_data(cls, session: Session | None, annee: int) -> dict[str, Any]:
+        """
+        Charge directement les données de performance (architecture) depuis la base de données.
+        
+        Args:
+            session: Session de base de données
+            annee: Année pour laquelle charger les données
+        
+        Returns:
+            Dictionnaire contenant :
+            - architecture: dict avec nb_programmes, nb_objectifs_globaux, nb_objectifs_specifiques, nb_indicateurs, nb_cibles
+            - taux_realisation: float
+            - nb_cibles_atteintes: int
+            - realisations: list de dict avec les réalisations par programme
+        """
+        if not session:
+            return {
+                "architecture": {
+                    "nb_programmes": 0,
+                    "nb_objectifs_globaux": 0,
+                    "nb_objectifs_specifiques": 0,
+                    "nb_indicateurs": 0,
+                    "nb_cibles": 0,
+                },
+                "taux_realisation": 0,
+                "nb_cibles_atteintes": 0,
+                "realisations": [],
+            }
+        
+        try:
+            from app.models.performance import ObjectifPerformance, IndicateurPerformance, TypeObjectif
+            from sqlalchemy import select, and_, func
+            from app.models.personnel import Programme
+            
+            # Compter les programmes actifs (approche robuste - IDs first)
+            programmes_ids_query = select(Programme.id).where(Programme.actif == True)
+            programmes_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(programmes_ids_query).all()]
+            nb_programmes = len(programmes_ids) if programmes_ids else 0
+            logger.info(f"🎯 [CADRE PERFORMANCE] 📋 Programmes actifs: {nb_programmes}")
+            
+            # Charger les objectifs globaux (IDs first approach)
+            og_ids_query = select(ObjectifPerformance.id).where(
+                and_(
+                    ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL,
+                    ObjectifPerformance.resultat_strategique_id.isnot(None)
+                )
+            )
+            og_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(og_ids_query).all()]
+            objectifs_globaux = [session.get(ObjectifPerformance, og_id) for og_id in og_ids if session.get(ObjectifPerformance, og_id)]
+            nb_objectifs_globaux = len(objectifs_globaux)
+            
+            # Charger les objectifs spécifiques (IDs first approach)
+            os_ids_query = select(ObjectifPerformance.id).where(
+                and_(
+                    ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
+                    ObjectifPerformance.objectif_global_id.isnot(None)
+                )
+            )
+            os_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(os_ids_query).all()]
+            objectifs_specifiques = [session.get(ObjectifPerformance, os_id) for os_id in os_ids if session.get(ObjectifPerformance, os_id)]
+            nb_objectifs_specifiques = len(objectifs_specifiques)
+            
+            # Charger les indicateurs (IDs first approach) - FILTRER PAR ANNÉE comme dans RPROG
+            ind_ids_query = select(IndicateurPerformance.id).where(
+                and_(
+                    IndicateurPerformance.actif == True,
+                    IndicateurPerformance.annee == annee  # Filtrer par année
+                )
+            )
+            ind_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(ind_ids_query).all()]
+            indicateurs = [session.get(IndicateurPerformance, ind_id) for ind_id in ind_ids if session.get(IndicateurPerformance, ind_id)]
+            nb_indicateurs = len(indicateurs)
+            nb_cibles = nb_indicateurs
+            
+            # Compter les cibles atteintes
+            cibles_atteintes = 0
+            for ind in indicateurs:
+                if ind.valeur_actuelle and ind.valeur_cible:
+                    try:
+                        if float(ind.valeur_actuelle) >= float(ind.valeur_cible):
+                            cibles_atteintes += 1
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Calculer le taux de réalisation
+            taux_realisation = (cibles_atteintes / nb_cibles * 100) if nb_cibles > 0 else 0
+            
+            # Préparer les réalisations par programme
+            realisations = []
+            # APPROCHE ROBUSTE: Récupérer d'abord les IDs, puis les objets complets
+            programmes_ids_query = select(Programme.id).where(Programme.actif == True).order_by(Programme.code)
+            programmes_ids_raw = session.exec(programmes_ids_query).all()
+            # Extraire correctement les IDs (peuvent être des tuples ou des entiers)
+            programmes_ids = []
+            for row in programmes_ids_raw:
+                if isinstance(row, tuple):
+                    programmes_ids.append(row[0])
+                elif isinstance(row, (int, str)):
+                    programmes_ids.append(int(row))
+                elif hasattr(row, 'id'):
+                    programmes_ids.append(row.id)
+                else:
+                    programmes_ids.append(row)
+            
+            logger.info(f"🎯 [CADRE PERFORMANCE] 📋 IDs programmes extraits: {programmes_ids}")
+            
+            for prog_id_raw in programmes_ids:
+                # S'assurer que prog_id est un entier
+                prog_id = prog_id_raw
+                if isinstance(prog_id, tuple):
+                    prog_id = prog_id[0]
+                try:
+                    prog_id = int(prog_id)
+                except (ValueError, TypeError):
+                    logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Impossible de convertir prog_id en entier: {prog_id_raw} (type: {type(prog_id_raw)})")
+                    continue
+                
+                prog = session.get(Programme, prog_id)
+                if not prog:
+                    logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Programme {prog_id} non trouvé dans la DB")
+                    continue
+                
+                prog_num = getattr(prog, 'code', None) or getattr(prog, 'numero', None) or ""
+                prog_titre = getattr(prog, 'libelle', None) or ""
+                logger.info(f"🎯 [CADRE PERFORMANCE] 📋 Traitement programme ID={prog_id}, code={prog_num}, titre={prog_titre}")
+                
+                # Les OS ne sont PAS directement liés aux programmes
+                # Ils sont liés aux OG via objectif_global_id
+                # Les OG sont liés aux programmes via programme_id
+                # Donc: Programme -> OG -> OS
+                
+                # 1. Trouver d'abord les OG liés à ce programme - MÊME APPROCHE QUE RPROG
+                og_prog_ids_query = select(ObjectifPerformance.id).where(
+                    and_(
+                        ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL.value,
+                        ObjectifPerformance.programme_id == prog_id
+                    )
+                )
+                # Dans RPROG, on utilise directement list() pour obtenir les IDs
+                og_prog_ids_raw = list(session.exec(og_prog_ids_query).all())
+                # Extraire les IDs correctement (peuvent être des tuples ou des entiers)
+                og_prog_ids = []
+                for item in og_prog_ids_raw:
+                    if isinstance(item, tuple):
+                        og_prog_ids.append(item[0])
+                    elif isinstance(item, (int, str)):
+                        og_prog_ids.append(int(item))
+                    else:
+                        og_prog_ids.append(item)
+                logger.info(f"🎯 [CADRE PERFORMANCE] 📋 Programme {prog_num}: {len(og_prog_ids)} OG trouvé(s): {og_prog_ids}")
+                
+                # 2. Récupérer les OS liés à ces OG - MÊME APPROCHE QUE RPROG
+                # Utiliser directement les objets complets plutôt que les IDs
+                query_objectifs_specifiques = select(ObjectifPerformance).where(
+                    ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE
+                )
+                
+                if og_prog_ids:
+                    # Filtrer par objectifs globaux du programme (comme dans RPROG)
+                    query_objectifs_specifiques = query_objectifs_specifiques.where(
+                        ObjectifPerformance.objectif_global_id.in_(og_prog_ids)
+                    )
+                    logger.info(f"🎯 [CADRE PERFORMANCE] 📋 Filtrage des OS par {len(og_prog_ids)} OG(s) pour programme {prog_num}")
+                else:
+                    logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Aucun OG trouvé pour le programme {prog_num}")
+                
+                # Récupérer les OS directement comme objets complets (comme dans RPROG)
+                objectifs_specifiques = session.exec(
+                    query_objectifs_specifiques.order_by(ObjectifPerformance.code, ObjectifPerformance.id)
+                ).all()
+                
+                logger.info(f"🎯 [CADRE PERFORMANCE] 📋 Programme {prog_num}: {len(objectifs_specifiques)} OS trouvé(s) via {len(og_prog_ids)} OG")
+                
+                # Si aucun OS trouvé via les OG, essayer de trouver les OS directement liés au programme
+                if len(objectifs_specifiques) == 0 and len(og_prog_ids) > 0:
+                    logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Aucun OS trouvé via les OG. Recherche alternative: OS directement liés au programme {prog_num}")
+                    os_direct_query = select(ObjectifPerformance).where(
+                        and_(
+                            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
+                            ObjectifPerformance.programme_id == prog_id
+                        )
+                    )
+                    objectifs_specifiques = session.exec(os_direct_query.order_by(ObjectifPerformance.code, ObjectifPerformance.id)).all()
+                    logger.info(f"🎯 [CADRE PERFORMANCE]   → {len(objectifs_specifiques)} OS trouvé(s) directement lié(s) au programme")
+                
+                # Parcourir les OS et créer les réalisations
+                for os_obj in objectifs_specifiques:
+                    if not os_obj:
+                        continue
+                    
+                    os_id = os_obj.id
+                    logger.info(f"🎯 [CADRE PERFORMANCE]   🔹 OS ID={os_id}: {os_obj.titre or os_obj.code or 'N/A'}")
+                    
+                    # Charger les indicateurs pour cet OS - MÊME APPROCHE QUE RPROG
+                    # Filtrer par année comme dans RPROG
+                    query_indicateurs = select(IndicateurPerformance).where(
+                        and_(
+                            IndicateurPerformance.objectif_id == os_id,
+                            IndicateurPerformance.actif == True,
+                            IndicateurPerformance.annee == annee  # Filtrer par année (comme dans RPROG)
+                        )
+                    ).order_by(IndicateurPerformance.id)
+                    
+                    indicateurs_os = list(session.exec(query_indicateurs).all())
+                    
+                    logger.info(f"🎯 [CADRE PERFORMANCE] 📋 OS {os_obj.titre or os_obj.code}: {len(indicateurs_os)} indicateur(s)")
+                    
+                    if indicateurs_os:
+                        nb_cibles_os = len(indicateurs_os)
+                        try:
+                            nb_cibles_atteintes_os = sum(
+                                1 for ind in indicateurs_os
+                                if ind.valeur_actuelle is not None and ind.valeur_cible is not None
+                                and float(ind.valeur_actuelle) >= float(ind.valeur_cible)
+                            )
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Erreur lors du calcul des cibles atteintes pour OS {os_id}: {e}")
+                            nb_cibles_atteintes_os = 0
+                        
+                        realisations.append({
+                            "programme": f"{prog_num}: {prog_titre}" if prog_num else prog_titre,
+                            "objectif_specifique": os_obj.titre or f"OS {os_obj.code or ''}",
+                            "nb_cibles": nb_cibles_os,
+                            "nb_cibles_atteintes": nb_cibles_atteintes_os,
+                        })
+                        logger.info(f"🎯 [CADRE PERFORMANCE] ✅ Réalisation ajoutée: programme={realisations[-1]['programme']}, OS={realisations[-1]['objectif_specifique']}, cibles={nb_cibles_os}, atteintes={nb_cibles_atteintes_os}")
+            
+            logger.info(
+                f"🎯 [CADRE PERFORMANCE] ✅ Données chargées: {nb_objectifs_globaux} OG, "
+                f"{nb_objectifs_specifiques} OS, {nb_indicateurs} indicateurs, {nb_programmes} programmes, "
+                f"{len(realisations)} réalisations"
+            )
+            logger.info(
+                f"🎯 [CADRE PERFORMANCE] 📊 Détails architecture: nb_programmes={nb_programmes}, nb_objectifs_globaux={nb_objectifs_globaux}, "
+                f"nb_objectifs_specifiques={nb_objectifs_specifiques}, nb_indicateurs={nb_indicateurs}, nb_cibles={nb_cibles}"
+            )
+            if len(realisations) > 0:
+                logger.info(f"🎯 [CADRE PERFORMANCE] ✅ {len(realisations)} réalisation(s) créée(s) pour le Tableau 3")
+                for idx, real in enumerate(realisations[:5], 1):  # Afficher les 5 premières
+                    logger.info(f"🎯 [CADRE PERFORMANCE]   {idx}. {real.get('programme', 'N/A')} - {real.get('objectif_specifique', 'N/A')} ({real.get('nb_cibles', 0)} cibles, {real.get('nb_cibles_atteintes', 0)} atteintes)")
+                if len(realisations) > 5:
+                    logger.info(f"🎯 [CADRE PERFORMANCE]   ... et {len(realisations) - 5} autre(s) réalisation(s)")
+            else:
+                logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Aucune réalisation créée - le Tableau 3 sera vide")
+                logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Vérifiez: programmes={nb_programmes}, OG={nb_objectifs_globaux}, OS={nb_objectifs_specifiques}, indicateurs={nb_indicateurs}")
+            
+            return {
+                "architecture": {
+                    "nb_programmes": nb_programmes,
+                    "nb_objectifs_globaux": nb_objectifs_globaux,
+                    "nb_objectifs_specifiques": nb_objectifs_specifiques,
+                    "nb_indicateurs": nb_indicateurs,
+                    "nb_cibles": nb_cibles,
+                },
+                "taux_realisation": round(taux_realisation, 2),
+                "nb_cibles_atteintes": cibles_atteintes,
+                "realisations": realisations,
+            }
+        except Exception as e:
+            logger.error(f"🎯 [CADRE PERFORMANCE] ❌ ERREUR lors du chargement: {e}", exc_info=True)
+            return {
+                "architecture": {
+                    "nb_programmes": 0,
+                    "nb_objectifs_globaux": 0,
+                    "nb_objectifs_specifiques": 0,
+                    "nb_indicateurs": 0,
+                    "nb_cibles": 0,
+                },
+                "taux_realisation": 0,
+                "nb_cibles_atteintes": 0,
+                "realisations": [],
+            }
+    
+    @classmethod
+    def load_programmes_data(cls, session: Session | None, annee: int) -> dict[str, Any]:
+        """
+        Charge directement les données des programmes (nombre, actions, activités) depuis la base de données.
+        
+        Args:
+            session: Session de base de données
+            annee: Année pour laquelle charger les données
+        
+        Returns:
+            Dictionnaire contenant :
+            - programmes: Liste des programmes avec leurs comptes d'actions/activités
+            - total_programmes: int
+            - total_actions: int
+            - total_activites: int
+        """
+        if not session:
+            return {
+                "programmes": [],
+                "total_programmes": 0,
+                "total_actions": 0,
+                "total_activites": 0,
+            }
+        
+        try:
+            from app.models.personnel import Programme
+            from app.models.budget import SigobeExecution, SigobeChargement
+            from sqlalchemy import select, func
+            from collections import defaultdict
+            
+            programmes_list = []
+            total_actions = 0
+            total_activites = 0
+            
+            # PRIORITÉ 1 : Depuis sigobe_execution (données d'exécution réelles)
+            # Récupérer le dernier chargement SIGOBE pour l'année (IDs first approach)
+            dernier_chargement_id_stmt = select(SigobeChargement.id).where(
+                SigobeChargement.annee == annee
+            ).order_by(SigobeChargement.date_chargement.desc())
+            dernier_chargement_id_result = session.exec(dernier_chargement_id_stmt)
+            dernier_chargement_id = dernier_chargement_id_result.first()
+            
+            dernier_chargement = None
+            if dernier_chargement_id:
+                dernier_chargement = session.get(SigobeChargement, dernier_chargement_id)
+            
+            if dernier_chargement:
+                # Charger les données depuis sigobe_execution
+                sigobe_executions_stmt = select(SigobeExecution).where(
+                    SigobeExecution.chargement_id == dernier_chargement.id
+                ).where(
+                    SigobeExecution.programmes.isnot(None)
+                ).where(
+                    SigobeExecution.programmes != ""
+                )
+                sigobe_executions_result = session.exec(sigobe_executions_stmt)
+                sigobe_executions = list(sigobe_executions_result)
+                
+                if sigobe_executions:
+                    # Grouper par programme
+                    programmes_dict: dict[str, dict[str, set]] = defaultdict(lambda: {"actions": set(), "activites": set()})
+                    
+                    for exec_sigobe in sigobe_executions:
+                        prog_nom = exec_sigobe.programmes
+                        if not prog_nom:
+                            continue
+                        
+                        if exec_sigobe.actions:
+                            programmes_dict[prog_nom]["actions"].add(exec_sigobe.actions)
+                        if exec_sigobe.activites:
+                            programmes_dict[prog_nom]["activites"].add(exec_sigobe.activites)
+                    
+                    # Construire la liste des programmes avec leurs comptes
+                    for idx, (prog_nom, prog_data) in enumerate(sorted(programmes_dict.items()), 1):
+                        actions_count = len(prog_data["actions"])
+                        activites_count = len(prog_data["activites"])
+                        
+                        total_actions += actions_count
+                        total_activites += activites_count
+                        
+                        programmes_list.append({
+                            "numero": idx,
+                            "titre": prog_nom,
+                            "nb_actions": actions_count,
+                            "nb_activites": activites_count,
+                        })
+            
+            # PRIORITÉ 2 : Si pas de données SIGOBE, utiliser les référentiels
+            if not programmes_list:
+                programmes_query = select(Programme).where(Programme.actif == True).order_by(Programme.code)
+                programmes = session.exec(programmes_query).all()
+                
+                for prog in programmes:
+                    # Compter les actions et activités depuis les référentiels
+                    # (simplifié pour l'instant, peut être amélioré si nécessaire)
+                    programmes_list.append({
+                        "numero": len(programmes_list) + 1,
+                        "titre": getattr(prog, 'libelle', None) or getattr(prog, 'code', None) or "",
+                        "nb_actions": 0,  # À compléter si nécessaire
+                        "nb_activites": 0,  # À compléter si nécessaire
+                    })
+            
+            logger.info(
+                f"✅ Données de programmes chargées directement: {len(programmes_list)} programmes, "
+                f"{total_actions} actions, {total_activites} activités"
+            )
+            
+            return {
+                "programmes": programmes_list,
+                "total_programmes": len(programmes_list),
+                "total_actions": total_actions,
+                "total_activites": total_activites,
+            }
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du chargement direct des données de programmes: {e}", exc_info=True)
+            return {
+                "programmes": [],
+                "total_programmes": 0,
+                "total_actions": 0,
+                "total_activites": 0,
+            }
     
     @classmethod
     def get_indicateurs_performance_data(cls, numero: int, titre: str, annee: int, session) -> list[dict[str, Any]]:
@@ -2668,9 +3065,6 @@ class RAPDataLoader(RAPBaseGenerator):
         annee_n_1 = annee - 1
         annee_n = annee
         
-        # Données par défaut : structure avec 3 OS et plusieurs indicateurs chacun
-        default_indicateurs = RAPFakeDataLoader.get_fake_indicateurs_performance(titre, annee)
-        
         # Récupérer les données depuis la base de données
         if session:
             try:
@@ -2693,11 +3087,8 @@ class RAPDataLoader(RAPBaseGenerator):
                     
                     if not indicateurs:
                         logger.info(f"⚠️ Aucun indicateur trouvé pour les années {annees_a_recuperer}")
-                        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
-                        if mode == "final":
-                            return []
-                        logger.info(f"📊 Mode brouillon: génération de données factices pour les indicateurs")
-                        return default_indicateurs
+                        logger.info(f"📊 Aucune donnée d'indicateur trouvée, retour d'une liste vide")
+                        return []
                     
                     # Récupérer tous les objectifs associés
                     objectif_ids = list(set([ind.objectif_id for ind in indicateurs]))
@@ -2712,12 +3103,9 @@ class RAPDataLoader(RAPBaseGenerator):
                         session.rollback()
                     except Exception:
                         pass
-                    mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
-                    if mode == "final":
-                        logger.info("⚠️ Pas de données disponibles pour les indicateurs (migration non appliquée)")
-                        return []
-                    logger.info("📊 Mode brouillon: génération de données factices pour les indicateurs (migration non appliquée)")
-                    return default_indicateurs
+                    logger.info("⚠️ Pas de données disponibles pour les indicateurs (migration non appliquée)")
+                    logger.info(f"📊 Aucune donnée d'indicateur trouvée, retour d'une liste vide")
+                    return []
                 
                 # Grouper les indicateurs par objectif et nom
                 indicateurs_groupes: dict[tuple[int, str], dict[str, Any]] = {}
@@ -2767,11 +3155,8 @@ class RAPDataLoader(RAPBaseGenerator):
                     return result
                 else:
                     logger.warning("⚠️ Aucun indicateur valide trouvé")
-                    mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
-                    if mode == "final":
-                        return []
-                    logger.info(f"📊 Mode brouillon: génération de données factices pour les indicateurs")
-                    return default_indicateurs
+                    logger.info(f"📊 Aucune donnée d'indicateur trouvée, retour d'une liste vide")
+                    return []
                     
             except Exception as e:
                 logger.exception(f"⚠️ Erreur lors de la récupération des indicateurs: {e}")
@@ -2779,18 +3164,12 @@ class RAPDataLoader(RAPBaseGenerator):
                     session.rollback()
                 except Exception:
                     pass
-                mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
-                if mode == "final":
-                    return []
-                logger.info(f"📊 Mode brouillon: génération de données factices pour les indicateurs (après erreur)")
-                return default_indicateurs
+                logger.info(f"📊 Erreur lors de la récupération des indicateurs, retour d'une liste vide")
+                return []
         
-        # Si pas de session, en mode brouillon retourner des données factices
-        mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
-        if mode == "final":
-            return []
-        logger.info(f"📊 Mode brouillon: génération de données factices pour les indicateurs (pas de session)")
-        return default_indicateurs
+        # Si pas de session, retourner une liste vide
+        logger.info(f"📊 Pas de session disponible, retour d'une liste vide pour les indicateurs")
+        return []
     
     @classmethod
     def get_effectifs_data(cls, numero: int, titre: str, annee: int, session) -> list[dict[str, Any]]:
@@ -2836,9 +3215,9 @@ class RAPDataLoader(RAPBaseGenerator):
                     mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
                     if mode == "final":
                         return []
-                    # Générer des données factices en mode brouillon avec le flag _is_fake
-                    logger.info(f"📊 Mode brouillon: génération de données factices pour les effectifs")
-                    return RAPFakeDataLoader.get_fake_effectifs(annee)
+                    # Pas de données trouvées, retourner une liste vide
+                    logger.info(f"📊 Aucune donnée d'effectif trouvée, retour d'une liste vide")
+                    return []
                 
                 annee_precedente = annee - 1
                 
@@ -2895,14 +3274,10 @@ class RAPDataLoader(RAPBaseGenerator):
             except Exception as e:
                 logger.warning(f"⚠️ Erreur lors de la récupération des effectifs: {e}")
         
-        # Si pas de données, générer des données factices en mode brouillon
+        # Si pas de données, retourner une liste vide (le tableau sera affiché vide avec "............")
         if not effectifs_list:
-            mode = cls.data.get("mode", "brouillon") if hasattr(cls, 'data') else "brouillon"
-            if mode == "final":
-                return []
-            # Générer des données factices en mode brouillon
-            logger.info(f"📊 Mode brouillon: génération de données factices pour les effectifs")
-            return RAPFakeDataLoader.get_fake_effectifs(annee)
+            logger.info(f"📊 Aucune donnée d'effectif trouvée, retour d'une liste vide")
+            return []
         
         return effectifs_list
     
@@ -2950,31 +3325,68 @@ class RAPDataLoader(RAPBaseGenerator):
             from sqlalchemy.exc import ProgrammingError, OperationalError
             
             # 1. Charger les orientations stratégiques actives
-            orientations = session.exec(
-                select(OrientationStrategique)
-                .where(OrientationStrategique.actif == True)
-                .order_by(OrientationStrategique.ordre.asc(), OrientationStrategique.libelle.asc())
-            ).all()
+            # Utiliser la même approche que RPROG : session.exec(...).all()
+            orientations_query = select(OrientationStrategique).where(
+                OrientationStrategique.actif == True
+            ).order_by(
+                OrientationStrategique.ordre.asc(), 
+                OrientationStrategique.libelle.asc()
+            )
+            # APPROCHE ALTERNATIVE: Récupérer d'abord les IDs, puis les objets individuellement
+            # Cela évite les problèmes avec les Row objects
+            orientations_ids_query = select(OrientationStrategique.id).where(
+                OrientationStrategique.actif == True
+            ).order_by(
+                OrientationStrategique.ordre.asc(), 
+                OrientationStrategique.libelle.asc()
+            )
+            orientations_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(orientations_ids_query).all()]
+            
+            # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            
+            if not orientations_ids:
+                logger.warning("⚠️ Aucune orientation stratégique active trouvée dans la base de données")
+                return None
+            
+            # Récupérer les objets SQLModel complets depuis les IDs
+            orientations = []
+            for orientation_id in orientations_ids:
+                orient = session.get(OrientationStrategique, orientation_id)
+                if orient:
+                    orientations.append(orient)
             
             if not orientations:
-                logger.debug("⚠️ Aucune orientation stratégique active trouvée dans la base de données")
+                logger.error("❌ ERREUR: Impossible de récupérer les orientations depuis leurs IDs")
                 return None
+            
+            logger.info(f"✅ {len(orientations)} orientation(s) SQLModel valide(s) récupérée(s)")
             
             # Structure pour le tableau (format compatible avec l'ancien JSON)
             table_entries = []
             
             for orientation in orientations:
+                # Vérifier que c'est bien un objet SQLModel
+                if not hasattr(orientation, 'libelle') or not hasattr(orientation, 'id'):
+                    logger.error(f"❌ ERREUR: orientation n'est pas un objet SQLModel valide. Type: {type(orientation)}")
+                    continue
+                
+                logger.debug(f"🔍 DIAGNOSTIC - Traitement orientation: {orientation.libelle} (ID: {orientation.id})")
                 # 2. Charger les résultats stratégiques pour cette orientation
-                resultats = session.exec(
-                    select(ResultatStrategique)
-                    .where(
+                # APPROCHE ALTERNATIVE: Récupérer d'abord les IDs, puis les objets individuellement
+                resultats_ids_query = select(ResultatStrategique.id).where(
                         and_(
                             ResultatStrategique.orientation_id == orientation.id,
                             ResultatStrategique.actif == True
                         )
-                    )
-                    .order_by(ResultatStrategique.ordre.asc(), ResultatStrategique.libelle.asc())
-                ).all()
+                ).order_by(ResultatStrategique.ordre.asc(), ResultatStrategique.libelle.asc())
+                resultats_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(resultats_ids_query).all()]
+                
+                # Récupérer les objets SQLModel complets depuis les IDs
+                resultats = []
+                for resultat_id in resultats_ids:
+                    resultat = session.get(ResultatStrategique, resultat_id)
+                    if resultat:
+                        resultats.append(resultat)
                 
                 if not resultats:
                     # Si pas de résultat, créer une ligne avec orientation seule
@@ -2986,16 +3398,21 @@ class RAPDataLoader(RAPBaseGenerator):
                 else:
                     for resultat in resultats:
                         # 3. Charger les objectifs globaux (GLOBAL) pour ce résultat stratégique
-                        objectifs_globaux = session.exec(
-                            select(ObjectifPerformance)
-                            .where(
+                        # APPROCHE ALTERNATIVE: Récupérer d'abord les IDs, puis les objets individuellement
+                        objectifs_globaux_ids_query = select(ObjectifPerformance.id).where(
                                 and_(
                                     ObjectifPerformance.resultat_strategique_id == resultat.id,
                                     ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL
                                 )
-                            )
-                            .order_by(ObjectifPerformance.titre.asc())
-                        ).all()
+                        ).order_by(ObjectifPerformance.titre.asc())
+                        objectifs_globaux_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(objectifs_globaux_ids_query).all()]
+                        
+                        # Récupérer les objets SQLModel complets depuis les IDs
+                        objectifs_globaux = []
+                        for obj_global_id in objectifs_globaux_ids:
+                            obj_global = session.get(ObjectifPerformance, obj_global_id)
+                            if obj_global:
+                                objectifs_globaux.append(obj_global)
                         
                         if not objectifs_globaux:
                             # Si pas d'objectif global, créer une ligne avec résultat vide
@@ -3010,16 +3427,21 @@ class RAPDataLoader(RAPBaseGenerator):
                                 # Optionnel : charger les objectifs spécifiques liés à cet objectif global
                                 objectifs_specifiques = []
                                 try:
-                                    objectifs_specifiques = session.exec(
-                                        select(ObjectifPerformance)
-                                        .where(
+                                    # APPROCHE ALTERNATIVE: Récupérer d'abord les IDs, puis les objets individuellement
+                                    objectifs_specifiques_ids_query = select(ObjectifPerformance.id).where(
                                             and_(
                                                 ObjectifPerformance.objectif_global_id == obj_global.id,
                                                 ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE
                                             )
-                                        )
-                                        .order_by(ObjectifPerformance.titre.asc())
-                                    ).all()
+                                    ).order_by(ObjectifPerformance.titre.asc())
+                                    objectifs_specifiques_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(objectifs_specifiques_ids_query).all()]
+                                    
+                                    # Récupérer les objets SQLModel complets depuis les IDs
+                                    objectifs_specifiques = []
+                                    for obj_spec_id in objectifs_specifiques_ids:
+                                        obj_spec = session.get(ObjectifPerformance, obj_spec_id)
+                                        if obj_spec:
+                                            objectifs_specifiques.append(obj_spec)
                                 except Exception:
                                     pass  # Ignorer les erreurs pour les objectifs spécifiques
                                 
@@ -3032,11 +3454,18 @@ class RAPDataLoader(RAPBaseGenerator):
                                 })
             
             if not table_entries:
+                logger.warning("⚠️ Aucune entrée de tableau créée (table_entries vide)")
                 return None
             
-            logger.debug(
+            unique_orientations = len(set(entry['orientation'] for entry in table_entries if entry.get('orientation')))
+            unique_resultats = len(set(entry['resultat'] for entry in table_entries if entry.get('resultat')))
+            unique_objectifs = len(set(entry['objectif'] for entry in table_entries if entry.get('objectif')))
+            
+            logger.info(
                 f"✅ Hiérarchie de performance chargée: "
-                f"{len(set(entry['orientation'] for entry in table_entries if entry['orientation']))} orientation(s), "
+                f"{unique_orientations} orientation(s), "
+                f"{unique_resultats} résultat(s), "
+                f"{unique_objectifs} objectif(s), "
                 f"{len(table_entries)} ligne(s) de tableau"
             )
             
@@ -3059,293 +3488,8 @@ class RAPDataLoader(RAPBaseGenerator):
 # GESTIONNAIRE DE DONNÉES FACTICES - DONNÉES DE CHARGEMENT
 # ============================================================================
 
-class RAPFakeDataLoader(RAPBaseGenerator):
-    """
-    Gestionnaire de données factices pour le chargement.
-    
-    Cette classe regroupe toutes les données factices utilisées en mode brouillon
-    lorsque la base de données est vide ou que les données ne sont pas disponibles.
-    Cela permet d'avoir toutes les données factices en un seul endroit pour faciliter
-    la maintenance et la modification.
-    
-    Responsabilités :
-    - Fournir des données factices pour les investissements
-    - Fournir des données factices pour les activités majeures
-    - Fournir des données factices pour les indicateurs de performance
-    - Fournir des données factices pour les effectifs
-    - Fournir des données factices pour l'introduction
-    """
-    
-    @staticmethod
-    def get_fake_investissements(annee: int) -> list[dict[str, Any]]:
-        """
-        Retourne les données factices pour les investissements.
-        
-        Args:
-            annee: Année courante pour calculer les dates dynamiquement
-        
-        Returns:
-            Liste de dictionnaires contenant les projets d'investissement factices
-        """
-        projets_factices = [
-            {
-                "nom": "Projet d'infrastructure administrative",
-                "annee_debut": annee - 2,
-                "annee_fin": annee + 1,
-                "cout_total_interieur": 500000000.0,
-                "cout_total_exterieur": 0.0,
-                "taux_execution": 0.72,  # 72%
-                f"budget_vote_{annee}_interieur": 200000000.0,
-                f"budget_vote_{annee}_exterieur": 0.0,
-                f"budget_actuel_{annee}_interieur": 250000000.0,
-                f"budget_actuel_{annee}_exterieur": 0.0,
-                "_is_fake": True,
-            },
-            {
-                "nom": "Projet d'équipement informatique",
-                "annee_debut": annee - 1,
-                "annee_fin": annee,
-                "cout_total_interieur": 150000000.0,
-                "cout_total_exterieur": 0.0,
-                "taux_execution": 0.80,  # 80%
-                f"budget_vote_{annee}_interieur": 150000000.0,
-                f"budget_vote_{annee}_exterieur": 0.0,
-                f"budget_actuel_{annee}_interieur": 150000000.0,
-                f"budget_actuel_{annee}_exterieur": 0.0,
-                "_is_fake": True,
-            },
-            {
-                "nom": "Projet de modernisation des systèmes",
-                "annee_debut": annee - 1,
-                "annee_fin": annee + 2,
-                "cout_total_interieur": 800000000.0,
-                "cout_total_exterieur": 200000000.0,
-                "taux_execution": 0.65,  # 65%
-                f"budget_vote_{annee}_interieur": 300000000.0,
-                f"budget_vote_{annee}_exterieur": 100000000.0,
-                f"budget_actuel_{annee}_interieur": 350000000.0,
-                f"budget_actuel_{annee}_exterieur": 120000000.0,
-                "_is_fake": True,
-            },
-        ]
-        
-        # Calculer l'ordonnancement basé sur le taux d'exécution
-        for projet in projets_factices:
-            budget_actuel_interieur = projet[f"budget_actuel_{annee}_interieur"]
-            budget_actuel_exterieur = projet[f"budget_actuel_{annee}_exterieur"]
-            budget_actuel_total = budget_actuel_interieur + budget_actuel_exterieur
-            taux_exec = projet.get("taux_execution", 0.75)
-            
-            # Répartir l'ordonnancement proportionnellement
-            ordonnancement_total = budget_actuel_total * taux_exec
-            if budget_actuel_total > 0:
-                ratio_interieur = budget_actuel_interieur / budget_actuel_total
-                projet[f"ordonnancement_{annee}_interieur"] = ordonnancement_total * ratio_interieur
-                projet[f"ordonnancement_{annee}_exterieur"] = ordonnancement_total * (1 - ratio_interieur)
-            else:
-                projet[f"ordonnancement_{annee}_interieur"] = 0.0
-                projet[f"ordonnancement_{annee}_exterieur"] = 0.0
-            
-            # Stocker le taux d'exécution
-            projet["_taux_execution"] = taux_exec
-        
-        return projets_factices
-    
-    @staticmethod
-    def get_fake_activites_majeures() -> list[dict[str, Any]]:
-        """
-        Retourne les données factices pour les activités majeures.
-        
-        Returns:
-            Liste de dictionnaires contenant les activités majeures factices
-        """
-        return [
-            {"libelle": "Renforcement des capacités institutionnelles", "taux_execution": 95.5, "_is_fake": True},
-            {"libelle": "Amélioration de la gestion du patrimoine immobilier", "taux_execution": 92.3, "_is_fake": True},
-            {"libelle": "Modernisation des systèmes d'information", "taux_execution": 88.7, "_is_fake": True},
-            {"libelle": "Optimisation de la gestion des ressources humaines", "taux_execution": 85.2, "_is_fake": True},
-        ]
-    
-    @staticmethod
-    def get_fake_indicateurs_performance(titre: str, annee: int) -> list[dict[str, Any]]:
-        """
-        Retourne les données factices pour les indicateurs de performance.
-        
-        Args:
-            titre: Titre du programme (utilisé dans les descriptions)
-            annee: Année courante pour calculer les années dynamiquement
-        
-        Returns:
-            Liste de dictionnaires contenant les indicateurs de performance factices
-        """
-        annee_n_3 = annee - 3
-        annee_n_2 = annee - 2
-        annee_n_1 = annee - 1
-        annee_n = annee
-        
-        return [
-            # Objectif Spécifique 1 - Indicateur 1
-            {
-                "objectif_titre": f"Objectif Spécifique 1: Améliorer la gestion de l'Administration du Portefeuille de l'Etat",
-                "indicateur_nom": "Taux d'exécution du PAS du programme du portefeuille de l'Etat",
-                "unite": "%",
-                f"realisation_{annee_n_3}": 95,
-                f"realisation_{annee_n_2}": 93,
-                f"realisation_{annee_n_1}": 89,
-                f"prevision_{annee_n}": 80,
-                f"realisation_{annee_n}": 96,
-                "nb_activites": 15,
-                "definition": f"Cet indicateur permet d'évaluer le niveau d'exécution du Plan d'Action Stratégique (PAS) du programme {titre}",
-                "source_donnees": "Rapport Annuel de Performance",
-                "mode_calcul": "(Montant exécuté / Montant prévu) x 100",
-                "valeurs_cibles": f"80% en {annee_n}, 85% en {annee_n+1}, 90% en {annee_n+2}",
-                "_source": "default",
-            },
-            # Objectif Spécifique 1 - Indicateur 2
-            {
-                "objectif_titre": f"Objectif Spécifique 1: Améliorer la gestion de l'Administration du Portefeuille de l'Etat",
-                "indicateur_nom": "Taux d'exécution du budget d'investissement du programme Portefeuille de l'Etat",
-                "unite": "%",
-                f"realisation_{annee_n_3}": 100,
-                f"realisation_{annee_n_2}": 100,
-                f"realisation_{annee_n_1}": 100,
-                f"prevision_{annee_n}": 97,
-                f"realisation_{annee_n}": 100,
-                "nb_activites": 8,
-                "definition": f"Cet indicateur mesure le taux d'exécution du budget d'investissement alloué au programme {titre}",
-                "source_donnees": "Rapport d'exécution budgétaire",
-                "mode_calcul": "(Budget d'investissement exécuté / Budget d'investissement prévu) x 100",
-                "valeurs_cibles": f"97% en {annee_n}, 98% en {annee_n+1}, 100% en {annee_n+2}",
-                "_source": "default",
-            },
-            # Objectif Spécifique 2 - Indicateur 1
-            {
-                "objectif_titre": f"Objectif Spécifique 2: Assurer le positionnement du Portefeuille de l'Etat comme un accélérateur de développement",
-                "indicateur_nom": "Nombre d'études réalisées dans le cadre de la mise en œuvre de la stratégie 2021-2025 de gestion du portefeuille de l'Etat",
-                "unite": "Nombre",
-                f"realisation_{annee_n_3}": None,
-                f"realisation_{annee_n_2}": 3,
-                f"realisation_{annee_n_1}": 7,
-                f"prevision_{annee_n}": 2,
-                f"realisation_{annee_n}": 6,
-                "nb_activites": 5,
-                "definition": f"Cet indicateur compte le nombre d'études réalisées pour la mise en œuvre de la stratégie de gestion du portefeuille de l'Etat",
-                "source_donnees": "Rapport d'activités / DGPE",
-                "mode_calcul": "Somme des études réalisées sur la période",
-                "valeurs_cibles": f"2 études en {annee_n}, 3 études en {annee_n+1}, 4 études en {annee_n+2}",
-                "_source": "default",
-            },
-            # Objectif Spécifique 2 - Indicateur 2
-            {
-                "objectif_titre": f"Objectif Spécifique 2: Assurer le positionnement du Portefeuille de l'Etat comme un accélérateur de développement",
-                "indicateur_nom": "Nombre de contrats de performance élaborés par la DGPE",
-                "unite": "Nombre",
-                f"realisation_{annee_n_3}": 18,
-                f"realisation_{annee_n_2}": 5,
-                f"realisation_{annee_n_1}": 14,
-                f"prevision_{annee_n}": 5,
-                f"realisation_{annee_n}": 13,
-                "nb_activites": 4,
-                "definition": f"Cet indicateur compte le nombre de contrats de performance élaborés par la Direction Générale du Portefeuille de l'Etat (DGPE)",
-                "source_donnees": "Rapport d'activités / DGPE",
-                "mode_calcul": "Somme des contrats de performance élaborés sur la période",
-                "valeurs_cibles": f"5 contrats en {annee_n}, 6 contrats en {annee_n+1}, 7 contrats en {annee_n+2}",
-                "_source": "default",
-            },
-            # Objectif Spécifique 2 - Indicateur 3
-            {
-                "objectif_titre": f"Objectif Spécifique 2: Assurer le positionnement du Portefeuille de l'Etat comme un accélérateur de développement",
-                "indicateur_nom": "Nombre d'entreprises publiques ayant procédé à la signature d'une lettre de mission entre le Conseil d'Administration et le Directeur Général",
-                "unite": "Nombre",
-                f"realisation_{annee_n_3}": None,
-                f"realisation_{annee_n_2}": 26,
-                f"realisation_{annee_n_1}": 33,
-                f"prevision_{annee_n}": 26,
-                f"realisation_{annee_n}": 35,
-                "nb_activites": 3,
-                "definition": f"Cet indicateur mesure le nombre d'entreprises publiques ayant signé une lettre de mission entre leur Conseil d'Administration et leur Directeur Général",
-                "source_donnees": "Rapport d'activités / DGPE",
-                "mode_calcul": "Somme des entreprises publiques ayant signé une lettre de mission sur la période",
-                "valeurs_cibles": f"26 entreprises en {annee_n}, 28 entreprises en {annee_n+1}, 30 entreprises en {annee_n+2}",
-                "_source": "default",
-            },
-            # Objectif Spécifique 3 - Indicateur 1
-            {
-                "objectif_titre": f"Objectif Spécifique 3: Améliorer le dispositif de contrôle des entreprises publiques",
-                "indicateur_nom": "Taux de réalisation du plan d'audits des entreprises publiques",
-                "unite": "%",
-                f"realisation_{annee_n_3}": 100,
-                f"realisation_{annee_n_2}": 85,
-                f"realisation_{annee_n_1}": 100,
-                f"prevision_{annee_n}": 80,
-                f"realisation_{annee_n}": 100,
-                "nb_activites": 10,
-                "definition": f"Cet indicateur évalue le pourcentage de réalisation du plan d'audits prévu pour les entreprises publiques",
-                "source_donnees": "Rapport d'audit / Cellule de contrôle",
-                "mode_calcul": "(Nombre d'audits réalisés / Nombre d'audits prévus) x 100",
-                "valeurs_cibles": f"80% en {annee_n}, 85% en {annee_n+1}, 90% en {annee_n+2}",
-                "_source": "default",
-            },
-            # Objectif Spécifique 3 - Indicateur 2
-            {
-                "objectif_titre": f"Objectif Spécifique 3: Améliorer le dispositif de contrôle des entreprises publiques",
-                "indicateur_nom": "Taux de réalisation du plan de contrôles opérationnels des entreprises publiques",
-                "unite": "%",
-                f"realisation_{annee_n_3}": 100,
-                f"realisation_{annee_n_2}": 85,
-                f"realisation_{annee_n_1}": 100,
-                f"prevision_{annee_n}": 80,
-                f"realisation_{annee_n}": 100,
-                "nb_activites": 12,
-                "definition": f"Cet indicateur mesure le pourcentage de réalisation du plan de contrôles opérationnels prévu pour les entreprises publiques",
-                "source_donnees": "Rapport de contrôle / Cellule de contrôle",
-                "mode_calcul": "(Nombre de contrôles réalisés / Nombre de contrôles prévus) x 100",
-                "valeurs_cibles": f"80% en {annee_n}, 85% en {annee_n+1}, 90% en {annee_n+2}",
-                "_source": "default",
-            },
-        ]
-    
-    @staticmethod
-    def get_fake_effectifs(annee: int) -> list[dict[str, Any]]:
-        """
-        Retourne les données factices pour les effectifs.
-        
-        Args:
-            annee: Année courante pour calculer l'année précédente
-        
-        Returns:
-            Liste de dictionnaires contenant les effectifs factices par catégorie
-        """
-        annee_precedente = annee - 1
-        return [
-            {"categorie": "Catégorie A", f"effectif_{annee_precedente}": 25, "besoins_exprimes": 5, "previsions": 5, "besoins_satisfaits": 4, "sorties": 2, "_is_fake": True},
-            {"categorie": "Catégorie B", f"effectif_{annee_precedente}": 45, "besoins_exprimes": 8, "previsions": 8, "besoins_satisfaits": 7, "sorties": 3, "_is_fake": True},
-            {"categorie": "Catégorie C", f"effectif_{annee_precedente}": 30, "besoins_exprimes": 6, "previsions": 6, "besoins_satisfaits": 5, "sorties": 2, "_is_fake": True},
-            {"categorie": "Catégorie D", f"effectif_{annee_precedente}": 15, "besoins_exprimes": 3, "previsions": 3, "besoins_satisfaits": 2, "sorties": 1, "_is_fake": True},
-            {"categorie": "Non Fonctionnaires", f"effectif_{annee_precedente}": 10, "besoins_exprimes": 2, "previsions": 2, "besoins_satisfaits": 2, "sorties": 0, "_is_fake": True},
-        ]
-    
-    @staticmethod
-    def get_fake_introduction_data() -> dict[str, Any]:
-        """
-        Retourne les données factices pour l'introduction.
-        
-        Returns:
-            Dictionnaire contenant les données factices pour l'introduction
-        """
-        return {
-            "ministre_nom": "Monsieur Moussa SANOGO",
-            "ministre_date_nomination": "2024-01-15",
-            "decret_attribution_numero": "n° 2024-820",
-            "decret_attribution_date": "2024-01-20",
-            "mission_ministere": "Mettre en œuvre la politique du Gouvernement en matière de patrimoine, de portefeuille de l'État et des entreprises publiques",
-            "structure_cabinet": "Cabinet du Ministre",
-            "structure_directions_centrales": 3,
-            "structure_services": 5,
-            "structure_directions_generales": 2,
-            "decret_organisation_numero": "n° 2024-963",
-            "decret_organisation_date": "2024-12-06",
-        }
+# Classe RAPFakeDataLoader supprimée - plus de données factices
+# Toutes les données manquantes sont remplacées par "............"
 
 
 # ============================================================================
@@ -4040,7 +4184,7 @@ class RAPLayoutDrawer(RAPBaseGenerator):
         # Déterminer la couleur du titre (toutes les données sont DB, rouge)
         titre_color = RAPStylingManager._get_color_for_source("db")
         
-        # Découper le titre en lignes
+        # Découper le titre en lignes (en majuscules pour la couverture)
         if titre_rapport:
             lines = wrap_text_to_width(pdf, titre_rapport.upper(), font_name, font_size, max_text_width)
             total_text_height = len(lines) * line_height
@@ -4390,7 +4534,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Marges
         left_margin = 3 * cm
         right_margin = 3 * cm
-        top_margin = 3 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 2 * cm  # Hauteur du footer
         footer_margin = 0.8 * cm  # Marge entre le contenu et le footer
         bottom_margin = footer_height + footer_margin
@@ -4576,7 +4720,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Marges
         left_margin = 3 * cm
         right_margin = 3 * cm
-        top_margin = 3 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 2 * cm
         footer_margin = 0.8 * cm
         bottom_margin = footer_height + footer_margin
@@ -4642,6 +4786,7 @@ class RAPContentDrawer(RAPBaseGenerator):
                     
                     titre = extract_title(found_data)
                     if not titre:
+                        # Les titres de tableaux restent en majuscules pour le programme
                         default_titres = [
                             f"Exécution financière par action du programme {numero} « {titre_prog.upper()} »",
                             f"Suivi des investissements du Programme {numero} « {titre_prog.upper()} »",
@@ -4728,7 +4873,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         page_num = start_page
         first_page = True
         
-        logger.info(f"🔍 DIAGNOSTIC _draw_liste_tableaux - Début avec start_page={start_page}, {len(tableaux_items)} tableaux à afficher")
+        # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
         logger.info(f"🔢 NUMÉROTATION - _draw_liste_tableaux DÉBUT: start_page={start_page}")
         
         while tableaux_items or first_page:
@@ -4826,7 +4971,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Marges
         left_margin = 3 * cm
         right_margin = 3 * cm
-        top_margin = 3 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 2 * cm
         footer_margin = 0.8 * cm
         bottom_margin = footer_height + footer_margin
@@ -4891,6 +5036,7 @@ class RAPContentDrawer(RAPBaseGenerator):
                     # Utiliser le titre extrait si disponible, sinon utiliser un titre par défaut
                     titre = extract_title(found_data)
                     if not titre:
+                        # Les titres de figures restent en majuscules pour le programme
                         default_titres = [
                             f"Répartition du budget actuel du Programme {numero} « {titre_prog.upper()} » par nature de dépenses",
                             f"Evolution des taux d'exécution par action du Programme {numero} « {titre_prog.upper()} »",
@@ -5071,7 +5217,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Marges
         left_margin = 3 * cm
         right_margin = 3 * cm
-        top_margin = 3 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 2 * cm
         footer_margin = 0.8 * cm
         bottom_margin = footer_height + footer_margin
@@ -5257,6 +5403,13 @@ class RAPContentDrawer(RAPBaseGenerator):
             
             # Dessiner le footer
             logger.info(f"🔢 NUMÉROTATION - Footer dessiné avec page_num={page_num}")
+            
+            # Sécurité : éviter les boucles infinies
+            if not items_to_remove and sigles_remaining:
+                logger.warning("⚠️ Aucun sigle n'a pu être dessiné, sortie de boucle")
+                break
+            
+            first_page = False
             draw_footer(page_num)
             
             pdf.restoreState()
@@ -5348,7 +5501,7 @@ class RAPContentDrawer(RAPBaseGenerator):
 
             pdf.restoreState()
 
-            # Footer / numéro de page
+            # Footer / numéro de page (AVANT l'incrémentation)
             if show_page_number:
                 logger.info(f"🔢 NUMÉROTATION - Footer pour page {current_page}")
                 if draw_footer_func:
@@ -5358,6 +5511,28 @@ class RAPContentDrawer(RAPBaseGenerator):
                     pdf.setFont("Helvetica-Bold", 12)
                     pdf.drawRightString(page_width - 30, 25, str(current_page))
                     pdf.restoreState()
+
+            # Sécurité : éviter les boucles infinies
+            # Pour LongTable, len(story) peut rester constant tout en avançant dans le tableau
+            # Donc on vérifie seulement si vraiment aucune progression après plusieurs pages
+            if consumed == 0 and after > 0:
+                if not hasattr(cls, '_story_no_consume_count'):
+                    cls._story_no_consume_count = 0
+                cls._story_no_consume_count += 1
+                if cls._story_no_consume_count > 10:  # Limite de 10 pages sans consommation
+                    logger.warning(f"⚠️ Aucun élément n'a été consommé après {cls._story_no_consume_count} pages, {after} éléments restants. Sortie de boucle pour éviter une boucle infinie.")
+                    break
+            else:
+                # Réinitialiser le compteur si on consomme des éléments
+                cls._story_no_consume_count = 0
+            
+            # Sécurité supplémentaire : limiter le nombre de pages pour éviter les boucles infinies
+            if current_page > 1000:  # Limite raisonnable
+                logger.error("⚠️ Limite de 1000 pages atteinte, arrêt pour éviter une boucle infinie")
+                break
+            
+            # Incrémenter le numéro de page pour la prochaine itération
+            current_page += 1
 
             # ⚠️ On NE TESTE PLUS (after == before)
             # Car pour LongTable, len(story) peut rester constant
@@ -5421,7 +5596,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Marges et dimensions
         left_margin = 3 * cm
         right_margin = 3 * cm
-        top_margin = 3 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 2 * cm
         footer_margin = 0.8 * cm
         bottom_margin = footer_height + footer_margin
@@ -5479,34 +5654,16 @@ class RAPContentDrawer(RAPBaseGenerator):
         logger.info(f"🔍 _draw_introduction_generale - cls.data contient 'introduction': {'introduction' in cls.data}")
         
         # Fonction helper pour générer des données factices selon le type
-        def generate_fake_value(key: str, default_value: Any = None) -> Any:
-            """Génère une valeur factice réaliste selon la clé."""
-            if not RAPBaseGenerator.should_use_fake_data():
-                return default_value
-            
-            # Générer des valeurs factices réalistes selon la clé
-            fake_data_map = RAPFakeDataLoader.get_fake_introduction_data()
-            
-            if key in fake_data_map:
-                return fake_data_map[key]
-            
-            # Valeurs par défaut selon le type
-            if default_value == "NC" or default_value == "":
-                return "Donnée factice"
-            elif isinstance(default_value, (int, float)) and default_value == 0:
-                return 15  # Valeur factice pour les nombres
-            else:
-                return default_value
+        # Fonction generate_fake_value supprimée - plus de données factices
         
         # Fonction helper pour récupérer une valeur principale
         def get_main_value(key: str, default_value: Any = None) -> tuple[Any, str]:
             """Récupère une valeur principale."""
             value = cls.data.get(key, default_value)
             
-            # Si la valeur est la valeur par défaut (NC, 0, etc.), générer une valeur factice en mode brouillon
-            if value == default_value and RAPBaseGenerator.should_use_fake_data():
-                fake_value = generate_fake_value(key, default_value)
-                return fake_value, "fake"
+            # Si la valeur est la valeur par défaut, retourner "............"
+            if value == default_value or value is None or value == "":
+                return "............", "db"
             
             return value, "db"
         
@@ -5515,10 +5672,9 @@ class RAPContentDrawer(RAPBaseGenerator):
             """Récupère une valeur d'introduction."""
             value = intro_data.get(key, default_value)
             
-            # Si la valeur est la valeur par défaut (NC, 0, etc.), générer une valeur factice en mode brouillon
-            if value == default_value and RAPBaseGenerator.should_use_fake_data():
-                fake_value = generate_fake_value(key, default_value)
-                return fake_value, "fake"
+            # Si la valeur est la valeur par défaut, retourner "............"
+            if value == default_value or value is None or value == "":
+                return "............", "db"
             
             return value, "db"
         
@@ -5548,27 +5704,25 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # Formater chaque valeur selon sa source (DB en rouge, factice en violet italique)
         def format_by_source(value: Any, source: str) -> str:
-            """Formate une valeur selon sa source."""
-            # Retourner "NC" pour les valeurs vides
+            """Formate une valeur selon sa source - toutes les données dynamiques en rouge."""
+            # Retourner "............" pour les valeurs vides ou "0"
             if not value or value == "" or value == []:
-                if source == "fake":
-                    return RAPStylingManager.format_fake_data("NC")
-                return RAPStylingManager.format_db_data("NC")
-            # Si c'est un nombre 0, retourner "0" formaté
-            if isinstance(value, (int, float)) and value == 0:
-                if source == "fake":
-                    return RAPStylingManager.format_fake_data("0")
-                return RAPStylingManager.format_db_data("0")
+                return f'<font color="#FF0000">............</font>'
+            # Si c'est un nombre 0 ou la chaîne "0", retourner "............" formaté en rouge
+            if (isinstance(value, (int, float)) and value == 0) or str(value).strip() == "0":
+                return f'<font color="#FF0000">............</font>'
             
-            # Formater selon la source
-            if source == "fake":
-                return RAPStylingManager.format_fake_data(str(value))
-            else:
-                return RAPStylingManager.format_db_data(str(value))
+            # Formater toutes les valeurs en rouge
+            value_str = str(value)
+            # Échapper les caractères HTML
+            value_str = value_str.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            return f'<font color="#FF0000">{value_str}</font>'
         
         # Récupérer le nom du ministère avec sa source
+        # Convertir en title case pour le contenu de l'introduction
         ministere_value, ministere_source = get_main_value("ministere", "NC")
-        formatted_ministere = format_by_source(ministere_value, ministere_source)
+        ministere_title = RAPStylingManager.to_title_case(ministere_value) if ministere_value and ministere_value != "NC" else ministere_value
+        formatted_ministere = format_by_source(ministere_title, ministere_source)
         
         formatted_ministre_nom = format_by_source(ministre_nom, ministre_nom_source)
         formatted_ministre_date = format_by_source(ministre_date, ministre_date_source)
@@ -5587,17 +5741,35 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # Paragraphe 2 : Structure organisationnelle
         formatted_structure_cabinet = format_by_source(structure_cabinet, structure_cabinet_source)
-        structure_desc = formatted_structure_cabinet if structure_cabinet and structure_cabinet != "NC" else RAPStylingManager.format_db_data("NC")
+        structure_desc = formatted_structure_cabinet if structure_cabinet and structure_cabinet != "............" else format_by_source("............", "db")
         
         # Formater les nombres selon la source
-        formatted_nb_directions = format_by_source(str(nb_directions), nb_directions_source) if nb_directions else RAPStylingManager.format_db_data("0")
-        formatted_nb_services = format_by_source(str(nb_services), nb_services_source) if nb_services else RAPStylingManager.format_db_data("0")
-        formatted_nb_dg = format_by_source(str(nb_dg), nb_dg_source) if nb_dg else RAPStylingManager.format_db_data("0")
+        # Convertir en int si c'est un nombre, sinon utiliser 0
+        # Gérer les cas où la valeur peut être "............" (chaîne) ou un nombre
+        try:
+            nb_directions_int = int(nb_directions) if isinstance(nb_directions, (int, float)) else (0 if nb_directions == "............" or not nb_directions else int(str(nb_directions)))
+        except (ValueError, TypeError):
+            nb_directions_int = 0
         
-        # Afficher "0" si vide
-        directions_text = f"{formatted_nb_directions} Direction{'s' if nb_directions > 1 else ''} centrale{'s' if nb_directions > 1 else ''}" if nb_directions else RAPStylingManager.format_db_data("0 Direction centrale")
-        services_text = f"{formatted_nb_services} Service{'s' if nb_services > 1 else ''}" if nb_services else RAPStylingManager.format_db_data("0 Service")
-        dg_text = f"{formatted_nb_dg} Direction{'s' if nb_dg > 1 else ''} Générale{'s' if nb_dg > 1 else ''}" if nb_dg else RAPStylingManager.format_db_data("0 Direction Générale")
+        try:
+            nb_services_int = int(nb_services) if isinstance(nb_services, (int, float)) else (0 if nb_services == "............" or not nb_services else int(str(nb_services)))
+        except (ValueError, TypeError):
+            nb_services_int = 0
+        
+        try:
+            nb_dg_int = int(nb_dg) if isinstance(nb_dg, (int, float)) else (0 if nb_dg == "............" or not nb_dg else int(str(nb_dg)))
+        except (ValueError, TypeError):
+            nb_dg_int = 0
+        
+        # Afficher "............" au lieu de "0" si la valeur est 0 ou manquante
+        formatted_nb_directions = format_by_source(str(nb_directions_int), nb_directions_source) if nb_directions_int > 0 else format_by_source("............", "db")
+        formatted_nb_services = format_by_source(str(nb_services_int), nb_services_source) if nb_services_int > 0 else format_by_source("............", "db")
+        formatted_nb_dg = format_by_source(str(nb_dg_int), nb_dg_source) if nb_dg_int > 0 else format_by_source("............", "db")
+        
+        # Afficher "............" si vide
+        directions_text = f"{formatted_nb_directions} Direction{'s' if nb_directions_int > 1 else ''} centrale{'s' if nb_directions_int > 1 else ''}" if nb_directions_int > 0 else format_by_source("............ Direction centrale", "db")
+        services_text = f"{formatted_nb_services} Service{'s' if nb_services_int > 1 else ''}" if nb_services_int > 0 else format_by_source("............ Service", "db")
+        dg_text = f"{formatted_nb_dg} Direction{'s' if nb_dg_int > 1 else ''} Générale{'s' if nb_dg_int > 1 else ''}" if nb_dg_int > 0 else format_by_source("............ Direction Générale", "db")
         
         structure_parts = [structure_desc]
         if directions_text:
@@ -5693,13 +5865,11 @@ class RAPContentDrawer(RAPBaseGenerator):
     @classmethod
     def draw_partie_i_ministere(
         cls,
-        pdf: canvas.Canvas,
-        width: float,
-        height: float,
-        start_page: int
-    ) -> int:
+        start_page: int,
+        session=None
+    ) -> tuple[BytesIO, int]:
         """
-        Dessine la Partie I : Le Ministère avec support multi-pages.
+        Dessine la Partie I : Le Ministère avec SimpleDocTemplate pour tous les tableaux.
         
         Cette méthode génère la première partie principale du rapport qui inclut :
         - I.1. Architecture programmatique du Ministère (avec tableau 1)
@@ -5712,36 +5882,56 @@ class RAPContentDrawer(RAPBaseGenerator):
           - III.2. Répartition par nature de dépenses (avec graphique)
         
         Args:
-            pdf: Le canvas PDF
-            width: Largeur de la page
-            height: Hauteur de la page
             start_page: Numéro de page de début
+            session: Session de base de données (optionnel)
         
         Returns:
-            Le numéro de la page suivante après la Partie I
+            Tuple (buffer du PDF temporaire, numéro de la dernière page + 1)
         
         Note:
-            Cette partie utilise SimpleDocTemplate pour gérer les tableaux longs.
-            Les données proviennent de la base de données ou sont générées en mode brouillon.
+            Cette partie utilise SimpleDocTemplate pour gérer les tableaux longs et leur division automatique.
+            Les données proviennent de la base de données.
         """
-        logger.info(f"🔢 NUMÉROTATION - draw_partie_i_ministere DÉBUT: start_page={start_page}")
+        logger.info(f"📄 Génération de la PARTIE I : LE MINISTÈRE (page {start_page})")
         
-        # Marges et dimensions
+        # Créer un buffer temporaire pour cette section
+        temp_buffer = BytesIO()
+        
+        # Dimensions de la page
+        page_width, page_height = landscape(A4)
         left_margin = 3 * cm
         right_margin = 3 * cm
-        top_margin = 3 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 2 * cm
         footer_margin = 0.8 * cm
         bottom_margin = footer_height + footer_margin
-        available_width = width - left_margin - right_margin
-        available_height = height - top_margin - bottom_margin
-
-        # Fonction pour dessiner le footer avec numéro de page
-        def draw_footer(page_number: int):
+        available_width = page_width - left_margin - right_margin
+        
+        # Créer le document SimpleDocTemplate
+        doc = SimpleDocTemplate(
+            temp_buffer,
+            pagesize=landscape(A4),
+            leftMargin=left_margin,
+            rightMargin=right_margin,
+            topMargin=top_margin,
+            bottomMargin=bottom_margin,
+        )
+        
+        # Fonction callback pour dessiner le footer avec numéro de page
+        page_counter = start_page - 1  # Commencer à start_page - 1 car on incrémente avant
+        
+        def on_page(canv, doc_obj):
+            """Callback appelé à chaque page pour dessiner le footer."""
+            nonlocal page_counter
+            page_counter += 1
+            
+            # Mettre à jour la variable de classe pour que les PageMarker puissent l'utiliser
+            cls._current_rendering_page = page_counter
+            
             RAPLayoutDrawer.draw_page_footer(
-                pdf=pdf,
-                page_number=page_number,
-                width=width,
+                pdf=canv,
+                page_number=page_counter,
+                width=page_width,
                 footer_margin=footer_margin,
                 footer_height=footer_height,
                 right_margin=right_margin
@@ -5802,11 +5992,18 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Récupérer les données
         ministere = cls.data.get("ministere", "")
         annee = cls.data.get("annee", 2024)
-        # Charger les programmes depuis la base de données uniquement (pas de DEFAULT_DATA)
-        programmes = cls.data.get("programmes", [])
+        # Les programmes seront chargés via ReportDataLoader.load_data_programmes plus bas
         
         # Récupérer les données de la partie ministère (ou utiliser des valeurs par défaut)
         partie_data = cls.data.get("partie_ministere", {})
+        
+        # IMPORTANT: Préserver les orientations stratégiques qui ont été chargées depuis la DB
+        orientations_preservees = partie_data.get("orientations", [])
+        orientations_count_preserve = partie_data.get("orientations_count")
+        resultats_count_preserve = partie_data.get("resultats_count")
+        objectifs_globaux_count_preserve = partie_data.get("objectifs_globaux_count")
+        
+        # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
         
         # Déterminer si les données viennent de la DB ou sont des valeurs par défaut
         # Si partie_data existe et contient programme_details, c'est qu'il vient de la DB (via load_budget_data)
@@ -5820,122 +6017,151 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Extraire les orientations stratégiques si présentes dans partie_ministere
         orientations_from_db = partie_data.get("orientations") if partie_data else None
         
-        # Si partie_data n'existe pas ou n'a pas programme_details, construire les données
+        # Si partie_data n'existe pas ou n'a pas programme_details, charger directement depuis la DB
         if not partie_data or "programme_details" not in partie_data:
-            # Initialiser le flag pour les données factices
-            is_architecture_fake = False
+            # Charger directement les données de programmes depuis la base de données
+            from app.db.session import engine
+            from sqlmodel import Session as SQLModelSession
             
-            # Calculer les totaux à partir des programmes
+            # Charger les données de programmes via ReportDataLoader
+            programmes_data = {}
+            annee_prog = cls.data.get("annee", 2024)
             total_actions = 0
             total_activites = 0
             programme_details = []
-            for prog in programmes:
-                num = prog.get("numero", 1)
-                titre = prog.get("titre", "")
-                actions = prog.get("nb_actions", 0)  # 0 si vide, pas de valeur par défaut hardcodée
-                activites = prog.get("nb_activites", 0)
-                programme_details.append({
-                    "numero": num,
-                    "titre": titre,
-                    "actions": actions,
-                    "activites": activites,
-                })
-                total_actions += actions
-                total_activites += activites
+            is_architecture_fake = False
             
-            # Calculer les pourcentages
-            if total_activites > 0:
-                prog1_pct = (programme_details[0]["activites"] / total_activites * 100) if len(programme_details) > 0 else 0
-                prog2_pct = (programme_details[1]["activites"] / total_activites * 100) if len(programme_details) > 1 else 0
-            else:
-                # Si pas de données, générer des données factices en mode brouillon
-                mode = cls.data.get("mode", "brouillon")
-                if mode == "brouillon" and RAPBaseGenerator.should_use_fake_data():
-                    # Générer des données factices pour la démonstration
-                    logger.info(f"📊 Mode brouillon: génération de données factices pour l'architecture programmatique")
-                    is_architecture_fake = True
-                    total_programmes = len(programmes) if programmes else 2
-                    total_actions = 15
-                    total_activites = 45
-                    programme_details = [
-                        {"numero": 1, "titre": "ADMINISTRATION GÉNÉRALE", "actions": 8, "activites": 25},
-                        {"numero": 2, "titre": "GESTION DU PATRIMOINE", "actions": 7, "activites": 20},
-                    ]
-                    prog1_pct = (25 / total_activites * 100) if total_activites > 0 else 0
-                    prog2_pct = (20 / total_activites * 100) if total_activites > 0 else 0
-                else:
-                    # Mode final : utiliser 0
-                    prog1_pct = 0
-                    prog2_pct = 0
-                    total_actions = 0
-                    total_activites = 0
+            try:
+                with SQLModelSession(engine) as prog_session:
+                    programmes_data = ReportDataLoader.load_data_programmes(
+                        prog_session, 
+                        annee=annee_prog, 
+                        include_sigobe_stats=True
+                    )
+                    logger.info(f"✅ Données de programmes chargées via ReportDataLoader: {programmes_data.get('total_programmes', 0)} programmes, {programmes_data.get('total_actions', 0)} actions, {programmes_data.get('total_activites', 0)} activités")
+                    
+                    # Utiliser les données chargées directement
+                    total_actions = programmes_data.get("total_actions", 0)
+                    total_activites = programmes_data.get("total_activites", 0)
+                    total_programmes = programmes_data.get("total_programmes", 0)
+                    programmes_loaded = programmes_data.get("programmes", [])
+                    
+                    # Construire programme_details depuis les données chargées
                     programme_details = []
+                    for prog in programmes_loaded:
+                        if isinstance(prog, dict):
+                            # Les données viennent déjà au format dict avec les stats SIGOBE
+                            programme_details.append({
+                                "numero": prog.get("numero", 0),
+                                "titre": prog.get("titre", ""),
+                                "actions": prog.get("nb_actions", 0),
+                                "activites": prog.get("nb_activites", 0),
+                            })
+                        else:
+                            # C'est un objet Programme SQLModel (sans stats SIGOBE)
+                            programme_details.append({
+                                "numero": 0,  # À déterminer depuis l'index
+                                "titre": getattr(prog, 'libelle', None) or getattr(prog, 'code', None) or "",
+                                "actions": 0,  # Stats SIGOBE non disponibles
+                                "activites": 0,  # Stats SIGOBE non disponibles
+                            })
+                    
+                    # Calculer les pourcentages
+                    if total_activites > 0 and len(programme_details) > 0:
+                        for i, prog_detail in enumerate(programme_details):
+                            pct_key = f"prog{i+1}_pct"
+                            pct_value = (prog_detail["activites"] / total_activites * 100) if total_activites > 0 else 0
+                            programme_details[i][pct_key] = pct_value
+                        
+                        prog1_pct = programme_details[0].get("prog1_pct", 0) if len(programme_details) > 0 else 0
+                        prog2_pct = programme_details[1].get("prog2_pct", 0) if len(programme_details) > 1 else 0
+                    else:
+                        prog1_pct = 0
+                        prog2_pct = 0
+                        
+            except Exception as prog_error:
+                logger.warning(f"⚠️ Erreur lors du chargement des données de programmes via ReportDataLoader: {prog_error}")
+                import traceback
+                logger.error(traceback.format_exc())
+                programmes_data = {
+                    "programmes": [],
+                    "total_programmes": 0,
+                    "total_actions": 0,
+                    "total_activites": 0,
+                }
+                total_actions = 0
+                total_activites = 0
+                total_programmes = 0
+                programme_details = []
+                prog1_pct = 0
+                prog2_pct = 0
+            
+            # Pas de génération de données factices - utiliser 0 si pas de données
             
             # Charger les orientations stratégiques depuis la DB
-            orientations = cls.data.get("partie_ministere", {}).get("orientations")
+            # IMPORTANT: Utiliser les orientations préservées au début de la fonction
+            orientations = orientations_preservees if orientations_preservees else []
+            orientations_count = orientations_count_preserve
+            resultats_count = resultats_count_preserve
+            objectifs_globaux_count = objectifs_globaux_count_preserve
+            
+            # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            
             if not orientations:
                 # Si pas de données, utiliser une liste vide (affichage avec "NC" pour les textes)
                 orientations = []
             
-            # Charger les données de performance depuis load_budget_data si disponibles
-            performance_data = cls.data.get("budget_data", {}).get("performance", {})
+            # Charger directement les données de performance depuis la base de données
+            # Ne plus dépendre de load_budget_data qui n'est pas fiable
+            from app.db.session import engine
+            from sqlmodel import Session as SQLModelSession
             
-            # Générer des données factices pour la performance si nécessaire
-            is_performance_fake = False
-            mode = cls.data.get("mode", "brouillon")
+            performance_data = {}
+            try:
+                with SQLModelSession(engine) as perf_session:
+                    performance_data = ReportDataLoader.load_data_performance(perf_session, annee)
+                    logger.info(f"🎯 [CADRE PERFORMANCE] ✅ Données chargées via ReportDataLoader: architecture={performance_data.get('architecture', {})}")
+            except Exception as perf_error:
+                logger.warning(f"⚠️ Erreur lors du chargement direct des données de performance: {perf_error}")
+                performance_data = {
+                    "architecture": {
+                        "nb_programmes": 0,
+                        "nb_objectifs_globaux": 0,
+                        "nb_objectifs_specifiques": 0,
+                        "nb_indicateurs": 0,
+                        "nb_cibles": 0,
+                    },
+                    "taux_realisation": 0,
+                    "nb_cibles_atteintes": 0,
+                    "realisations": [],
+                }
+            
+            # Utiliser uniquement les données réelles depuis la DB
             architecture_db = performance_data.get("architecture", {})
             realisations_db = performance_data.get("realisations", [])
             
-            # Vérifier si les données de performance sont vides
-            if (mode == "brouillon" and RAPBaseGenerator.should_use_fake_data() and
-                (architecture_db.get("nb_objectifs_globaux", 0) == 0 or
-                 architecture_db.get("nb_objectifs_specifiques", 0) == 0 or
-                 architecture_db.get("nb_indicateurs", 0) == 0 or
-                 len(realisations_db) == 0)):
-                logger.info(f"📊 Mode brouillon: génération de données factices pour la performance")
-                is_performance_fake = True
-                # Générer des données factices pour l'architecture
-                architecture_data = {
-                    "nb_programmes": len(programmes) if programmes else 2,
-                    "nb_objectifs_globaux": 5,
-                    "nb_objectifs_specifiques": 12,
-                    "nb_indicateurs": 15,
-                    "nb_cibles": 15,
-                }
-                # Générer des données factices pour les réalisations
-                realisations = [
-                    {"programme": "P1: ADMINISTRATION GÉNÉRALE", "objectif_specifique": "OS 1: Améliorer la coordination", "nb_cibles": 5, "nb_cibles_atteintes": 4},
-                    {"programme": "P1: ADMINISTRATION GÉNÉRALE", "objectif_specifique": "OS 2: Renforcer les capacités", "nb_cibles": 4, "nb_cibles_atteintes": 4},
-                    {"programme": "P2: GESTION DU PATRIMOINE", "objectif_specifique": "OS 1: Optimiser la gestion", "nb_cibles": 6, "nb_cibles_atteintes": 5},
-                ]
-                taux_realisation = 86.7  # (13/15) * 100
-                taux_realisation_n1 = 82.5
-                nb_indicateurs_n1 = 14
-            else:
-                # Utiliser les données réelles
-                architecture_data = {
-                    "nb_programmes": architecture_db.get("nb_programmes", len(programmes) if programmes else 0),
+            # Utiliser les données réelles uniquement
+            architecture_data = {
+                "nb_programmes": architecture_db.get("nb_programmes", total_programmes if 'total_programmes' in locals() else 0),
                     "nb_objectifs_globaux": architecture_db.get("nb_objectifs_globaux", 0),
                     "nb_objectifs_specifiques": architecture_db.get("nb_objectifs_specifiques", 0),
                     "nb_indicateurs": architecture_db.get("nb_indicateurs", 0),
                     "nb_cibles": architecture_db.get("nb_cibles", 0),
                 }
-                realisations = realisations_db
-                taux_realisation = performance_data.get("taux_realisation", 0)
-                taux_realisation_n1 = performance_data.get(f"taux_realisation_{annee - 1}", 0)
-                nb_indicateurs_n1 = performance_data.get(f"nb_indicateurs_{annee - 1}", 0)
+            realisations = realisations_db
+            taux_realisation = performance_data.get("taux_realisation", 0)
+            taux_realisation_n1 = performance_data.get(f"taux_realisation_{annee - 1}", 0)
+            nb_indicateurs_n1 = performance_data.get(f"nb_indicateurs_{annee - 1}", 0)
             
             partie_data = {
-                "total_programmes": len(programmes) if programmes else 0,
+                "total_programmes": total_programmes,
                 "total_actions": total_actions,
                 "total_activites": total_activites,
                 "programme_details": programme_details,
                 "prog1_pct": prog1_pct,
                 "prog2_pct": prog2_pct,
                 "source": f"Source: Annexe 4 de la Loi de Finances n° 2023-1000 du 18 décembre 2023 portant budget de l'Etat pour l'année {annee}",
-                "orientations": orientations,
-                "_is_architecture_fake": is_architecture_fake,  # Flag pour indiquer que les données sont factices
-                "_is_performance_fake": is_performance_fake,  # Flag pour indiquer que les données de performance sont factices
+                "orientations": orientations,  # Les orientations préservées depuis cls.data
                 "performance": {
                     "architecture": architecture_data,
                     "realisations": realisations,
@@ -5946,8 +6172,74 @@ class RAPContentDrawer(RAPBaseGenerator):
                 }
             }
             
+            # IMPORTANT: Préserver les compteurs d'orientations si présents
+            if orientations_count is not None:
+                partie_data["orientations_count"] = orientations_count
+            if resultats_count is not None:
+                partie_data["resultats_count"] = resultats_count
+            if objectifs_globaux_count is not None:
+                partie_data["objectifs_globaux_count"] = objectifs_globaux_count
+            
+            # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            
             # Mettre à jour cls.data pour que partie_data soit disponible
-            cls.data["partie_ministere"] = partie_data
+            # IMPORTANT: Fusionner avec l'existant pour ne pas perdre les données
+            if "partie_ministere" not in cls.data:
+                cls.data["partie_ministere"] = {}
+            cls.data["partie_ministere"].update(partie_data)
+        else:
+            # Si partie_data existe déjà avec programme_details, s'assurer que les orientations sont préservées
+            if "partie_ministere" not in cls.data:
+                cls.data["partie_ministere"] = {}
+            
+            # IMPORTANT: Toujours préserver les orientations depuis cls.data si elles existent
+            # Même si partie_data existe déjà, on doit s'assurer que les orientations sont dans cls.data
+            if orientations_preservees:
+                cls.data["partie_ministere"]["orientations"] = orientations_preservees
+                if orientations_count_preserve is not None:
+                    cls.data["partie_ministere"]["orientations_count"] = orientations_count_preserve
+                if resultats_count_preserve is not None:
+                    cls.data["partie_ministere"]["resultats_count"] = resultats_count_preserve
+                if objectifs_globaux_count_preserve is not None:
+                    cls.data["partie_ministere"]["objectifs_globaux_count"] = objectifs_globaux_count_preserve
+                # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            elif "orientations" in cls.data.get("partie_ministere", {}):
+                # Si orientations_preservees est vide mais qu'il y a des orientations dans cls.data, les utiliser
+                orientations_preservees = cls.data["partie_ministere"]["orientations"]
+                # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            
+            # IMPORTANT: S'assurer que les données de performance sont présentes dans cls.data["partie_ministere"]
+            # Même si partie_data existe déjà, on doit vérifier si performance existe
+            if "performance" not in cls.data.get("partie_ministere", {}):
+                # Si performance n'existe pas dans partie_ministere, essayer de le charger depuis budget_data
+                if "budget_data" in cls.data and "performance" in cls.data["budget_data"]:
+                    if "performance" not in cls.data["partie_ministere"]:
+                        cls.data["partie_ministere"]["performance"] = {}
+                    cls.data["partie_ministere"]["performance"].update(cls.data["budget_data"]["performance"])
+                    # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            
+            # Mettre à jour partie_data avec les données de cls.data pour utilisation dans la suite
+            # IMPORTANT: Utiliser directement cls.data["partie_ministere"] pour avoir toujours les données à jour
+            partie_data = cls.data["partie_ministere"]
+            
+            # S'assurer que les orientations sont toujours présentes dans partie_data
+            if orientations_preservees and "orientations" not in partie_data:
+                partie_data["orientations"] = orientations_preservees
+                # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            elif "orientations" not in partie_data and "orientations" in cls.data.get("partie_ministere", {}):
+                # Si orientations_preservees est vide mais qu'il y a des orientations dans cls.data, les utiliser
+                partie_data["orientations"] = cls.data["partie_ministere"]["orientations"]
+                # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+            
+            # S'assurer que les données de performance sont toujours présentes dans partie_data
+            if "performance" not in partie_data:
+                # Si performance n'existe pas dans partie_data, essayer de le charger depuis budget_data ou cls.data
+                if "budget_data" in cls.data and "performance" in cls.data["budget_data"]:
+                    partie_data["performance"] = cls.data["budget_data"]["performance"].copy()
+                    # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+                elif "performance" in cls.data.get("partie_ministere", {}):
+                    partie_data["performance"] = cls.data["partie_ministere"]["performance"]
+                    # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
         
         # Construire la story
         story: list[Any] = []
@@ -5969,58 +6261,73 @@ class RAPContentDrawer(RAPBaseGenerator):
         # I.1. Architecture programmatique du Ministère
         # Paragraphe introductif
         programme_details = partie_data.get("programme_details", [])
-        prog1_detail = programme_details[0] if len(programme_details) > 0 else {}
-        prog2_detail = programme_details[1] if len(programme_details) > 1 else {}
-        prog1_pct = partie_data.get("prog1_pct", 0)
-        prog2_pct = partie_data.get("prog2_pct", 0)
-        
-        prog1_titre = prog1_detail.get('titre', 'NC') if prog1_detail else 'NC'  # "NC" si vide
-        prog2_titre = prog2_detail.get('titre', 'NC') if prog2_detail else 'NC'  # "NC" si vide
         sigle_ministere = RAPStylingManager.get_sigle_ministere()
         
-        # Déterminer si les données sont factices (vérifier le flag ou si les données sont vides)
-        mode = cls.data.get("mode", "brouillon")
-        is_fake_data = (
-            partie_data.get('_is_architecture_fake', False) or  # Flag indiquant que les données sont factices
-            (mode == "brouillon" and 
-             RAPBaseGenerator.should_use_fake_data() and
-             (partie_data.get('total_actions', 0) == 0 or 
-              partie_data.get('total_activites', 0) == 0 or
-              prog1_titre == 'NC' or prog2_titre == 'NC'))
-        )
-        
-        # Log pour déboguer
-        if is_fake_data:
-            logger.info(f"📊 Données factices détectées pour l'architecture: flag={partie_data.get('_is_architecture_fake', False)}, total_actions={partie_data.get('total_actions', 0)}")
-        
-        # Fonction helper pour formater selon si c'est factice ou réel
+        # Toujours utiliser les données de la DB (plus de données factices)
+        # Fonction helper pour formater les données (toujours DB maintenant)
         def format_partie_value(value: Any) -> str:
-            """Formate une valeur de la partie ministère selon si elle est factice ou réelle."""
-            if is_fake_data:
-                return RAPStylingManager.format_fake_data(str(value))
-            else:
-                return RAPStylingManager.format_db_data(str(value))
+            """Formate une valeur de la partie ministère (toujours depuis DB)."""
+            return RAPStylingManager.format_db_data(str(value))
         
         # Formater toutes les données selon leur source
-        formatted_ministere = RAPStylingManager.format_db_data(ministere)  # Toujours DB (nom du ministère)
+        # Le nom du ministère en title case pour le contenu
+        ministere_title = RAPStylingManager.to_title_case(ministere) if ministere else ""
+        formatted_ministere = RAPStylingManager.format_db_data(ministere_title)  # Toujours DB (nom du ministère)
         formatted_sigle = RAPStylingManager.format_db_data(sigle_ministere)  # Toujours DB (sigle)
         formatted_total_prog = format_partie_value(partie_data.get('total_programmes', 0))
         formatted_total_actions = format_partie_value(partie_data.get('total_actions', 0))
         formatted_total_activites = format_partie_value(partie_data.get('total_activites', 0))
-        formatted_prog1_titre = format_partie_value(prog1_titre if prog1_titre != 'NC' else 'ADMINISTRATION GÉNÉRALE')
-        formatted_prog1_activites = format_partie_value(prog1_detail.get('activites', 0) if prog1_detail else 0)
-        formatted_prog1_pct = format_partie_value(f"{prog1_pct:.2f}")
-        formatted_prog2_titre = format_partie_value(prog2_titre if prog2_titre != 'NC' else 'GESTION DU PATRIMOINE')
-        formatted_prog2_activites = format_partie_value(prog2_detail.get('activites', 0) if prog2_detail else 0)
-        formatted_prog2_pct = format_partie_value(f"{prog2_pct:.2f}")
+        
+        # Construire la phrase décrivant les programmes dynamiquement
+        total_activites = partie_data.get('total_activites', 0)
+        programmes_phrase = ""
+        
+        if len(programme_details) == 0:
+            programmes_phrase = "Aucun programme enregistré."
+        elif len(programme_details) == 1:
+            prog = programme_details[0]
+            prog_titre = format_partie_value(prog.get('titre', 'NC'))
+            prog_activites = format_partie_value(prog.get('activites', 0))
+            prog_pct = (prog.get('activites', 0) / total_activites * 100) if total_activites > 0 else 0
+            formatted_prog_pct = format_partie_value(f"{prog_pct:.2f}")
+            programmes_phrase = f"Le programme « {prog_titre} » enregistre {prog_activites} activités ({formatted_prog_pct}%)."
+        elif len(programme_details) == 2:
+            prog1 = programme_details[0]
+            prog2 = programme_details[1]
+            prog1_titre = format_partie_value(prog1.get('titre', 'NC'))
+            prog1_activites = format_partie_value(prog1.get('activites', 0))
+            prog1_pct = (prog1.get('activites', 0) / total_activites * 100) if total_activites > 0 else 0
+            formatted_prog1_pct = format_partie_value(f"{prog1_pct:.2f}")
+            prog2_titre = format_partie_value(prog2.get('titre', 'NC'))
+            prog2_activites = format_partie_value(prog2.get('activites', 0))
+            prog2_pct = (prog2.get('activites', 0) / total_activites * 100) if total_activites > 0 else 0
+            formatted_prog2_pct = format_partie_value(f"{prog2_pct:.2f}")
+            programmes_phrase = (
+                f"Le programme « {prog1_titre} » enregistre "
+                f"{prog1_activites} activités ({formatted_prog1_pct}%) et le programme "
+                f"« {prog2_titre} » {prog2_activites} activités ({formatted_prog2_pct}%)."
+            )
+        else:
+            # 3 programmes ou plus : lister tous avec des virgules et "et" pour le dernier
+            programme_parts = []
+            for prog in programme_details:
+                prog_titre = format_partie_value(prog.get('titre', 'NC'))
+                prog_activites = format_partie_value(prog.get('activites', 0))
+                prog_pct = (prog.get('activites', 0) / total_activites * 100) if total_activites > 0 else 0
+                formatted_prog_pct = format_partie_value(f"{prog_pct:.2f}")
+                programme_parts.append(f"le programme « {prog_titre} » {prog_activites} activités ({formatted_prog_pct}%)")
+            
+            # Joindre avec des virgules et "et" avant le dernier
+            if len(programme_parts) == 3:
+                programmes_phrase = f"{programme_parts[0]}, {programme_parts[1]} et {programme_parts[2]}."
+            else:
+                # Plus de 3 programmes : "A, B, C et D."
+                programmes_phrase = ", ".join(programme_parts[:-1]) + f" et {programme_parts[-1]}."
         
         para1_text = (
             f"Le {formatted_ministere} ({formatted_sigle}) est subdivisé en {formatted_total_prog} programmes déclinés en "
             f"{formatted_total_actions} actions comprenant {formatted_total_activites} activités. "
-            f"Le programme « {formatted_prog1_titre} » enregistre "
-            f"{formatted_prog1_activites} activités ({formatted_prog1_pct}%) et le programme "
-            f"« {formatted_prog2_titre} » "
-            f"{formatted_prog2_activites} activités ({formatted_prog2_pct}%)."
+            f"{programmes_phrase.capitalize()}"
         )
         # Ajouter CondPageBreak pour éviter que le titre soit orphelin
         story.append(CondPageBreak(3 * cm))  # S'assure qu'il y a au moins 3 cm d'espace avant le titre
@@ -6094,7 +6401,8 @@ class RAPContentDrawer(RAPBaseGenerator):
         ]
         
         # repeatRows=1 permet de répéter les en-têtes sur chaque page si le tableau est divisé
-        recap_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        # Utiliser LongTable pour supporter le multi-pages
+        recap_table = LongTable(table_data, colWidths=col_widths, repeatRows=1, splitByRow=1)
         recap_table.setStyle(
             TableStyle([
                 # Bordures
@@ -6132,30 +6440,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # Générer des données factices si toutes les valeurs sont à 0 en mode brouillon
         mode = cls.data.get("mode", "brouillon")
-        is_politique_fake = (
-            mode == "brouillon" and 
-            RAPBaseGenerator.should_use_fake_data() and
-            (orientations_count == 0 or resultats_count == 0 or objectifs_count == 0)
-        )
-        
-        if is_politique_fake:
-            logger.info(f"📊 Mode brouillon: génération de données factices pour la politique ministérielle")
-            orientations_count = 3
-            resultats_count = 8
-            objectifs_count = 12
-            # Marquer dans partie_data que les données sont factices
-            partie_data['_is_politique_fake'] = True
-        
-        # Utiliser le flag pour déterminer si les données sont factices
-        is_politique_fake_final = partie_data.get('_is_politique_fake', False) or is_politique_fake
-        
-        # Formater selon la source (factice ou DB)
+        # Toujours utiliser les données de la DB (plus de données factices)
+        # Formater les données (toujours DB maintenant)
         def format_politique_value(value: Any) -> str:
-            """Formate une valeur de la politique selon si elle est factice ou réelle."""
-            if is_politique_fake_final:
-                return RAPStylingManager.format_fake_data(str(value))
-            else:
-                return RAPStylingManager.format_db_data(str(value))
+            """Formate une valeur de la politique (toujours depuis DB)."""
+            return RAPStylingManager.format_db_data(str(value))
         
         formatted_orientations_count = format_politique_value(orientations_count)
         formatted_resultats_count = format_politique_value(resultats_count)
@@ -6184,14 +6473,24 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         orientations_list = partie_data.get("orientations", [])
         
-        # Si pas de données et mode brouillon, générer des données factices pour le tableau
-        if not orientations_list and is_politique_fake:
-            logger.info(f"📊 Mode brouillon: génération de données factices pour le tableau de politique ministérielle")
-            orientations_list = [
-                {"orientation": "Renforcement de la gouvernance", "resultat": "Amélioration de la transparence", "objectif": "Objectif 1: Renforcer la transparence"},
-                {"orientation": "Modernisation de l'administration", "resultat": "Efficacité accrue des services", "objectif": "Objectif 2: Moderniser les processus"},
-                {"orientation": "Développement du patrimoine", "resultat": "Valorisation des actifs", "objectif": "Objectif 3: Optimiser la gestion"},
-            ]
+        # Log pour diagnostic détaillé
+        logger.info(f"🔍 DIAGNOSTIC - orientations_list depuis partie_data: {len(orientations_list) if orientations_list else 0} éléments")
+        # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+        if not orientations_list:
+            # Si orientations_list est vide, vérifier directement dans cls.data
+            orientations_direct = cls.data.get("partie_ministere", {}).get("orientations", [])
+            if orientations_direct:
+                orientations_list = orientations_direct
+        
+        # Si aucune donnée trouvée, ajouter une ligne avec le message
+        if not orientations_list:
+            logger.warning(f"⚠️ Aucune donnée d'orientation stratégique trouvée dans partie_data")
+            message_para = Paragraph("Aucune donnée d'orientation stratégique disponible pour cette période.", table_cell_style)
+            politique_table_data.append([
+                message_para,
+                "",  # Colonnes vides
+                "",
+            ])
         
         for orientation_data in orientations_list:
             # Formater les données du tableau selon leur source (factice ou DB)
@@ -6212,9 +6511,9 @@ class RAPContentDrawer(RAPBaseGenerator):
         ]
         
         # repeatRows=1 permet de répéter les en-têtes sur chaque page si le tableau est divisé
-        politique_table = Table(politique_table_data, colWidths=politique_col_widths, repeatRows=1)
-        politique_table.setStyle(
-            TableStyle([
+        # Utiliser LongTable pour supporter le multi-pages
+        politique_table = LongTable(politique_table_data, colWidths=politique_col_widths, repeatRows=1, splitByRow=1)
+        politique_table_style = TableStyle([
                 # Bordures
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
                 # En-têtes
@@ -6228,7 +6527,14 @@ class RAPContentDrawer(RAPBaseGenerator):
                 ("TOPPADDING", (0, 0), (-1, -1), 6),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
             ])
-        )
+        
+        # Si aucune donnée trouvée, fusionner toutes les colonnes du message
+        if not orientations_list:
+            # La ligne du message est à l'index 1 (après l'en-tête)
+            politique_table_style.add("SPAN", (0, 1), (-1, 1))  # Fusionner toutes les colonnes
+            politique_table_style.add("ALIGN", (0, 1), (-1, 1), "CENTER")  # Centrer le message
+        
+        politique_table.setStyle(politique_table_style)
         
         # Ajouter le tableau (sans titre car il n'y en a pas dans l'image)
         story.append(politique_table)
@@ -6248,27 +6554,75 @@ class RAPContentDrawer(RAPBaseGenerator):
         story.append(CondPageBreak(3 * cm))
         story.append(Paragraph("II.1. Architecture du cadre de performance", subsection_title_style))
         
+        # ========================================================================
+        # 🎯 CADRE DE PERFORMANCE - TABLEAU 2
+        # ========================================================================
         # Tableau 2: Composantes des cadres de performance du ministère
-        performance_data = partie_data.get("performance", {})
-        architecture_data = performance_data.get("architecture", {})
+        # TOUJOURS charger directement les données de performance depuis la base de données
+        from app.db.session import engine
+        from sqlmodel import Session as SQLModelSession
         
-        # Déterminer si les données de performance sont factices
-        is_performance_fake = partie_data.get('_is_performance_fake', False)
+        # Récupérer l'année depuis cls.data
+        annee_tableau2 = cls.data.get("annee", 2024)
+        logger.info(f"🎯 [CADRE PERFORMANCE] Année utilisée: {annee_tableau2}")
         
-        # Fonction helper pour formater les données de performance
-        def format_performance_value(value: Any) -> str:
-            """Formate une valeur de performance selon si elle est factice ou réelle."""
-            if is_performance_fake:
-                return RAPStylingManager.format_fake_data(str(value))
-            else:
-                return RAPStylingManager.format_db_data(str(value))
+        # TOUJOURS charger directement depuis la DB pour être sûr d'avoir les bonnes données
+        architecture_data = {
+            "nb_programmes": 0,
+            "nb_objectifs_globaux": 0,
+            "nb_objectifs_specifiques": 0,
+            "nb_indicateurs": 0,
+            "nb_cibles": 0,
+        }
         
-        # Formater toutes les valeurs dynamiques selon leur source
-        formatted_nb_programmes = format_performance_value(architecture_data.get("nb_programmes", 0))
-        formatted_nb_objectifs_globaux = format_performance_value(architecture_data.get("nb_objectifs_globaux", 0))
-        formatted_nb_objectifs_specifiques = format_performance_value(architecture_data.get("nb_objectifs_specifiques", 0))
-        formatted_nb_indicateurs = format_performance_value(architecture_data.get("nb_indicateurs", 0))
-        formatted_nb_cibles = format_performance_value(architecture_data.get("nb_cibles", 0))
+        try:
+            logger.info(f"🎯 [CADRE PERFORMANCE] Chargement via ReportDataLoader...")
+            with SQLModelSession(engine) as perf_session:
+                performance_data = ReportDataLoader.load_data_performance(perf_session, annee_tableau2)
+                architecture_data = performance_data.get("architecture", {})
+                logger.info(f"🎯 [CADRE PERFORMANCE] ✅ Données chargées: nb_programmes={architecture_data.get('nb_programmes', 0)}, nb_objectifs_globaux={architecture_data.get('nb_objectifs_globaux', 0)}, nb_objectifs_specifiques={architecture_data.get('nb_objectifs_specifiques', 0)}, nb_indicateurs={architecture_data.get('nb_indicateurs', 0)}, nb_cibles={architecture_data.get('nb_cibles', 0)}")
+                
+                # Mettre à jour partie_data pour utilisation future
+                if "performance" not in partie_data:
+                    partie_data["performance"] = {}
+                partie_data["performance"].update(performance_data)
+                
+                # Mettre à jour cls.data aussi
+                if "partie_ministere" not in cls.data:
+                    cls.data["partie_ministere"] = {}
+                if "performance" not in cls.data["partie_ministere"]:
+                    cls.data["partie_ministere"]["performance"] = {}
+                cls.data["partie_ministere"]["performance"].update(performance_data)
+        except Exception as perf_error:
+            logger.error(f"🎯 [CADRE PERFORMANCE] ❌ ERREUR: {perf_error}")
+            import traceback
+            logger.error(f"🎯 [CADRE PERFORMANCE] ❌ Traceback: {traceback.format_exc()}")
+            architecture_data = {
+                "nb_programmes": 0,
+                "nb_objectifs_globaux": 0,
+                "nb_objectifs_specifiques": 0,
+                "nb_indicateurs": 0,
+                "nb_cibles": 0,
+            }
+        
+        logger.info(f"🎯 [CADRE PERFORMANCE] 📊 Données finales pour tableau: {architecture_data}")
+        
+        # Formater toutes les valeurs dynamiques (toujours depuis DB, toujours en rouge)
+        # RAPStylingManager.format_db_data gère déjà le remplacement de 0 par "............"
+        formatted_nb_programmes = RAPStylingManager.format_db_data(architecture_data.get("nb_programmes", 0))
+        formatted_nb_objectifs_globaux = RAPStylingManager.format_db_data(architecture_data.get("nb_objectifs_globaux", 0))
+        formatted_nb_objectifs_specifiques = RAPStylingManager.format_db_data(architecture_data.get("nb_objectifs_specifiques", 0))
+        formatted_nb_indicateurs = RAPStylingManager.format_db_data(architecture_data.get("nb_indicateurs", 0))
+        formatted_nb_cibles = RAPStylingManager.format_db_data(architecture_data.get("nb_cibles", 0))
+        
+        # Vérifier si toutes les valeurs sont vides (0 ou "............")
+        has_data = (
+            architecture_data.get("nb_programmes", 0) > 0 or
+            architecture_data.get("nb_objectifs_globaux", 0) > 0 or
+            architecture_data.get("nb_objectifs_specifiques", 0) > 0 or
+            architecture_data.get("nb_indicateurs", 0) > 0 or
+            architecture_data.get("nb_cibles", 0) > 0
+        )
         
         tableau1_data = [
             [
@@ -6279,15 +6633,29 @@ class RAPContentDrawer(RAPBaseGenerator):
                 Paragraph("Indicateurs liés aux OS", table_header_style),
                 Paragraph("Cibles liées aux indicateurs et OS", table_header_style),
             ],
-            [
+        ]
+        
+        # Ajouter une ligne "Aucune donnée disponible" si toutes les valeurs sont vides
+        if not has_data:
+            tableau1_data.append([
+                Paragraph("Nombre", table_cell_style),
+                Paragraph(RAPStylingManager.format_db_data("Aucune donnée disponible pour cette période."), table_cell_center_style),
+                Paragraph("", table_cell_center_style),
+                Paragraph("", table_cell_center_style),
+                Paragraph("", table_cell_center_style),
+                Paragraph("", table_cell_center_style),
+            ])
+            # Ajouter un SPAN pour fusionner les colonnes 1-5
+            tableau1_data[-1][1] = Paragraph(RAPStylingManager.format_db_data("Aucune donnée disponible pour cette période."), table_cell_center_style)
+        else:
+            tableau1_data.append([
                 Paragraph("Nombre", table_cell_style),
                 Paragraph(formatted_nb_programmes, table_cell_center_style),
                 Paragraph(formatted_nb_objectifs_globaux, table_cell_center_style),
                 Paragraph(formatted_nb_objectifs_specifiques, table_cell_center_style),
                 Paragraph(formatted_nb_indicateurs, table_cell_center_style),
                 Paragraph(formatted_nb_cibles, table_cell_center_style),
-            ]
-        ]
+            ])
         
         tableau1_col_widths = [
             available_width * 0.25,  # Composantes
@@ -6299,9 +6667,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         ]
         
         # repeatRows=1 permet de répéter les en-têtes sur chaque page si le tableau est divisé
-        tableau1 = Table(tableau1_data, colWidths=tableau1_col_widths, repeatRows=1)
-        tableau1.setStyle(
-            TableStyle([
+        # Utiliser LongTable pour supporter le multi-pages
+        tableau1 = LongTable(tableau1_data, colWidths=tableau1_col_widths, repeatRows=1, splitByRow=1)
+        
+        # Préparer les styles du tableau
+        tableau1_style = [
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#bdd6ee")),
                 ("ALIGN", (0, 0), (-1, 0), "CENTER"),
@@ -6312,8 +6682,13 @@ class RAPContentDrawer(RAPBaseGenerator):
                 ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                 ("TOPPADDING", (0, 0), (-1, -1), 6),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ])
-        )
+        ]
+        
+        # Si aucune donnée, fusionner les colonnes 1-5 pour le message
+        if not has_data:
+            tableau1_style.append(("SPAN", (1, 1), (5, 1)))
+        
+        tableau1.setStyle(TableStyle(tableau1_style))
         
         tableau_numero = RAPBaseGenerator.get_next_tableau_numero()
         story.append(Paragraph(f"Tableau {tableau_numero}: Composantes des cadres de performance du ministère", subsection_title_style))
@@ -6324,7 +6699,9 @@ class RAPContentDrawer(RAPBaseGenerator):
         story.append(Spacer(1, 0.15 * cm))
         
         # Paragraphe après tableau 1 - formater toutes les valeurs dynamiques selon leur source
-        formatted_ministere_para = RAPStylingManager.format_db_data(ministere)  # Toujours DB
+        # Le nom du ministère en title case pour le contenu
+        ministere_title_para = RAPStylingManager.to_title_case(ministere) if ministere else ""
+        formatted_ministere_para = RAPStylingManager.format_db_data(ministere_title_para)  # Toujours DB
         formatted_sigle_para = RAPStylingManager.format_db_data(RAPStylingManager.get_sigle_ministere())  # Toujours DB
         formatted_annee_para = RAPStylingManager.format_db_data(str(annee))  # Toujours DB
         
@@ -6342,8 +6719,30 @@ class RAPContentDrawer(RAPBaseGenerator):
         story.append(CondPageBreak(3 * cm))
         story.append(Paragraph("II.2. Bilan des données globales du cadre de performance", subsection_title_style))
         
+        # ========================================================================
+        # 🎯 CADRE DE PERFORMANCE - TABLEAU 3
+        # ========================================================================
         # Tableau 3: Réalisations du cadre de performance du ministère
+        # IMPORTANT: Ce tableau utilise LongTable qui sera géré par SimpleDocTemplate
+        # via Frame.addFromList dans _render_multipage_story pour la division automatique
         realisations = performance_data.get("realisations", [])
+        
+        logger.info(f"🎯 [CADRE PERFORMANCE] 📊 Tableau 3 - realisations depuis performance_data: {len(realisations)} élément(s)")
+        if realisations:
+            logger.info(f"🎯 [CADRE PERFORMANCE] 📊 Tableau 3 - Premier élément: {realisations[0] if len(realisations) > 0 else 'vide'}")
+        else:
+            # Si realisations est vide, essayer de recharger depuis la DB
+            logger.info(f"🎯 [CADRE PERFORMANCE] ⚠️ Tableau 3 - realisations vide, rechargement depuis DB...")
+            try:
+                with SQLModelSession(engine) as perf_session:
+                    performance_data_tableau3 = ReportDataLoader.load_data_performance(perf_session, annee_tableau2)
+                    realisations = performance_data_tableau3.get("realisations", [])
+                    logger.info(f"🎯 [CADRE PERFORMANCE] ✅ Tableau 3 - realisations rechargées: {len(realisations)} élément(s)")
+                    # Mettre à jour performance_data pour cohérence
+                    performance_data["realisations"] = realisations
+            except Exception as perf_error:
+                logger.error(f"🎯 [CADRE PERFORMANCE] ❌ ERREUR Tableau 3: {perf_error}")
+                realisations = []
         
         tableau2_data = [
             [
@@ -6357,39 +6756,119 @@ class RAPContentDrawer(RAPBaseGenerator):
         total_cibles = 0
         total_cibles_atteintes = 0
         current_programme = None
+        programme_spans = []  # Liste pour stocker les informations de fusion: (start_row, span_count)
+        current_programme_start_row = None
+        current_programme_count = 0
         
-        for realisation in realisations:
-            prog = realisation.get("programme", "")
-            os = realisation.get("objectif_specifique", "")
-            nb_cibles = realisation.get("nb_cibles", 0)
-            nb_atteintes = realisation.get("nb_cibles_atteintes", 0)
+        # Si aucune réalisation trouvée, afficher un message
+        if not realisations:
+            logger.warning(f"🎯 [CADRE PERFORMANCE] ⚠️ Tableau 3 - Aucune réalisation trouvée après chargement")
+            message_para = Paragraph(RAPStylingManager.format_db_data("Aucune donnée de réalisation disponible pour cette période."), table_cell_style)
+            tableau2_data.append([
+                message_para,
+                Paragraph("", table_cell_style),
+                Paragraph("", table_cell_center_style),
+                Paragraph("", table_cell_center_style),
+            ])
+            # Stocker 0 dans performance_data
+            performance_data["total_cibles"] = 0
+            performance_data["total_cibles_atteintes"] = 0
+        else:
+            logger.info(f"🎯 [CADRE PERFORMANCE] 📊 Tableau 3 - {len(realisations)} réalisation(s) à afficher")
             
-            total_cibles += nb_cibles
-            total_cibles_atteintes += nb_atteintes
+            # Première passe: construire les données et collecter les informations de fusion
+            # L'en-tête est à l'index 0, les données commencent à l'index 1
+            data_start_row = 1  # Ligne 0 est l'en-tête
             
-            # Formater toutes les valeurs dynamiques selon leur source
-            formatted_prog = format_performance_value(prog) if prog else ""
-            formatted_os = format_performance_value(os) if os else ""
-            formatted_nb_cibles = format_performance_value(nb_cibles)
-            formatted_nb_atteintes = format_performance_value(nb_atteintes)
+            for idx, realisation in enumerate(realisations):
+                prog_full = realisation.get("programme", "")
+                os = realisation.get("objectif_specifique", "")
+                nb_cibles = realisation.get("nb_cibles", 0)
+                nb_atteintes = realisation.get("nb_cibles_atteintes", 0)
+                
+                total_cibles += nb_cibles
+                total_cibles_atteintes += nb_atteintes
             
-            # Si c'est le même programme, on ne répète pas le nom
-            programme_cell = Paragraph(formatted_prog, table_cell_style) if prog != current_programme else Paragraph("", table_cell_style)
-            if prog != current_programme:
-                current_programme = prog
+                # Formater le programme pour le tableau: "P{numero} : {titre}"
+                # Le format des réalisations peut être "P{code}: {libelle}" ou "PP{code}: {libelle}" (double P si code est déjà "P1")
+                # On normalise pour avoir "P{numero} : {titre}" (avec espace après ":" et sans double P)
+                prog_for_table = prog_full
+                if prog_full:
+                    
+                    # Normaliser le format: s'assurer qu'il y a un espace après les deux-points
+                    if ":" in prog_for_table:
+                        # Remplacer ":" par " : " seulement si pas déjà présent
+                        if ": " not in prog_for_table:
+                            prog_for_table = prog_for_table.replace(":", " : ", 1)  # Remplacer seulement la première occurrence
+                    # Si pas de format "P{numero}:", essayer de construire depuis programme_details
+                    elif not prog_for_table.startswith("P"):
+                        # Chercher le programme dans programme_details pour obtenir le numéro
+                        programme_details_temp = performance_data.get("programme_details", []) or partie_data.get("programme_details", [])
+                        for prog_detail in programme_details_temp:
+                            if prog_detail.get("titre", "") == prog_full:
+                                numero = prog_detail.get("numero", 0)
+                                if numero > 0:
+                                    # Le code peut être déjà "P1" ou juste "1", vérifier
+                                    code_prog = prog_detail.get("code", "")
+                                    if code_prog and code_prog.startswith("P"):
+                                        # Le code contient déjà "P", utiliser tel quel
+                                        prog_for_table = f"{code_prog} : {prog_full}"
+                                    else:
+                                        # Le code ne contient pas "P", l'ajouter
+                                        prog_for_table = f"P{numero} : {prog_full}"
+                                break
+                
+                # Formater l'objectif spécifique pour le tableau: "OS {code} : {titre}"
+                # Normaliser l'espace après les deux-points si nécessaire
+                os_for_table = os
+                if os:
+                    # Si le format est "OS {code}: {titre}" (sans espace), normaliser en "OS {code} : {titre}"
+                    if "OS " in os and ":" in os and ": " not in os:
+                        os_for_table = os.replace(":", " : ", 1)  # Remplacer seulement la première occurrence
+                
+                # Formater toutes les valeurs dynamiques (toujours depuis DB, toujours en rouge)
+                formatted_prog = RAPStylingManager.format_db_data(prog_for_table) if prog_for_table else ""
+                formatted_os = RAPStylingManager.format_db_data(os_for_table) if os_for_table else ""
+                formatted_nb_cibles = RAPStylingManager.format_db_data(nb_cibles)
+                formatted_nb_atteintes = RAPStylingManager.format_db_data(nb_atteintes)
+                
+                # Calculer le numéro de ligne dans le tableau (0 = en-tête, 1+ = données)
+                current_row = data_start_row + idx
+                
+                # Gérer les changements de programme pour la fusion (utiliser le nom complet comme clé)
+                # Normaliser la clé pour la comparaison (sans espaces supplémentaires)
+                prog_key = prog_for_table.replace(" : ", ":") if prog_for_table else ""
+                if prog_key != current_programme:
+                    # Si on avait un programme précédent, enregistrer sa fusion
+                    if current_programme is not None and current_programme_count > 0:
+                        programme_spans.append((current_programme_start_row, current_programme_count))
+                    
+                    # Nouveau programme
+                    current_programme = prog_key
+                    current_programme_start_row = current_row
+                    current_programme_count = 1
+                    programme_cell = Paragraph(formatted_prog, table_cell_style)
+                else:
+                    # Même programme, cellule vide (sera fusionnée plus tard)
+                    current_programme_count += 1
+                    programme_cell = Paragraph("", table_cell_style)
+                
+                tableau2_data.append([
+                    programme_cell,
+                    Paragraph(formatted_os, table_cell_style),
+                    Paragraph(formatted_nb_cibles, table_cell_center_style),
+                    Paragraph(formatted_nb_atteintes, table_cell_center_style),
+                ])
+            
+            # Enregistrer la dernière fusion de programme (APRÈS la boucle)
+            if current_programme is not None and current_programme_count > 0:
+                programme_spans.append((current_programme_start_row, current_programme_count))
+            
+            # Ligne Total - seulement si on a des réalisations
+            formatted_total_cibles = RAPStylingManager.format_db_data(total_cibles)
+            formatted_total_cibles_atteintes = RAPStylingManager.format_db_data(total_cibles_atteintes)
             
             tableau2_data.append([
-                programme_cell,
-                Paragraph(formatted_os, table_cell_style),
-                Paragraph(formatted_nb_cibles, table_cell_center_style),
-                Paragraph(formatted_nb_atteintes, table_cell_center_style),
-            ])
-        
-        # Ligne Total - formater les valeurs selon leur source
-        formatted_total_cibles = format_performance_value(total_cibles)
-        formatted_total_cibles_atteintes = format_performance_value(total_cibles_atteintes)
-        
-        tableau2_data.append([
             Paragraph("TOTAL", ParagraphStyle("TableTotal", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, leading=14, alignment=0)),
             Paragraph("", table_cell_style),
             Paragraph(formatted_total_cibles, ParagraphStyle("TableTotal", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, leading=14, alignment=1)),
@@ -6399,6 +6878,8 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Stocker les totaux dans performance_data pour utilisation dans les paragraphes
         performance_data["total_cibles"] = total_cibles
         performance_data["total_cibles_atteintes"] = total_cibles_atteintes
+        logger.info(f"🎯 [CADRE PERFORMANCE] 📊 Tableau 3 - Totaux: {total_cibles} cibles, {total_cibles_atteintes} atteintes")
+        logger.info(f"🎯 [CADRE PERFORMANCE] 📊 Tableau 3 - {len(programme_spans)} fusion(s) de cellules de programmes à appliquer")
         
         tableau2_col_widths = [
             available_width * 0.25,  # Programmes
@@ -6407,28 +6888,93 @@ class RAPContentDrawer(RAPBaseGenerator):
             available_width * 0.15,  # Nombre de cibles atteintes
         ]
         
-        # repeatRows=1 permet de répéter les en-têtes sur chaque page si le tableau est divisé
-        tableau2 = Table(tableau2_data, colWidths=tableau2_col_widths, repeatRows=1)
-        tableau2.setStyle(
-            TableStyle([
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#bdd6ee")),
-                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#ffe599")),
+        # IMPORTANT: Utiliser LongTable avec SimpleDocTemplate pour division automatique sur plusieurs pages
+        # LongTable est géré par SimpleDocTemplate via Frame.addFromList dans _render_multipage_story
+        # repeatRows=1 : répète l'en-tête sur chaque page
+        # splitByRow=1 : permet la division par lignes sur plusieurs pages
+        tableau2 = LongTable(
+            tableau2_data,
+            colWidths=tableau2_col_widths,
+            repeatRows=1,  # Répéter l'en-tête sur chaque page
+            splitByRow=1   # Permettre la division par lignes
+        )
+        tableau2_style = [
+            # Bordures extérieures et intérieures (meilleure compatibilité avec division de pages)
+            ("BOX", (0, 0), (-1, -1), 1, colors.black),
+            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.black),
+            # En-têtes centrés horizontalement et verticalement, sans fond bleu
                 ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+            # Alignement des données
                 ("ALIGN", (0, 1), (1, -2), "LEFT"),
-                ("ALIGN", (2, 1), (-1, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("VALIGN", (0, 1), (-1, -1), "TOP"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 6),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                 ("TOPPADDING", (0, 0), (-1, -1), 6),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ])
-        )
+        ]
+        
+        # Si aucune donnée, fusionner les colonnes pour le message
+        if not realisations:
+            tableau2_style.append(("SPAN", (0, 1), (-1, 1)))
+            tableau2_style.append(("ALIGN", (0, 1), (-1, 1), "CENTER"))
+        else:
+            # Fusionner les cellules de la colonne "Programmes" (colonne 0) pour chaque groupe d'objectifs
+            # SPAN(row_start, col_start, row_end, col_end) - la colonne 0 est "Programmes"
+            # Le nombre total de lignes dans le tableau (en-tête + données + TOTAL)
+            # len(tableau2_data) inclut: en-tête (index 0) + données (indices 1 à N) + TOTAL (index N+1)
+            total_rows_in_table = len(tableau2_data)  # Nombre total de lignes dans tableau2_data
+            # L'index de la dernière ligne est total_rows_in_table - 1
+            # La ligne TOTAL est à l'index total_rows_in_table - 1
+            # Les données vont de l'index 1 à total_rows_in_table - 2
+            max_data_row_index = total_rows_in_table - 2  # Dernière ligne de données (avant TOTAL)
+            
+            logger.info(f"🎯 [CADRE PERFORMANCE] 📊 Tableau 3 - Total lignes: {total_rows_in_table} (en-tête + {total_rows_in_table - 2} données + TOTAL), max_data_row_index: {max_data_row_index}")
+            
+            for start_row, span_count in programme_spans:
+                # start_row est l'index de la première ligne de données pour ce programme
+                # span_count est le nombre de lignes à fusionner
+                # L'en-tête est à l'index 0, donc start_row commence à 1
+                # On fusionne de start_row à start_row + span_count - 1
+                end_row = start_row + span_count - 1
+                
+                # Validation: s'assurer que end_row ne dépasse pas le nombre de lignes de données
+                if end_row > max_data_row_index:
+                    logger.warning(f"⚠️ Tableau 3: end_row ({end_row}) dépasse max_data_row_index ({max_data_row_index}) pour span start_row={start_row}, span_count={span_count}, ajustement à {max_data_row_index}")
+                    end_row = max_data_row_index
+                
+                # Validation supplémentaire: s'assurer que start_row est valide
+                if start_row < 1:
+                    logger.warning(f"⚠️ Tableau 3: start_row ({start_row}) < 1, ignoré")
+                    continue
+                if start_row > max_data_row_index:
+                    logger.warning(f"⚠️ Tableau 3: start_row ({start_row}) > max_data_row_index ({max_data_row_index}), ignoré")
+                    continue
+                
+                # SPAN fusionne (row, col) de (start_row, 0) à (end_row, 0)
+                logger.debug(f"🎯 [CADRE PERFORMANCE] 📊 Tableau 3 - Fusion: SPAN((0, {start_row}), (0, {end_row})) pour {span_count} lignes")
+                tableau2_style.append(("SPAN", (0, start_row), (0, end_row)))
+                # Centrer verticalement le texte dans la cellule fusionnée
+                tableau2_style.append(("VALIGN", (0, start_row), (0, end_row), "MIDDLE"))
+            
+            # Ajouter le style pour la ligne TOTAL seulement si on a des données
+            tableau2_style.append(("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#ffe599")))
+            tableau2_style.append(("ALIGN", (2, 1), (-1, -1), "CENTER"))
+        
+        tableau2.setStyle(TableStyle(tableau2_style))
         
         tableau_numero = RAPBaseGenerator.get_next_tableau_numero()
+        
+        # IMPORTANT: Pour permettre la division automatique du tableau sur plusieurs pages,
+        # on doit s'assurer que le tableau est bien ajouté à la story et que
+        # _render_multipage_story utilise Frame.addFromList qui supporte LongTable
         story.append(Paragraph(f"Tableau {tableau_numero}: Réalisations du cadre de performance du ministère", subsection_title_style))
         story.append(Spacer(1, 0.2 * cm))
+        
+        # Le LongTable sera automatiquement divisé par Frame.addFromList si configuré correctement
+        # splitByRow=1 et repeatRows=1 sont déjà configurés sur le LongTable
         story.append(tableau2)
+        
         story.append(Spacer(1, 0.15 * cm))
         story.append(Paragraph(partie_data.get("source", ""), source_style))
         story.append(Spacer(1, 0.15 * cm))
@@ -6444,18 +6990,29 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         formatted_annee_bilan = RAPStylingManager.format_db_data(str(annee))  # Année toujours DB
         formatted_annee_n1 = RAPStylingManager.format_db_data(str(annee_precedente))  # Année toujours DB
-        formatted_nb_indicateurs_bilan = format_performance_value(architecture_data.get('nb_indicateurs', 0))
-        formatted_taux_realisation = format_performance_value(taux_realisation)
-        formatted_nb_indicateurs_n1 = format_performance_value(nb_indicateurs_n1)
+        formatted_nb_indicateurs_bilan = RAPStylingManager.format_db_data(architecture_data.get('nb_indicateurs', 0))
+        formatted_taux_realisation = RAPStylingManager.format_db_data(taux_realisation)
+        formatted_nb_indicateurs_n1 = RAPStylingManager.format_db_data(nb_indicateurs_n1)
         
-        # Construire la liste dynamique des programmes (P1, P2, P3, etc.)
+        # Construire la liste dynamique des programmes avec leurs libellés complets
         programmes_list = []
-        for prog in programmes:
-            numero = prog.get("numero", 0)
-            if numero > 0:
-                programmes_list.append(f"P{numero}")
+        programme_details = performance_data.get("programme_details", [])
+        if not programme_details:
+            # Essayer de récupérer depuis partie_data
+            programme_details = partie_data.get("programme_details", [])
         
-        # Formater la liste des programmes
+        for prog in programme_details:
+            titre = prog.get("titre", "")
+            numero = prog.get("numero", 0)
+            if titre:
+                # Utiliser le libellé complet du programme en title case pour le contenu
+                titre_title = RAPStylingManager.to_title_case(titre)
+                programmes_list.append(titre_title)
+            elif numero > 0:
+                # Si pas de titre, utiliser le numéro en dernier recours
+                programmes_list.append(f"{numero}")
+        
+        # Formater la liste des programmes (en title case pour le contenu)
         if len(programmes_list) == 0:
             programmes_text = "les programmes"
         elif len(programmes_list) == 1:
@@ -6463,7 +7020,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         elif len(programmes_list) == 2:
             programmes_text = f"les programmes {RAPStylingManager.format_db_data(programmes_list[0])} et {RAPStylingManager.format_db_data(programmes_list[1])}"
         else:
-            # Plus de 2 programmes : "P1, P2 et P3"
+            # Plus de 2 programmes : "Programme 1, Programme 2 et Programme 3"
             programmes_formatted = [RAPStylingManager.format_db_data(p) for p in programmes_list[:-1]]
             programmes_text = f"les programmes {', '.join(programmes_formatted)} et {RAPStylingManager.format_db_data(programmes_list[-1])}"
         
@@ -6474,10 +7031,10 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Calculer le taux de réalisation réel si possible
         if total_cibles > 0:
             taux_realisation_calcule = (total_cibles_atteintes / total_cibles) * 100
-            formatted_taux_realisation_calcule = format_performance_value(f"{taux_realisation_calcule:.1f}")
+            formatted_taux_realisation_calcule = RAPStylingManager.format_db_data(f"{taux_realisation_calcule:.1f}")
         else:
             taux_realisation_calcule = taux_realisation
-            formatted_taux_realisation_calcule = format_performance_value(taux_realisation)
+            formatted_taux_realisation_calcule = RAPStylingManager.format_db_data(taux_realisation)
         
         # Adapter la phrase selon les résultats
         if total_cibles == 0:
@@ -6485,16 +7042,17 @@ class RAPContentDrawer(RAPBaseGenerator):
             phrase_resultats = f"Les indicateurs ont été définis, mais aucune cible n'a encore été évaluée."
         elif total_cibles_atteintes == total_cibles and total_cibles > 0:
             # Tous les objectifs sont atteints
-            phrase_resultats = f"L'ensemble de ces indicateurs a atteint les objectifs fixés, ce qui correspond à un taux de réalisation de {formatted_taux_realisation_calcule}%."
+            phrase_resultats = f"Pour {programmes_text}, l'ensemble de ces indicateurs a atteint les objectifs fixés, ce qui correspond à un taux de réalisation de {formatted_taux_realisation_calcule}%."
         elif total_cibles_atteintes == 0 and total_cibles > 0:
             # Aucun objectif atteint
-            formatted_total_cibles_para = format_performance_value(total_cibles)
-            phrase_resultats = f"Sur les {formatted_total_cibles_para} cibles définies, aucune n'a été atteinte à ce jour, ce qui correspond à un taux de réalisation de {formatted_taux_realisation_calcule}%."
+            formatted_total_cibles_para = RAPStylingManager.format_db_data(total_cibles)
+            phrase_resultats = f"Pour {programmes_text}, sur les {formatted_total_cibles_para} cibles définies, aucune n'a été atteinte à ce jour, ce qui correspond à un taux de réalisation de {formatted_taux_realisation_calcule}%."
         else:
             # Certains objectifs sont atteints, d'autres non
-            formatted_total_cibles_para = format_performance_value(total_cibles)
-            formatted_cibles_atteintes_para = format_performance_value(total_cibles_atteintes)
-            phrase_resultats = f"Sur les {formatted_total_cibles_para} cibles définies, {formatted_cibles_atteintes_para} ont été atteintes, ce qui correspond à un taux de réalisation de {formatted_taux_realisation_calcule}%."
+            formatted_total_cibles_para = RAPStylingManager.format_db_data(total_cibles)
+            formatted_cibles_atteintes_para = RAPStylingManager.format_db_data(total_cibles_atteintes)
+            # Inclure les noms des programmes dans la phrase
+            phrase_resultats = f"Pour {programmes_text}, sur les {formatted_total_cibles_para} cibles définies, {formatted_cibles_atteintes_para} ont été atteintes, ce qui correspond à un taux de réalisation de {formatted_taux_realisation_calcule}%."
         
         para_bilan1 = (
             f"Pour l'année {formatted_annee_bilan}, l'analyse du cadre de performance du ministère, tel que présenté dans le "
@@ -6507,7 +7065,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # Construire le deuxième paragraphe de manière dynamique selon les données réelles
         # Récupérer les données de N-1 pour comparaison (utiliser les clés dynamiques)
-        formatted_taux_realisation_n1 = format_performance_value(f"{taux_realisation_n1:.1f}")
+        formatted_taux_realisation_n1 = RAPStylingManager.format_db_data(f"{taux_realisation_n1:.1f}")
         
         # Calculer la différence entre N et N-1
         evolution_taux = taux_realisation_calcule - taux_realisation_n1 if total_cibles > 0 else 0
@@ -6541,16 +7099,16 @@ class RAPContentDrawer(RAPBaseGenerator):
             phrase_evolution = "une continuité dans les résultats est observée. "
         elif evolution_taux > 5:
             # Amélioration significative (> 5%)
-            phrase_evolution = f"une amélioration significative est observée avec une hausse du taux de réalisation de {format_performance_value(f'{abs(evolution_taux):.1f}')} points. "
+            phrase_evolution = f"une amélioration significative est observée avec une hausse du taux de réalisation de {RAPStylingManager.format_db_data(f'{abs(evolution_taux):.1f}')} points. "
         elif evolution_taux > 0:
             # Amélioration modérée
-            phrase_evolution = f"une amélioration est observée avec une hausse du taux de réalisation de {format_performance_value(f'{abs(evolution_taux):.1f}')} points. "
+            phrase_evolution = f"une amélioration est observée avec une hausse du taux de réalisation de {RAPStylingManager.format_db_data(f'{abs(evolution_taux):.1f}')} points. "
         elif evolution_taux < -5:
             # Dégradation significative (< -5%)
-            phrase_evolution = f"une baisse du taux de réalisation de {format_performance_value(f'{abs(evolution_taux):.1f}')} points est constatée. "
+            phrase_evolution = f"une baisse du taux de réalisation de {RAPStylingManager.format_db_data(f'{abs(evolution_taux):.1f}')} points est constatée. "
         else:
             # Dégradation modérée
-            phrase_evolution = f"une légère baisse du taux de réalisation de {format_performance_value(f'{abs(evolution_taux):.1f}')} points est constatée. "
+            phrase_evolution = f"une légère baisse du taux de réalisation de {RAPStylingManager.format_db_data(f'{abs(evolution_taux):.1f}')} points est constatée. "
         
         # Construire la phrase sur la capacité du ministère (seulement si taux élevé)
         if taux_realisation_calcule >= 80 and total_cibles > 0:
@@ -6605,8 +7163,27 @@ class RAPContentDrawer(RAPBaseGenerator):
         story.append(Paragraph("III. FINANCEMENT GLOBAL DU MINISTÈRE", section_title_style))
         story.append(Spacer(1, 0.15 * cm))
         
-        # Récupérer les données de financement
-        financement_data = cls.data.get("financement_global", {})
+        # Charger les données de financement depuis sigobe_execution
+        logger.info(f"📊 Chargement des données de financement depuis sigobe_execution pour l'année {annee}")
+        try:
+            from app.services.report_data_loader import ReportDataLoader
+            
+            # Utiliser la méthode centralisée de ReportDataLoader
+            financement_data = ReportDataLoader.load_data_financement_global(session, annee)
+            
+            # Stocker dans cls.data pour réutilisation éventuelle
+            cls.data["financement_global"] = financement_data
+            logger.info(f"✅ Données de financement chargées: budget_initial={financement_data.get('budget_initial_total', 0)}, budget_reel={financement_data.get('budget_reel_total', 0)}, natures={list(financement_data.get('par_nature', {}).keys())}")
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du chargement des données de financement: {e}", exc_info=True)
+            # Utiliser des données vides en cas d'erreur
+            financement_data = {
+                "budget_initial_total": 0,
+                "budget_reel_total": 0,
+                "evolution_total": 0,
+                "taux_evolution_total": 0,
+                "par_nature": {},
+            }
         
         # Générer des données factices pour le financement si nécessaire
         is_financement_fake = False
@@ -6616,56 +7193,22 @@ class RAPContentDrawer(RAPBaseGenerator):
         budget_reel_total = financement_data.get("budget_reel_total", 0)
         financement_par_nature = financement_data.get("par_nature", {})
         
-        # Vérifier si les données de financement sont vides
-        if (mode == "brouillon" and RAPBaseGenerator.should_use_fake_data() and
-            (budget_initial_total == 0 or budget_reel_total == 0 or not financement_par_nature)):
-            logger.info(f"📊 Mode brouillon: génération de données factices pour le financement global")
-            is_financement_fake = True
-            # Générer des données factices réalistes
-            budget_initial_total = 15_000_000_000.0  # 15 milliards FCFA
-            budget_reel_total = 16_500_000_000.0  # 16.5 milliards FCFA (augmentation de 10%)
-            evolution_total = budget_reel_total - budget_initial_total
-            taux_evolution_total = (evolution_total / budget_initial_total * 100) if budget_initial_total > 0 else 0
-            
-            # Générer des données factices par nature
-            financement_par_nature = {
-                "P": {
-                    "budget_initial": 8_000_000_000.0,  # 8 milliards
-                    "budget_reel": 8_500_000_000.0,  # 8.5 milliards (augmentation de 6.25%)
-                },
-                "BS": {
-                    "budget_initial": 3_500_000_000.0,  # 3.5 milliards
-                    "budget_reel": 4_000_000_000.0,  # 4 milliards (augmentation de 14.3%)
-                },
-                "T": {
-                    "budget_initial": 2_000_000_000.0,  # 2 milliards
-                    "budget_reel": 2_200_000_000.0,  # 2.2 milliards (augmentation de 10%)
-                },
-                "I": {
-                    "budget_initial": 1_500_000_000.0,  # 1.5 milliards
-                    "budget_reel": 1_800_000_000.0,  # 1.8 milliards (augmentation de 20%)
-                },
-            }
-        else:
-            evolution_total = budget_reel_total - budget_initial_total
-            taux_evolution_total = (evolution_total / budget_initial_total * 100) if budget_initial_total > 0 else 0
+        # Calculer l'évolution (toujours depuis DB maintenant)
+        evolution_total = budget_reel_total - budget_initial_total
+        taux_evolution_total = (evolution_total / budget_initial_total * 100) if budget_initial_total > 0 else 0
         
-        # Marquer dans cls.data que les données sont factices
-        if is_financement_fake:
-            cls.data["_is_financement_fake"] = True
-        
-        # Fonction helper pour formater les données de financement
+        # Fonction helper pour formater les données de financement (toujours DB)
         def format_financement_value(value: Any) -> str:
-            """Formate une valeur de financement selon si elle est factice ou réelle."""
-            if is_financement_fake:
-                return RAPStylingManager.format_fake_data(str(value))
-            else:
-                return RAPStylingManager.format_db_data(str(value))
+            """Formate une valeur de financement (toujours depuis DB)."""
+            return RAPStylingManager.format_db_data(str(value))
         
         # Formatage des montants en FCFA avec espaces comme séparateurs
         def format_fcfa(montant: float) -> str:
-            """Formate un montant en FCFA avec espaces comme séparateurs de milliers."""
-            return f"{montant:,.0f}".replace(",", " ")
+            """Formate un montant en FCFA avec espaces comme séparateurs de milliers. Retourne "............" en rouge si 0."""
+            if montant == 0 or montant is None:
+                return '<font color="#FF0000">............</font>'
+            montant_str = f"{int(montant):,}".replace(",", " ")
+            return f'<font color="#FF0000">{montant_str}</font>'
         
         # Récupérer les montants par nature (0 si non disponible, pas de valeurs par défaut hardcodées)
         personnel_init = financement_par_nature.get("P", {}).get("budget_initial", 0)
@@ -6712,7 +7255,9 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # Paragraphe introductif - formater toutes les valeurs dynamiques selon leur source
         formatted_annee_intro = RAPStylingManager.format_db_data(str(annee))  # Année toujours DB
-        formatted_ministere_intro = RAPStylingManager.format_db_data(ministere) if ministere else RAPStylingManager.format_db_data("NC")  # Toujours DB
+        # Le nom du ministère en title case pour le contenu
+        ministere_title_intro = RAPStylingManager.to_title_case(ministere) if ministere else "NC"
+        formatted_ministere_intro = RAPStylingManager.format_db_data(ministere_title_intro)  # Toujours DB
         formatted_sigle_intro = RAPStylingManager.format_db_data(RAPStylingManager.get_sigle_ministere())  # Toujours DB
         formatted_budget_initial = format_financement_value(format_fcfa(budget_initial_total)) if budget_initial_total > 0 else format_financement_value("0")
         formatted_personnel_init = format_financement_value(format_fcfa(personnel_init)) if personnel_init > 0 else format_financement_value("0")
@@ -6809,11 +7354,8 @@ class RAPContentDrawer(RAPBaseGenerator):
         if raisons_augmentation and abs(evolution_total) > 0:
             for raison in raisons_augmentation:
                 if raison and raison.strip():  # Ignorer les raisons vides
-                    # Formater les raisons selon leur source (factice ou DB)
-                    if is_financement_fake and mode == "brouillon" and RAPBaseGenerator.should_use_fake_data():
-                        formatted_raison = RAPStylingManager.format_fake_data(raison.strip())
-                    else:
-                        formatted_raison = RAPStylingManager.format_db_data(raison.strip())
+                    # Formater les raisons (toujours depuis DB maintenant)
+                    formatted_raison = RAPStylingManager.format_db_data(raison.strip())
                     story.append(Paragraph(formatted_raison, bullet_style, bulletText="•"))
         
         story.append(Spacer(1, 0.3 * cm))
@@ -6950,7 +7492,9 @@ class RAPContentDrawer(RAPBaseGenerator):
             story.append(Spacer(1, 0.3 * cm))
         
         # Section : Répartition du budget actuel par nature de dépenses - formater toutes les valeurs dynamiques selon leur source
-        formatted_ministere_repart = RAPStylingManager.format_db_data(ministere) if ministere else RAPStylingManager.format_db_data("NC")  # Toujours DB
+        # Le nom du ministère en title case pour le contenu
+        ministere_title_repart = RAPStylingManager.to_title_case(ministere) if ministere else "NC"
+        formatted_ministere_repart = RAPStylingManager.format_db_data(ministere_title_repart)  # Toujours DB
         formatted_sigle_repart = RAPStylingManager.format_db_data(RAPStylingManager.get_sigle_ministere())  # Toujours DB
         formatted_budget_reel_repart = format_financement_value(format_fcfa(budget_reel_total)) if budget_reel_total > 0 else format_financement_value("0")
         
@@ -7262,10 +7806,25 @@ class RAPContentDrawer(RAPBaseGenerator):
             investissements_real_exec = investissements_prev * 0.85  # 85% d'exécution
         
         # Calculer les écarts et taux pour l'année courante (totaux)
+        # S'assurer que toutes les valeurs sont numériques et non None
+        budget_annee_prevue = float(budget_annee_prevue or 0)
+        budget_annee_realisee = float(budget_annee_realisee or 0)
+        budget_annee_precedente_realisation = float(budget_annee_precedente_realisation or 0)
+        
         ecart_annee = budget_annee_prevue - budget_annee_realisee
         tx_real_annee = (budget_annee_realisee / budget_annee_prevue * 100) if budget_annee_prevue > 0 else 0
         
         # Calculer les écarts et taux par nature
+        # S'assurer que toutes les variables sont numériques et non None
+        personnel_prev = float(personnel_prev or 0)
+        personnel_real = float(personnel_real or 0)
+        biens_prev = float(biens_prev or 0)
+        biens_real_exec = float(biens_real_exec or 0)
+        transferts_prev = float(transferts_prev or 0)
+        transferts_real_exec = float(transferts_real_exec or 0)
+        investissements_prev = float(investissements_prev or 0)
+        investissements_real_exec = float(investissements_real_exec or 0)
+        
         personnel_ecart = personnel_prev - personnel_real
         personnel_tx = (personnel_real / personnel_prev * 100) if personnel_prev > 0 else 0
         
@@ -7280,11 +7839,18 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # Fonction de formatage spécifique pour le tableau 3
         def format_tableau3_value(value: Any) -> str:
-            """Formate une valeur du tableau 3 selon si elle est factice ou réelle."""
-            if is_tableau3_fake:
-                return RAPStylingManager.format_fake_data(str(value))
-            else:
-                return RAPStylingManager.format_db_data(str(value))
+            """
+            Formate une valeur du tableau 3.
+            Si la valeur est déjà formatée en HTML (contient <font>), on la retourne telle quelle.
+            Sinon, on l'enveloppe dans les balises HTML appropriées.
+            """
+            if value is None:
+                return "-"
+            if isinstance(value, str) and "<font" in value:
+                # La valeur est déjà formatée en HTML, on la retourne telle quelle
+                return value
+            # Sinon, on formate la valeur
+            return RAPStylingManager.format_db_data(str(value))
         
         # Styles pour le tableau avec hauteur de lignes réduite
         table_header_style = ParagraphStyle(
@@ -7355,8 +7921,9 @@ class RAPContentDrawer(RAPBaseGenerator):
         annee_actuelle_formatted = RAPStylingManager.format_db_data(str(annee))
         
         # Formater les valeurs communes (zéro et tiret) selon leur source
-        formatted_zero = format_tableau3_value(format_fcfa(0))
-        formatted_dash = format_tableau3_value("-")
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas réappliquer format_tableau3_value
+        formatted_zero = format_fcfa(0)  # Déjà formaté en HTML avec <font color="#FF0000">
+        formatted_dash = format_tableau3_value("-")  # "-" doit être formaté normalement
         
         # En-têtes multi-lignes
         table_data = []
@@ -7391,11 +7958,14 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # 1.1 Ressources intérieures
         # Formater toutes les valeurs numériques selon leur source
-        formatted_budget_annee_precedente = format_tableau3_value(format_fcfa(budget_annee_precedente_realisation))
-        formatted_prev_annee = format_tableau3_value(format_fcfa(budget_annee_prevue))
-        formatted_real_annee = format_tableau3_value(format_fcfa(budget_annee_realisee))
-        formatted_ecart_annee = format_tableau3_value(format_fcfa(ecart_annee))
-        formatted_tx_real_annee = format_tableau3_value(f"{tx_real_annee:.2f}%")
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas utiliser format_tableau3_value
+        formatted_budget_annee_precedente = format_fcfa(budget_annee_precedente_realisation)
+        formatted_prev_annee = format_fcfa(budget_annee_prevue)
+        formatted_real_annee = format_fcfa(budget_annee_realisee)
+        formatted_ecart_annee = format_fcfa(ecart_annee)
+        # S'assurer que tx_real_annee n'est pas None avant le formatage
+        tx_real_annee_value = tx_real_annee if tx_real_annee is not None else 0
+        formatted_tx_real_annee = format_tableau3_value(f"{tx_real_annee_value:.2f}%")
         
         table_data.append([
             Paragraph("&nbsp;&nbsp;&nbsp;&nbsp;1.1 Ressources intérieures", table_cell_style),
@@ -7478,10 +8048,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # 2.1 Personnel
         # Formater toutes les valeurs numériques selon leur source
-        formatted_personnel_n1 = format_tableau3_value(format_fcfa(personnel_n1_realisation))
-        formatted_personnel_prev = format_tableau3_value(format_fcfa(personnel_prev))
-        formatted_personnel_real = format_tableau3_value(format_fcfa(personnel_real))
-        formatted_personnel_ecart = format_tableau3_value(format_fcfa(personnel_ecart))
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas utiliser format_tableau3_value
+        formatted_personnel_n1 = format_fcfa(personnel_n1_realisation)
+        formatted_personnel_prev = format_fcfa(personnel_prev)
+        formatted_personnel_real = format_fcfa(personnel_real)
+        formatted_personnel_ecart = format_fcfa(personnel_ecart)
         formatted_personnel_tx = format_tableau3_value(f"{personnel_tx:.2f}%")
         
         table_data.append([
@@ -7500,10 +8071,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         solde_ecart = solde_prev - solde_real
         solde_tx = (solde_real / solde_prev * 100) if solde_prev > 0 else 0
         
-        formatted_solde_n1 = format_tableau3_value(format_fcfa(solde_n1))
-        formatted_solde_prev = format_tableau3_value(format_fcfa(solde_prev))
-        formatted_solde_real = format_tableau3_value(format_fcfa(solde_real))
-        formatted_solde_ecart = format_tableau3_value(format_fcfa(solde_ecart))
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas utiliser format_tableau3_value
+        formatted_solde_n1 = format_fcfa(solde_n1)
+        formatted_solde_prev = format_fcfa(solde_prev)
+        formatted_solde_real = format_fcfa(solde_real)
+        formatted_solde_ecart = format_fcfa(solde_ecart)
         formatted_solde_tx = format_tableau3_value(f"{solde_tx:.2f}%")
         
         table_data.append([
@@ -7522,10 +8094,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         contractuels_ecart = contractuels_prev - contractuels_real
         contractuels_tx = (contractuels_real / contractuels_prev * 100) if contractuels_prev > 0 else 0
         
-        formatted_contractuels_n1 = format_tableau3_value(format_fcfa(contractuels_n1))
-        formatted_contractuels_prev = format_tableau3_value(format_fcfa(contractuels_prev))
-        formatted_contractuels_real = format_tableau3_value(format_fcfa(contractuels_real))
-        formatted_contractuels_ecart = format_tableau3_value(format_fcfa(contractuels_ecart))
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas utiliser format_tableau3_value
+        formatted_contractuels_n1 = format_fcfa(contractuels_n1)
+        formatted_contractuels_prev = format_fcfa(contractuels_prev)
+        formatted_contractuels_real = format_fcfa(contractuels_real)
+        formatted_contractuels_ecart = format_fcfa(contractuels_ecart)
         formatted_contractuels_tx = format_tableau3_value(f"{contractuels_tx:.2f}%")
         
         table_data.append([
@@ -7539,10 +8112,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # 2.2 Biens et Service
         # Formater toutes les valeurs numériques selon leur source
-        formatted_biens_n1 = format_tableau3_value(format_fcfa(biens_n1_realisation))
-        formatted_biens_prev = format_tableau3_value(format_fcfa(biens_prev))
-        formatted_biens_real = format_tableau3_value(format_fcfa(biens_real_exec))
-        formatted_biens_ecart = format_tableau3_value(format_fcfa(biens_ecart))
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas utiliser format_tableau3_value
+        formatted_biens_n1 = format_fcfa(biens_n1_realisation)
+        formatted_biens_prev = format_fcfa(biens_prev)
+        formatted_biens_real = format_fcfa(biens_real_exec)
+        formatted_biens_ecart = format_fcfa(biens_ecart)
         formatted_biens_tx = format_tableau3_value(f"{biens_tx:.2f}%")
         
         table_data.append([
@@ -7555,10 +8129,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         ])
         
         # 2.3 Transferts
-        formatted_transferts_n1 = format_tableau3_value(format_fcfa(transferts_n1_realisation))
-        formatted_transferts_prev = format_tableau3_value(format_fcfa(transferts_prev))
-        formatted_transferts_real = format_tableau3_value(format_fcfa(transferts_real_exec))
-        formatted_transferts_ecart = format_tableau3_value(format_fcfa(transferts_ecart))
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas utiliser format_tableau3_value
+        formatted_transferts_n1 = format_fcfa(transferts_n1_realisation)
+        formatted_transferts_prev = format_fcfa(transferts_prev)
+        formatted_transferts_real = format_fcfa(transferts_real_exec)
+        formatted_transferts_ecart = format_fcfa(transferts_ecart)
         formatted_transferts_tx = format_tableau3_value(f"{transferts_tx:.2f}%")
         
         table_data.append([
@@ -7595,10 +8170,11 @@ class RAPContentDrawer(RAPBaseGenerator):
         
         # 2.4 Investissement
         # Formater toutes les valeurs numériques selon leur source
-        formatted_investissements_n1 = format_tableau3_value(format_fcfa(investissements_n1_realisation))
-        formatted_investissements_prev = format_tableau3_value(format_fcfa(investissements_prev))
-        formatted_investissements_real = format_tableau3_value(format_fcfa(investissements_real_exec))
-        formatted_investissements_ecart = format_tableau3_value(format_fcfa(investissements_ecart))
+        # Note: format_fcfa retourne déjà du HTML formaté, ne pas utiliser format_tableau3_value
+        formatted_investissements_n1 = format_fcfa(investissements_n1_realisation)
+        formatted_investissements_prev = format_fcfa(investissements_prev)
+        formatted_investissements_real = format_fcfa(investissements_real_exec)
+        formatted_investissements_ecart = format_fcfa(investissements_ecart)
         formatted_investissements_tx = format_tableau3_value(f"{investissements_tx:.2f}%")
         
         table_data.append([
@@ -7810,25 +8386,23 @@ class RAPContentDrawer(RAPBaseGenerator):
         story.append(Paragraph(analyse_text, body_style))
         story.append(Spacer(1, 0.3 * cm))
         
-        # La page a déjà été créée dans generate_pdf avant l'appel
-        # Rendre la story avec pagination automatique
-        logger.info(f"🔢 NUMÉROTATION - AVANT _render_multipage_story pour partie I: start_page={start_page}")
-        final_page = cls._render_multipage_story(
-            pdf,
-            story,
-            page_num=start_page,
-            frame_x=left_margin,
-            frame_y=bottom_margin,
-            frame_width=available_width,
-            frame_height=available_height,
-            page_width=width,
-            show_page_number=True,
-            draw_footer_func=draw_footer,
-        )
-        logger.info(f"🔢 NUMÉROTATION - APRÈS _render_multipage_story pour partie I: final_page={final_page}")
-        logger.info(f"🔢 NUMÉROTATION - draw_partie_i_ministere FIN: retourne final_page={final_page}")
+        # Construire le PDF avec SimpleDocTemplate (DÉCOUPAGE AUTOMATIQUE DES TABLEAUX !)
+        doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
         
-        return final_page
+        # Réinitialiser la variable de classe après le build
+        RAPBaseGenerator._current_rendering_page = None
+        
+        temp_buffer.seek(0)
+        
+        # Compter le nombre de pages générées
+        temp_reader = PdfReader(temp_buffer)
+        num_pages = len(temp_reader.pages)
+        final_page = start_page + num_pages - 1
+        
+        temp_buffer.seek(0)
+        logger.info(f"✅ Partie I générée : {num_pages} pages (de {start_page} à {final_page})")
+        
+        return temp_buffer, final_page
     
     @classmethod
     def draw_conclusion_generale(
@@ -7871,7 +8445,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         page_width, page_height = landscape(A4)
         left_margin = 2 * cm
         right_margin = 2 * cm
-        top_margin = 2.5 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 1.5 * cm
         footer_margin = 0.5 * cm
         bottom_margin = footer_height + footer_margin
@@ -7952,13 +8526,10 @@ class RAPContentDrawer(RAPBaseGenerator):
         is_conclusion_generale_fake = False
         
         # Vérifier le mode et générer des données factices si nécessaire
-        mode = cls.data.get("mode", "brouillon")
-        if not conclusion_generale_data and mode == "brouillon":
-            logger.info(f"📊 Mode brouillon: génération de données factices pour la conclusion générale")
-            is_conclusion_generale_fake = True
-            
+        # Toujours utiliser les données de la DB (plus de données factices)
+        if not conclusion_generale_data:
             programmes = cls.data.get("programmes", [])
-            nb_programmes = len(programmes) if programmes else 2
+            nb_programmes = len(programmes) if programmes else 0
             
             # Compter le nombre total d'indicateurs
             nb_indicateurs_total = 0
@@ -7973,18 +8544,15 @@ class RAPContentDrawer(RAPBaseGenerator):
                 except Exception:
                     pass
             
-            if nb_indicateurs_total == 0:
-                nb_indicateurs_total = 8  # Valeur factice
-            
             # Récupérer le taux d'exécution global depuis les données de financement
             financement_data = cls.data.get("financement_interpretations", {})
-            taux_execution_global = financement_data.get("taux_execution_global", 94.74)
+            taux_execution_global = financement_data.get("taux_execution_global", 0)
             
-            # Calculer les taux par nature de dépense (factices)
-            taux_personnel = 100.0
-            taux_transferts = 100.0
-            taux_biens_services = 85.54
-            taux_investissements = 91.36
+            # Utiliser 0 si pas de données (plus de valeurs factices)
+            taux_personnel = 0
+            taux_transferts = 0
+            taux_biens_services = 0
+            taux_investissements = 0
             
             conclusion_generale_data = {
                 "intro": (
@@ -8030,7 +8598,7 @@ class RAPContentDrawer(RAPBaseGenerator):
         # Fonction helper pour formater les valeurs
         def format_programme_value(value: Any, is_fake: bool = False) -> str:
             if is_fake:
-                return RAPStylingManager.format_fake_data(str(value))
+                return RAPStylingManager.format_db_data(str(value))
             else:
                 return RAPStylingManager.format_db_data(str(value))
         
@@ -8138,7 +8706,8 @@ class RAPContentDrawer(RAPBaseGenerator):
             None,
         ]
         
-        signature_table = Table(signature_table_data, colWidths=col_widths, rowHeights=row_heights)
+        # Utiliser LongTable même pour les petits tableaux (comme dans RPROG)
+        signature_table = LongTable(signature_table_data, colWidths=col_widths, rowHeights=row_heights, repeatRows=0, splitByRow=1)
         
         signature_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -8336,7 +8905,7 @@ class RAPContentDrawer(RAPBaseGenerator):
                 if numero == 2:
                     pages["perspectives"] = pages_found.get(f"programme_{numero}_perspectives", 47)
                 
-                # Titre de la partie
+                # Titre de la partie (grand titre - reste en majuscules)
                 partie_text = f"PARTIE {numero + 1} : LE PROGRAMME {numero} « {titre.upper()} »"
                 toc_items.append({
                     "text": partie_text, 
@@ -8463,7 +9032,7 @@ class RAPContentDrawer(RAPBaseGenerator):
                 if numero == 2:
                     pages["perspectives"] = RAPPageManager.get_page_position(f"programme_{numero}_perspectives", 47)
                 
-                # Titre de la partie
+                # Titre de la partie (grand titre - reste en majuscules)
                 partie_text = f"PARTIE {numero + 1} : LE PROGRAMME {numero} « {titre.upper()} »"
                 toc_items.append({
                     "text": partie_text, 
@@ -8666,6 +9235,17 @@ class RAPTableDrawer(RAPBaseGenerator):
         total_ordonnancement_interieur = 0
         total_ordonnancement_exterieur = 0
         
+        # Si aucune donnée trouvée, ajouter une ligne avec le message
+        if len(projects) == 0:
+            # Calculer la largeur totale pour le message (fusionné sur toutes les colonnes)
+            total_width = sum(col_widths)
+            # Créer un Paragraph pour le message
+            message_para = Paragraph("Aucun investissement enregistré pour cette période.", cell_style)
+            table_data.append([
+                message_para,
+                "", "", "", "", "", "",  # Colonnes vides
+            ])
+        
         # Parcourir les projets
         for project in projects:
             nom = project["nom"]
@@ -8746,53 +9326,55 @@ class RAPTableDrawer(RAPBaseGenerator):
             total_ordonnancement_interieur += ordonnancement_interieur
             total_ordonnancement_exterieur += ordonnancement_exterieur
         
-        # Ligne totale
-        total_cout = total_cout_interieur + total_cout_exterieur
-        total_budget_vote = total_budget_vote_interieur + total_budget_vote_exterieur
-        total_budget_actuel = total_budget_actuel_interieur + total_budget_actuel_exterieur
-        total_ordonnancement = total_ordonnancement_interieur + total_ordonnancement_exterieur
-        
-        # Formater les totaux
-        formatted_total_cout = format_programme_value(format_fcfa(total_cout), is_fake) if format_programme_value else format_fcfa(total_cout)
-        formatted_total_budget_vote = format_programme_value(format_fcfa(total_budget_vote), is_fake) if format_programme_value else format_fcfa(total_budget_vote)
-        formatted_total_budget_actuel = format_programme_value(format_fcfa(total_budget_actuel), is_fake) if format_programme_value else format_fcfa(total_budget_actuel)
-        formatted_total_ordonnancement = format_programme_value(format_fcfa(total_ordonnancement), is_fake) if format_programme_value else format_fcfa(total_ordonnancement)
-        formatted_total_budget_actuel_interieur = format_programme_value(format_fcfa(total_budget_actuel_interieur), is_fake) if format_programme_value else format_fcfa(total_budget_actuel_interieur)
-        formatted_total_ordonnancement_interieur = format_programme_value(format_fcfa(total_ordonnancement_interieur), is_fake) if format_programme_value else format_fcfa(total_ordonnancement_interieur)
-        formatted_total_budget_actuel_exterieur = format_programme_value(format_fcfa(total_budget_actuel_exterieur), is_fake) if format_programme_value else format_fcfa(total_budget_actuel_exterieur)
-        formatted_total_ordonnancement_exterieur = format_programme_value(format_fcfa(total_ordonnancement_exterieur), is_fake) if format_programme_value else format_fcfa(total_ordonnancement_exterieur)
-        
-        table_data.append([
-            Paragraph("<b>Total programme (budget de l'Etat)</b>", cell_style_bold),
-            Paragraph("", cell_center_style),
-            Paragraph("", cell_center_style),
-            Paragraph(f"<b>{formatted_total_cout}</b>", cell_right_style),
-            Paragraph(f"<b>{formatted_total_budget_vote}</b>", cell_right_style),
-            Paragraph(f"<b>{formatted_total_budget_actuel}</b>", cell_right_style),
-            Paragraph(f"<b>{formatted_total_ordonnancement}</b>", cell_right_style),
-        ])
-        
-        # Ligne totale "Sur financement intérieur"
-        table_data.append([
-            Paragraph("<b>Total sur financement intérieur</b>", cell_style_bold),
-            Paragraph("", cell_center_style),
-            Paragraph("", cell_center_style),
-            Paragraph("", cell_right_style),
-            Paragraph("", cell_right_style),
-            Paragraph(f"<b>{formatted_total_budget_actuel_interieur}</b>", cell_right_style),
-            Paragraph(f"<b>{formatted_total_ordonnancement_interieur}</b>", cell_right_style),
-        ])
-        
-        # Ligne totale "Sur financement extérieur"
-        table_data.append([
-            Paragraph("<b>Total sur financement extérieur</b>", cell_style_bold),
-            Paragraph("", cell_center_style),
-            Paragraph("", cell_center_style),
-            Paragraph("", cell_right_style),
-            Paragraph("", cell_right_style),
-            Paragraph(f"<b>{formatted_total_budget_actuel_exterieur}</b>", cell_right_style),
-            Paragraph(f"<b>{formatted_total_ordonnancement_exterieur}</b>", cell_right_style),
-        ])
+        # Ajouter les lignes totales seulement si on a des projets
+        if len(projects) > 0:
+            # Ligne totale
+            total_cout = total_cout_interieur + total_cout_exterieur
+            total_budget_vote = total_budget_vote_interieur + total_budget_vote_exterieur
+            total_budget_actuel = total_budget_actuel_interieur + total_budget_actuel_exterieur
+            total_ordonnancement = total_ordonnancement_interieur + total_ordonnancement_exterieur
+            
+            # Formater les totaux
+            formatted_total_cout = format_programme_value(format_fcfa(total_cout), is_fake) if format_programme_value else format_fcfa(total_cout)
+            formatted_total_budget_vote = format_programme_value(format_fcfa(total_budget_vote), is_fake) if format_programme_value else format_fcfa(total_budget_vote)
+            formatted_total_budget_actuel = format_programme_value(format_fcfa(total_budget_actuel), is_fake) if format_programme_value else format_fcfa(total_budget_actuel)
+            formatted_total_ordonnancement = format_programme_value(format_fcfa(total_ordonnancement), is_fake) if format_programme_value else format_fcfa(total_ordonnancement)
+            formatted_total_budget_actuel_interieur = format_programme_value(format_fcfa(total_budget_actuel_interieur), is_fake) if format_programme_value else format_fcfa(total_budget_actuel_interieur)
+            formatted_total_ordonnancement_interieur = format_programme_value(format_fcfa(total_ordonnancement_interieur), is_fake) if format_programme_value else format_fcfa(total_ordonnancement_interieur)
+            formatted_total_budget_actuel_exterieur = format_programme_value(format_fcfa(total_budget_actuel_exterieur), is_fake) if format_programme_value else format_fcfa(total_budget_actuel_exterieur)
+            formatted_total_ordonnancement_exterieur = format_programme_value(format_fcfa(total_ordonnancement_exterieur), is_fake) if format_programme_value else format_fcfa(total_ordonnancement_exterieur)
+            
+            table_data.append([
+                Paragraph("<b>Total programme (budget de l'Etat)</b>", cell_style_bold),
+                Paragraph("", cell_center_style),
+                Paragraph("", cell_center_style),
+                Paragraph(f"<b>{formatted_total_cout}</b>", cell_right_style),
+                Paragraph(f"<b>{formatted_total_budget_vote}</b>", cell_right_style),
+                Paragraph(f"<b>{formatted_total_budget_actuel}</b>", cell_right_style),
+                Paragraph(f"<b>{formatted_total_ordonnancement}</b>", cell_right_style),
+            ])
+            
+            # Ligne totale "Sur financement intérieur"
+            table_data.append([
+                Paragraph("<b>Total sur financement intérieur</b>", cell_style_bold),
+                Paragraph("", cell_center_style),
+                Paragraph("", cell_center_style),
+                Paragraph("", cell_right_style),
+                Paragraph("", cell_right_style),
+                Paragraph(f"<b>{formatted_total_budget_actuel_interieur}</b>", cell_right_style),
+                Paragraph(f"<b>{formatted_total_ordonnancement_interieur}</b>", cell_right_style),
+            ])
+            
+            # Ligne totale "Sur financement extérieur"
+            table_data.append([
+                Paragraph("<b>Total sur financement extérieur</b>", cell_style_bold),
+                Paragraph("", cell_center_style),
+                Paragraph("", cell_center_style),
+                Paragraph("", cell_right_style),
+                Paragraph("", cell_right_style),
+                Paragraph(f"<b>{formatted_total_budget_actuel_exterieur}</b>", cell_right_style),
+                Paragraph(f"<b>{formatted_total_ordonnancement_exterieur}</b>", cell_right_style),
+            ])
         
         # Créer le LongTable pour le support multi-page
         investissement_table = LongTable(table_data, colWidths=col_widths, repeatRows=1, splitByRow=1)
@@ -8811,14 +9393,8 @@ class RAPTableDrawer(RAPBaseGenerator):
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, 0), 9),
             
-            # Lignes totales (3 dernières lignes)
-            ("BACKGROUND", (0, -3), (-1, -3), colors.HexColor("#ffe599")),  # Total programme
-            ("BACKGROUND", (0, -2), (-1, -2), colors.white),  # Total intérieur
-            ("BACKGROUND", (0, -1), (-1, -1), colors.white),  # Total extérieur
-            ("FONTNAME", (0, -3), (-1, -1), "Helvetica-Bold"),
-            
             # Alignement des montants
-            ("ALIGN", (3, 1), (-1, -4), "RIGHT"),
+            ("ALIGN", (3, 1), (-1, -4), "RIGHT") if len(projects) > 0 else ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
             ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
             
             # Padding
@@ -8827,6 +9403,19 @@ class RAPTableDrawer(RAPBaseGenerator):
             ("TOPPADDING", (0, 0), (-1, -1), 2),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ])
+        
+        # Ajouter les lignes totales seulement si on a des projets
+        if len(projects) > 0:
+            investissement_table_style.add("BACKGROUND", (0, -3), (-1, -3), colors.HexColor("#ffe599"))  # Total programme
+            investissement_table_style.add("BACKGROUND", (0, -2), (-1, -2), colors.white)  # Total intérieur
+            investissement_table_style.add("BACKGROUND", (0, -1), (-1, -1), colors.white)  # Total extérieur
+            investissement_table_style.add("FONTNAME", (0, -3), (-1, -1), "Helvetica-Bold")
+        
+        # Si aucune donnée trouvée, fusionner toutes les colonnes du message
+        if len(projects) == 0:
+            # La ligne du message est à l'index 1 (après l'en-tête)
+            investissement_table_style.add("SPAN", (0, 1), (-1, 1))  # Fusionner toutes les colonnes
+            investissement_table_style.add("ALIGN", (0, 1), (-1, 1), "CENTER")  # Centrer le message
         
         investissement_table.setStyle(investissement_table_style)
         
@@ -8962,6 +9551,14 @@ class RAPTableDrawer(RAPBaseGenerator):
         table_data = []
         table_data.extend(header)
         
+        # Si aucune donnée trouvée, ajouter une ligne avec le message
+        if len(indicateurs_data) == 0:
+            message_para = Paragraph("Aucun indicateur de performance enregistré pour cette période.", cell_style)
+            table_data.append([
+                message_para,
+                "", "", "", "", "", "",  # Colonnes vides
+            ])
+        
         # Grouper les indicateurs par objectif_titre pour éviter les répétitions
         indicateurs_par_objectif: dict[str, list[dict[str, Any]]] = {}
         for indicateur in indicateurs_data:
@@ -9068,14 +9665,20 @@ class RAPTableDrawer(RAPBaseGenerator):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ])
         
-        # Fusionner les cellules des lignes d'objectifs
-        # Calculer les indices des lignes d'objectifs correctement
-        row_index = 2  # Commence après les 2 lignes d'en-tête
-        for objectif_titre, indicateurs_os in indicateurs_par_objectif.items():
-            # Fusionner les colonnes 0 et 1 pour la ligne objectif
-            indicateurs_table_style.add("SPAN", (0, row_index), (1, row_index))
-            # Passer à la ligne suivante (objectif) après avoir traité tous les indicateurs
-            row_index += len(indicateurs_os) + 1  # +1 pour la ligne objectif elle-même
+        # Si aucune donnée trouvée, fusionner toutes les colonnes du message
+        if len(indicateurs_data) == 0:
+            # La ligne du message est à l'index 2 (après les 2 lignes d'en-tête)
+            indicateurs_table_style.add("SPAN", (0, 2), (-1, 2))  # Fusionner toutes les colonnes
+            indicateurs_table_style.add("ALIGN", (0, 2), (-1, 2), "CENTER")  # Centrer le message
+        else:
+            # Fusionner les cellules des lignes d'objectifs
+            # Calculer les indices des lignes d'objectifs correctement
+            row_index = 2  # Commence après les 2 lignes d'en-tête
+            for objectif_titre, indicateurs_os in indicateurs_par_objectif.items():
+                # Fusionner les colonnes 0 et 1 pour la ligne objectif
+                indicateurs_table_style.add("SPAN", (0, row_index), (1, row_index))
+                # Passer à la ligne suivante (objectif) après avoir traité tous les indicateurs
+                row_index += len(indicateurs_os) + 1  # +1 pour la ligne objectif elle-même
         
         # Styles pour les lignes de données
         indicateurs_table_style.add("VALIGN", (0, 2), (-1, -1), "MIDDLE")
@@ -9213,6 +9816,14 @@ class RAPTableDrawer(RAPBaseGenerator):
         table_data = []
         table_data.extend(header)
         
+        # Si aucune donnée trouvée, ajouter une ligne avec le message
+        if len(effectifs_data) == 0:
+            message_para = Paragraph("Aucune donnée d'effectif disponible pour cette période.", cell_style)
+            table_data.append([
+                message_para,
+                "", "", "", "", "", "",  # Colonnes vides
+            ])
+        
         total_effectif_n_minus_1 = 0
         total_besoins_exprimes = 0
         total_previsions = 0
@@ -9262,26 +9873,28 @@ class RAPTableDrawer(RAPBaseGenerator):
             total_besoins_satisfaits += besoins_satisfaits
             total_sorties += sorties
         
-        # Ligne totale
-        total_fin_annee_total = total_effectif_n_minus_1 + total_besoins_satisfaits - total_sorties
-        
-        # Formater les totaux
-        formatted_total_effectif = format_programme_value(str(total_effectif_n_minus_1), totals_are_fake)
-        formatted_total_besoins_exprimes = format_programme_value(str(total_besoins_exprimes), totals_are_fake)
-        formatted_total_previsions = format_programme_value(str(total_previsions), totals_are_fake)
-        formatted_total_besoins_satisfaits = format_programme_value(str(total_besoins_satisfaits), totals_are_fake)
-        formatted_total_sorties = format_programme_value(str(total_sorties), totals_are_fake)
-        formatted_total_fin_annee = format_programme_value(str(total_fin_annee_total), totals_are_fake)
-        
-        table_data.append([
-            Paragraph("<b>TOTAL</b>", cell_style_bold),
-            Paragraph(formatted_total_effectif, cell_right_style),
-            Paragraph(formatted_total_besoins_exprimes, cell_right_style),
-            Paragraph(formatted_total_previsions, cell_right_style),
-            Paragraph(formatted_total_besoins_satisfaits, cell_right_style),
-            Paragraph(formatted_total_sorties, cell_right_style),
-            Paragraph(formatted_total_fin_annee, cell_right_style),
-        ])
+        # Ajouter la ligne totale seulement si on a des données
+        if len(effectifs_data) > 0:
+            # Ligne totale
+            total_fin_annee_total = total_effectif_n_minus_1 + total_besoins_satisfaits - total_sorties
+            
+            # Formater les totaux
+            formatted_total_effectif = format_programme_value(str(total_effectif_n_minus_1), totals_are_fake)
+            formatted_total_besoins_exprimes = format_programme_value(str(total_besoins_exprimes), totals_are_fake)
+            formatted_total_previsions = format_programme_value(str(total_previsions), totals_are_fake)
+            formatted_total_besoins_satisfaits = format_programme_value(str(total_besoins_satisfaits), totals_are_fake)
+            formatted_total_sorties = format_programme_value(str(total_sorties), totals_are_fake)
+            formatted_total_fin_annee = format_programme_value(str(total_fin_annee_total), totals_are_fake)
+            
+            table_data.append([
+                Paragraph("<b>TOTAL</b>", cell_style_bold),
+                Paragraph(formatted_total_effectif, cell_right_style),
+                Paragraph(formatted_total_besoins_exprimes, cell_right_style),
+                Paragraph(formatted_total_previsions, cell_right_style),
+                Paragraph(formatted_total_besoins_satisfaits, cell_right_style),
+                Paragraph(formatted_total_sorties, cell_right_style),
+                Paragraph(formatted_total_fin_annee, cell_right_style),
+            ])
         
         # Créer le LongTable pour le support multi-page
         effectifs_table = LongTable(table_data, colWidths=col_widths, repeatRows=2, splitByRow=1)
@@ -9306,12 +9919,8 @@ class RAPTableDrawer(RAPBaseGenerator):
             ("FONTNAME", (0, 0), (-1, 1), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, 1), 9),
             
-            # Ligne totale (dernière ligne)
-            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#ffe599")),
-            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-            
             # Alignement des montants
-            ("ALIGN", (1, 2), (-1, -2), "RIGHT"),
+            ("ALIGN", (1, 2), (-1, -2), "RIGHT") if len(effectifs_data) > 0 else ("ALIGN", (1, 2), (-1, -1), "RIGHT"),
             ("VALIGN", (0, 2), (-1, -1), "MIDDLE"),
             
             # Padding
@@ -9320,6 +9929,17 @@ class RAPTableDrawer(RAPBaseGenerator):
             ("TOPPADDING", (0, 0), (-1, -1), 2),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ])
+        
+        # Ajouter la ligne totale seulement si on a des données
+        if len(effectifs_data) > 0:
+            effectifs_table_style.add("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#ffe599"))
+            effectifs_table_style.add("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold")
+        
+        # Si aucune donnée trouvée, fusionner toutes les colonnes du message
+        if len(effectifs_data) == 0:
+            # La ligne du message est à l'index 2 (après les 2 lignes d'en-tête)
+            effectifs_table_style.add("SPAN", (0, 2), (-1, 2))  # Fusionner toutes les colonnes
+            effectifs_table_style.add("ALIGN", (0, 2), (-1, 2), "CENTER")  # Centrer le message
         
         effectifs_table.setStyle(effectifs_table_style)
         
@@ -9614,10 +10234,12 @@ class RAPChartGenerator(RAPBaseGenerator):
                 rates_n.append(rates.get("rate_n", 0.0))
                 action_num += 1
             
-            # Si pas de données, ne pas générer le graphique
+            # Si pas de données, créer un graphique vide avec des données par défaut
             if not actions_labels:
-                logger.warning("⚠️ Aucune donnée d'action disponible pour le graphique des taux d'exécution")
-                return None
+                logger.info("📊 Aucune donnée d'action disponible, création d'un graphique vide")
+                actions_labels = ["Action 1"]
+                rates_n_minus_1 = [0.0]
+                rates_n = [0.0]
             
             # Créer la figure avec une largeur plus grande pour occuper toute la largeur disponible
             fig, ax = plt.subplots(figsize=(20, 6), dpi=200)
@@ -9728,10 +10350,12 @@ class RAPChartGenerator(RAPBaseGenerator):
                 effectif_n_val = effectif_n_minus_1_val + effectif.get("besoins_satisfaits", 0) - effectif.get("sorties", 0)
                 effectifs_n.append(effectif_n_val)
             
-            # Si pas de données, ne pas générer le graphique
+            # Si pas de données, créer un graphique vide avec des données par défaut
             if not effectifs_n_minus_1:
-                logger.warning("⚠️ Aucune donnée d'effectif disponible pour le graphique")
-                return None
+                logger.info("📊 Aucune donnée d'effectif disponible, création d'un graphique vide")
+                categories = ["A", "B", "C", "D", "Non fonctionnaires"]
+                effectifs_n_minus_1 = [0] * len(categories)
+                effectifs_n = [0] * len(categories)
             
             # Créer la figure
             fig, ax = plt.subplots(figsize=(16, 6), dpi=200)
@@ -9854,10 +10478,11 @@ class RAPChartGenerator(RAPBaseGenerator):
                     annees_filtered.append(a)
                     valeurs_filtered.append(float(v))
             
-            # Si aucune valeur n'est disponible, ne pas générer le graphique
+            # Si aucune valeur n'est disponible, créer un graphique vide avec des données par défaut
             if not valeurs_filtered:
-                logger.warning(f"⚠️ Aucune valeur disponible pour l'indicateur '{indicateur_nom}'")
-                return None
+                logger.info(f"📊 Aucune valeur disponible pour l'indicateur '{indicateur_nom}', création d'un graphique vide")
+                annees_filtered = [annee_n_3, annee_n_2, annee_n_1, annee]
+                valeurs_filtered = [0.0] * len(annees_filtered)
             
             # Créer la figure
             fig, ax = plt.subplots(figsize=(16, 6), dpi=200)
@@ -9999,7 +10624,7 @@ class RAPProgramSectionDrawer(RAPBaseGenerator):
         # Marges et dimensions (identiques au service original)
         left_margin = 2.5 * cm
         right_margin = 2.5 * cm
-        top_margin = 2.5 * cm
+        top_margin = 1.5 * cm  # Hauteur réduite du header
         footer_height = 1.5 * cm
         footer_margin = 0.5 * cm
         bottom_margin = footer_height + footer_margin
@@ -10179,10 +10804,11 @@ class RAPProgramSectionDrawer(RAPBaseGenerator):
         
         # Fonction pour formater les montants
         def format_fcfa(montant: float) -> str:
-            if montant == 0:
-                return "0"
+            """Formate un montant en FCFA. Retourne "............" en rouge si 0."""
+            if montant == 0 or montant is None:
+                return '<font color="#FF0000">............</font>'
             montant_str = f"{int(montant):,}".replace(",", " ")
-            return montant_str
+            return f'<font color="#FF0000">{montant_str}</font>'
         
         # Story pour SimpleDocTemplate
         story = []
@@ -10278,11 +10904,12 @@ class RAPProgramSectionDrawer(RAPBaseGenerator):
             # Si is_fake est True, les données sont factices et doivent être formatées en violet
             # (elles ne sont générées qu'en mode brouillon, donc _should_use_fake_data() devrait toujours être True)
             if is_fake:
-                return RAPStylingManager.format_fake_data(str(value))
+                return RAPStylingManager.format_db_data(str(value))
             else:
                 return RAPStylingManager.format_db_data(str(value))
         
         # Titre de la partie (formaté après la définition de format_programme_value)
+        # Les grands titres restent en majuscules
         formatted_numero_partie = format_programme_value(str(numero), is_programme_fake)
         formatted_titre_partie = format_programme_value(titre.upper(), is_programme_fake)
         # Enregistrer la page AVANT le titre pour garantir que la page enregistrée est celle où le titre commence
@@ -10516,7 +11143,8 @@ class RAPProgramSectionDrawer(RAPBaseGenerator):
         ]
         
         obj_col_widths = [available_width * 0.5, available_width * 0.5]
-        obj_table = Table(obj_table_data, colWidths=obj_col_widths, repeatRows=1)
+        # Utiliser LongTable pour supporter le multi-pages
+        obj_table = LongTable(obj_table_data, colWidths=obj_col_widths, repeatRows=1, splitByRow=1)
         obj_table.setStyle(
             TableStyle([
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
@@ -11249,6 +11877,7 @@ class RAPProgramSectionDrawer(RAPBaseGenerator):
         # Si CondPageBreak force une nouvelle page, le marqueur enregistrera cette nouvelle page
         story.append(PageMarker(f"programme_{numero}_realisations"))
         # Le titre et l'année viennent toujours de la DB (pas factices)
+        # Les grands titres de sections restent en majuscules
         formatted_titre_realisations = format_programme_value(titre.upper(), is_programme_fake)
         formatted_annee_realisations = format_programme_value(str(annee), False)  # Année toujours DB
         story.append(Paragraph(f"II. REALISATIONS DU PROGRAMME « {formatted_titre_realisations} » AU COURS DE L'EXERCICE {formatted_annee_realisations}", section_title_style))
@@ -12822,9 +13451,9 @@ class RAPProgramSectionDrawer(RAPBaseGenerator):
                 # Formater les titres selon la source (factice en violet italique, DB en rouge)
                 # Conserver les préfixes dans objectif_titre et indicateur_nom
                 if is_fake_data:
-                    formatted_objectif_titre = RAPStylingManager.format_fake_data(objectif_titre)
-                    formatted_indicateur_nom = RAPStylingManager.format_fake_data(indicateur_nom)
-                    formatted_indicateur_num = RAPStylingManager.format_fake_data(str(indicateur_num))
+                    formatted_objectif_titre = RAPStylingManager.format_db_data(objectif_titre)
+                    formatted_indicateur_nom = RAPStylingManager.format_db_data(indicateur_nom)
+                    formatted_indicateur_num = RAPStylingManager.format_db_data(str(indicateur_num))
                 else:
                     formatted_objectif_titre = RAPStylingManager.format_db_data(objectif_titre)
                     formatted_indicateur_nom = RAPStylingManager.format_db_data(indicateur_nom)
@@ -12980,7 +13609,7 @@ class RAPProgramSectionDrawer(RAPBaseGenerator):
                 def format_indicateur_value(value: Any) -> str:
                     """Formate une valeur d'indicateur selon si elle est factice ou réelle."""
                     if is_fake_data:
-                        return RAPStylingManager.format_fake_data(str(value))
+                        return RAPStylingManager.format_db_data(str(value))
                     else:
                         return RAPStylingManager.format_db_data(str(value))
                 
@@ -13458,6 +14087,11 @@ class RAPPDFGenerator(RAPBaseGenerator):
         if "introduction" in db_data:
             logger.info(f"📊 Données d'introduction dans db_data: {list(db_data['introduction'].keys())}")
         
+        # DIAGNOSTIC: Vérifier les orientations stratégiques dans db_data
+        if "partie_ministere" in db_data:
+            partie_ministere_db = db_data["partie_ministere"]
+            # Logs DIAGNOSTIC supprimés pour se concentrer sur le cadre de performance
+        
         # Fusionner les données : DB < données du formulaire
         # NE PAS utiliser DEFAULT_DATA pour éviter les valeurs factices
         user_data = data or {}
@@ -13494,11 +14128,35 @@ class RAPPDFGenerator(RAPBaseGenerator):
             RAPBaseGenerator.data["annee"] = annee
             logger.info(f"📅 Aucune année fournie, utilisation de l'année en cours: {annee}")
         
-        # Charger les données budgétaires si une session est fournie
-        budget_data = RAPDataLoader.load_budget_data(session, annee)
+        # NE PLUS UTILISER load_budget_data - charger directement dans chaque méthode
+        # Les données de performance sont maintenant chargées directement dans draw_partie_i_ministere
+        # Les données de programmes sont chargées directement dans draw_partie_i_ministere aussi
+        logger.info(f"✅ Chargement direct des données activé - load_budget_data ignoré")
         
-        # Fusionner les données budgétaires (code copié du service original)
-        if budget_data:
+        # NE PLUS UTILISER budget_data - les données sont chargées directement dans chaque méthode
+        # S'assurer que partie_ministere existe pour préserver les orientations stratégiques
+        if "partie_ministere" not in RAPBaseGenerator.data:
+            RAPBaseGenerator.data["partie_ministere"] = {}
+        
+        partie_ministere = RAPBaseGenerator.data["partie_ministere"]
+        
+        # IMPORTANT: Préserver les orientations stratégiques depuis db_data si elles existent
+        if "partie_ministere" in db_data and "orientations" in db_data["partie_ministere"]:
+            orientations_from_db = db_data["partie_ministere"]["orientations"]
+            partie_ministere["orientations"] = orientations_from_db
+            if "orientations_count" in db_data["partie_ministere"]:
+                partie_ministere["orientations_count"] = db_data["partie_ministere"]["orientations_count"]
+            if "resultats_count" in db_data["partie_ministere"]:
+                partie_ministere["resultats_count"] = db_data["partie_ministere"]["resultats_count"]
+            if "objectifs_globaux_count" in db_data["partie_ministere"]:
+                partie_ministere["objectifs_globaux_count"] = db_data["partie_ministere"]["objectifs_globaux_count"]
+            logger.info(f"✅ Orientations stratégiques préservées depuis db_data: {len(orientations_from_db) if orientations_from_db else 0} élément(s)")
+        
+        RAPBaseGenerator.data["partie_ministere"] = partie_ministere
+        
+        # Ancien code supprimé - les données sont maintenant chargées directement dans draw_partie_i_ministere
+        # TODO: Supprimer ce bloc une fois que tout fonctionne
+        if False:  # Désactivé - ne plus utiliser budget_data
             # Mettre à jour les programmes si disponibles
             if "programmes" in budget_data and budget_data["programmes"]:
                 RAPBaseGenerator.data["programmes"] = budget_data["programmes"]
@@ -13508,6 +14166,25 @@ class RAPPDFGenerator(RAPBaseGenerator):
                 RAPBaseGenerator.data["partie_ministere"] = {}
             
             partie_ministere = RAPBaseGenerator.data["partie_ministere"]
+            
+            # IMPORTANT: Préserver les orientations stratégiques depuis db_data si elles existent
+            if "partie_ministere" in db_data and "orientations" in db_data["partie_ministere"]:
+                orientations_from_db = db_data["partie_ministere"]["orientations"]
+                partie_ministere["orientations"] = orientations_from_db
+                if "orientations_count" in db_data["partie_ministere"]:
+                    partie_ministere["orientations_count"] = db_data["partie_ministere"]["orientations_count"]
+                if "resultats_count" in db_data["partie_ministere"]:
+                    partie_ministere["resultats_count"] = db_data["partie_ministere"]["resultats_count"]
+                if "objectifs_globaux_count" in db_data["partie_ministere"]:
+                    partie_ministere["objectifs_globaux_count"] = db_data["partie_ministere"]["objectifs_globaux_count"]
+                logger.info(f"✅ Orientations stratégiques préservées depuis db_data: {len(orientations_from_db) if orientations_from_db else 0} élément(s)")
+                if orientations_from_db and len(orientations_from_db) > 0:
+                    logger.info(f"🔍 DIAGNOSTIC - Premier élément préservé: {orientations_from_db[0]}")
+            else:
+                logger.warning(f"⚠️ DIAGNOSTIC - Pas d'orientations dans db_data['partie_ministere']")
+                if "partie_ministere" in db_data:
+                    logger.warning(f"⚠️ DIAGNOSTIC - Clés dans db_data['partie_ministere']: {list(db_data['partie_ministere'].keys())}")
+            
             if "total_programmes" in budget_data:
                 partie_ministere["total_programmes"] = budget_data["total_programmes"]
             if "total_actions" in budget_data:
@@ -13534,6 +14211,114 @@ class RAPPDFGenerator(RAPBaseGenerator):
                         pct_key = f"prog{i+1}_pct"
                         pct_value = (prog["activites"] / total_activites * 100) if total_activites > 0 else 0
                         partie_ministere[pct_key] = pct_value
+            
+            RAPBaseGenerator.data["partie_ministere"] = partie_ministere
+        else:
+            # Ancien code avec budget_data - supprimé car on charge directement maintenant
+            pass
+            # Si budget_data est vide, s'assurer que partie_ministere existe quand même
+            # et charger les données de performance directement depuis la base de données si nécessaire
+            if "partie_ministere" not in RAPBaseGenerator.data:
+                RAPBaseGenerator.data["partie_ministere"] = {}
+            
+            partie_ministere = RAPBaseGenerator.data["partie_ministere"]
+            
+            # IMPORTANT: Préserver les orientations stratégiques depuis db_data si elles existent
+            if "partie_ministere" in db_data and "orientations" in db_data["partie_ministere"]:
+                orientations_from_db = db_data["partie_ministere"]["orientations"]
+                partie_ministere["orientations"] = orientations_from_db
+                if "orientations_count" in db_data["partie_ministere"]:
+                    partie_ministere["orientations_count"] = db_data["partie_ministere"]["orientations_count"]
+                if "resultats_count" in db_data["partie_ministere"]:
+                    partie_ministere["resultats_count"] = db_data["partie_ministere"]["resultats_count"]
+                if "objectifs_globaux_count" in db_data["partie_ministere"]:
+                    partie_ministere["objectifs_globaux_count"] = db_data["partie_ministere"]["objectifs_globaux_count"]
+                logger.info(f"✅ Orientations stratégiques préservées depuis db_data (budget_data vide): {len(orientations_from_db) if orientations_from_db else 0} élément(s)")
+            
+            # IMPORTANT: Essayer de charger les données de performance directement depuis la base de données
+            # si budget_data est vide mais qu'une session est disponible
+            if session and "performance" not in partie_ministere:
+                try:
+                    logger.info(f"🔍 DIAGNOSTIC - Tentative de chargement direct des données de performance depuis la DB (budget_data vide)")
+                    from app.models.performance import ObjectifPerformance, IndicateurPerformance, TypeObjectif
+                    from sqlalchemy import select, and_
+                    
+                    # Charger les objectifs globaux
+                    og_ids_query = select(ObjectifPerformance.id).where(
+                        and_(
+                            ObjectifPerformance.type_objectif == TypeObjectif.GLOBAL,
+                            ObjectifPerformance.resultat_strategique_id.isnot(None)
+                        )
+                    )
+                    og_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(og_ids_query).all()]
+                    objectifs_globaux = [session.get(ObjectifPerformance, og_id) for og_id in og_ids if session.get(ObjectifPerformance, og_id)]
+                    
+                    # Charger les objectifs spécifiques
+                    os_ids_query = select(ObjectifPerformance.id).where(
+                        and_(
+                            ObjectifPerformance.type_objectif == TypeObjectif.SPECIFIQUE,
+                            ObjectifPerformance.objectif_global_id.isnot(None)
+                        )
+                    )
+                    os_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(os_ids_query).all()]
+                    objectifs_specifiques = [session.get(ObjectifPerformance, os_id) for os_id in os_ids if session.get(ObjectifPerformance, os_id)]
+                    
+                    # Charger les indicateurs
+                    ind_ids_query = select(IndicateurPerformance.id).where(IndicateurPerformance.actif == True)
+                    ind_ids = [row[0] if isinstance(row, tuple) else row for row in session.exec(ind_ids_query).all()]
+                    indicateurs = [session.get(IndicateurPerformance, ind_id) for ind_id in ind_ids if session.get(IndicateurPerformance, ind_id)]
+                    
+                    nb_objectifs_globaux = len(objectifs_globaux)
+                    nb_objectifs_specifiques = len(objectifs_specifiques)
+                    nb_indicateurs = len(indicateurs)
+                    nb_cibles = nb_indicateurs
+                    
+                    # Compter les cibles atteintes
+                    cibles_atteintes = 0
+                    for ind in indicateurs:
+                        if ind.valeur_actuelle and ind.valeur_cible:
+                            try:
+                                if float(ind.valeur_actuelle) >= float(ind.valeur_cible):
+                                    cibles_atteintes += 1
+                            except (ValueError, TypeError):
+                                pass
+                    
+                    taux_realisation = (cibles_atteintes / nb_cibles * 100) if nb_cibles > 0 else 0
+                    
+                    # Compter les programmes
+                    programmes_list = RAPBaseGenerator.data.get("programmes", [])
+                    nb_programmes = len(programmes_list) if programmes_list else 0
+                    
+                    # Construire les données de performance
+                    partie_ministere["performance"] = {
+                        "architecture": {
+                            "nb_programmes": nb_programmes,
+                            "nb_objectifs_globaux": nb_objectifs_globaux,
+                            "nb_objectifs_specifiques": nb_objectifs_specifiques,
+                            "nb_indicateurs": nb_indicateurs,
+                            "nb_cibles": nb_cibles,
+                        },
+                        "taux_realisation": round(taux_realisation, 2),
+                        "nb_cibles_atteintes": cibles_atteintes,
+                        "realisations": [],  # Liste vide pour l'instant
+                    }
+                    
+                    logger.info(f"✅ Données de performance chargées directement depuis la DB: {nb_objectifs_globaux} OG, {nb_objectifs_specifiques} OS, {nb_indicateurs} indicateurs")
+                except Exception as perf_error:
+                    logger.warning(f"⚠️ Impossible de charger les données de performance directement: {perf_error}")
+                    # Créer une structure vide pour éviter les erreurs
+                    partie_ministere["performance"] = {
+                        "architecture": {
+                            "nb_programmes": 0,
+                            "nb_objectifs_globaux": 0,
+                            "nb_objectifs_specifiques": 0,
+                            "nb_indicateurs": 0,
+                            "nb_cibles": 0,
+                        },
+                        "taux_realisation": 0,
+                        "nb_cibles_atteintes": 0,
+                        "realisations": [],
+                    }
             
             RAPBaseGenerator.data["partie_ministere"] = partie_ministere
         
@@ -13613,12 +14398,11 @@ class RAPPDFGenerator(RAPBaseGenerator):
         logger.info(f"📄 Page {next_page}+: Introduction générale")
         next_page = RAPContentDrawer.draw_introduction_generale(content_pdf, width, height, next_page)
         
-        # PARTIE I : LE MINISTÈRE
-        content_pdf.showPage()
+        # PARTIE I : LE MINISTÈRE (générée avec SimpleDocTemplate)
         logger.info(f"📄 Page {next_page}: PARTIE I : LE MINISTÈRE")
-        next_page = RAPContentDrawer.draw_partie_i_ministere(content_pdf, width, height, next_page)
+        partie_i_buffer, next_page = RAPContentDrawer.draw_partie_i_ministere(next_page, session=session)
         
-        # Sauvegarder le contenu
+        # Sauvegarder le contenu (avant Partie I)
         content_pdf.save()
         content_buffer.seek(0)
         
@@ -13655,7 +14439,7 @@ class RAPPDFGenerator(RAPBaseGenerator):
         cover_reader = PdfReader(cover_buffer)
         temp_writer.add_page(cover_reader.pages[0])
         
-        # Ajouter le contenu
+        # Ajouter le contenu (avant Partie I)
         content_reader = PdfReader(content_buffer)
         content_pages_clean = []
         for page in content_reader.pages:
@@ -13663,6 +14447,11 @@ class RAPPDFGenerator(RAPBaseGenerator):
             if page_text:  # Seulement garder les pages avec du contenu
                 content_pages_clean.append(page)
         for page in content_pages_clean:
+            temp_writer.add_page(page)
+        
+        # Ajouter la Partie I (générée avec SimpleDocTemplate)
+        partie_i_reader = PdfReader(partie_i_buffer)
+        for page in partie_i_reader.pages:
             temp_writer.add_page(page)
         
         # Ajouter les programmes
@@ -13997,7 +14786,7 @@ class RAPPDFGenerator(RAPBaseGenerator):
         for page in sommaire_pages_clean:
             writer.add_page(page)
         
-        # 3. Ajouter toutes les autres sections (liste tableaux, graphiques, sigles, intro, partie I)
+        # 3. Ajouter toutes les autres sections (liste tableaux, graphiques, sigles, intro)
         content_reader = PdfReader(content_buffer)
         content_pages = list(content_reader.pages)
         logger.info(f"📄 Contenu (liste tableaux, etc.): {len(content_pages)} pages générées")
@@ -14030,6 +14819,16 @@ class RAPPDFGenerator(RAPBaseGenerator):
             writer.add_page(page)
             logger.info(f"🔍 DIAGNOSTIC - Page contenu {idx+1}/{len(content_pages_clean)} ajoutée. Total pages dans writer: {len(writer.pages)}")
         logger.info(f"🔍 DIAGNOSTIC - Après ajout contenu, nombre total de pages dans writer: {len(writer.pages)}")
+        
+        # 3.5. Ajouter la Partie I (générée avec SimpleDocTemplate)
+        logger.info("📄 Ajout de la Partie I au PDF final...")
+        partie_i_reader = PdfReader(partie_i_buffer)
+        partie_i_pages = list(partie_i_reader.pages)
+        logger.info(f"📄 Partie I: {len(partie_i_pages)} pages générées")
+        for idx, page in enumerate(partie_i_pages):
+            writer.add_page(page)
+            logger.info(f"🔍 DIAGNOSTIC - Page Partie I {idx+1}/{len(partie_i_pages)} ajoutée. Total pages dans writer: {len(writer.pages)}")
+        logger.info(f"🔍 DIAGNOSTIC - Après ajout Partie I, nombre total de pages dans writer: {len(writer.pages)}")
         
         # 4. Ajouter les parties programmes
         for prog_buffer in programme_buffers:

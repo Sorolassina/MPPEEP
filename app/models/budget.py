@@ -505,6 +505,9 @@ class SuiviInvestissement(SQLModel, table=True):
     taux_realisation_budgetaire: Decimal | None = Field(default=None, decimal_places=2, max_digits=5)  # % réal budgétaire
     taux_realisation_physique: Decimal | None = Field(default=None, decimal_places=2, max_digits=5)  # % réal physique
 
+    # Commentaire/Interprétation
+    commentaire: str | None = Field(default=None, sa_column=Column(Text))  # Commentaire pour l'interprétation
+
     # Métadonnées
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime | None = None

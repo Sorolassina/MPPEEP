@@ -66,7 +66,7 @@ class Direction(SQLModel, table=True):
     libelle: str = Field(max_length=200)
     description: str | None = None
     actif: bool = True
-    type: str | None = Field(default=None, index=True)  # Type de direction: "CENTRALE", "GENERALE", etc.
+    type: str = Field(default="centrale", index=True)  # Type de direction: "centrale" (par défaut) ou "générale"
 
     # Hiérarchie - peut être rattachée à un Programme OU à un Cabinet (exclusion mutuelle)
     programme_id: int | None = Field(default=None, foreign_key="programme.id")

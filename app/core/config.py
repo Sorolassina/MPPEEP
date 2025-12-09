@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     # APPLICATION
     # ==========================================
     APP_NAME: str = "SYGEP"
-    ENV: Literal["dev", "staging", "prod"] = "dev"
-    DEBUG: bool = True
+    ENV: Literal["dev", "staging", "prod"] = "prod"
+    DEBUG: bool = False
     SECRET_KEY: str = "changeme-in-production"
 
     # ROOT_PATH configuré dynamiquement selon l'environnement

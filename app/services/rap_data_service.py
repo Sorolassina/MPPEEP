@@ -2,7 +2,8 @@
 Service pour la gestion des données du Rapport Annuel de Performance (RAP)
 """
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
+from sqlalchemy import func
 from app.models.rap_data import RapData
 from app.models.personnel import Direction, Service
 from app.core.logging_config import get_logger
@@ -83,20 +84,28 @@ class RapDataService:
             - nb_services: Nombre de services actifs
         """
         try:
-            # Compter les directions centrales (type="CENTRALE" et actif=True)
+            # Compter les directions centrales (type="CENTRALE" ou "centrale" et actif=True)
+            # Utiliser func.upper() pour normaliser la comparaison (insensible à la casse)
+            # Note: func.upper() convertit en majuscules, donc "centrale" devient "CENTRALE"
             directions_centrales_query = select(Direction).where(
                 Direction.actif == True,
-                Direction.type == "CENTRALE"
+                func.upper(func.coalesce(Direction.type, '')) == "CENTRALE"
             )
-            directions_centrales = db_session.exec(directions_centrales_query).all()
+            directions_centrales = list(db_session.exec(directions_centrales_query).all())
             nb_directions_centrales = len(directions_centrales) if directions_centrales else 0
             
-            # Compter les directions générales (type="GENERALE" ou type="GÉNÉRALE" et actif=True)
+            # Compter les directions générales (type="GENERALE", "GÉNÉRALE", "générale" ou "générale" et actif=True)
+            # Utiliser or_ avec plusieurs variantes possibles
+            # Note: "GÉNÉRALE" avec accent et "GENERALE" sans accent sont deux valeurs différentes
+            # Utiliser func.upper() pour chaque variante pour gérer la casse
             directions_generales_query = select(Direction).where(
                 Direction.actif == True,
-                (Direction.type == "GENERALE") | (Direction.type == "GÉNÉRALE")
+                or_(
+                    func.upper(func.coalesce(Direction.type, '')) == "GÉNÉRALE",
+                    func.upper(func.coalesce(Direction.type, '')) == "GENERALE"
+                )
             )
-            directions_generales = db_session.exec(directions_generales_query).all()
+            directions_generales = list(db_session.exec(directions_generales_query).all())
             nb_directions_generales = len(directions_generales) if directions_generales else 0
             
             # Compter les services actifs
