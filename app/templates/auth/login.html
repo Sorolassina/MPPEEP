@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/modals.css')) }}">
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/components.css')) }}">
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/pages.css')) }}">
+    <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/responsive.css')) }}">
     
 
     
@@ -129,22 +130,124 @@
         /* Responsive horloge */
         @media (max-width: 768px) {
             .clock-widget {
-                top: 30px;
-                left: 20px;
+                top: 20px;
+                right: 20px;
+                left: auto;
+                text-align: right;
             }
             
             .clock-time {
-                font-size: 4rem;
+                font-size: 3.5rem;
+                letter-spacing: -1px;
+                margin-bottom: 0.15rem;
+                text-align: right;
             }
             
             .clock-date {
-                font-size: 1.2rem;
+                font-size: 1rem;
+                letter-spacing: 0.3px;
+                text-align: right;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .clock-widget {
+                top: 15px;
+                right: 15px;
+                left: auto;
+                text-align: right;
+            }
+            
+            .clock-time {
+                font-size: 3rem;
+                letter-spacing: -1px;
+                text-align: right;
+            }
+            
+            .clock-date {
+                font-size: 0.9rem;
+                text-align: right;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .clock-widget {
+                top: 10px;
+                right: 10px;
+                left: auto;
+                text-align: right;
+            }
+            
+            .clock-time {
+                font-size: 2.5rem;
+                letter-spacing: -0.5px;
+                margin-bottom: 0.1rem;
+                text-align: right;
+            }
+            
+            .clock-date {
+                font-size: 0.8rem;
+                letter-spacing: 0.2px;
+                line-height: 1.2;
+                text-align: right;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .clock-widget {
+                top: 8px;
+                right: 8px;
+                left: auto;
+                text-align: right;
+            }
+            
+            .clock-time {
+                font-size: 2rem;
+                text-align: right;
+            }
+            
+            .clock-date {
+                font-size: 0.75rem;
+                text-align: right;
             }
         }
         
         @media (max-height: 600px) {
             .clock-widget {
-                display: none; /* Masquer sur petits écrans */
+                top: 10px;
+                right: 10px;
+                left: auto;
+                text-align: right;
+            }
+            
+            .clock-time {
+                font-size: 2rem;
+                margin-bottom: 0.1rem;
+                text-align: right;
+            }
+            
+            .clock-date {
+                font-size: 0.75rem;
+                text-align: right;
+            }
+        }
+        
+        @media (max-width: 480px) and (max-height: 700px) {
+            .clock-widget {
+                top: 8px;
+                right: 8px;
+                left: auto;
+                text-align: right;
+            }
+            
+            .clock-time {
+                font-size: 2rem;
+                text-align: right;
+            }
+            
+            .clock-date {
+                font-size: 0.7rem;
+                text-align: right;
             }
         }
 
@@ -190,6 +293,22 @@
             height: 100%;
             object-fit: contain;
             border-radius: 50%;
+            max-width: 80px;
+            max-height: 80px;
+        }
+
+        @media (max-width: 768px) {
+            .logo-image {
+                max-width: 60px;
+                max-height: 60px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-image {
+                max-width: 50px;
+                max-height: 50px;
+            }
         }
 
         .login-title {
@@ -451,26 +570,107 @@
         }
 
         /* Responsive */
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
             .login-container {
-                padding: 16px;
+                padding: 12px;
+                overflow-y: auto;
+            }
+
+            .login-wrapper {
+                max-width: 100%;
+                padding: 0;
             }
 
             .login-form-container {
-                padding: 24px;
+                padding: 20px;
+                border-radius: 16px;
             }
 
             .login-title {
-                font-size: 16px;
+                font-size: 14px;
+                line-height: 1.4;
+                margin-bottom: 8px;
             }
 
             .login-header h3.login-subtitle {
-                font-size: 18px;
+                font-size: 16px;
+                margin-bottom: 6px;
+            }
+
+            .login-subtitle {
+                font-size: 12px;
             }
 
             .logo-container {
-                width: 70px;
-                height: 70px;
+                width: 60px;
+                height: 60px;
+                margin-bottom: 12px;
+            }
+
+            .form-input {
+                padding: 14px 16px;
+                font-size: 16px; /* Évite le zoom automatique sur iOS */
+            }
+
+            .form-label {
+                font-size: 13px;
+            }
+
+            .form-options {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .forgot-password {
+                text-align: left;
+                width: 100%;
+            }
+
+            .login-button {
+                width: 100%;
+            }
+
+            .copyright {
+                bottom: 10px;
+                right: 12px;
+                font-size: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 8px;
+            }
+
+            .login-form-container {
+                padding: 16px;
+            }
+
+            .login-title {
+                font-size: 12px;
+            }
+
+            .login-header h3.login-subtitle {
+                font-size: 14px;
+            }
+
+            .logo-container {
+                width: 50px;
+                height: 50px;
+            }
+
+            .copyright {
+                bottom: 8px;
+                right: 8px;
+                font-size: 9px;
+            }
+
+            .btn-back-to-landing {
+                top: 5px;
+                left: 5px;
+                padding: 6px 10px;
+                font-size: 0.8rem;
             }
         }
 
@@ -481,26 +681,88 @@
             }
 
             .login-content {
-                gap: 16px;
+                gap: 12px;
             }
 
             .login-form-container {
-                padding: 20px;
+                padding: 16px;
             }
 
             .login-header {
-                margin-bottom: 16px;
+                margin-bottom: 12px;
             }
 
             .login-title {
-                font-size: 16px;
-                margin-bottom: 8px;
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+
+            .login-header h3.login-subtitle {
+                font-size: 14px;
+                margin-bottom: 4px;
             }
 
             .logo-container {
-                width: 60px;
-                height: 60px;
-                margin-bottom: 12px;
+                width: 50px;
+                height: 50px;
+                margin-bottom: 8px;
+            }
+
+            .clock-widget {
+                top: 8px;
+                right: 8px;
+                left: auto;
+                text-align: right;
+            }
+
+            .clock-time {
+                font-size: 1.8rem;
+                margin-bottom: 0.05rem;
+                text-align: right;
+            }
+
+            .clock-date {
+                font-size: 0.7rem;
+                text-align: right;
+            }
+
+            .copyright {
+                display: none;
+            }
+        }
+
+        /* Orientation paysage sur mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .clock-widget {
+                top: 10px;
+                right: 10px;
+                left: auto;
+                text-align: right;
+            }
+
+            .clock-time {
+                font-size: 2rem;
+                text-align: right;
+            }
+
+            .clock-date {
+                font-size: 0.75rem;
+                text-align: right;
+            }
+            .login-container {
+                padding: 8px;
+            }
+
+            .login-form-container {
+                padding: 16px;
+            }
+
+            .login-content {
+                gap: 12px;
+            }
+
+            .clock-widget {
+                display: none;
             }
         }
         
@@ -537,7 +799,10 @@
                     
                     <!-- Logo et Titre (déplacés à l'intérieur) -->
                     <div class="login-header">
-                        <img src="{{ static_versioned_url(static_url('images/logo.webp')) }}" alt="Logo" style="width: 80px; height: 80px; margin: 0 auto 15px auto; display: block; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <a href="{{ url_for('landing_page') }}" class="btn-back-to-landing" title="Retour à la page d'accueil" style="position: absolute; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 8px 12px; text-decoration: none; font-size: 0.9rem; font-weight: 600; backdrop-filter: blur(10px); transition: all 0.3s; z-index: 100;">
+                            ← Retour
+                        </a>
+                        <img src="{{ static_versioned_url(static_url('images/logo.webp')) }}" alt="Logo" class="logo-image" style="width: 80px; height: 80px; margin: 0 auto 15px auto; display: block; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                         <h2 class="login-title" style="color: var(--white-color);">
                             Ministère du patrimoine, du Portefeuille de l'Etat et des Entreprises Publiques
                         </h2>
@@ -826,6 +1091,40 @@
                         successMessage.style.display = 'none';
                     }, 300);
                 }, 5000);
+            }
+
+            // ========================================
+            // TIMER D'INACTIVITÉ - 3 MINUTES
+            // ========================================
+            let inactivityTimer;
+            const INACTIVITY_TIMEOUT = 3 * 60 * 1000; // 3 minutes en millisecondes
+            const landingUrl = '{{ url_for("landing_page") }}';
+
+            function resetInactivityTimer() {
+                // Réinitialiser le timer
+                clearTimeout(inactivityTimer);
+                
+                // Définir un nouveau timer
+                inactivityTimer = setTimeout(function() {
+                    // Rediriger vers landing après 3 minutes d'inactivité
+                    window.location.href = landingUrl;
+                }, INACTIVITY_TIMEOUT);
+            }
+
+            // Événements qui réinitialisent le timer
+            const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+            events.forEach(function(event) {
+                document.addEventListener(event, resetInactivityTimer, true);
+            });
+
+            // Démarrer le timer au chargement de la page
+            resetInactivityTimer();
+
+            // Réinitialiser le timer lors de la soumission du formulaire
+            if (form) {
+                form.addEventListener('submit', function() {
+                    clearTimeout(inactivityTimer);
+                });
             }
         });
     </script>

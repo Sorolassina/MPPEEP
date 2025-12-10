@@ -135,6 +135,47 @@
 .toast.removing {
   animation: slideOutRight 0.3s ease-out forwards;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+  #toast-container {
+    top: 10px !important;
+    right: 10px !important;
+    left: 10px !important;
+    max-width: 100% !important;
+  }
+
+  .toast {
+    min-width: auto;
+    width: 100%;
+    padding: 0.875rem 1rem;
+  }
+
+  .toast-icon {
+    font-size: 1.25rem;
+  }
+
+  .toast-title {
+    font-size: 0.9rem;
+  }
+
+  .toast-message {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #toast-container {
+    top: 8px !important;
+    right: 8px !important;
+    left: 8px !important;
+    gap: 8px;
+  }
+
+  .toast {
+    padding: 0.75rem 0.875rem;
+  }
+}
 </style>
 
 <script>

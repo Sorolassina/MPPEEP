@@ -31,7 +31,13 @@ def generate_recovery_code() -> str:
     return "".join(random.choices(string.digits, k=6))
 
 
-# ===== ROUTES DE LOGIN =====
+# ===== ROUTES DE LANDING ET LOGIN =====
+
+
+@router.get("/landing", response_class=HTMLResponse, name="landing_page")
+async def landing_get(request: Request):
+    """Affiche la page de landing (choix du type d'utilisateur)"""
+    return templates.TemplateResponse("auth/landing.html", get_template_context(request))
 
 
 @router.get("/login", response_class=HTMLResponse, name="login_page")

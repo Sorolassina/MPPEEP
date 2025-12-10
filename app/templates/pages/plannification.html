@@ -250,6 +250,117 @@
     font-size: 3rem;
     margin-bottom: 1rem;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .plannification-page {
+        padding: 1rem 0.75rem;
+    }
+
+    .calendar-container {
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .calendar-header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .calendar-nav {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .calendar-nav a {
+        width: 100%;
+        text-align: center;
+        padding: 0.75rem;
+    }
+
+    .calendar-title {
+        font-size: 1.25rem;
+        padding: 0.5rem 1rem;
+        width: 100%;
+        text-align: center;
+    }
+
+    .calendar-grid {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.35rem;
+    }
+
+    .calendar-day-header {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    .calendar-day {
+        min-height: 80px;
+        padding: 0.35rem;
+    }
+
+    .day-number {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .event-item {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.4rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+
+    .empty-state-icon {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .plannification-page {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .calendar-container {
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .calendar-header {
+        padding: 0.75rem;
+    }
+
+    .calendar-title {
+        font-size: 1.1rem;
+    }
+
+    .calendar-day {
+        min-height: 70px;
+        padding: 0.25rem;
+    }
+
+    .calendar-day-header {
+        padding: 0.4rem 0.15rem;
+        font-size: 0.7rem;
+    }
+
+    .day-number {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.3rem;
+    }
+
+    .event-item {
+        font-size: 0.6rem;
+        padding: 0.2rem 0.3rem;
+    }
+}
 </style>
 {% endblock %}
 

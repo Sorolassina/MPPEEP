@@ -11,6 +11,7 @@
     <!-- CSS de base -->
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/base.css')) }}">
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/theme.css')) }}">
+    <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/responsive.css')) }}">
     
     <style>
         .privacy-container {
@@ -254,38 +255,180 @@
         
         /* Responsive */
         @media (max-width: 768px) {
+            .privacy-container {
+                padding: 12px;
+                overflow-y: auto;
+            }
+
             .clock-widget {
-                top: 20px;
-                left: 20px;
+                top: 15px;
+                left: 12px;
             }
             
             .clock-time {
-                font-size: 3rem;
+                font-size: 2.5rem;
             }
             
             .clock-date {
-                font-size: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .copyright {
+                bottom: 10px;
+                right: 12px;
+                font-size: 10px;
             }
             
             .privacy-card {
-                padding: 20px;
+                padding: 16px;
                 max-height: 95vh;
+                border-radius: 16px;
+            }
+
+            .privacy-header {
+                margin-bottom: 20px;
+            }
+
+            .privacy-logo {
+                width: 60px;
+                height: 60px;
             }
             
             .privacy-title {
-                font-size: 20px;
+                font-size: 18px;
+                margin-bottom: 8px;
+            }
+
+            .privacy-subtitle {
+                font-size: 12px;
+            }
+
+            .privacy-content {
+                padding: 16px;
+                max-height: 50vh;
+                font-size: 14px;
+            }
+
+            .privacy-content h2 {
+                font-size: 16px;
+                margin-top: 16px;
+                margin-bottom: 8px;
+            }
+
+            .privacy-content p,
+            .privacy-content ul {
+                font-size: 13px;
+                line-height: 1.6;
+                margin-bottom: 12px;
             }
             
             .privacy-actions {
                 flex-direction: column;
+                gap: 12px;
             }
             
             .checkbox-container {
                 width: 100%;
+                padding: 12px;
+            }
+
+            .checkbox-label {
+                font-size: 13px;
             }
             
             .btn-accept {
                 width: 100%;
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .privacy-container {
+                padding: 8px;
+            }
+
+            .privacy-card {
+                padding: 12px;
+            }
+
+            .privacy-logo {
+                width: 50px;
+                height: 50px;
+            }
+
+            .privacy-title {
+                font-size: 16px;
+            }
+
+            .privacy-subtitle {
+                font-size: 11px;
+            }
+
+            .privacy-content {
+                padding: 12px;
+                max-height: 45vh;
+                font-size: 13px;
+            }
+
+            .privacy-content h2 {
+                font-size: 15px;
+            }
+
+            .privacy-content p,
+            .privacy-content ul {
+                font-size: 12px;
+            }
+
+            .clock-widget {
+                top: 10px;
+                left: 8px;
+            }
+
+            .clock-time {
+                font-size: 2rem;
+            }
+
+            .clock-date {
+                font-size: 0.85rem;
+            }
+
+            .copyright {
+                bottom: 8px;
+                right: 8px;
+                font-size: 9px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .clock-widget {
+                display: none;
+            }
+
+            .copyright {
+                display: none;
+            }
+
+            .privacy-content {
+                max-height: 40vh;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            .privacy-container {
+                padding: 8px;
+            }
+
+            .privacy-card {
+                padding: 12px;
+            }
+
+            .privacy-content {
+                max-height: 35vh;
+            }
+
+            .clock-widget {
+                display: none;
             }
         }
     </style>

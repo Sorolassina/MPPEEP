@@ -4,6 +4,49 @@
 {% block title %}{{ 'Modifier' if inventaire else 'Nouvel' }} Inventaire - Gestion des Stocks</body>
 {% endblock %}
 
+{% block styles %}
+<style>
+/* Responsive */
+@media (max-width: 768px) {
+    .content-wrapper {
+        padding: 0.75rem;
+    }
+
+    .card {
+        padding: 1.25rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-wrapper {
+        padding: 0.5rem;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <body class="form-page-premium">
 {{ page_header(

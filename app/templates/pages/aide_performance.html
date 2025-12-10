@@ -355,24 +355,81 @@
     
     .help-hero {
         padding: 2rem 1.5rem;
+        border-radius: 16px;
     }
     
     .help-hero h1 {
-        font-size: 2rem;
+        font-size: 1.75rem;
+    }
+
+    .help-hero p {
+        font-size: 1rem;
     }
     
     .help-section {
         padding: 1.5rem;
+        border-radius: 16px;
+    }
+
+    .help-section h2 {
+        font-size: 1.5rem;
+    }
+
+    .help-section h3 {
+        font-size: 1.25rem;
+    }
+
+    .help-section h4 {
+        font-size: 1rem;
     }
     
     .help-grid,
     .feature-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .help-card {
+        padding: 1.25rem;
     }
     
     .hierarchy-box {
         min-width: auto;
         width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .help-page-full-width {
+        padding: 1rem 0.75rem;
+    }
+
+    .help-hero {
+        padding: 1.5rem 1rem;
+    }
+
+    .help-hero h1 {
+        font-size: 1.5rem;
+    }
+
+    .help-hero p {
+        font-size: 0.95rem;
+    }
+
+    .help-section {
+        padding: 1.25rem;
+    }
+
+    .help-section h2 {
+        font-size: 1.25rem;
+    }
+
+    .help-section h3 {
+        font-size: 1.1rem;
+    }
+
+    .help-card {
+        padding: 1rem;
     }
 }
 </style>

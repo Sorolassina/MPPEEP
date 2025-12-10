@@ -458,6 +458,139 @@
     scrollbar-width: thin;
     scrollbar-color: var(--primary-color) var(--messagerie-scroll-track);
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .messagerie-popup {
+        width: 100% !important;
+        max-width: 100% !important;
+        right: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        top: 0 !important;
+        max-height: 100vh !important;
+        min-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+
+    .messagerie-popup.active {
+        right: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        top: 0 !important;
+    }
+
+    .messagerie-header {
+        padding: 12px 16px;
+    }
+
+    .messagerie-header h3 {
+        font-size: 1rem;
+    }
+
+    .messagerie-content {
+        flex-direction: column;
+    }
+
+    .conversations-list,
+    .chat-area {
+        width: 100%;
+        height: auto;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .conversations-list {
+        border-right: none;
+        border-bottom: 1px solid var(--messagerie-border);
+    }
+
+    .messagerie-search {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .messagerie-search input {
+        width: 100%;
+    }
+
+    .btn-new-conv {
+        width: 100%;
+    }
+
+    .conversation-item {
+        padding: 12px;
+    }
+
+    .conversation-avatar {
+        width: 40px;
+        height: 40px;
+    }
+
+    .conversation-info h4 {
+        font-size: 0.9rem;
+    }
+
+    .conversation-preview {
+        font-size: 0.8rem;
+    }
+
+    .message-item {
+        max-width: 85%;
+    }
+
+    .message-bubble {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .chat-input-area {
+        padding: 12px;
+        flex-direction: column;
+    }
+
+    .chat-input-area textarea {
+        width: 100%;
+        min-height: 60px;
+    }
+
+    .btn-send {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .messagerie-header {
+        padding: 10px 12px;
+    }
+
+    .messagerie-header h3 {
+        font-size: 0.95rem;
+    }
+
+    .conversation-item {
+        padding: 10px;
+    }
+
+    .conversation-avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .message-item {
+        max-width: 90%;
+    }
+
+    .message-bubble {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+
+    .chat-input-area {
+        padding: 10px;
+    }
+}
 </style>
 
 <script>

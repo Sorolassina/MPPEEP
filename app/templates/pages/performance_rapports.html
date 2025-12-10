@@ -66,6 +66,214 @@
         transform: translateY(0);
     }
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .rap-tabs {
+        margin-top: 1rem;
+    }
+
+    .rap-tabs-nav {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        gap: 0.5rem;
+        padding-bottom: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(232, 106, 10, 0.3) transparent;
+    }
+
+    .rap-tabs-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .rap-tabs-nav::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .rap-tabs-nav::-webkit-scrollbar-thumb {
+        background: rgba(232, 106, 10, 0.3);
+        border-radius: 2px;
+    }
+
+    .rap-tabs-nav::-webkit-scrollbar-thumb:hover {
+        background: rgba(232, 106, 10, 0.5);
+    }
+
+    .rap-tab-btn {
+        padding: 0.625rem 1rem;
+        font-size: 0.85rem;
+        flex: 0 0 auto;
+        min-width: fit-content;
+        white-space: nowrap;
+        justify-content: center;
+    }
+
+    .rap-tab-btn span {
+        font-size: 1rem;
+    }
+
+    /* Formulaires dans les modals */
+    .performance-engagement-body .form-group {
+        width: 100% !important;
+    }
+
+    .performance-engagement-body div[style*="display: flex"] {
+        flex-direction: column !important;
+    }
+
+    .performance-engagement-body div[style*="flex:"] {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+    }
+
+    /* Modal responsive */
+    .modal-fullscreen .modal-content {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 1rem auto !important;
+        max-height: calc(100vh - 2rem) !important;
+    }
+
+    .modal-fullscreen .modal-body {
+        max-height: calc(100vh - 200px) !important;
+        overflow-y: auto !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .rap-tabs {
+        margin-top: 0.75rem;
+    }
+
+    .rap-tabs-nav {
+        gap: 0.375rem;
+        padding-bottom: 0.375rem;
+    }
+
+    .rap-tab-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+        border-bottom-width: 2px;
+    }
+
+    .rap-tab-btn span {
+        font-size: 0.9rem;
+        margin-right: 0.25rem;
+    }
+
+    /* Cacher le texte sur très petits écrans, garder seulement l'icône */
+    .rap-tab-btn span:not(:first-child) {
+        display: none;
+    }
+
+    .rap-tab-btn {
+        min-width: 44px;
+        padding: 0.5rem;
+        justify-content: center;
+    }
+
+    /* Modal responsive */
+    .modal-fullscreen .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0.5rem !important;
+        max-height: calc(100vh - 1rem) !important;
+        border-radius: 8px !important;
+    }
+
+    .modal-fullscreen .modal-header {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .modal-fullscreen .modal-header h2 {
+        font-size: 1.1rem !important;
+    }
+
+    .modal-fullscreen .modal-body {
+        padding: 1rem !important;
+        max-height: calc(100vh - 180px) !important;
+    }
+
+    .performance-engagement-intro {
+        font-size: 0.85rem !important;
+        padding: 0.75rem !important;
+    }
+}
+
+/* Styles pour l'historique des rapports */
+.reports-history {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.history-header {
+    margin-bottom: 1.5rem;
+}
+
+.history-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.history-subtitle {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.report-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.25rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.report-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #64748b;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .reports-history {
+        padding: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .history-title {
+        font-size: 1.25rem;
+    }
+}
 </style>
 {% endblock %}
 
@@ -109,14 +317,6 @@
                 </p>
                 <span class="template-badge badge-analytique">Rapport d'Activité</span>
             </div>
-            <div class="template-card" onclick="useTemplate('DAF')">
-                <div class="template-icon">💼</div>
-                <div class="template-name">Rapport Trimestriel DAF</div>
-                <p class="template-description">
-                    Suivi financier trimestriel, exécution budgétaire et alertes du Directeur Administratif et Financier.
-                </p>
-                <span class="template-badge badge-periodique">Trimestriel</span>
-            </div>
             <div class="template-card" onclick="openCadrePerformanceModal()">
                 <div class="template-icon">💼</div>
                 <div class="template-name">Cadre de performance du ministère</div>
@@ -125,6 +325,15 @@
                 </p>
                 <span class="template-badge badge-periodique">Annuel</span>
             </div>
+            <div class="template-card" onclick="useTemplate('DAF')">
+                <div class="template-icon">💼</div>
+                <div class="template-name">Rapport Trimestriel DAF</div>
+                <p class="template-description">
+                    Suivi financier trimestriel, exécution budgétaire et alertes du Directeur Administratif et Financier.
+                </p>
+                <span class="template-badge badge-periodique">Trimestriel</span>
+            </div>
+            
         </div>
     </section>
 
@@ -766,41 +975,205 @@
         </div>
         <form id="cadrePerformanceForm" class="modal-body performance-engagement-body" data-endpoint-pdf="{{ url_for('performance_cadre_performance_pdf') }}" data-endpoint-word="{{ url_for('performance_cadre_performance_docx') }}">
             <p class="performance-engagement-intro">
-                Sélectionnez les paramètres pour générer le cadre de performance. Vous pouvez générer pour un programme spécifique ou pour tout le ministère.
+                Renseignez les informations ci-dessous pour générer le cadre de performance (format paysage).
             </p>
             
-            <section>
-                <h3 class="performance-engagement-title">
-                    <span>📄</span> Paramètres de génération
-                </h3>
-                <div class="performance-engagement-grid">
-                    <div class="form-group">
-                        <label for="cadre_programme_id" class="form-label">Programme</label>
-                        <select id="cadre_programme_id" name="programme_id" class="form-control">
-                            <option value="">-- Tout le ministère --</option>
-                            {% for programme in programmes %}
-                            <option value="{{ programme.id }}">{{ programme.code }} - {{ programme.libelle }}</option>
-                            {% endfor %}
-                        </select>
-                        <span class="performance-engagement-hint">Sélectionnez un programme spécifique ou laissez vide pour tout le ministère.</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="cadre_annee_reference" class="form-label">Année de référence *</label>
-                        <input type="number" id="cadre_annee_reference" name="annee_reference" class="form-control" min="2000" max="2100" step="1" placeholder="2021" value="2021" required>
-                        <span class="performance-engagement-hint">Année de base fixe à partir de laquelle on a commencé à mesurer la performance (ex: 2021).</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="cadre_annee_redaction" class="form-label">Période de rédaction (N) *</label>
-                        <input type="number" id="cadre_annee_redaction" name="annee_redaction" class="form-control" min="2000" max="2100" step="1" placeholder="2024" value="2024" required>
-                        <span class="performance-engagement-hint">Période de rédaction (N). Les valeurs de référence seront N-1, N-2 et les cibles seront N, N+1, N+2.</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="cadre_titre" class="form-label">Titre personnalisé (optionnel)</label>
-                        <input type="text" id="cadre_titre" name="titre" class="form-control" placeholder="Cadre de Performance du Ministère">
-                        <span class="performance-engagement-hint">Titre personnalisé pour le rapport. Si vide, un titre par défaut sera utilisé.</span>
-                    </div>
+            <!-- Système d'onglets CP -->
+            <div class="rap-tabs">
+                <div class="rap-tabs-nav">
+                    <button type="button" class="rap-tab-btn active" onclick="switchCpTab('general')" data-tab="general">
+                        <span>📄</span> Général
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchCpTab('cadre-globale')" data-tab="cadre-globale">
+                        <span>📋</span> Cadre Globale
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchCpTab('cadre-programme')" data-tab="cadre-programme">
+                        <span>📊</span> Cadre Programme
+                    </button>
+                    <button type="button" class="rap-tab-btn" onclick="switchCpTab('modification-architecture')" data-tab="modification-architecture">
+                        <span>🔧</span> Modification Architecture
+                    </button>
                 </div>
-            </section>
+                
+                <!-- Onglet 1: Général -->
+                <div id="cp-tab-general" class="rap-tab-content active">
+                    <section>
+                        <h3 class="performance-engagement-title">
+                            <span>📄</span> Informations Générales
+                        </h3>
+                        <div class="performance-engagement-grid">
+                            <div class="form-group">
+                                <label for="cp_annee_debut" class="form-label" style="color: #dc3545; font-weight: 600;">Année de début *</label>
+                                <input type="number" id="cp_annee_debut" name="annee_debut" class="form-control" min="2000" max="2100" step="1" placeholder="2026" required style="border-color: #dc3545;">
+                                <span class="performance-engagement-hint">Année de début de la période du cadre de performance.</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="cp_annee_fin" class="form-label" style="color: #dc3545; font-weight: 600;">Année de fin *</label>
+                                <input type="number" id="cp_annee_fin" name="annee_fin" class="form-control" min="2000" max="2100" step="1" placeholder="2028" required style="border-color: #dc3545;">
+                                <span class="performance-engagement-hint">Année de fin de la période du cadre de performance.</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="cp_section" class="form-label">Section *</label>
+                                <input type="text" id="cp_section" name="section" class="form-control" placeholder="SECTION 376" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="cp_ministere" class="form-label">Ministère *</label>
+                                <input type="text" id="cp_ministere" name="ministere" class="form-control" placeholder="MINISTERE DU PATRIMOINE, DU PORTEFEUILLE DE L'ÉTAT ET DES ENTREPRISES PUBLIQUES" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label for="cp_titre_rapport" class="form-label">Titre du rapport *</label>
+                                <input type="text" id="cp_titre_rapport" name="titre_rapport" class="form-control" placeholder="DOCUMENT DE PRESENTATION DU CADRE DE PERFORMANCE" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="cp_titre_periode" class="form-label">Titre période</label>
+                                <input type="text" id="cp_titre_periode" name="titre_periode" class="form-control" placeholder="AU TITRE DE LA PERIODE" value="AU TITRE DE LA PERIODE">
+                            </div>
+                            <div class="form-group">
+                                <label for="cp_date_publication" class="form-label">Date de publication</label>
+                                <input type="text" id="cp_date_publication" name="date_publication" class="form-control" placeholder="Mars 2025">
+                                <span class="performance-engagement-hint">Format: "Mois Année" (ex: "Mars 2025"). Si vide, la date actuelle sera utilisée.</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="cp_logo_path" class="form-label">Logo/Emblème</label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="text" id="cp_logo_path" name="logo_path" class="form-control" placeholder="images/logo.webp">
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('cp_logo_path_file').click()">📁 Parcourir</button>
+                                    <input type="file" id="cp_logo_path_file" accept="image/*" style="display: none;" onchange="uploadEngagementPhoto('cp_logo_path')">
+                                </div>
+                                <div class="performance-upload-preview" id="cp_logo_path_preview_wrapper" style="display: none; margin-top: 0.5rem;">
+                                    <img id="cp_logo_path_preview" alt="Prévisualisation du logo" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                
+                <!-- Onglet 2: Cadre Globale -->
+                <div id="cp-tab-cadre-globale" class="rap-tab-content">
+                    <section>
+                        <h3 class="performance-engagement-title">
+                            <span>📋</span> Cadre Globale de Présentation de la Performance
+                        </h3>
+                        <div class="performance-engagement-grid">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_cadre_global_commentaire" class="form-label">Commentaire</label>
+                                <textarea id="cp_cadre_global_commentaire" name="cadre_global_commentaire" class="form-control" rows="10" placeholder="Le Ministère du Patrimoine, du Portefeuille de l'État et des Entreprises Publiques (MPPEEP) a été créé à la faveur du remaniement ministériel du 17 octobre 2023. Ses missions sont définies par l'article 13 du décret 2023-820 portant attribution des membres du gouvernement. Le ministère est organisé par le décret n° 2023-963 du 6 décembre 2023 portant organisation du MPPEEP. Au regard de ces deux (2) décrets, le MPPEEP a identifié trois (3) programmes et défini trois (3) objectifs globaux auxquels sont rattachés neuf (9) objectifs spécifiques." style="width: 100%; min-height: 200px;"></textarea>
+                                <span class="performance-engagement-hint">Commentaire explicatif sur le cadre global de présentation de la performance du ministère.</span>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_organismes_tutelle" class="form-label">Organismes sous tutelle directe (EPN, SODE, SEM)</label>
+                                <textarea id="cp_organismes_tutelle" name="organismes_tutelle" class="form-control" rows="8" placeholder="Entrez un organisme par ligne. Format: Programme: Organisme&#10;Exemple:&#10;P1: Société Nationale de gestion du Patrimoine Immobilier de l'Etat (SONAPIE)&#10;P2: Organisme 2"></textarea>
+                                <span class="performance-engagement-hint">Entrez les organismes sous tutelle directe pour chaque programme. Format: Code Programme: Nom de l'organisme (une ligne par organisme).</span>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_organismes_prives_ong" class="form-label">Organismes privés et ONG subventionnées</label>
+                                <textarea id="cp_organismes_prives_ong" name="organismes_prives_ong" class="form-control" rows="8" placeholder="Entrez un organisme par ligne. Format: Programme: Organisme&#10;Exemple:&#10;P1: ONG Exemple 1&#10;P2: ONG Exemple 2"></textarea>
+                                <span class="performance-engagement-hint">Entrez les organismes privés et ONG subventionnées pour chaque programme. Format: Code Programme: Nom de l'organisme (une ligne par organisme).</span>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_projets_hors_pip" class="form-label">Projets hors PIP</label>
+                                <textarea id="cp_projets_hors_pip" name="projets_hors_pip" class="form-control" rows="8" placeholder="Entrez un projet par ligne. Format: Programme: Projet&#10;Exemple:&#10;P1: Projet hors PIP 1&#10;P2: Projet hors PIP 2"></textarea>
+                                <span class="performance-engagement-hint">Entrez les projets hors PIP pour chaque programme. Format: Code Programme: Nom du projet (une ligne par projet).</span>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_tableau2_commentaire" class="form-label">Commentaire du Tableau 2 (Cartographie administrative des programmes)</label>
+                                <textarea id="cp_tableau2_commentaire" name="tableau2_commentaire" class="form-control" rows="6" placeholder="Commentaire explicatif sur la cartographie administrative des programmes..."></textarea>
+                                <span class="performance-engagement-hint">Commentaire explicatif sur le tableau de cartographie administrative des programmes.</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                
+                <!-- Onglet 3: Cadre Programme -->
+                <div id="cp-tab-cadre-programme" class="rap-tab-content">
+                    <section>
+                        <h3 class="performance-engagement-title">
+                            <span>📊</span> Cadre Programme - Commentaires
+                        </h3>
+                        <div class="performance-engagement-grid">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_programme_commentaire" class="form-label">Commentaire avant l'analyse</label>
+                                <textarea id="cp_programme_commentaire" name="programme_commentaire" class="form-control" rows="10" placeholder="Commentaire qui sera affiché avant l'analyse des résultats pour chaque programme..."></textarea>
+                                <span class="performance-engagement-hint">Commentaire qui sera inséré avant la section d'analyse des résultats pour chaque programme.</span>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_cadre_performance_commentaire" class="form-label">Commentaire après le tableau "Cadre de performance"</label>
+                                <textarea id="cp_cadre_performance_commentaire" name="cadre_performance_commentaire" class="form-control" rows="8" placeholder="Commentaire qui sera affiché après le tableau 'Cadre de performance' pour chaque programme..."></textarea>
+                                <span class="performance-engagement-hint">Commentaire qui sera inséré après le tableau 'Cadre de performance' pour chaque programme.</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                
+                <!-- Onglet 4: Modification Architecture -->
+                <div id="cp-tab-modification-architecture" class="rap-tab-content">
+                    <section>
+                        <h3 class="performance-engagement-title">
+                            <span>🔧</span> Modification de l'Architecture Programmatique
+                        </h3>
+                        <div class="performance-engagement-grid">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                                    <h4 style="margin-top: 0; color: #495057;">📋 Instructions</h4>
+                                    <p style="margin-bottom: 0.5rem;">Pour spécifier les modifications d'architecture programmatique :</p>
+                                    <ol style="margin-left: 1.5rem; margin-bottom: 0;">
+                                        <li>Téléchargez le template Excel ci-dessous</li>
+                                        <li>Remplissez le template avec les modifications souhaitées</li>
+                                        <li>Chargez le fichier rempli pour appliquer les modifications</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Template Excel</label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button type="button" class="btn btn-info" onclick="downloadCpModificationTemplate()">
+                                        📥 Télécharger le template
+                                    </button>
+                                    <span class="performance-engagement-hint" style="margin: 0;">Téléchargez le template Excel avec les instructions pour remplir les modifications d'architecture.</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="cp_modification_file" class="form-label">Charger le fichier rempli</label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="file" id="cp_modification_file" accept=".xlsx,.xls" class="form-control" style="flex: 1;" onchange="handleCpModificationFileUpload(event)">
+                                    <button type="button" class="btn btn-success" onclick="document.getElementById('cp_modification_file').click()" style="white-space: nowrap;">
+                                        📁 Parcourir
+                                    </button>
+                                </div>
+                                <span class="performance-engagement-hint">Sélectionnez le fichier Excel rempli avec vos modifications.</span>
+                                <div id="cp_modification_file_status" style="margin-top: 0.5rem; display: none;"></div>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Modifications manuelles (pour quelques modifications)</label>
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                                    <p style="margin: 0 0 1rem 0; color: #495057; font-size: 0.9em;">Pour ajouter quelques modifications rapidement, utilisez le formulaire ci-dessous. Pour de nombreuses modifications, utilisez plutôt le template Excel.</p>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addCpModificationRow()">
+                                        ➕ Ajouter une modification
+                                    </button>
+                                </div>
+                                <div id="cp_modifications_manual_list" style="margin-top: 1rem;">
+                                    <!-- Les lignes de modifications seront ajoutées ici dynamiquement -->
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Aperçu des modifications</label>
+                                <div id="cp_modifications_preview" style="background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 1rem; min-height: 100px; max-height: 300px; overflow-y: auto;">
+                                    <p style="color: #6c757d; margin: 0; font-style: italic;">Aucune modification ajoutée. Ajoutez des modifications manuellement ou chargez un fichier Excel.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </form>
         <div class="modal-footer performance-engagement-footer">
             <button type="button" class="btn btn-secondary" onclick="closeCadrePerformanceModal()">Annuler</button>
@@ -958,6 +1331,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialisation de la modal du rapport annuel
     initRapportAnnuelModal();
+    
+    // Charger l'historique des rapports
+    loadReportsHistory();
 });
 
 // ============================================
@@ -2160,6 +2536,28 @@ function switchRprogTab(tabName) {
     }
 }
 
+function switchCpTab(tabName) {
+    // Masquer tous les contenus d'onglets CP
+    const allTabs = document.querySelectorAll('#cadrePerformanceModal .rap-tab-content');
+    allTabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Désactiver tous les boutons d'onglets CP
+    const allButtons = document.querySelectorAll('#cadrePerformanceModal .rap-tab-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // Afficher l'onglet sélectionné
+    const selectedTab = document.getElementById(`cp-tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Activer le bouton correspondant
+    const selectedButton = document.querySelector(`#cadrePerformanceModal .rap-tab-btn[data-tab="${tabName}"]`);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+}
+
 // Fonction pour charger les données RPROG depuis le serveur
 async function loadRprogData() {
     console.log('🔄 loadRprogData() appelée');
@@ -3023,6 +3421,13 @@ function initRapportAnnuelModal() {
                 closeCadrePerformanceModal();
             }
         });
+        
+        // Prévisualisation du logo
+        const logoInput = document.getElementById('cp_logo_path');
+        if (logoInput) {
+            logoInput.addEventListener('change', () => updateEngagementPhotoPreview('cp_logo_path'));
+            logoInput.addEventListener('blur', () => updateEngagementPhotoPreview('cp_logo_path'));
+        }
     }
     
     // Modal rapport RPROG
@@ -3055,6 +3460,37 @@ function openCadrePerformanceModal() {
     }
     modal.classList.add('show');
     document.body.classList.add('modal-open');
+    
+    // Appliquer les valeurs par défaut
+    const form = document.getElementById('cadrePerformanceForm');
+    if (form && rapportAnnuelDefaults) {
+        const currentYear = new Date().getFullYear();
+        setFieldValue('cp_annee_debut', currentYear);
+        setFieldValue('cp_annee_fin', currentYear + 2);
+        setFieldValue('cp_section', rapportAnnuelDefaults.section || 'SECTION 376');
+        setFieldValue('cp_ministere', rapportAnnuelDefaults.ministere || '');
+        setFieldValue('cp_titre_rapport', 'DOCUMENT DE PRESENTATION DU CADRE DE PERFORMANCE');
+        setFieldValue('cp_titre_periode', 'AU TITRE DE LA PERIODE');
+        setFieldValue('cp_date_publication', '');
+        setFieldValue('cp_logo_path', rapportAnnuelDefaults.logo_path || '');
+        
+        // Charger la valeur par défaut du commentaire du cadre global
+        const cpDefaults = {
+            cadre_global_commentaire: "Le Ministère du Patrimoine, du Portefeuille de l'État et des Entreprises Publiques (MPPEEP) a été créé à la faveur du remaniement ministériel du 17 octobre 2023. Ses missions sont définies par l'article 13 du décret 2023-820 portant attribution des membres du gouvernement. Le ministère est organisé par le décret n° 2023-963 du 6 décembre 2023 portant organisation du MPPEEP. Au regard de ces deux (2) décrets, le MPPEEP a identifié trois (3) programmes et défini trois (3) objectifs globaux auxquels sont rattachés neuf (9) objectifs spécifiques.",
+            organismes_tutelle: "",
+            organismes_prives_ong: "",
+            projets_hors_pip: ""
+        };
+        setFieldValue('cp_cadre_global_commentaire', cpDefaults.cadre_global_commentaire);
+        setFieldValue('cp_organismes_tutelle', cpDefaults.organismes_tutelle);
+        setFieldValue('cp_organismes_prives_ong', cpDefaults.organismes_prives_ong);
+        setFieldValue('cp_projets_hors_pip', cpDefaults.projets_hors_pip);
+        
+        // Mettre à jour la prévisualisation du logo
+        if (rapportAnnuelDefaults.logo_path) {
+            updateEngagementPhotoPreview('cp_logo_path', rapportAnnuelDefaults.logo_path);
+        }
+    }
 }
 
 function closeCadrePerformanceModal() {
@@ -3087,22 +3523,75 @@ async function generateCadrePerformancePDF(mode = 'brouillon') {
     const formData = new FormData(form);
 
     // Récupérer les valeurs du formulaire
-    const programme_id = formData.get("programme_id");
-    const annee_reference = formData.get("annee_reference");
-    const annee_redaction = formData.get("annee_redaction");
-    const titre = formData.get("titre");
+    const annee_debut = formData.get("annee_debut");
+    const annee_fin = formData.get("annee_fin");
+    const section = formData.get("section");
+    const ministere = formData.get("ministere");
+    const titre_rapport = formData.get("titre_rapport");
+    const titre_periode = formData.get("titre_periode");
+    const date_publication = formData.get("date_publication");
+    const logo_path = formData.get("logo_path");
+    const cadre_global_commentaire = formData.get("cadre_global_commentaire");
+    const organismes_tutelle = formData.get("organismes_tutelle");
+    const organismes_prives_ong = formData.get("organismes_prives_ong");
+    const projets_hors_pip = formData.get("projets_hors_pip");
+    const tableau2_commentaire = formData.get("tableau2_commentaire");
+    const programme_commentaire = formData.get("programme_commentaire");
+    const cadre_performance_commentaire = formData.get("cadre_performance_commentaire");
 
-    if (programme_id) {
-        params.append("programme_id", programme_id);
+    if (annee_debut) {
+        params.append("annee_debut", annee_debut);
     }
-    if (annee_reference) {
-        params.append("annee_reference", annee_reference);
+    if (annee_fin) {
+        params.append("annee_fin", annee_fin);
     }
-    if (annee_redaction) {
-        params.append("annee_redaction", annee_redaction);
+    if (section) {
+        params.append("section", section);
     }
-    if (titre && titre.trim()) {
-        params.append("titre", titre.trim());
+    if (ministere) {
+        params.append("ministere", ministere);
+    }
+    if (titre_rapport) {
+        params.append("titre_rapport", titre_rapport);
+    }
+    if (titre_periode) {
+        params.append("titre_periode", titre_periode);
+    }
+    if (date_publication) {
+        params.append("date_publication", date_publication);
+    }
+    if (logo_path) {
+        params.append("logo_path", logo_path);
+    }
+    if (cadre_global_commentaire) {
+        params.append("cadre_global_commentaire", cadre_global_commentaire);
+    }
+    if (organismes_tutelle) {
+        params.append("organismes_tutelle", organismes_tutelle);
+    }
+    if (organismes_prives_ong) {
+        params.append("organismes_prives_ong", organismes_prives_ong);
+    }
+    if (projets_hors_pip) {
+        params.append("projets_hors_pip", projets_hors_pip);
+    }
+    if (projets_hors_pip) {
+        params.append("projets_hors_pip", projets_hors_pip);
+    }
+    if (tableau2_commentaire) {
+        params.append("tableau2_commentaire", tableau2_commentaire);
+    }
+    if (programme_commentaire) {
+        params.append("programme_commentaire", programme_commentaire);
+    }
+    if (cadre_performance_commentaire) {
+        params.append("cadre_performance_commentaire", cadre_performance_commentaire);
+    }
+    
+    // Ajouter les modifications d'architecture si disponibles
+    const modificationsData = document.getElementById('cp_modifications_data');
+    if (modificationsData && modificationsData.value) {
+        params.append("modifications_architecture", modificationsData.value);
     }
     
     // Ajouter le paramètre mode (brouillon ou final)
@@ -3118,6 +3607,295 @@ async function generateCadrePerformancePDF(mode = 'brouillon') {
 
     closeCadrePerformanceModal();
     window.location.assign(targetUrl);
+}
+
+// Fonction pour télécharger le template de modification d'architecture
+async function downloadCpModificationTemplate() {
+    try {
+        const form = document.getElementById('cadrePerformanceForm');
+        if (!form) {
+            if (typeof showWarning === "function") {
+                showWarning("Formulaire introuvable.");
+            }
+            return;
+        }
+        
+        const annee_debut = document.getElementById('cp_annee_debut')?.value || new Date().getFullYear();
+        const annee_fin = document.getElementById('cp_annee_fin')?.value || new Date().getFullYear() + 2;
+        
+        const url = `/mppeep/api/v1/performance/cadre-performance/template-modification?annee_debut=${annee_debut}&annee_fin=${annee_fin}`;
+        
+        if (typeof showGlobalLoading === "function") {
+            showGlobalLoading("Téléchargement du template...", "Veuillez patienter");
+        }
+        
+        // Télécharger le fichier
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error("Erreur lors du téléchargement du template");
+        }
+        
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `Template_Modification_Architecture_CP_${annee_debut}-${annee_fin}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+        
+        if (typeof showSuccess === "function") {
+            showSuccess("Template téléchargé avec succès !");
+        }
+    } catch (error) {
+        console.error("Erreur lors du téléchargement du template:", error);
+        if (typeof showError === "function") {
+            showError("Erreur lors du téléchargement du template. Veuillez réessayer.");
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+    }
+}
+
+// Fonction pour gérer le chargement du fichier de modifications
+async function handleCpModificationFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+    
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        if (typeof showError === "function") {
+            showError("Le fichier doit être au format Excel (.xlsx ou .xls)");
+        }
+        event.target.value = '';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const statusDiv = document.getElementById('cp_modification_file_status');
+    const previewDiv = document.getElementById('cp_modifications_preview');
+    
+    if (statusDiv) {
+        statusDiv.innerHTML = '<span style="color: #007bff;">⏳ Chargement en cours...</span>';
+        statusDiv.style.display = 'block';
+    }
+    
+    try {
+        if (typeof showGlobalLoading === "function") {
+            showGlobalLoading("Chargement du fichier...", "Veuillez patienter");
+        }
+        
+        const response = await fetch('/mppeep/api/v1/performance/cadre-performance/upload-modification', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || "Erreur lors du chargement du fichier");
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.modifications) {
+            // Afficher le statut
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color: #28a745;">✅ ${data.count} modification(s) chargée(s) avec succès</span>`;
+            }
+            
+            // Stocker les modifications chargées dans un champ caché temporaire
+            let hiddenInput = document.getElementById('cp_modifications_data');
+            if (!hiddenInput) {
+                const form = document.getElementById('cadrePerformanceForm');
+                if (form) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.id = 'cp_modifications_data';
+                    hiddenInput.name = 'modifications_architecture';
+                    form.appendChild(hiddenInput);
+                }
+            }
+            if (hiddenInput) {
+                // Stocker uniquement les modifications Excel (les manuelles seront ajoutées dans updateCpModificationsPreview)
+                hiddenInput.value = JSON.stringify(data.modifications);
+            }
+            
+            // Mettre à jour l'aperçu avec toutes les modifications (manuelles + Excel)
+            updateCpModificationsPreview();
+            
+            if (typeof showSuccess === "function") {
+                showSuccess(`${data.count} modification(s) chargée(s) avec succès !`);
+            }
+        } else {
+            throw new Error("Format de réponse invalide");
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement du fichier:", error);
+        if (statusDiv) {
+            statusDiv.innerHTML = `<span style="color: #dc3545;">❌ ${error.message}</span>`;
+        }
+        if (typeof showError === "function") {
+            showError(error.message || "Erreur lors du chargement du fichier. Veuillez vérifier le format.");
+        }
+    } finally {
+        if (typeof hideGlobalLoading === "function") {
+            hideGlobalLoading();
+        }
+    }
+}
+
+// Compteur pour les modifications manuelles
+let cpModificationRowCounter = 0;
+
+// Fonction pour ajouter une ligne de modification manuelle
+function addCpModificationRow() {
+    const container = document.getElementById('cp_modifications_manual_list');
+    if (!container) return;
+    
+    const rowId = `cp_mod_row_${cpModificationRowCounter++}`;
+    const rowDiv = document.createElement('div');
+    rowDiv.id = rowId;
+    rowDiv.style.cssText = 'background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 1rem; margin-bottom: 0.5rem;';
+    
+    const annee_debut = document.getElementById('cp_annee_debut')?.value || new Date().getFullYear();
+    const annee_fin = document.getElementById('cp_annee_fin')?.value || new Date().getFullYear() + 2;
+    
+    rowDiv.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; gap: 0.5rem; align-items: end;">
+            <div class="form-group" style="margin: 0;">
+                <label style="font-size: 0.85em; font-weight: 600; margin-bottom: 0.25rem; display: block;">Type *</label>
+                <select class="form-control cp-mod-type" style="font-size: 0.9em;" required>
+                    <option value="">Sélectionner...</option>
+                    <option value="programme">Programme</option>
+                    <option value="action">Action</option>
+                    <option value="activite">Activité</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label style="font-size: 0.85em; font-weight: 600; margin-bottom: 0.25rem; display: block;">Code ancien (${annee_debut}-${annee_fin})</label>
+                <input type="text" class="form-control cp-mod-code-ancien" style="font-size: 0.9em;" placeholder="Ex: 21236">
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label style="font-size: 0.85em; font-weight: 600; margin-bottom: 0.25rem; display: block;">Libellé ancien</label>
+                <input type="text" class="form-control cp-mod-libelle-ancien" style="font-size: 0.9em;" placeholder="Ex: Administration Générale">
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label style="font-size: 0.85em; font-weight: 600; margin-bottom: 0.25rem; display: block;">Code nouveau (${parseInt(annee_debut)+1}-${parseInt(annee_fin)+1})</label>
+                <input type="text" class="form-control cp-mod-code-nouveau" style="font-size: 0.9em;" placeholder="Ex: 21236">
+            </div>
+            <div class="form-group" style="margin: 0;">
+                <label style="font-size: 0.85em; font-weight: 600; margin-bottom: 0.25rem; display: block;">Libellé nouveau</label>
+                <input type="text" class="form-control cp-mod-libelle-nouveau" style="font-size: 0.9em;" placeholder="Ex: Administration Générale">
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeCpModificationRow('${rowId}')" title="Supprimer cette modification">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(rowDiv);
+    
+    // Ajouter les listeners pour mettre à jour l'aperçu
+    const inputs = rowDiv.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        input.addEventListener('change', updateCpModificationsPreview);
+        input.addEventListener('input', updateCpModificationsPreview);
+    });
+    
+    updateCpModificationsPreview();
+}
+
+// Fonction pour supprimer une ligne de modification
+function removeCpModificationRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        row.remove();
+        updateCpModificationsPreview();
+    }
+}
+
+// Fonction pour mettre à jour l'aperçu des modifications
+function updateCpModificationsPreview() {
+    const previewDiv = document.getElementById('cp_modifications_preview');
+    if (!previewDiv) return;
+    
+    const modifications = [];
+    
+    // Récupérer les modifications manuelles
+    const manualRows = document.querySelectorAll('#cp_modifications_manual_list > div');
+    manualRows.forEach(row => {
+        const type = row.querySelector('.cp-mod-type')?.value || '';
+        const codeAncien = row.querySelector('.cp-mod-code-ancien')?.value?.trim() || '';
+        const libelleAncien = row.querySelector('.cp-mod-libelle-ancien')?.value?.trim() || '';
+        const codeNouveau = row.querySelector('.cp-mod-code-nouveau')?.value?.trim() || '';
+        const libelleNouveau = row.querySelector('.cp-mod-libelle-nouveau')?.value?.trim() || '';
+        
+        if (type && (codeAncien || libelleAncien || codeNouveau || libelleNouveau)) {
+            modifications.push({
+                type: type,
+                code_ancien: codeAncien,
+                libelle_ancien: libelleAncien,
+                code_nouveau: codeNouveau,
+                libelle_nouveau: libelleNouveau
+            });
+        }
+    });
+    
+    // Récupérer les modifications chargées depuis Excel (si présentes)
+    const hiddenInput = document.getElementById('cp_modifications_data');
+    if (hiddenInput && hiddenInput.value) {
+        try {
+            const excelModifications = JSON.parse(hiddenInput.value);
+            modifications.push(...excelModifications);
+        } catch (e) {
+            console.error("Erreur lors du parsing des modifications Excel:", e);
+        }
+    }
+    
+    // Afficher l'aperçu
+    if (modifications.length === 0) {
+        previewDiv.innerHTML = '<p style="color: #6c757d; margin: 0; font-style: italic;">Aucune modification ajoutée. Ajoutez des modifications manuellement ou chargez un fichier Excel.</p>';
+    } else {
+        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+        html += '<thead><tr style="background: #f8f9fa;"><th style="padding: 0.5rem; border: 1px solid #ddd;">Type</th><th style="padding: 0.5rem; border: 1px solid #ddd;">Ancien</th><th style="padding: 0.5rem; border: 1px solid #ddd;">Nouveau</th></tr></thead>';
+        html += '<tbody>';
+        
+        modifications.forEach(mod => {
+            html += '<tr>';
+            html += `<td style="padding: 0.5rem; border: 1px solid #ddd;">${mod.type}</td>`;
+            html += `<td style="padding: 0.5rem; border: 1px solid #ddd;">${mod.code_ancien || ''} ${mod.libelle_ancien || ''}</td>`;
+            html += `<td style="padding: 0.5rem; border: 1px solid #ddd;">${mod.code_nouveau || ''} ${mod.libelle_nouveau || ''}</td>`;
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        previewDiv.innerHTML = html;
+        
+        // Mettre à jour le champ caché avec toutes les modifications
+        let hiddenInput = document.getElementById('cp_modifications_data');
+        if (!hiddenInput) {
+            const form = document.getElementById('cadrePerformanceForm');
+            if (form) {
+                const newInput = document.createElement('input');
+                newInput.type = 'hidden';
+                newInput.id = 'cp_modifications_data';
+                newInput.name = 'modifications_architecture';
+                form.appendChild(newInput);
+                hiddenInput = newInput;
+            }
+        }
+        if (hiddenInput) {
+            hiddenInput.value = JSON.stringify(modifications);
+        }
+    }
 }
 
 async function generateCadrePerformanceWord(mode = 'final') {
@@ -3141,22 +3919,69 @@ async function generateCadrePerformanceWord(mode = 'final') {
     const formData = new FormData(form);
 
     // Récupérer les valeurs du formulaire
-    const programme_id = formData.get("programme_id");
-    const annee_reference = formData.get("annee_reference");
-    const annee_redaction = formData.get("annee_redaction");
-    const titre = formData.get("titre");
+    const annee_debut = formData.get("annee_debut");
+    const annee_fin = formData.get("annee_fin");
+    const section = formData.get("section");
+    const ministere = formData.get("ministere");
+    const titre_rapport = formData.get("titre_rapport");
+    const titre_periode = formData.get("titre_periode");
+    const date_publication = formData.get("date_publication");
+    const logo_path = formData.get("logo_path");
+    const cadre_global_commentaire = formData.get("cadre_global_commentaire");
+    const organismes_tutelle = formData.get("organismes_tutelle");
+    const organismes_prives_ong = formData.get("organismes_prives_ong");
+    const projets_hors_pip = formData.get("projets_hors_pip");
+    const tableau2_commentaire = formData.get("tableau2_commentaire");
+    const programme_commentaire = formData.get("programme_commentaire");
+    const cadre_performance_commentaire = formData.get("cadre_performance_commentaire");
 
-    if (programme_id) {
-        params.append("programme_id", programme_id);
+    if (annee_debut) {
+        params.append("annee_debut", annee_debut);
     }
-    if (annee_reference) {
-        params.append("annee_reference", annee_reference);
+    if (annee_fin) {
+        params.append("annee_fin", annee_fin);
     }
-    if (annee_redaction) {
-        params.append("annee_redaction", annee_redaction);
+    if (section) {
+        params.append("section", section);
     }
-    if (titre && titre.trim()) {
-        params.append("titre", titre.trim());
+    if (ministere) {
+        params.append("ministere", ministere);
+    }
+    if (titre_rapport) {
+        params.append("titre_rapport", titre_rapport);
+    }
+    if (titre_periode) {
+        params.append("titre_periode", titre_periode);
+    }
+    if (date_publication) {
+        params.append("date_publication", date_publication);
+    }
+    if (logo_path) {
+        params.append("logo_path", logo_path);
+    }
+    if (cadre_global_commentaire) {
+        params.append("cadre_global_commentaire", cadre_global_commentaire);
+    }
+    if (organismes_tutelle) {
+        params.append("organismes_tutelle", organismes_tutelle);
+    }
+    if (organismes_prives_ong) {
+        params.append("organismes_prives_ong", organismes_prives_ong);
+    }
+    if (projets_hors_pip) {
+        params.append("projets_hors_pip", projets_hors_pip);
+    }
+    if (projets_hors_pip) {
+        params.append("projets_hors_pip", projets_hors_pip);
+    }
+    if (tableau2_commentaire) {
+        params.append("tableau2_commentaire", tableau2_commentaire);
+    }
+    if (programme_commentaire) {
+        params.append("programme_commentaire", programme_commentaire);
+    }
+    if (cadre_performance_commentaire) {
+        params.append("cadre_performance_commentaire", cadre_performance_commentaire);
     }
     
     // Ajouter le paramètre mode (brouillon ou final)
@@ -3204,6 +4029,167 @@ async function generateCadrePerformanceWord(mode = 'final') {
     } finally {
         if (typeof hideGlobalLoading === "function") {
             hideGlobalLoading();
+        }
+    }
+}
+
+// Fonction pour charger l'historique des rapports
+async function loadReportsHistory() {
+    const reportsList = document.getElementById('reports-list');
+    if (!reportsList) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/mppeep/api/v1/performance/api/rapports/historique');
+        
+        if (!response.ok) {
+            throw new Error(`Erreur ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.rapports) {
+            displayReportsHistory(result.rapports);
+        } else {
+            reportsList.innerHTML = '<div class="empty-state" style="text-align: center; padding: 2rem; color: #6c757d;"><p style="margin: 0;">Aucun rapport généré pour le moment.</p></div>';
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement de l'historique:", error);
+        const reportsList = document.getElementById('reports-list');
+        if (reportsList) {
+            reportsList.innerHTML = '<div class="empty-state" style="text-align: center; padding: 2rem; color: #dc3545;"><p style="margin: 0;">Erreur lors du chargement de l\'historique des rapports.</p></div>';
+        }
+    }
+}
+
+// Fonction pour afficher l'historique des rapports
+function displayReportsHistory(rapports) {
+    const reportsList = document.getElementById('reports-list');
+    if (!reportsList) {
+        return;
+    }
+    
+    if (!rapports || rapports.length === 0) {
+        reportsList.innerHTML = '<div class="empty-state" style="text-align: center; padding: 2rem; color: #6c757d;"><p style="margin: 0;">Aucun rapport généré pour le moment.</p></div>';
+        return;
+    }
+    
+    let html = '';
+    
+    rapports.forEach(rapport => {
+        const date = new Date(rapport.created_at).toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const typeIcon = getReportTypeIcon(rapport.type_rapport);
+        const formatBadge = rapport.format_fichier === 'PDF' ? 'badge-danger' : 'badge-info';
+        const tailleMB = rapport.fichier_taille ? (rapport.fichier_taille / (1024 * 1024)).toFixed(2) : 'N/A';
+        
+        html += `
+            <div class="report-card" style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; transition: box-shadow 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #0f172a;">
+                            ${typeIcon} ${rapport.titre || 'Rapport de Performance'}
+                        </h4>
+                        <p style="margin: 0; color: #64748b; font-size: 0.85em;">
+                            ${rapport.description || 'Aucune description'}
+                        </p>
+                    </div>
+                    <span class="badge ${formatBadge}" style="font-size: 0.75em; padding: 0.25rem 0.5rem;">${rapport.format_fichier || 'PDF'}</span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.85em; color: #64748b;">
+                    <div>
+                        <strong>Type:</strong> ${rapport.type_rapport || 'N/A'}
+                    </div>
+                    <div>
+                        <strong>Période:</strong> ${rapport.periode || 'N/A'}
+                    </div>
+                    <div>
+                        <strong>Date début:</strong> ${rapport.date_debut ? new Date(rapport.date_debut).toLocaleDateString('fr-FR') : 'N/A'}
+                    </div>
+                    <div>
+                        <strong>Date fin:</strong> ${rapport.date_fin ? new Date(rapport.date_fin).toLocaleDateString('fr-FR') : 'N/A'}
+                    </div>
+                </div>
+                
+                ${rapport.nb_objectifs || rapport.nb_indicateurs ? `
+                <div style="display: flex; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.85em; flex-wrap: wrap;">
+                    ${rapport.nb_objectifs ? `<span><strong>Objectifs:</strong> ${rapport.nb_objectifs}</span>` : ''}
+                    ${rapport.nb_indicateurs ? `<span><strong>Indicateurs:</strong> ${rapport.nb_indicateurs}</span>` : ''}
+                    ${rapport.taux_realisation ? `<span><strong>Taux réalisation:</strong> ${rapport.taux_realisation.toFixed(1)}%</span>` : ''}
+                </div>
+                ` : ''}
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="font-size: 0.8em; color: #94a3b8;">
+                        <div>Généré le ${date}</div>
+                        ${rapport.created_by_nom ? `<div>Par ${rapport.created_by_nom}</div>` : ''}
+                        ${rapport.fichier_taille ? `<div>Taille: ${tailleMB} MB</div>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-danger" onclick="deleteReport(${rapport.id})" title="Supprimer">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    reportsList.innerHTML = html;
+}
+
+// Fonction pour obtenir l'icône selon le type de rapport
+function getReportTypeIcon(type) {
+    const icons = {
+        'GLOBAL': '📊',
+        'OBJECTIFS': '🎯',
+        'INDICATEURS': '📈',
+        'SYNTHESE': '📋',
+        'RAP': '📄',
+        'RPROG': '📑',
+        'CP': '📋'
+    };
+    return icons[type] || '📄';
+}
+
+// Fonction pour supprimer un rapport
+async function deleteReport(rapportId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce rapport de l\'historique ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/mppeep/api/v1/performance/api/rapports/${rapportId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erreur lors de la suppression');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            if (typeof showSuccess === "function") {
+                showSuccess("Rapport supprimé de l'historique avec succès !");
+            }
+            // Recharger l'historique
+            loadReportsHistory();
+        } else {
+            throw new Error(result.error || 'Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error("Erreur lors de la suppression:", error);
+        if (typeof showError === "function") {
+            showError("Erreur lors de la suppression du rapport.");
         }
     }
 }

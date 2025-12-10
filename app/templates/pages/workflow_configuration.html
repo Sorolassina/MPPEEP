@@ -1282,6 +1282,138 @@ select.form-control {
 
 }
 
+/* Responsive */
+@media (max-width: 768px) {
+    .workflow-config-container {
+        padding: 0 0.75rem 2rem;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-button {
+        padding: 0.65rem 1rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .templates-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .template-card {
+        padding: 1.25rem;
+    }
+
+    .template-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .template-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .template-actions .btn-sm {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .roles-grid {
+        gap: 1rem;
+    }
+
+    .role-card {
+        padding: 1.25rem;
+    }
+
+    .request-types-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .request-type-card {
+        padding: 1.25rem;
+    }
+
+    .request-type-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .modal-lg .modal-content {
+        width: 95%;
+        max-width: 95%;
+        margin: 1rem auto;
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+    }
+
+    .step-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .step-checkbox-label {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .workflow-config-container {
+        padding: 0 0.5rem 1.5rem;
+    }
+
+    .tab-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .template-card {
+        padding: 1rem;
+    }
+
+    .role-card {
+        padding: 1rem;
+    }
+
+    .request-type-card {
+        padding: 1rem;
+    }
+
+    .modal-lg .modal-content {
+        width: 100%;
+        max-width: 100%;
+        margin: 0.5rem;
+        padding: 0.75rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+}
+
 </style>
 
 {% endblock %}

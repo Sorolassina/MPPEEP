@@ -3,7 +3,39 @@
 
 {% block title %}Orientations Stratégiques - {{ app_name }}{% endblock %}
 
-{% block styles %}{% endblock %}
+{% block styles %}
+<style>
+/* Responsive pour modals et autres éléments spécifiques */
+@media (max-width: 768px) {
+    .modal-md .modal-content {
+        width: 95%;
+        max-width: 95%;
+        margin: 1rem auto;
+    }
+
+    .modal-body .form-row {
+        flex-direction: column;
+    }
+
+    .modal-body .form-group {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-md .modal-content {
+        width: 100%;
+        max-width: 100%;
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+
+    .modal-header h2 {
+        font-size: 1.1rem;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
 {{ page_header(

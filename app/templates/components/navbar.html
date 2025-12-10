@@ -118,6 +118,93 @@
     object-fit: cover;
   }
 
+  /* Menu hamburger */
+  .navbar-hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 1001;
+  }
+
+  .navbar-hamburger span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: white;
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+
+  .navbar-hamburger.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+  }
+
+  .navbar-hamburger.active span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .navbar-hamburger.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+  }
+
+  /* Menu mobile */
+  .navbar-mobile-menu {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background: var(--secondary-color);
+    border-bottom: 3px solid var(--accent-color);
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .navbar-mobile-menu.active {
+    display: flex;
+  }
+
+  .navbar-mobile-link {
+    color: white;
+    text-decoration: none;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    transition: background 0.3s;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+
+  .navbar-mobile-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .navbar-mobile-user {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .navbar-mobile-user-photo {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
   /* responsive */
   @media (max-width: 900px) {
     .navbar-container {
@@ -132,20 +219,26 @@
   }
 
   @media (max-width: 768px) {
-    .navbar-container {
-      flex-direction: column;
-      align-items: stretch;
+    .navbar-hamburger {
+      display: flex;
     }
 
     .navbar-menu {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
+      display: none;
     }
 
-    .nav-link {
-      width: 100%;
-      text-align: center;
+    .navbar-brand span {
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .navbar-brand span {
+      display: none;
+    }
+
+    .navbar-logo {
+      height: 28px;
     }
   }
 
@@ -202,6 +295,79 @@
         <a href="{{ url_for('login_page') }}" class="nav-link nav-link--signin">🔐 Connexion</a>
       {% endif %}
     </div>
+
+    <button class="navbar-hamburger" id="navbarHamburger" aria-label="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+
+  <div class="navbar-mobile-menu" id="navbarMobileMenu">
+    {% if current_user %}
+      <div class="navbar-mobile-user">
+        <img src="{{ profile_picture_url(current_user) }}" alt="Photo profil" class="navbar-mobile-user-photo">
+        <span>{{ current_user.full_name or current_user.email }}</span>
+      </div>
+      <div id="session-timer-mobile" class="session-timer" style="display: none;">
+          <div class="session-timer-content">
+              <span class="session-timer-icon">⏱️</span>
+              <span class="session-timer-label">Session expire dans :</span>
+              <span class="session-timer-time" id="session-timer-time-mobile">--:--:--</span>
+          </div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="navbar-mobile-link nav-link--logout">⏻ Déconnexion</a>
+    {% else %}
+      <a href="{{ url_for('login_page') }}" class="navbar-mobile-link nav-link--signin">🔐 Connexion</a>
+    {% endif %}
   </div>
 </nav>
+
+<script>
+  // Gestion du menu hamburger mobile
+  (function() {
+    const hamburger = document.getElementById('navbarHamburger');
+    const mobileMenu = document.getElementById('navbarMobileMenu');
+    const mobileLinks = mobileMenu ? mobileMenu.querySelectorAll('.navbar-mobile-link') : [];
+
+    if (hamburger && mobileMenu) {
+      // Toggle menu
+      hamburger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        hamburger.classList.toggle('active');
+        mobileMenu.classList.toggle('active');
+        document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
+      });
+
+      // Fermer le menu en cliquant sur un lien
+      mobileLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+          hamburger.classList.remove('active');
+          mobileMenu.classList.remove('active');
+          document.body.style.overflow = '';
+        });
+      });
+
+      // Fermer le menu en cliquant en dehors
+      document.addEventListener('click', function(e) {
+        if (mobileMenu.classList.contains('active') && 
+            !hamburger.contains(e.target) && 
+            !mobileMenu.contains(e.target)) {
+          hamburger.classList.remove('active');
+          mobileMenu.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      });
+
+      // Fermer le menu avec la touche Escape
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
+          hamburger.classList.remove('active');
+          mobileMenu.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      });
+    }
+  })();
+</script>
     

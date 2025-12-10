@@ -11,9 +11,47 @@
     <!-- CSS de base -->
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/base.css')) }}">
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/theme.css')) }}">
+    <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/responsive.css')) }}">
     
     <!-- CSS spécifiques aux pages d'authentification -->
     {% block styles %}{% endblock %}
+    
+    <style>
+        /* Styles de base pour les pages d'authentification */
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .auth-page {
+                padding: 0.5rem;
+            }
+
+            .auth-container {
+                width: 100%;
+                padding: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-page {
+                padding: 0;
+            }
+        }
+    </style>
 </head>
 <body class="auth-page">
     <div class="auth-container">

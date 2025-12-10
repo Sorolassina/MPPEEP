@@ -130,11 +130,43 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
+        padding: 1.5rem 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .page-header-content h1 {
+        font-size: 1.4rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .breadcrumbs {
+        font-size: 0.85rem;
+        flex-wrap: wrap;
     }
     
     .page-header-actions {
         width: 100%;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .page-header-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header {
+        padding: 1.25rem 1rem;
+    }
+
+    .page-header-content h1 {
+        font-size: 1.25rem;
+    }
+
+    .breadcrumbs {
+        font-size: 0.8rem;
     }
 }
 </style>

@@ -27,6 +27,125 @@
 {% endblock %}
 
 {% block styles %}
+<style>
+    .error-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        padding: 2rem;
+        gap: 3rem;
+    }
 
+    .error-content {
+        flex: 1;
+        max-width: 500px;
+        text-align: center;
+    }
+
+    .error-code {
+        font-size: 8rem;
+        font-weight: 800;
+        color: var(--secondary-color);
+        line-height: 1;
+        margin-bottom: 1rem;
+    }
+
+    .error-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+
+    .error-message {
+        font-size: 1.1rem;
+        color: var(--text-muted-color);
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .error-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .error-illustration {
+        flex: 1;
+        max-width: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .error-illustration svg {
+        width: 100%;
+        max-width: 300px;
+        height: auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .error-page {
+            flex-direction: column;
+            gap: 2rem;
+            padding: 1.5rem;
+            min-height: 50vh;
+        }
+
+        .error-content {
+            max-width: 100%;
+        }
+
+        .error-code {
+            font-size: 5rem;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+        }
+
+        .error-message {
+            font-size: 1rem;
+        }
+
+        .error-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .error-actions .btn {
+            width: 100%;
+        }
+
+        .error-illustration {
+            max-width: 250px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .error-page {
+            padding: 1rem;
+        }
+
+        .error-code {
+            font-size: 4rem;
+        }
+
+        .error-title {
+            font-size: 1.25rem;
+        }
+
+        .error-message {
+            font-size: 0.95rem;
+        }
+
+        .error-illustration {
+            max-width: 200px;
+        }
+    }
+</style>
 {% endblock %}
 

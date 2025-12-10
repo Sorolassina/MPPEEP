@@ -608,4 +608,36 @@ function closeModal(modalId) {
 console.log('✅ Page fiches techniques hiérarchiques chargée');
 </script>
 
+<style>
+/* Responsive */
+@media (max-width: 768px) {
+    .budget-fiches-page {
+        padding: 1rem;
+    }
+
+    .filters-panel {
+        padding: 1.25rem !important;
+    }
+
+    .filters-row {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+    }
+
+    .fiches-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .budget-fiches-page {
+        padding: 0.75rem;
+    }
+
+    .filters-panel {
+        padding: 1rem !important;
+    }
+}
+</style>
+
 {% endblock %}

@@ -277,9 +277,126 @@
     text-align: center;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
+    .users-management {
+        padding: 0 0.75rem 2rem;
+        gap: 1.5rem;
+    }
+
+    .users-management .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .users-management .stat-card.white {
+        padding: 1rem;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .users-management .stat-card .stat-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 1.4rem;
+    }
+
+    .users-management .stat-card .stat-value {
+        font-size: 1.25rem;
+    }
+
+    .users-management .table-responsive {
+        padding: 1rem;
+    }
+
+    .data-table {
+        font-size: 0.85rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .table-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .btn-icon {
+        width: 100%;
+        text-align: center;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-width: 95%;
+        margin: 1rem auto;
+    }
+
     .photo-upload-container {
         grid-template-columns: 1fr;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .actions-footer {
+        justify-content: center;
+    }
+
+    .actions-footer .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .users-management {
+        padding: 0 0.5rem 1.5rem;
+        gap: 1.25rem;
+    }
+
+    .users-management .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .users-management .stat-card.white {
+        padding: 0.875rem;
+    }
+
+    .users-management .stat-card .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+
+    .users-management .stat-card .stat-value {
+        font-size: 1.1rem;
+    }
+
+    .users-management .table-responsive {
+        padding: 0.75rem;
+    }
+
+    .data-table {
+        font-size: 0.75rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.5rem 0.4rem;
+    }
+
+    .modal-content {
+        width: 100%;
+        max-width: 100%;
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.1rem;
     }
 }
 </style>

@@ -673,5 +673,51 @@ function voirKPIs(chargementId) {
 }
 </script>
 
+<style>
+/* Responsive */
+@media (max-width: 768px) {
+    .sigobe-container {
+        padding: 1rem;
+    }
+
+    .filters-section {
+        padding: 1.25rem;
+    }
+
+    .filters-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .chargements-section {
+        padding: 1.25rem;
+    }
+
+    .chargements-table {
+        font-size: 0.85rem;
+    }
+
+    .chargements-table th,
+    .chargements-table td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sigobe-container {
+        padding: 0.75rem;
+    }
+
+    .filters-section,
+    .chargements-section {
+        padding: 1rem;
+    }
+
+    .chargements-table {
+        font-size: 0.75rem;
+    }
+}
+</style>
+
 {% endblock %}
 

@@ -137,6 +137,113 @@
 .table-help tr:nth-child(even) {
     background: #f8f9fa;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .help-container {
+        padding: 1rem 0.75rem;
+    }
+
+    .help-section {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .help-section h2 {
+        font-size: 1.3rem;
+    }
+
+    .help-section h3 {
+        font-size: 1.1rem;
+    }
+
+    .schema-box {
+        padding: 1rem;
+        font-size: 0.85rem;
+    }
+
+    .step-box {
+        padding: 0.85rem;
+    }
+
+    .step-number {
+        width: 26px;
+        height: 26px;
+        line-height: 26px;
+        font-size: 0.9rem;
+    }
+
+    .exemple-box,
+    .warning-box,
+    .success-box {
+        padding: 0.85rem 1rem;
+    }
+
+    .flow-diagram {
+        margin: 1.5rem 0;
+    }
+
+    .flow-step {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        margin: 0.25rem;
+    }
+
+    .flow-arrow {
+        font-size: 1.5rem;
+    }
+
+    .table-help {
+        font-size: 0.85rem;
+    }
+
+    .table-help th,
+    .table-help td {
+        padding: 0.5rem 0.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .help-container {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .help-section {
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .help-section h2 {
+        font-size: 1.2rem;
+    }
+
+    .help-section h3 {
+        font-size: 1rem;
+    }
+
+    .schema-box {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .step-box {
+        padding: 0.75rem;
+    }
+
+    .flow-step {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.85rem;
+    }
+
+    .table-help {
+        font-size: 0.8rem;
+    }
+
+    .table-help th,
+    .table-help td {
+        padding: 0.4rem 0.3rem;
+    }
+}
 </style>
 {% endblock %}
 

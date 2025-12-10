@@ -5,6 +5,7 @@ Exécute des tâches périodiques en arrière-plan
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlmodel import Session, select
 
 from app.core.logging_config import get_logger
@@ -192,6 +193,22 @@ def start_scheduler():
         name='Nettoyage quotidien',
         replace_existing=True
     )
+    
+    # Ajouter la tâche de keep-alive du chatbot (toutes les 10 minutes)
+    # Cela maintient le modèle Ollama chargé en mémoire
+    try:
+        from app.services.chatbot_warmup_service import ChatbotWarmupService
+        
+        scheduler.add_job(
+            ChatbotWarmupService.keep_alive_sync,
+            trigger=IntervalTrigger(minutes=10),  # Toutes les 10 minutes
+            id='chatbot_keepalive',
+            name='Keep-alive chatbot Ollama',
+            replace_existing=True
+        )
+        logger.info("   💓 Keep-alive chatbot programmé : toutes les 10 minutes")
+    except Exception as e:
+        logger.debug(f"⚠️ Impossible d'ajouter le keep-alive chatbot: {e}")
     
     # Démarrer le scheduler
     scheduler.start()

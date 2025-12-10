@@ -125,6 +125,69 @@
     text-align: center;
 }
 
+/* Responsive */
+@media (max-width: 768px) {
+    .consolidation-container {
+        padding: 1rem 0;
+    }
+
+    .generator-section,
+    .consolidations-section {
+        padding: 1.25rem;
+        border-radius: 12px;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .consolidations-section .data-table {
+        font-size: 0.85rem;
+    }
+
+    .consolidations-section .data-table th,
+    .consolidations-section .data-table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.8rem;
+    }
+
+    /* Sur mobile, les colonnes prennent toute la largeur */
+    .consolidations-section .data-table th,
+    .consolidations-section .data-table td {
+        width: auto !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .consolidation-container {
+        padding: 0.75rem 0;
+    }
+
+    .generator-section,
+    .consolidations-section {
+        padding: 1rem;
+    }
+
+    .section-title {
+        font-size: 1rem;
+    }
+
+    .consolidations-section .data-table {
+        font-size: 0.75rem;
+    }
+
+    .consolidations-section .data-table th,
+    .consolidations-section .data-table td {
+        padding: 0.4rem 0.2rem;
+        font-size: 0.75rem;
+    }
+}
+
 .badge {
     padding: 0.25rem 0.5rem;
     border-radius: 10px;

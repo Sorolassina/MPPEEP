@@ -41,6 +41,81 @@
     border-left: 4px solid var(--warning-color);
 }
 
+/* Flash Messages Container */
+.flash-messages-container {
+    margin-bottom: var(--spacing-md);
+}
+
+.flash-messages-container .alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+}
+
+.alert-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex: 1;
+}
+
+.alert-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.alert-message {
+    flex: 1;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+/* Responsive pour les flash messages */
+@media (max-width: 768px) {
+    .flash-messages-container {
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .flash-messages-container .alert {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.9rem;
+    }
+
+    .alert-icon {
+        font-size: 1rem;
+    }
+
+    .alert-close {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .flash-messages-container .alert {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.85rem;
+    }
+
+    .alert-content {
+        gap: var(--spacing-xs);
+    }
+}
+
 /* ========================================
    2. BADGES
    ======================================== */
@@ -216,6 +291,33 @@
     transition: opacity 0.3s ease;
 }
 
+/* Responsive pour les notifications */
+@media (max-width: 768px) {
+    .error-notification,
+    .success-notification {
+        top: 80px;
+        right: 10px;
+        left: 10px;
+        min-width: auto;
+        max-width: 100%;
+    }
+
+    .error-notification-content,
+    .success-notification-content {
+        padding: 0.875rem 1rem;
+    }
+
+    .error-notification-title,
+    .success-notification-title {
+        font-size: 0.95rem;
+    }
+
+    .error-notification-message,
+    .success-notification-message {
+        font-size: 0.85rem;
+    }
+}
+
 .error-notification-content,
 .success-notification-content {
     background: white;
@@ -323,6 +425,17 @@
     border: none;
     outline: none;
     gap: 0;
+}
+
+/* Responsive pour les boutons flottants */
+@media (max-width: 768px) {
+    .floating-help-button {
+        width: 50px;
+        height: 50px;
+        bottom: 20px;
+        right: 20px;
+        font-size: 1.5rem;
+    }
 }
 
 .floating-help-button:hover {

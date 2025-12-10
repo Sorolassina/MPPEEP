@@ -102,6 +102,74 @@ Accès Refusé
         border-radius: 4px;
         font-size: 0.8rem;
     }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .access-denied-container {
+            padding: 1.5rem;
+            min-height: 50vh;
+        }
+
+        .access-denied-icon {
+            font-size: 3rem;
+        }
+
+        .access-denied-title {
+            font-size: 1.5rem;
+        }
+
+        .access-denied-message {
+            font-size: 1rem;
+            max-width: 100%;
+        }
+
+        .access-denied-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .access-denied-actions .btn-primary,
+        .access-denied-actions .btn-secondary {
+            width: 100%;
+            text-align: center;
+        }
+
+        .user-permissions {
+            max-width: 100%;
+            padding: 1.25rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .access-denied-container {
+            padding: 1rem;
+        }
+
+        .access-denied-icon {
+            font-size: 2.5rem;
+        }
+
+        .access-denied-title {
+            font-size: 1.25rem;
+        }
+
+        .access-denied-message {
+            font-size: 0.95rem;
+        }
+
+        .user-permissions {
+            padding: 1rem;
+        }
+
+        .user-permissions h4 {
+            font-size: 1rem;
+        }
+
+        .permission-badge {
+            font-size: 0.75rem;
+            padding: 3px 6px;
+        }
+    }
 </style>
 
 <div class="access-denied-container">

@@ -718,10 +718,104 @@ kbd {
 
 /* Responsive */
 @media (max-width: 768px) {
+    .page-grid {
+        padding: 1rem;
+    }
+
+    .card {
+        padding: 1.25rem !important;
+    }
+
+    .card h2 {
+        font-size: 1.25rem !important;
+    }
+
     .quick-guides,
     .help-sections,
     .support-methods {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .quick-guide,
+    .help-card {
+        padding: 1.25rem;
+    }
+
+    .search-help input {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+    }
+
+    .faq-question {
+        padding: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .faq-answer {
+        padding: 0 1rem !important;
+    }
+
+    .faq-item.active .faq-answer {
+        padding: 1.25rem !important;
+    }
+
+    .support-info {
+        padding: 1.5rem;
+    }
+
+    .support-method {
+        padding: 1.25rem;
+    }
+
+    .support-icon {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-grid {
+        padding: 0.75rem;
+    }
+
+    .card {
+        padding: 1rem !important;
+    }
+
+    .card h2 {
+        font-size: 1.1rem !important;
+    }
+
+    .quick-guide,
+    .help-card {
+        padding: 1rem;
+    }
+
+    .quick-guide-title,
+    .help-card-title {
+        font-size: 1rem !important;
+    }
+
+    .faq-question {
+        padding: 0.875rem;
+        font-size: 0.9rem;
+    }
+
+    .faq-item.active .faq-answer {
+        padding: 1rem !important;
+        font-size: 0.9rem;
+    }
+
+    .support-info {
+        padding: 1.25rem;
+    }
+
+    .support-method {
+        padding: 1rem;
+    }
+
+    .support-icon {
+        font-size: 1.75rem;
     }
 }
 </style>

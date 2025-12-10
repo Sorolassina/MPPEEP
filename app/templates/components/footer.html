@@ -64,15 +64,61 @@
   }
 
   @media (max-width: 768px) {
+    .footer {
+      padding: var(--spacing-sm) var(--spacing-sm);
+    }
+
     .footer-container {
       flex-direction: column;
       text-align: center;
       gap: var(--spacing-xs);
     }
 
+    .footer-content {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .footer-content p {
+      font-size: 0.7rem;
+    }
+
+    .footer-note {
+      display: none; /* Cacher la note développeur sur mobile */
+    }
+
     .footer-links {
       justify-content: center;
       gap: var(--spacing-sm);
+      flex-wrap: wrap;
+    }
+
+    /* Cacher les liens intermédiaires, garder seulement le premier et le dernier */
+    .footer-links a:not(:first-child):not(:last-child) {
+      display: none;
+    }
+
+    .footer a {
+      font-size: 0.7rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .footer {
+      padding: var(--spacing-xs) var(--spacing-sm);
+    }
+
+    .footer-content p {
+      font-size: 0.65rem;
+    }
+
+    .footer a {
+      font-size: 0.65rem;
+    }
+
+    /* Sur très petits écrans, garder seulement le copyright */
+    .footer-links {
+      display: none;
     }
   }
 </style>

@@ -608,22 +608,39 @@
 /* Responsive */
 @media (max-width: 768px) {
   .referentials-page {
-    padding: 0 0.5rem 2rem;
+    padding: 0 0.75rem 2rem;
   }
   
   .referentials-page .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
+  }
+
+  .referentials-page .stat-card {
+    padding: 1rem;
+  }
+
+  .referentials-page .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .referentials-page .stat-label {
+    font-size: 0.85rem;
   }
   
   .referentials-page .tabs {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0.5rem;
     gap: 0.25rem;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .referentials-page .tab {
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   
   .referentials-page .table-header {
@@ -631,9 +648,122 @@
     align-items: flex-start;
     gap: 1rem;
   }
+
+  .referentials-page .table-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .referentials-page .table-header .btn {
+    width: 100%;
+  }
   
   .referentials-page .tab-content {
     padding: 1rem;
+  }
+
+  .referentials-page .data-table {
+    font-size: 0.85rem;
+  }
+
+  .referentials-page .data-table th,
+  .referentials-page .data-table td {
+    padding: 0.65rem 0.5rem;
+  }
+
+  #crudModal .modal-content {
+    width: 95%;
+    max-width: 95%;
+    margin: 1rem auto;
+  }
+
+  #crudModal .modal-body {
+    padding: 1rem;
+  }
+
+  #crudModal .modal-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #crudModal .modal-footer .btn {
+    width: 100%;
+  }
+
+  .referentials-page .empty-state-card {
+    padding: 2rem 1rem;
+  }
+
+  .referentials-page .empty-state-icon {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .referentials-page {
+    padding: 0 0.5rem 1.5rem;
+  }
+
+  .referentials-page .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .referentials-page .stat-card {
+    padding: 0.85rem;
+  }
+
+  .referentials-page .stat-number {
+    font-size: 1.3rem;
+  }
+
+  .referentials-page .tabs {
+    padding: 0.5rem;
+    gap: 0.2rem;
+  }
+
+  .referentials-page .tab {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .referentials-page .tab-content {
+    padding: 0.75rem;
+  }
+
+  .referentials-page .table-header h3 {
+    font-size: 1rem;
+  }
+
+  .referentials-page .data-table {
+    font-size: 0.8rem;
+  }
+
+  .referentials-page .data-table th,
+  .referentials-page .data-table td {
+    padding: 0.5rem 0.35rem;
+  }
+
+  #crudModal .modal-content {
+    width: 100%;
+    max-width: 100%;
+    margin: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  #crudModal .modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .referentials-page .empty-state-card {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .referentials-page .empty-state-icon {
+    font-size: 2.5rem;
+  }
+
+  .referentials-page .empty-state-title {
+    font-size: 1.1rem;
   }
 }
 </style>

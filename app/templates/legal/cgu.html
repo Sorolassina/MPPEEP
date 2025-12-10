@@ -9,7 +9,7 @@
         <p class="page-subtitle">MPPEEP Dashboard - Version 1.0</p>
     </div>
 
-    <div class="card" style="max-width: 1000px; margin: 0 auto;">
+    <div class="card legal-card">
         <div class="legal-content">
             
             <section class="legal-section">
@@ -302,17 +302,144 @@
         font-weight: 600;
     }
 
+    .legal-card {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .page-container {
+        padding: 2rem;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        color: var(--secondary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: var(--text-muted-color);
+        font-size: 1rem;
+    }
+
+    /* Responsive */
     @media (max-width: 768px) {
+        .page-container {
+            padding: 1rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.9rem;
+        }
+
+        .legal-card {
+            max-width: 100%;
+            margin: 0;
+        }
+
         .legal-content {
-            padding: 20px;
+            padding: 1.25rem;
+            font-size: 0.95rem;
+        }
+
+        .legal-section {
+            margin-bottom: 2rem;
         }
 
         .legal-section h2 {
-            font-size: 18px;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
         }
 
         .legal-section h3 {
-            font-size: 16px;
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .legal-section p {
+            margin-bottom: 1rem;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .legal-section ul {
+            margin-left: 1rem;
+            margin-bottom: 1rem;
+            padding-left: 1.25rem;
+        }
+
+        .legal-section li {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .legal-footer {
+            margin-top: 2rem !important;
+            padding-top: 1.5rem !important;
+        }
+
+        .legal-footer p {
+            font-size: 0.85rem !important;
+        }
+
+        .legal-footer .btn {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .page-container {
+            padding: 0.75rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.85rem;
+        }
+
+        .legal-content {
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .legal-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .legal-section h2 {
+            font-size: 1.1rem;
+        }
+
+        .legal-section h3 {
+            font-size: 1rem;
+        }
+
+        .legal-section p,
+        .legal-section li {
+            font-size: 0.9rem;
+        }
+
+        .legal-section ul {
+            margin-left: 0.75rem;
+            padding-left: 1rem;
         }
     }
 </style>

@@ -57,6 +57,14 @@ body {
     width: 100%;
 }
 
+/* Responsive pour main-content */
+@media (max-width: 768px) {
+    .main-content {
+        padding: var(--spacing-md) var(--spacing-sm);
+        min-height: calc(100vh - 100px);
+    }
+}
+
 /* Animation de fade-in pour les pages */
 @keyframes fadeInPage {
     0% {

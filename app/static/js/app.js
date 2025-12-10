@@ -309,3 +309,80 @@ window.hideLoading = window.hideLoading || function() {
         }, 10);
     });
 })();
+
+// ============================================
+// RESPONSIVE - GESTION DU MENU MOBILE
+// ============================================
+
+/**
+ * Gestion du menu hamburger et de la sidebar sur mobile
+ */
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle sidebar
+        const sidebarToggle = document.querySelector('.sidebar-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarOverlay = document.querySelector('.sidebar-overlay');
+        
+        if (sidebarToggle && sidebar) {
+            // Créer l'overlay s'il n'existe pas
+            if (!sidebarOverlay) {
+                const overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                document.body.appendChild(overlay);
+                
+                // Fermer la sidebar en cliquant sur l'overlay
+                overlay.addEventListener('click', function() {
+                    closeSidebar();
+                });
+            }
+            
+            // Ouvrir/fermer la sidebar
+            sidebarToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleSidebar();
+            });
+            
+            // Fermer la sidebar en cliquant sur un lien
+            const sidebarLinks = sidebar.querySelectorAll('a');
+            sidebarLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    closeSidebar();
+                });
+            });
+            
+            // Fermer la sidebar avec la touche Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+                    closeSidebar();
+                }
+            });
+        }
+        
+        function toggleSidebar() {
+            if (sidebar) {
+                sidebar.classList.toggle('open');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) {
+                    overlay.classList.toggle('active');
+                }
+                document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+            }
+        }
+        
+        function closeSidebar() {
+            if (sidebar) {
+                sidebar.classList.remove('open');
+                const overlay = document.querySelector('.sidebar-overlay');
+                if (overlay) {
+                    overlay.classList.remove('active');
+                }
+                document.body.style.overflow = '';
+            }
+        }
+        
+        // Exposer les fonctions globalement
+        window.toggleSidebar = toggleSidebar;
+        window.closeSidebar = closeSidebar;
+    });
+})();

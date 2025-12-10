@@ -513,6 +513,35 @@ style.textContent = `
       display: none !important;
     }
   }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .page-grid {
+      padding: 1rem;
+    }
+
+    .card {
+      padding: 1.25rem !important;
+    }
+
+    div[style*="display: grid"] {
+      grid-template-columns: 1fr !important;
+    }
+
+    div[style*="grid-template-columns"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .page-grid {
+      padding: 0.75rem;
+    }
+
+    .card {
+      padding: 1rem !important;
+    }
+  }
 `;
 document.head.appendChild(style);
 

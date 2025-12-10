@@ -1,62 +1,448 @@
 {% extends "layouts/base.html" %}
 {% from 'components/page_header.html' import page_header %}
 
-{% block title %}Gestion des Fichiers - {{ app_name }}</body>
-{% endblock %}
+{% block title %}Gestion des Fichiers - {{ app_name }}{% endblock %}
 
 {% block styles %}
 <style>
-transition: all 0.3s;
+.files-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin: 0 0 0.5rem 0;
+}
+
+.stat-card p {
+    color: #666;
+    margin: 0;
+}
+
+.upload-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.accordion-header {
+    padding: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    transition: all 0.3s;
+}
+
 .accordion-header:hover {
-transition: transform 0.3s;
-transition: max-height 0.3s ease-out;
-transition: max-height 0.5s ease-in;
+    background: #e9ecef;
+}
+
+.accordion-header h2 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.accordion-icon {
+    transition: transform 0.3s;
+}
+
+.accordion-icon.open {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.accordion-content.open {
+    max-height: 2000px;
+    transition: max-height 0.5s ease-in;
+}
+
 .accordion-body {
-color: #333;
-border: 1px solid #ddd;
-border: 2px dashed #ddd;
-transition: all 0.3s;
-background: #f9f9f9;
+    padding: 1.5rem;
+    color: #333;
+}
+
+.upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group-premium {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group-premium label {
+    font-weight: 600;
+    color: #333;
+}
+
+.file-input-wrapper {
+    position: relative;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.file-input-label {
+    display: block;
+    padding: 2rem;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #f9f9f9;
+}
+
 .file-input-label:hover {
-background: #f0f0f0;
-background: #e8f5e9;
-transition: all 0.3s;
+    background: #f0f0f0;
+    border-color: var(--secondary-color);
+}
+
+.file-input-label.has-file {
+    background: #e8f5e9;
+    border-color: #4caf50;
+}
+
+.btn-upload {
+    padding: 0.75rem 1.5rem;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
 .btn-upload:hover:not(:disabled) {
-background: #ccc;
-color: #666;
-border: 1px solid #ddd;
-background: #f5f5f5;
-border-bottom: 1px solid #eee;
-color: #333;
+    background: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.btn-upload:disabled {
+    background: #ccc;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--secondary-color);
+    transition: width 0.3s;
+}
+
+.filters-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.filter-group select {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.files-list {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.files-list h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+}
+
+.files-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.files-table th {
+    background: #f5f5f5;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+
+.files-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
 .files-table tbody tr:hover {
-background: #f9f9f9;
-background: #e3f2fd;
-color: #1976d2;
-background: #fff3e0;
-color: #f57c00;
-background: #e8f5e9;
-color: #388e3c;
-background: #ffebee;
-color: #d32f2f;
-background: #f5f5f5;
-color: #757575;
-transition: all 0.3s;
-background: #2196f3;
+    background: #f9f9f9;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-uploaded {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.status-processing {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.status-processed {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.status-error {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.status-archived {
+    background: #f5f5f5;
+    color: #757575;
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-action {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.btn-view {
+    background: #2196f3;
+    color: white;
+}
+
 .btn-view:hover {
-background: #1976d2;
-background: #ff9800;
+    background: #1976d2;
+}
+
+.btn-reprocess {
+    background: #ff9800;
+    color: white;
+}
+
 .btn-reprocess:hover {
-background: #f57c00;
-background: #f44336;
+    background: #f57c00;
+}
+
+.btn-delete {
+    background: #f44336;
+    color: white;
+}
+
 .btn-delete:hover {
-background: #d32f2f;
-color: #666;
-color: #999;
-background: #e0e0e0;
-transition: width 0.3s;
-color: #666;
+    background: #d32f2f;
+}
+
+.loading, .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.empty-state {
+    color: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .files-container {
+        padding: 1rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .stat-card {
+        padding: 1.25rem;
+    }
+
+    .stat-card h3 {
+        font-size: 1.75rem;
+    }
+
+    .accordion-header {
+        padding: 1.25rem;
+    }
+
+    .accordion-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .accordion-body {
+        padding: 1.25rem;
+    }
+
+    .filters-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group {
+        min-width: 100%;
+    }
+
+    .files-list {
+        padding: 1.25rem;
+    }
+
+    .files-table {
+        font-size: 0.85rem;
+    }
+
+    .files-table th,
+    .files-table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .file-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .btn-action {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .files-container {
+        padding: 0.75rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-card h3 {
+        font-size: 1.5rem;
+    }
+
+    .accordion-header {
+        padding: 1rem;
+    }
+
+    .accordion-body {
+        padding: 1rem;
+    }
+
+    .filters-section {
+        padding: 1rem;
+    }
+
+    .files-list {
+        padding: 1rem;
+    }
+
+    .files-list h2 {
+        font-size: 1.25rem;
+    }
+
+    .files-table {
+        font-size: 0.75rem;
+    }
+
+    .files-table th,
+    .files-table td {
+        padding: 0.5rem 0.4rem;
+    }
+}
 </style>
-</body>
 {% endblock %}
 
 {% block content %}

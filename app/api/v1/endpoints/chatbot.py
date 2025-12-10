@@ -121,6 +121,52 @@ def normalize_document_text(text: str) -> str:
     return text
 
 
+def is_greeting(message: str) -> bool:
+    """
+    Détermine si le message est une simple salutation.
+    
+    Args:
+        message: Message de l'utilisateur
+        
+    Returns:
+        True si c'est une salutation, False sinon
+    """
+    message_lower = message.lower().strip()
+    
+    # Liste des salutations courantes (français et anglais)
+    greetings = [
+        'bonjour',
+        'bonsoir',
+        'salut',
+        'hello',
+        'hi',
+        'hey',
+        'coucou',
+        'bon matin',
+        'bon après-midi',
+        'bonne soirée',
+        'bonne nuit',
+        'bonjour à tous',
+        'salut tout le monde',
+        'hey there',
+        'good morning',
+        'good afternoon',
+        'good evening',
+    ]
+    
+    # Vérifier si le message est exactement une salutation (ou salutation + ponctuation)
+    message_clean = re.sub(r'[^\w\s]', '', message_lower)  # Enlever la ponctuation
+    words = message_clean.split()
+    
+    # Si le message contient seulement 1-3 mots et qu'un de ces mots est une salutation
+    if len(words) <= 3:
+        for greeting in greetings:
+            if greeting in words:
+                return True
+    
+    return False
+
+
 def is_document_question_required(message: str, document_context: Optional[str]) -> bool:
     """
     Détermine si le message de l'utilisateur nécessite une réponse basée sur le document.
@@ -185,8 +231,15 @@ async def chat_with_ollama(
         ollama_url = getattr(settings, 'OLLAMA_URL', 'http://localhost:11434')
         ollama_api_url = f"{ollama_url}/api/generate"
         
-        # Récupérer le contexte de la base de données (RAG)
-        db_context = ChatbotRAGService.get_context_for_query(session, chat_message.message)
+        # Vérifier si c'est une simple salutation
+        is_simple_greeting = is_greeting(chat_message.message)
+        
+        # Récupérer le contexte de la base de données (RAG) seulement si ce n'est pas une salutation
+        if is_simple_greeting:
+            db_context = None
+            logger.info(f"👋 Salutation détectée: '{chat_message.message}' - Contexte RAG ignoré")
+        else:
+            db_context = ChatbotRAGService.get_context_for_query(session, chat_message.message)
         
         # Traiter le contexte des documents uploadés séparément (priorité élevée)
         document_context = None
@@ -209,12 +262,18 @@ async def chat_with_ollama(
             else:
                 document_instruction = "\n\nNOTE: Document uploadé mais non demandé. Réponds avec tes connaissances générales, SANS mentionner le document."
         
+        # Adapter le prompt si c'est une salutation
+        greeting_instruction = ""
+        if is_simple_greeting:
+            greeting_instruction = "\n\n⚠️ ATTENTION : L'utilisateur a simplement dit bonjour/bonsoir/salut. Réponds UNIQUEMENT par une salutation simple et naturelle (ex: 'Bonjour ! Comment puis-je vous aider ?'). NE récite PAS tes missions, ton rôle, ou la liste des modules. Sois BRIÈV et NATUREL, comme un collègue."
+        
         # Système prompt simplifié pour améliorer les performances
-        system_prompt = f"""Tu es SYGEP AI, assistant du système MPPEEP Dashboard.{document_instruction}
+        system_prompt = f"""Tu es SYGEP AI, assistant du système MPPEEP Dashboard.{document_instruction}{greeting_instruction}
 
 RÔLE: Aide les utilisateurs avec les modules (RH, Personnel, Performance, Budget, Stock, Référentiels, Workflows).
 
-RÈGLES:
+RÈGLES IMPORTANTES:
+- Pour les SALUTATIONS (bonjour, bonsoir, salut, hello, hi, bonsoir, etc.) : Réponds SIMPLEMENT et NATURELLEMENT, comme un collègue. Par exemple : "Bonjour ! Comment puis-je vous aider ?" ou "Salut ! Qu'est-ce qui vous amène ?" NE récite PAS tes missions ou ton rôle.
 - Guide vers l'interface utilisateur, JAMAIS les routes API (/api/v1/...)
 - Sois concis et précis
 - Utilise les données fournies ci-dessous
@@ -275,19 +334,19 @@ GESTION DES CAS SPÉCIFIQUES:
    - Si l'information n'est pas disponible, sois honnête et guide l'utilisateur vers la page d'aide ou l'administrateur
    - Propose des alternatives basées sur les fonctionnalités similaires disponibles
 
-2. FONCTIONNALITÉS RÉCEMMENT AJOUTÉES:
+3. FONCTIONNALITÉS RÉCEMMENT AJOUTÉES:
    - Reconnais que la fonctionnalité peut être nouvelle
    - Utilise les données disponibles pour donner des informations
    - Guide l'utilisateur à explorer l'interface pour découvrir la fonctionnalité
    - Propose de consulter la documentation ou l'administrateur
 
-3. CAS D'ERREUR TRÈS PARTICULIERS:
+4. CAS D'ERREUR TRÈS PARTICULIERS:
    - Sois empathique et rassurant
    - Propose des solutions étape par étape (actualiser, vider cache, vérifier session, etc.)
    - Si l'erreur est complexe, guide vers l'administrateur avec les informations nécessaires (message d'erreur, étapes, navigateur)
    - Utilise les données de la base pour vérifier si c'est un problème de données
 
-4. QUESTIONS NÉCESSITANT DES INFORMATIONS EXTERNES:
+5. QUESTIONS NÉCESSITANT DES INFORMATIONS EXTERNES:
    - Identifie clairement que l'information n'est pas dans le système MPPEEP
    - Utilise les données disponibles dans MPPEEP pour donner un contexte
    - Guide vers les sources d'information externes appropriées
@@ -808,6 +867,41 @@ async def test_upload_raw(
         logger.error(f"❌ Erreur lors de la lecture du body brut: {e}", exc_info=True)
         logger.error(f"❌ Type d'erreur: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+@router.post("/warmup")
+async def warmup_chatbot(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Préchauffe le chatbot Ollama en arrière-plan.
+    
+    Cette fonction charge le modèle Ollama en mémoire pour réduire
+    la latence lors des premiers appels de l'utilisateur.
+    
+    Args:
+        current_user: L'utilisateur actuel (authentifié)
+    
+    Returns:
+        Statut du préchauffage
+    """
+    try:
+        from app.services.chatbot_warmup_service import ChatbotWarmupService
+        
+        # Lancer le préchauffage en arrière-plan (non-bloquant)
+        import asyncio
+        asyncio.create_task(ChatbotWarmupService.warmup_model())
+        
+        return {
+            "success": True,
+            "message": "Préchauffage du chatbot lancé en arrière-plan"
+        }
+    except Exception as e:
+        logger.error(f"❌ Erreur lors du préchauffage: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @router.post("/test-upload-minimal")

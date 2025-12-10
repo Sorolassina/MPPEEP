@@ -46,6 +46,34 @@ async def lifespan(app: FastAPI):
         logger.info("⏰ Démarrage du planificateur de tâches...")
         start_scheduler()
         logger.info("✅ Planificateur de tâches démarré")
+        
+        # Préchauffage du chatbot Ollama en arrière-plan (non-bloquant)
+        try:
+            logger.info("🔥 Initialisation du préchauffage du chatbot Ollama...")
+            # Importer et lancer le préchauffage en arrière-plan
+            from app.services.chatbot_warmup_service import ChatbotWarmupService
+            import asyncio
+            import threading
+            
+            def warmup_background():
+                """Lance le préchauffage dans un thread séparé"""
+                try:
+                    # Créer une nouvelle boucle d'événements pour ce thread
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    # Exécuter le préchauffage
+                    loop.run_until_complete(ChatbotWarmupService.warmup_model())
+                    loop.close()
+                except Exception as e:
+                    logger.debug(f"⚠️ Préchauffage chatbot en arrière-plan: {e}")
+            
+            # Lancer le préchauffage dans un thread pour ne pas bloquer le démarrage
+            warmup_thread = threading.Thread(target=warmup_background, daemon=True)
+            warmup_thread.start()
+            logger.info("✅ Préchauffage chatbot lancé en arrière-plan (thread séparé)")
+        except Exception as e:
+            logger.debug(f"⚠️ Préchauffage chatbot non disponible: {e}")
+            # Ne pas bloquer le démarrage si le préchauffage échoue
 
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'initialisation: {e}", exc_info=True)
@@ -229,8 +257,8 @@ def get_version():
 
 @subapp.get("/", name="read_root")
 def read_root(request: Request):
-    """Redirige vers la page de login"""
-    return RedirectResponse(url=str(request.url_for("login_page")), status_code=303)
+    """Redirige vers la page de landing"""
+    return RedirectResponse(url=str(request.url_for("landing_page")), status_code=303)
 
 
 @subapp.get("/access-denied", response_class=HTMLResponse, name="access_denied")

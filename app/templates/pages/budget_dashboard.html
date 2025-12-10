@@ -1250,21 +1250,42 @@
 }
 
 @media (max-width: 768px) {
+    .budget-container {
+        padding: 1rem;
+    }
+
+    .budget-filters {
+        padding: 1.25rem 1.5rem;
+    }
+
+    .kpis-container {
+        padding: 1rem;
+    }
+
     .kpis-list {
-        flex-direction: column;
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
     .kpi-item {
         width: 100%;
     }
     
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-card {
+        padding: 1.5rem;
+    }
+    
     .bars-and-legend {
         flex-direction: column;
-        gap: 30px;
+        gap: 1.5rem;
     }
     
     .bars-wrapper {
-        gap: 30px;
+        gap: 1.5rem;
     }
     
     .legend-box {
@@ -1273,7 +1294,7 @@
     
     .execution-comparison {
         flex-direction: column;
-        gap: 2rem;
+        gap: 1.5rem;
     }
     
     .execution-circle-container {
@@ -1283,6 +1304,28 @@
     
     .execution-percent {
         font-size: 28px;
+    }
+
+    .prog-list {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .budget-container {
+        padding: 0.75rem;
+    }
+
+    .budget-filters {
+        padding: 1rem;
+    }
+
+    .kpis-container {
+        padding: 0.75rem;
+    }
+
+    .stats-card {
+        padding: 1.25rem;
     }
 }
 </style>

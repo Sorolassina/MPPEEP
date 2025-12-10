@@ -3,6 +3,75 @@
 
 {% block title %}Aide - Référentiels{% endblock %}
 
+{% block styles %}
+<style>
+    .help-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .help-container {
+            padding: 1.5rem 1rem;
+        }
+
+        .card {
+            padding: 1.25rem !important;
+        }
+
+        .card h2,
+        .card h3 {
+            font-size: 1.25rem !important;
+        }
+
+        .card h4 {
+            font-size: 1.1rem !important;
+        }
+
+        div[style*="display: grid"] {
+            grid-template-columns: 1fr !important;
+        }
+
+        pre {
+            font-size: 0.85rem !important;
+            overflow-x: auto;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .help-container {
+            padding: 1rem 0.75rem;
+        }
+
+        .card {
+            padding: 1rem !important;
+        }
+
+        .card h2 {
+            font-size: 1.1rem !important;
+        }
+
+        .card h3 {
+            font-size: 1rem !important;
+        }
+
+        .card h4 {
+            font-size: 0.95rem !important;
+        }
+
+        ol, ul {
+            padding-left: 1.25rem !important;
+        }
+
+        pre {
+            font-size: 0.75rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 {{ page_header(
     title='❓ Aide - Gestion des Référentiels',
@@ -17,7 +86,7 @@
     ]
 ) }}
 
-<div class="help-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+<div class="help-container">
     
     <!-- Introduction -->
     <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;">

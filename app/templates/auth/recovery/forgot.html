@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/base.css')) }}">
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/theme.css')) }}">
     <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/buttons.css')) }}">
+    <link rel="stylesheet" href="{{ static_versioned_url(static_url('css/responsive.css')) }}">
     
     
     <style>
@@ -217,14 +218,114 @@
             text-align: left;
         }
         
-        @media (max-width: 480px) {
-            .recovery-card {
-                padding: 30px 20px;
-                margin: 10px;
+        /* Responsive */
+        @media (max-width: 768px) {
+            .recovery-container {
+                padding: 12px;
+                overflow-y: auto;
             }
-            
+
+            .recovery-card {
+                padding: 24px;
+                margin: 0;
+                border-radius: 16px;
+            }
+
             .recovery-title {
                 font-size: 20px;
+            }
+
+            .recovery-subtitle {
+                font-size: 14px;
+            }
+
+            .clock-widget {
+                top: 20px;
+                left: 12px;
+            }
+
+            .clock-time {
+                font-size: 3rem;
+            }
+
+            .clock-date {
+                font-size: 1rem;
+            }
+
+            .copyright {
+                bottom: 10px;
+                right: 12px;
+                font-size: 10px;
+            }
+
+            .form-control {
+                padding: 14px 16px;
+                font-size: 16px; /* Évite le zoom automatique sur iOS */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .recovery-container {
+                padding: 8px;
+            }
+
+            .recovery-card {
+                padding: 20px 16px;
+            }
+
+            .recovery-title {
+                font-size: 18px;
+            }
+
+            .recovery-subtitle {
+                font-size: 13px;
+            }
+
+            .clock-widget {
+                top: 15px;
+                left: 8px;
+            }
+
+            .clock-time {
+                font-size: 2.5rem;
+            }
+
+            .clock-date {
+                font-size: 0.9rem;
+            }
+
+            .copyright {
+                bottom: 8px;
+                right: 8px;
+                font-size: 9px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .clock-widget {
+                display: none;
+            }
+
+            .copyright {
+                display: none;
+            }
+
+            .recovery-card {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: landscape) {
+            .recovery-container {
+                padding: 8px;
+            }
+
+            .recovery-card {
+                padding: 16px;
+            }
+
+            .clock-widget {
+                display: none;
             }
         }
     </style>

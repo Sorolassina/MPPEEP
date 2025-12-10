@@ -435,16 +435,121 @@ Accueil
     .dashboard-grid {
         gap: 2rem;
     }
+
+    .hero-section {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .form-page-premium {
-        padding: 2rem 1rem 2.5rem;
+        padding: 1.5rem 1rem 2rem;
+    }
+
+    .dashboard-grid {
+        gap: 1.5rem;
+    }
+
+    .hero-section {
+        padding: 1.5rem;
+        border-radius: 16px;
+    }
+
+    .hero-content h1 {
+        font-size: 1.75rem;
+    }
+
+    .hero-content p {
+        font-size: 0.95rem;
+    }
+
+    .hero-minister {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero-minister img {
+        width: 80px;
+        height: 80px;
+    }
+
+    .hero-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .hero-stat {
+        width: 100%;
+    }
+
+    .quick-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .quick-card {
+        padding: 1.25rem;
+    }
+
+    .quick-alerts {
+        grid-template-columns: 1fr;
+    }
+
+    .alert-card {
+        padding: 1rem;
     }
 
     .card.quick-actions .actions-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: 1fr;
         gap: 1rem;
+    }
+
+    .action-button {
+        padding: 1.25rem 1rem;
+        min-height: 100px;
+    }
+
+    .action-button .action-icon {
+        font-size: 2rem;
+    }
+
+    .action-button .action-text {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-page-premium {
+        padding: 1rem 0.75rem 1.5rem;
+    }
+
+    .hero-section {
+        padding: 1.25rem;
+    }
+
+    .hero-content h1 {
+        font-size: 1.5rem;
+    }
+
+    .hero-minister img {
+        width: 70px;
+        height: 70px;
+    }
+
+    .quick-card {
+        padding: 1rem;
+    }
+
+    .alert-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .alert-card-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
     }
 }
 </style>

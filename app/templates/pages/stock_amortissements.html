@@ -3,6 +3,63 @@
 
 {% block title %}Amortissements - Stock - {{ app_name }}{% endblock %}
 
+{% block styles %}
+<style>
+/* Responsive */
+@media (max-width: 768px) {
+    .page-grid {
+        padding: 0.75rem;
+    }
+
+    .card {
+        padding: 1.25rem;
+    }
+
+    .data-table {
+        font-size: 0.8rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.5rem 0.4rem;
+    }
+
+    .data-table th:nth-child(3),
+    .data-table td:nth-child(3),
+    .data-table th:nth-child(4),
+    .data-table td:nth-child(4),
+    .data-table th:nth-child(5),
+    .data-table td:nth-child(5) {
+        display: none;
+    }
+
+    .data-table {
+        overflow-x: auto;
+        display: block;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-grid {
+        padding: 0.5rem;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    .data-table {
+        font-size: 0.75rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.4rem 0.3rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <body class="form-page-premium">
 {{ page_header(

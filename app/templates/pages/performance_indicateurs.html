@@ -302,6 +302,24 @@
     }
     
     @media (max-width: 768px) {
+        .performance-indicators-page {
+            padding: 1rem;
+        }
+
+        .indicators-hierarchy {
+            gap: 1.5rem;
+        }
+
+        .programme-group {
+            padding: 1.25rem;
+        }
+
+        .programme-group-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
         .programme-group-ogs,
         .indicator-group-os-list,
         .indicator-group-indicators {
@@ -316,7 +334,6 @@
             display: none;
         }
         
-        .programme-group-header,
         .indicator-group-og-header,
         .indicator-group-os-header {
             flex-direction: column;
@@ -328,6 +345,20 @@
             flex-direction: column;
             align-items: flex-start;
             gap: 0.5rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .performance-indicators-page {
+            padding: 0.75rem;
+        }
+
+        .programme-group {
+            padding: 1rem;
+        }
+
+        .programme-group-title {
+            font-size: 1.1rem;
         }
     }
 </style>

@@ -589,5 +589,40 @@ async function supprimerLigne(ligneId) {
 }
 </script>
 
+<style>
+/* Responsive */
+@media (max-width: 768px) {
+    .action-menu {
+        min-width: 150px;
+        right: auto;
+        left: 0;
+    }
+
+    .data-table {
+        font-size: 0.85rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .data-table {
+        font-size: 0.75rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 0.5rem 0.4rem;
+    }
+}
+</style>
+
 {% endblock %}
 

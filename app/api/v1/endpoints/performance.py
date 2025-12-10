@@ -14,6 +14,9 @@ import re
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, File as FastAPIFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from sqlmodel import Session, select
+from io import BytesIO
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from app.api.v1.endpoints.auth import require_roles, get_current_user
 from app.core.logging_config import get_logger
@@ -37,6 +40,7 @@ from app.services.performance_engagement_letter_service import PerformanceEngage
 from app.services.rapport_annuel_performance_generator_modular import RAPPDFGenerator
 from app.services.report_generator import ReportGenerator
 from app.services.cadre_performance_generator import CadrePerformanceGenerator
+from app.services.rapport_cadre_performance_generator import CPPDFGenerator
 
 logger = get_logger(__name__)
 
@@ -604,39 +608,74 @@ def generate_cadre_performance_pdf(
 ):
     """Génère le cadre de performance en PDF."""
     try:
-        # Récupérer les paramètres
-        programme_id = request.query_params.get("programme_id")
-        programme_id = int(programme_id) if programme_id and programme_id.isdigit() else None
+        from app.services.system_settings_service import SystemSettingsService
         
-        annee_reference = request.query_params.get("annee_reference")
-        annee_reference = int(annee_reference) if annee_reference and annee_reference.isdigit() else None
+        data: dict[str, Any] = {}
         
-        annee_redaction = request.query_params.get("annee_redaction")
-        annee_redaction = int(annee_redaction) if annee_redaction and annee_redaction.isdigit() else None
+        # Récupérer les paramètres généraux du formulaire
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            final_value = transform(value) if transform else value
+            data[target_key] = final_value
         
-        titre = request.query_params.get("titre")
+        optional_param("annee_debut", "annee_debut", lambda v: int(v) if v.isdigit() else v)
+        optional_param("annee_fin", "annee_fin", lambda v: int(v) if v.isdigit() else v)
+        optional_param("section", "section")
+        optional_param("ministere", "ministere")
+        optional_param("titre_rapport", "titre_rapport")
+        optional_param("titre_periode", "titre_periode")
+        optional_param("date_publication", "date_publication")
+        optional_param("logo_path", "logo_path")
+        optional_param("cadre_global_commentaire", "cadre_global_commentaire")
+        optional_param("organismes_tutelle", "organismes_tutelle")
+        optional_param("organismes_prives_ong", "organismes_prives_ong")
+        optional_param("projets_hors_pip", "projets_hors_pip")
+        optional_param("tableau2_commentaire", "tableau2_commentaire")
+        optional_param("programme_commentaire", "programme_commentaire")
+        optional_param("cadre_performance_commentaire", "cadre_performance_commentaire")
         
-        mode = request.query_params.get("mode", "brouillon")
-        mode = mode if mode in ["brouillon", "final"] else "brouillon"
+        # Récupérer le mode depuis les paramètres de requête (brouillon ou final)
+        mode_param = request.query_params.get("mode", "brouillon")
+        data["mode"] = mode_param if mode_param in ["brouillon", "final"] else "brouillon"
         
-        # Générer le PDF
-        pdf_buffer = CadrePerformanceGenerator.generate_pdf(
-            session=db,
-            programme_id=programme_id,
-            annee_reference=annee_reference,
-            annee_redaction=annee_redaction,
-            titre=titre,
-            mode=mode
-        )
+        # Récupérer les paramètres système pour les valeurs par défaut
+        system_settings = SystemSettingsService.get_settings_as_dict(db)
+        logo_path_from_settings = system_settings.get("logo_path", "")
+        current_year = datetime.now().year
         
-        # Nom du fichier
-        if programme_id:
-            programme = db.exec(
-                select(Programme).where(Programme.id == programme_id)
-            ).first()
-            filename = f"cadre_performance_{programme.code if programme else programme_id}.pdf"
-        else:
-            filename = "cadre_performance_ministere.pdf"
+        # Appliquer les valeurs par défaut si non fournies
+        if "annee_debut" not in data:
+            data["annee_debut"] = CPPDFGenerator.DEFAULT_DATA.get("annee_debut", current_year)
+        if "annee_fin" not in data:
+            data["annee_fin"] = CPPDFGenerator.DEFAULT_DATA.get("annee_fin", current_year + 2)
+        if "section" not in data:
+            data["section"] = CPPDFGenerator.DEFAULT_DATA.get("section", "SECTION 376")
+        if "ministere" not in data:
+            data["ministere"] = system_settings.get("ministere", CPPDFGenerator.DEFAULT_DATA.get("ministere", ""))
+        if "titre_rapport" not in data:
+            data["titre_rapport"] = CPPDFGenerator.DEFAULT_DATA.get("titre_rapport", "")
+        if "titre_periode" not in data:
+            data["titre_periode"] = CPPDFGenerator.DEFAULT_DATA.get("titre_periode", "AU TITRE DE LA PERIODE")
+        if "date_publication" not in data:
+            # Générer la date de publication si non définie
+            mois_fr = [
+                "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+            ]
+            mois_actuel = mois_fr[datetime.now().month - 1]
+            annee_actuelle = datetime.now().year
+            data["date_publication"] = f"{mois_actuel} {annee_actuelle}"
+        if "logo_path" not in data:
+            data["logo_path"] = logo_path_from_settings if logo_path_from_settings else CPPDFGenerator.DEFAULT_DATA.get("logo_path", "")
+        
+        # Générer le PDF avec les données
+        pdf_buffer = CPPDFGenerator.generate_pdf(data, session=db)
+        
+        annee_debut = data.get("annee_debut", current_year)
+        annee_fin = data.get("annee_fin", current_year + 2)
+        filename = f"cadre_performance_{annee_debut}-{annee_fin}.pdf"
         
         headers = {
             "Content-Disposition": f"inline; filename={filename}",
@@ -645,6 +684,279 @@ def generate_cadre_performance_pdf(
     except Exception as exc:
         logger.exception("Erreur génération cadre de performance: %s", exc)
         raise HTTPException(status_code=500, detail="Erreur lors de la génération du cadre de performance")
+
+
+@router.get(
+    "/cadre-performance/template-modification",
+    response_class=StreamingResponse,
+    name="performance_cp_template_modification",
+)
+def download_cp_modification_template(
+    annee_debut: int = Query(2026, description="Année de début"),
+    annee_fin: int = Query(2028, description="Année de fin"),
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Télécharge un template Excel pour spécifier les modifications d'architecture programmatique.
+    """
+    try:
+        from app.models.personnel import Programme
+        from app.models.budget import SigobeExecution
+        from sqlmodel import select, and_
+        
+        # Créer un classeur Excel
+        wb = Workbook()
+        
+        # Feuille 1: Instructions
+        ws_instructions = wb.active
+        ws_instructions.title = "Instructions"
+        
+        # Styles
+        title_font = Font(bold=True, size=14, color="FFFFFF")
+        title_fill = PatternFill(start_color="FF8C00", end_color="FF8C00", fill_type="solid")
+        header_font = Font(bold=True, size=11, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        example_fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        border_style = Border(
+            left=Side(style="thin"), right=Side(style="thin"),
+            top=Side(style="thin"), bottom=Side(style="thin")
+        )
+        
+        # Titre
+        ws_instructions.merge_cells("A1:F1")
+        cell_title = ws_instructions.cell(row=1, column=1)
+        cell_title.value = "📋 TEMPLATE DE MODIFICATION D'ARCHITECTURE PROGRAMMATIQUE"
+        cell_title.font = title_font
+        cell_title.fill = title_fill
+        cell_title.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Instructions
+        instructions = [
+            ("", None, None),
+            ("📌 INSTRUCTIONS", Font(bold=True, size=12, color="FF8C00"), None),
+            ("", None, None),
+            ("Ce template vous permet de spécifier les modifications d'architecture programmatique pour le rapport CP.", None, None),
+            ("", None, None),
+            ("1. Remplissez la feuille 'Modifications' avec les changements souhaités", None, None),
+            ("2. Pour chaque élément à modifier, indiquez :", None, None),
+            ("   - Le TYPE (Programme, Action, ou Activité)", None, None),
+            ("   - Le CODE et LIBELLÉ ANCIENS (période 2025-2027)", None, None),
+            ("   - Le CODE et LIBELLÉ NOUVEAUX (période 2026-2028)", None, None),
+            ("", None, None),
+            ("3. Les lignes en gris sont des EXEMPLES à SUPPRIMER avant de charger le fichier", None, None),
+            ("", None, None),
+            ("4. Une fois rempli, chargez le fichier dans l'onglet 'Modification Architecture' du modal", None, None),
+            ("", None, None),
+            ("✅ RÈGLES", Font(bold=True, size=12, color="28A745"), None),
+            ("", None, None),
+            ("✅ Le TYPE doit être exactement : 'Programme', 'Action', ou 'Activité'", None, None),
+            ("✅ Les codes doivent correspondre aux codes existants dans SIGOBE", None, None),
+            ("✅ Ne supprimez pas les en-têtes de colonnes", None, None),
+            ("✅ Laissez vide les cellules si aucun changement n'est nécessaire", None, None),
+            ("", None, None),
+            (f"📅 Template généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}", Font(italic=True, size=9), None),
+        ]
+        
+        for row_num, (text, font, fill) in enumerate(instructions, 2):
+            cell = ws_instructions.cell(row=row_num, column=1)
+            cell.value = text
+            if font:
+                cell.font = font
+            if fill:
+                cell.fill = fill
+            cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        
+        ws_instructions.column_dimensions["A"].width = 100
+        
+        # Feuille 2: Modifications
+        ws_modifications = wb.create_sheet("Modifications")
+        
+        # En-têtes
+        headers = [
+            "TYPE",
+            f"CODE ANCIEN ({annee_debut}-{annee_fin})",
+            f"LIBELLÉ ANCIEN ({annee_debut}-{annee_fin})",
+            f"CODE NOUVEAU ({annee_debut+1}-{annee_fin+1})",
+            f"LIBELLÉ NOUVEAU ({annee_debut+1}-{annee_fin+1})",
+        ]
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws_modifications.cell(row=1, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = border_style
+        
+        # Ajuster les largeurs
+        ws_modifications.column_dimensions["A"].width = 15
+        ws_modifications.column_dimensions["B"].width = 25
+        ws_modifications.column_dimensions["C"].width = 50
+        ws_modifications.column_dimensions["D"].width = 25
+        ws_modifications.column_dimensions["E"].width = 50
+        
+        # Charger les données existantes depuis SIGOBE pour exemples
+        try:
+            programmes_query = select(Programme).where(Programme.actif == True).limit(3)
+            programmes = db.exec(programmes_query).all()
+            
+            actions_query = select(
+                SigobeExecution.actions
+            ).distinct().where(
+                and_(
+                    SigobeExecution.annee == annee_debut,
+                    SigobeExecution.actions.isnot(None),
+                    SigobeExecution.actions != ""
+                )
+            ).limit(5)
+            actions = [a for a in db.exec(actions_query).all() if a and a.strip()]
+            
+            activites_query = select(
+                SigobeExecution.activites
+            ).distinct().where(
+                and_(
+                    SigobeExecution.annee == annee_debut,
+                    SigobeExecution.activites.isnot(None),
+                    SigobeExecution.activites != ""
+                )
+            ).limit(5)
+            activites = [a for a in db.exec(activites_query).all() if a and a.strip()]
+            
+            # Ajouter des exemples
+            row = 2
+            if programmes:
+                prog = programmes[0]
+                ws_modifications.cell(row=row, column=1, value="Programme").fill = example_fill
+                ws_modifications.cell(row=row, column=2, value=getattr(prog, 'code', '')).fill = example_fill
+                ws_modifications.cell(row=row, column=3, value=getattr(prog, 'libelle', '')).fill = example_fill
+                ws_modifications.cell(row=row, column=4, value=getattr(prog, 'code', '')).fill = example_fill
+                ws_modifications.cell(row=row, column=5, value=getattr(prog, 'libelle', '')).fill = example_fill
+                row += 1
+            
+            if actions:
+                action = actions[0]
+                action_parts = action.split(' ', 1)
+                action_code = action_parts[0] if len(action_parts) > 0 else ""
+                action_libelle = action_parts[1] if len(action_parts) > 1 else action
+                ws_modifications.cell(row=row, column=1, value="Action").fill = example_fill
+                ws_modifications.cell(row=row, column=2, value=action_code).fill = example_fill
+                ws_modifications.cell(row=row, column=3, value=action_libelle).fill = example_fill
+                ws_modifications.cell(row=row, column=4, value=action_code).fill = example_fill
+                ws_modifications.cell(row=row, column=5, value=action_libelle).fill = example_fill
+                row += 1
+            
+            if activites:
+                activite = activites[0]
+                activite_parts = activite.split(' ', 1)
+                activite_code = activite_parts[0] if len(activite_parts) > 0 else ""
+                activite_libelle = activite_parts[1] if len(activite_parts) > 1 else activite
+                ws_modifications.cell(row=row, column=1, value="Activité").fill = example_fill
+                ws_modifications.cell(row=row, column=2, value=activite_code).fill = example_fill
+                ws_modifications.cell(row=row, column=3, value=activite_libelle).fill = example_fill
+                ws_modifications.cell(row=row, column=4, value=activite_code).fill = example_fill
+                ws_modifications.cell(row=row, column=5, value=activite_libelle).fill = example_fill
+        except Exception as e:
+            logger.warning(f"Erreur lors du chargement des exemples: {e}")
+        
+        # Appliquer les bordures aux exemples
+        for r in range(2, row + 1):
+            for c in range(1, 6):
+                ws_modifications.cell(row=r, column=c).border = border_style
+        
+        # Figer la première ligne
+        ws_modifications.freeze_panes = "A2"
+        
+        # Sauvegarder dans un buffer
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        logger.info(f"📥 Template de modification CP téléchargé par {current_user.email}")
+        
+        filename = f"Template_Modification_Architecture_CP_{annee_debut}-{annee_fin}.xlsx"
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as e:
+        logger.exception(f"Erreur lors de la génération du template: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la génération du template: {str(e)}")
+
+
+@router.post(
+    "/cadre-performance/upload-modification",
+    response_class=JSONResponse,
+    name="performance_cp_upload_modification",
+)
+async def upload_cp_modification_file(
+    file: UploadFile = FastAPIFile(...),
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Charge un fichier Excel rempli avec les modifications d'architecture et retourne les données.
+    """
+    try:
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail="Le fichier doit être au format Excel (.xlsx ou .xls)")
+        
+        # Lire le fichier
+        contents = await file.read()
+        wb = load_workbook(BytesIO(contents), data_only=True)
+        
+        # Trouver la feuille "Modifications"
+        if "Modifications" not in wb.sheetnames:
+            raise HTTPException(status_code=400, detail="La feuille 'Modifications' est introuvable dans le fichier")
+        
+        ws = wb["Modifications"]
+        
+        # Lire les données (en ignorant la première ligne d'en-tête)
+        modifications = []
+        for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            # Ignorer les lignes vides
+            if not any(row):
+                continue
+            
+            type_elem = str(row[0]).strip() if row[0] else ""
+            code_ancien = str(row[1]).strip() if row[1] else ""
+            libelle_ancien = str(row[2]).strip() if row[2] else ""
+            code_nouveau = str(row[3]).strip() if row[3] else ""
+            libelle_nouveau = str(row[4]).strip() if row[4] else ""
+            
+            # Valider le type
+            if type_elem and type_elem.lower() not in ['programme', 'action', 'activité', 'activite']:
+                continue
+            
+            # Normaliser le type
+            type_normalized = "programme" if type_elem.lower() == "programme" else \
+                            "action" if type_elem.lower() == "action" else "activite"
+            
+            # Ignorer si tous les champs sont vides
+            if not code_ancien and not libelle_ancien and not code_nouveau and not libelle_nouveau:
+                continue
+            
+            modifications.append({
+                "type": type_normalized,
+                "code_ancien": code_ancien,
+                "libelle_ancien": libelle_ancien,
+                "code_nouveau": code_nouveau,
+                "libelle_nouveau": libelle_nouveau,
+            })
+        
+        logger.info(f"📤 {len(modifications)} modifications chargées par {current_user.email}")
+        
+        return JSONResponse({
+            "success": True,
+            "modifications": modifications,
+            "count": len(modifications)
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Erreur lors du chargement du fichier: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors du chargement du fichier: {str(e)}")
 
 
 @router.get(
@@ -665,48 +977,83 @@ def generate_cadre_performance_docx(
     """
     try:
         from app.services.pdf_to_word_service import PDFToWordService
+        from app.services.system_settings_service import SystemSettingsService
         
         # Récupérer les paramètres de conversion
         use_ocr = request.query_params.get("ocr", "false").lower() == "true"
         
-        # Récupérer les paramètres
-        programme_id = request.query_params.get("programme_id")
-        programme_id = int(programme_id) if programme_id and programme_id.isdigit() else None
+        data: dict[str, Any] = {}
         
-        annee_reference = request.query_params.get("annee_reference")
-        annee_reference = int(annee_reference) if annee_reference and annee_reference.isdigit() else None
+        # Récupérer les paramètres généraux du formulaire
+        def optional_param(param: str, target_key: str, transform=None) -> None:
+            value = request.query_params.get(param)
+            if value is None or value == "":
+                return
+            final_value = transform(value) if transform else value
+            data[target_key] = final_value
         
-        annee_redaction = request.query_params.get("annee_redaction")
-        annee_redaction = int(annee_redaction) if annee_redaction and annee_redaction.isdigit() else None
+        optional_param("annee_debut", "annee_debut", lambda v: int(v) if v.isdigit() else v)
+        optional_param("annee_fin", "annee_fin", lambda v: int(v) if v.isdigit() else v)
+        optional_param("section", "section")
+        optional_param("ministere", "ministere")
+        optional_param("titre_rapport", "titre_rapport")
+        optional_param("titre_periode", "titre_periode")
+        optional_param("date_publication", "date_publication")
+        optional_param("logo_path", "logo_path")
+        optional_param("cadre_global_commentaire", "cadre_global_commentaire")
+        optional_param("organismes_tutelle", "organismes_tutelle")
+        optional_param("organismes_prives_ong", "organismes_prives_ong")
+        optional_param("projets_hors_pip", "projets_hors_pip")
+        optional_param("tableau2_commentaire", "tableau2_commentaire")
+        optional_param("programme_commentaire", "programme_commentaire")
+        optional_param("cadre_performance_commentaire", "cadre_performance_commentaire")
         
-        titre = request.query_params.get("titre")
+        # Récupérer le mode depuis les paramètres de requête (brouillon ou final)
+        mode_param = request.query_params.get("mode", "brouillon")
+        data["mode"] = mode_param if mode_param in ["brouillon", "final"] else "brouillon"
         
-        mode = request.query_params.get("mode", "brouillon")
-        mode = mode if mode in ["brouillon", "final"] else "brouillon"
+        # Récupérer les paramètres système pour les valeurs par défaut
+        system_settings = SystemSettingsService.get_settings_as_dict(db)
+        logo_path_from_settings = system_settings.get("logo_path", "")
+        current_year = datetime.now().year
+        
+        # Appliquer les valeurs par défaut si non fournies
+        if "annee_debut" not in data:
+            data["annee_debut"] = CPPDFGenerator.DEFAULT_DATA.get("annee_debut", current_year)
+        if "annee_fin" not in data:
+            data["annee_fin"] = CPPDFGenerator.DEFAULT_DATA.get("annee_fin", current_year + 2)
+        if "section" not in data:
+            data["section"] = CPPDFGenerator.DEFAULT_DATA.get("section", "SECTION 376")
+        if "ministere" not in data:
+            data["ministere"] = system_settings.get("ministere", CPPDFGenerator.DEFAULT_DATA.get("ministere", ""))
+        if "titre_rapport" not in data:
+            data["titre_rapport"] = CPPDFGenerator.DEFAULT_DATA.get("titre_rapport", "")
+        if "titre_periode" not in data:
+            data["titre_periode"] = CPPDFGenerator.DEFAULT_DATA.get("titre_periode", "AU TITRE DE LA PERIODE")
+        if "date_publication" not in data:
+            # Générer la date de publication si non définie
+            mois_fr = [
+                "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+            ]
+            mois_actuel = mois_fr[datetime.now().month - 1]
+            annee_actuelle = datetime.now().year
+            data["date_publication"] = f"{mois_actuel} {annee_actuelle}"
+        if "logo_path" not in data:
+            data["logo_path"] = logo_path_from_settings if logo_path_from_settings else CPPDFGenerator.DEFAULT_DATA.get("logo_path", "")
         
         # Étape 1: Générer le PDF
         logger.info("📄 Génération du PDF du cadre de performance...")
-        pdf_buffer = CadrePerformanceGenerator.generate_pdf(
-            session=db,
-            programme_id=programme_id,
-            annee_reference=annee_reference,
-            annee_redaction=annee_redaction,
-            titre=titre,
-            mode=mode
-        )
+        pdf_buffer = CPPDFGenerator.generate_pdf(data, session=db)
         
         # Étape 2: Convertir le PDF en Word
         logger.info("🔄 Conversion PDF → Word en cours...")
         word_buffer = PDFToWordService.convert_pdf_to_word(pdf_buffer, use_ocr=use_ocr)
         
-        # Nom du fichier
-        if programme_id:
-            programme = db.exec(
-                select(Programme).where(Programme.id == programme_id)
-            ).first()
-            filename = f"cadre_performance_{programme.code if programme else programme_id}.docx"
-        else:
-            filename = "cadre_performance_ministere.docx"
+        annee_debut = data.get("annee_debut", current_year)
+        annee_fin = data.get("annee_fin", current_year + 2)
+        
+        filename = f"cadre_performance_{annee_debut}-{annee_fin}.docx"
         
         headers = {
             "Content-Disposition": f"attachment; filename={filename}",

@@ -104,6 +104,49 @@
     padding-top: 1.5rem;
     border-top: 1px solid #e0e0e0;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .rh-demande-container {
+        padding: 1rem;
+    }
+
+    .form-container-premium {
+        padding: 1.5rem;
+        border-radius: 12px;
+    }
+
+    .form-section-title {
+        font-size: 1.1rem;
+    }
+
+    .form-grid-premium {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .form-actions-premium {
+        flex-direction: column;
+    }
+
+    .form-actions-premium .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .rh-demande-container {
+        padding: 0.75rem;
+    }
+
+    .form-container-premium {
+        padding: 1.25rem;
+    }
+
+    .form-section-title {
+        font-size: 1rem;
+    }
+}
 </style>
 {% endblock %}
 

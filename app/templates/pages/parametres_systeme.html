@@ -454,14 +454,117 @@
     font-size: 0.85rem;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
+    .settings-page {
+        padding: 0 0.75rem 2rem;
+    }
+
+    .form-section {
+        padding: 1.5rem !important;
+    }
+
+    .form-section-title {
+        font-size: 1.25rem !important;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+    }
+
+    .colors-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
     .color-input-group {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
+    .color-input-group input[type="color"] {
+        width: 100%;
+        height: 50px;
+    }
+
     .color-input-group .color-text {
         width: 100%;
+    }
+
+    .logo-upload-section {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .logo-preview {
+        padding: 1.25rem;
+    }
+
+    .logo-preview img {
+        max-width: 180px;
+        max-height: 140px;
+    }
+
+    .logo-upload {
+        padding: 1.25rem;
+    }
+
+    .referentiels-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .referentiel-card {
+        padding: 1.25rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+    }
+
+    .minister-civility-group select {
+        min-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .settings-page {
+        padding: 0 0.5rem 1.5rem;
+    }
+
+    .form-section {
+        padding: 1.25rem !important;
+    }
+
+    .form-section-title {
+        font-size: 1.1rem !important;
+    }
+
+    .logo-preview {
+        padding: 1rem;
+    }
+
+    .logo-preview img {
+        max-width: 150px;
+        max-height: 120px;
+    }
+
+    .logo-upload {
+        padding: 1rem;
+    }
+
+    .referentiel-card {
+        padding: 1rem;
+    }
+
+    .referentiel-card h4 {
+        font-size: 1.1rem;
     }
 }
 </style>
